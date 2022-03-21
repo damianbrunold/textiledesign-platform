@@ -1,0 +1,31 @@
+<!doctype html>
+<title>{% block title %}{% endblock %} - Textileplatform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% if g.user and g.user.darkmode %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_dark.css') }}">
+{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
+<link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<nav>
+    <h1><a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/icons/icon.png') }}"> Textileplatform</a> {% block context %}{% endblock %}</h1>
+    <ul>
+    {% if g.user %}
+        <li><span>{{ g.user.name }}</span>
+        <li><a href="{{ url_for('main.profile') }}">Profil</a>
+        <li><a href="{{ url_for('auth.logout') }}">Abmelden</a>
+    {% else %}
+        <li><a href="{{ url_for('auth.register') }}">Registrieren</a>
+        <li><a href="{{ url_for('auth.login') }}">Anmelden</a>
+    {% endif %}
+    </ul>
+</nav>
+<section class="content">
+    <header>
+        {% block header %}{% endblock %}
+    </header>
+    {% for message in get_flashed_messages() %}
+        <div class="flash">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+</section>
+

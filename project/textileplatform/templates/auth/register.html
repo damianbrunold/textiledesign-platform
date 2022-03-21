@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Konto erstellen {% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method="post">
+    <label for="name">Name</label>
+    <input name="name" id="name" required value="{{ request.form['name'] }}">
+    <label for="email">E-Mail</label>
+    <input name="email" id="email" required value="{{ request.form['email'] }}">
+    <label for="password">Password</label>
+    <input type="password" name="password" id="password" required value="{{ request.form['password'] }}">
+    <input type="submit" value="Erstellen">
+  </form>
+{% endblock %}

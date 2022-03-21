@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Profile {% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method="post">
+    <label for="name">Name</label>
+    <input name="name" id="name" required value="{{ user.name }}">
+    <div>
+        <input type="checkbox" name="darkmode" id="darkmode" {% if user.darkmode %}checked{% endif %}>
+        <label for="darkmode" class="inline">Dunkelmodus</label>
+    </div>
+    <input type="submit" value="Speichern">
+  </form>
+{% endblock %}
+
