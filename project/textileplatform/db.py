@@ -1,7 +1,7 @@
 import datetime
 import sqlalchemy
 
-from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Boolean, Text, LargeBinary
 from sqlalchemy import UniqueConstraint, PrimaryKeyConstraint
 from sqlalchemy import insert
 
@@ -14,15 +14,63 @@ from werkzeug.security import generate_password_hash
 metadata = MetaData()
 
 user_table = Table(
-    "dwuser",
+    "txuser",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("name", String(100), nullable=False),
-    Column("email", String(100), nullable=False),
+    Column("email", String(255), nullable=False),
     Column("password", String(255), nullable=False),
     Column("darkmode", Boolean),
     Column("verified", Boolean),
     Column("disabled", Boolean)
+)
+
+group_table = Table(
+    "txgroup",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("owner_id", Integer, nullable=False),
+    Column("name", String(100), nullable=False),
+    Column("description", Text, nullable=False),
+)
+
+document_table = Table(
+    "txdoc",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("owner_id", Integer, nullable=False),
+    Column("type_id", Integer, nullable=False),
+    Column("name", String(255)),
+    Column("description", Text),
+    Column("contents", Text),
+    Column("preview_image", LargeBinary),
+    Column("thumbnail_image", LargeBinary),
+    Column("created", DateTime),
+    Column("modified", DateTime),
+    Column("public", Boolean)
+)
+
+type_table = Table(
+    "txtype",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("label", String(100), nullable=False)
+)
+
+user_group_table = Table(
+    "txusergroup",
+    metadata,
+    Column("user_id", Integer, nullable=False),
+    Column("group_id", Integer, nullable=False),
+    PrimaryKeyConstraint("user_id", "group_id")
+)
+
+document_pin_table = Table(
+    "txdocpin",
+    metadata,
+    Column("doc_id", Integer, nullable=False),
+    Column("user_id", Integer, nullable=False),
+    PrimaryKeyConstraint("doc_id", "user_id")
 )
 
 def get_db():
@@ -42,6 +90,9 @@ def init_db():
     metadata.create_all(engine)
 
     with engine.begin() as conn:
+        conn.execute(insert(type_table).values(id=0, label="DB-WEAVE Pattern"))
+        conn.execute(insert(type_table).values(id=1, label="JBEAD Pattern"))
+        conn.execute(insert(type_table).values(id=2, label="Generic Image"))
         conn.execute(
             insert(user_table).values(
                 id=0, 
