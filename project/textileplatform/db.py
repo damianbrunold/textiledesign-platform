@@ -103,6 +103,8 @@ def init_db():
                 darkmode=True, 
                 verified=True, 
                 disabled=False,
+                locale="en",
+                timezone="CET",
                 password=generate_password_hash(current_app.config['ADMIN_PASSWORD']))
         )
 
