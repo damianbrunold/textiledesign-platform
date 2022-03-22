@@ -29,11 +29,11 @@ def register():
         error = None
 
         if not name:
-            error = 'Name muss ausgefüllt werden.'
+            error = gettext('Name is required')
         elif not email:
-            error = 'E-Mail muss ausgefüllt werden.'
+            error = gettext('E-Mail is required')
         elif not password:
-            error = 'Passwort muss ausgefüllt werden.'
+            error = gettext('Password is required')
 
         if error is None:
             try:
@@ -48,7 +48,7 @@ def register():
                 user.timezone = flask_babel.get_timezone()
                 add_user(user)
             except IntegrityError:
-                error = f"E-Mail {email} ist bereits registriert."
+                error = gettext('E-Mail {0} is already used').format(email)
             else:
                 return redirect(url_for("auth.login"))
 
@@ -66,13 +66,13 @@ def login():
         user = get_user_by_email(email)
 
         if user is None:
-            error = 'Benutzerdaten sind nicht korrekt.'
+            error = gettext('Login data are not correct')
         elif not check_password_hash(user.password, password):
-            error = 'Benutzerdaten sind nicht korrekt.'
+            error = gettext('Login data are not correct')
         elif user.verified == 0:
-            error = 'Konto muss zuerst verifiziert werden.'
+            error = gettext('Account verification is pending')
         elif user.disabled == 1:
-            error = 'Konto ist deaktiviert.'
+            error = gettext('Account is disabled')
 
         if error is None:
             session.clear()

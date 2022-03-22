@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}Status{% endblock %}</h1>
+    <h1>{% block title %}{{ gettext('Status') }}{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
-<p>textileplatform version {{ v }}</p>
+    <p>{{ gettext('textileplatform version')}} {{ v }}</p>
 {% endblock %}
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2022-03-22 15:34+0100\n"
+"POT-Creation-Date: 2022-03-22 19:22+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,55 +17,96 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.9.1\n"
 
-#: textileplatform/main.py:46
+#: auth.py:32
+msgid "Name is required"
+msgstr ""
+
+#: auth.py:34
+msgid "E-Mail is required"
+msgstr ""
+
+#: auth.py:36
+msgid "Password is required"
+msgstr ""
+
+#: auth.py:51
+msgid "E-Mail {0} is already used"
+msgstr ""
+
+#: auth.py:69 auth.py:71
+msgid "Login data are not correct"
+msgstr ""
+
+#: auth.py:73
+msgid "Account verification is pending"
+msgstr ""
+
+#: auth.py:75
+msgid "Account is disabled"
+msgstr ""
+
+#: main.py:46
 msgid "Changes could not be saved."
 msgstr ""
 
-#: textileplatform/templates/base.html:2 textileplatform/templates/base.html:10
+#: templates/base.html:2 templates/base.html:10
 msgid "Textile Platform"
 msgstr ""
 
-#: textileplatform/templates/base.html:14
+#: templates/base.html:14 templates/main/profile.html:4
 msgid "Profile"
 msgstr ""
 
-#: textileplatform/templates/base.html:15
+#: templates/base.html:15
 msgid "Log out"
 msgstr ""
 
-#: textileplatform/templates/base.html:17
+#: templates/base.html:17
 msgid "Register"
 msgstr ""
 
-#: textileplatform/templates/auth/login.html:4
-#: textileplatform/templates/auth/login.html:13
-#: textileplatform/templates/base.html:18
+#: templates/auth/login.html:4 templates/auth/login.html:13
+#: templates/base.html:18
 msgid "Log in"
 msgstr ""
 
-#: textileplatform/templates/auth/login.html:9
-#: textileplatform/templates/auth/register.html:11
+#: templates/auth/login.html:9 templates/auth/register.html:11
 msgid "E-Mail"
 msgstr ""
 
-#: textileplatform/templates/auth/login.html:11
-#: textileplatform/templates/auth/register.html:13
+#: templates/auth/login.html:11 templates/auth/register.html:13
 msgid "Password"
 msgstr ""
 
-#: textileplatform/templates/auth/login.html:15
+#: templates/auth/login.html:15
 msgid "Recover password"
 msgstr ""
 
-#: textileplatform/templates/auth/register.html:4
+#: templates/auth/register.html:4
 msgid "Create Account"
 msgstr ""
 
-#: textileplatform/templates/auth/register.html:9
+#: templates/auth/register.html:9 templates/main/profile.html:9
 msgid "Name"
 msgstr ""
 
-#: textileplatform/templates/auth/register.html:15
+#: templates/auth/register.html:15
 msgid "Create"
+msgstr ""
+
+#: templates/main/profile.html:13
+msgid "Dark mode"
+msgstr ""
+
+#: templates/main/profile.html:15
+msgid "Save"
+msgstr ""
+
+#: templates/main/status.html:4
+msgid "Status"
+msgstr ""
+
+#: templates/main/status.html:8
+msgid "textileplatform version"
 msgstr ""
 
