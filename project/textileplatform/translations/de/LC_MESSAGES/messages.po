@@ -1,0 +1,72 @@
+# German translations for PROJECT.
+# Copyright (C) 2022 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2022-03-22 15:34+0100\n"
+"PO-Revision-Date: 2022-03-22 15:35+0100\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: de\n"
+"Language-Team: de <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.9.1\n"
+
+#: textileplatform/main.py:46
+msgid "Changes could not be saved."
+msgstr "Änderungen konnten nicht gespeichert werden."
+
+#: textileplatform/templates/base.html:2 textileplatform/templates/base.html:10
+msgid "Textile Platform"
+msgstr "Textil-Plattform"
+
+#: textileplatform/templates/base.html:14
+msgid "Profile"
+msgstr "Profil"
+
+#: textileplatform/templates/base.html:15
+msgid "Log out"
+msgstr "Abmelden"
+
+#: textileplatform/templates/base.html:17
+msgid "Register"
+msgstr "Registrieren"
+
+#: textileplatform/templates/auth/login.html:4
+#: textileplatform/templates/auth/login.html:13
+#: textileplatform/templates/base.html:18
+msgid "Log in"
+msgstr "Anmelden"
+
+#: textileplatform/templates/auth/login.html:9
+#: textileplatform/templates/auth/register.html:11
+msgid "E-Mail"
+msgstr "E-Mail"
+
+#: textileplatform/templates/auth/login.html:11
+#: textileplatform/templates/auth/register.html:13
+msgid "Password"
+msgstr "Passwort"
+
+#: textileplatform/templates/auth/login.html:15
+msgid "Recover password"
+msgstr "Passwort zurücksetzen"
+
+#: textileplatform/templates/auth/register.html:4
+msgid "Create Account"
+msgstr "Konto erstellen"
+
+#: textileplatform/templates/auth/register.html:9
+msgid "Name"
+msgstr "Name"
+
+#: textileplatform/templates/auth/register.html:15
+msgid "Create"
+msgstr "Erstellen"
+

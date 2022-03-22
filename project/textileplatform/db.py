@@ -22,7 +22,9 @@ user_table = Table(
     Column("password", String(255), nullable=False),
     Column("darkmode", Boolean),
     Column("verified", Boolean),
-    Column("disabled", Boolean)
+    Column("disabled", Boolean),
+    Column("locale", String(20)),
+    Column("timezone", String(20))
 )
 
 group_table = Table(

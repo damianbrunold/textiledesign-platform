@@ -15,5 +15,7 @@ class User:
         result.darkmode = row.darkmode
         result.verified = row.verified
         result.disabled = row.disabled
+        result.locale = row.locale
+        result.timezone = row.timezone
         return result
 

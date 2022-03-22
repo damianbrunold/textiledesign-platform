@@ -18,7 +18,9 @@ def add_user(user):
                 password=user.password,
                 darkmode=user.darkmode,
                 verified=user.verified,
-                disabled=user.disabled
+                disabled=user.disabled,
+                locale=user.locale,
+                timezone=user.timezone
             ).returning(user_table.c.id)
         ).fetchone()[0]
         return user
@@ -33,7 +35,9 @@ def update_user(user):
                 password=user.password,
                 darkmode=user.darkmode,
                 verified=user.verified,
-                disabled=user.disabled
+                disabled=user.disabled,
+                locale=user.locale,
+                timezone=user.timezone
             ).where(user_table.c.id == user.id)
         )
 
@@ -48,7 +52,9 @@ def get_user_by_id(user_id):
                 user_table.c.password,
                 user_table.c.darkmode,
                 user_table.c.verified,
-                user_table.c.disabled
+                user_table.c.disabled,
+                user_table.c.locale,
+                user_table.c.timezone
             ).
             select_from(user_table).
             where(user_table.c.id == user_id)
@@ -68,7 +74,9 @@ def get_user_by_email(email):
                 user_table.c.password,
                 user_table.c.darkmode,
                 user_table.c.verified,
-                user_table.c.disabled
+                user_table.c.disabled,
+                user_table.c.locale,
+                user_table.c.timezone
             ).
             select_from(user_table).
             where(user_table.c.email == email)

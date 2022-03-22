@@ -1,5 +1,5 @@
 <!doctype html>
-<title>{% block title %}{% endblock %} - Textile Platform</title>
+<title>{% block title %}{% endblock %} - {{ gettext('Textile Platform') }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 {% if g.user and g.user.darkmode %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style_dark.css') }}">
@@ -7,15 +7,15 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
 <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
 <nav>
-    <h1><a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/icons/icon.png') }}"> Textile Platform</a> {% block context %}{% endblock %}</h1>
+    <h1><a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/icons/icon.png') }}"> {{ gettext('Textile Platform') }}</a> {% block context %}{% endblock %}</h1>
     <ul>
     {% if g.user %}
         <li><span>{{ g.user.name }}</span>
-        <li><a href="{{ url_for('main.profile') }}">Profil</a>
-        <li><a href="{{ url_for('auth.logout') }}">Abmelden</a>
+        <li><a href="{{ url_for('main.profile') }}">{{ gettext('Profile') }}</a>
+        <li><a href="{{ url_for('auth.logout') }}">{{ gettext('Log out') }}</a>
     {% else %}
-        <li><a href="{{ url_for('auth.register') }}">Registrieren</a>
-        <li><a href="{{ url_for('auth.login') }}">Anmelden</a>
+    <li><a href="{{ url_for('auth.register') }}">{{ gettext('Register') }}</a>
+        <li><a href="{{ url_for('auth.login') }}">{{ gettext('Log in') }}</a>
     {% endif %}
     </ul>
 </nav>

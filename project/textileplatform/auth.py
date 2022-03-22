@@ -1,6 +1,8 @@
 import datetime
 import functools
 
+import flask_babel
+
 from sqlalchemy.exc import IntegrityError
 
 from flask import (
@@ -42,6 +44,8 @@ def register():
                 user.darkmode = False
                 user.verified = True
                 user.disabled = False
+                user.locale = flask_babel.get_locale()
+                user.timezone = flask_babel.get_timezone()
                 add_user(user)
             except IntegrityError:
                 error = f"E-Mail {email} ist bereits registriert."

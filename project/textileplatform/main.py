@@ -1,5 +1,6 @@
 from importlib.metadata import version
 from sqlalchemy.exc import IntegrityError
+from flask_babel import gettext
 
 from flask import (
     Blueprint, flash, g, redirect, render_template, render_template_string, request, url_for
@@ -42,7 +43,7 @@ def profile():
             update_user(user)
         except IntegrityError as e:
             app.logger.exception("Profile changes not changed")
-            error = f"Änderungen können nicht gespeichert werden."
+            error = gettext('Changes could not be saved.')
         else:
             return redirect(url_for("main.index"))
 

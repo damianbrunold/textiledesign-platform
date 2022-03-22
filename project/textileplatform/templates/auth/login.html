@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 
 {% block header %}
-  <h1>{% block title %}Anmeldung {% endblock %}</h1>
+<h1>{% block title %}{{ gettext('Log in') }} {% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
   <form method="post">
-    <label for="email">E-Mail</label>
+      <label for="email">{{ gettext('E-Mail') }}</label>
     <input name="email" id="email" required>
-    <label for="password">Passwort</label>
+    <label for="password">{{ gettext('Password') }}</label>
     <input type="password" name="password" id="password" required>
-    <input type="submit" value="Anmelden">
+    <input type="submit" value="{{ gettext('Log in') }}">
   </form>
-  <a href="{{ url_for('auth.recover') }}">Passwort vergessen</a>
+  <a href="{{ url_for('auth.recover') }}">{{ gettext('Recover password') }}</a>
 {% endblock %}
