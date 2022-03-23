@@ -1,0 +1,15 @@
+Todo
+----
+
+1- Define weave pattern in-memory format
+2- Parse DBW-Format into in-memory format
+3- Render in-memory format into DBW-Format
+4- Upload and store DBW pattern file
+5- Download pattern file in DBW-Format
+6- Very basic rendering/editing of pattern
+7- Save changes to pattern
+
+- Parse WIF-Format into in-memory format
+- Render in-memory format into WIF-Format
+- Download pattern file in WIF-Format
+
