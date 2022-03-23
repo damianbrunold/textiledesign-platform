@@ -13,3 +13,5 @@ dist/
 build/
 *.egg-info/
 *backup.sql
+
+/documents/
