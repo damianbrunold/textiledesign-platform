@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}{{ gettext('Upload pattern') }} {% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <form enctype="multipart/form-data" method="POST">
+        <label for="name">{{ gettext('Name') }}</label>
+        <input type="text" name="name" id="name">
+        <label for="file">{{ gettext('Pattern File') }}</label>
+        <input id="file" name="file" type="file">
+        <input type="submit" value="{{ gettext('Upload') }}">
+    </form>
+{% endblock %}
+
+

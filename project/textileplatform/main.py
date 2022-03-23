@@ -14,7 +14,10 @@ from textileplatform.auth import login_required
 
 @bp.route('/')
 def index():
-    return render_template('main/index.html')
+    patterns = []
+    if g.user:
+        patterns = [] # TODO load patterns
+    return render_template('main/index.html', patterns=patterns)
 
 
 @bp.route('/status')
@@ -50,4 +53,22 @@ def profile():
         flash(error)
 
     return render_template('main/profile.html', user=g.user)
+
+
+@bp.route('/upload', methods=('GET', 'POST'))
+@login_required
+def upload_pattern():
+    if request.method == 'POST':
+        pass
+
+    return render_template('main/upload_pattern.html')
+
+
+@bp.route('/create', methods=('GET', 'POST'))
+@login_required
+def create_pattern():
+    if request.method == 'POST':
+        pass
+
+    return render_template('main/create_pattern.html')
 
