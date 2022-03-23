@@ -1,62 +1,48 @@
 import json
 
-class WeavePattern:
-    def __init__(self):
-        self.author = ""
-        self.organization = ""
-        self.notes = ""
+def serialize_pattern(pattern):
+    return json.dumps(pattern)
 
-        self.width = 300
-        self.height = 300
-        self.max_heddles = 30
-        self.max_treadling = 30
-        self.data_threading = []
-        self.data_tieup = []
-        self.data_pegplan = []
-        self.data_treadling = []
-        self.data_blatteinzug = [] # TODO rename
-        self.data_colors_warp = []
-        self.data_colors_weft = []
 
-        # TODO fixeinzug?
-        # TODO webstuhl klammern
+def deserialize_pattern(s):
+    return json.loads(s)
 
-        self.color_palette = []
 
-        self.block_patterns = MiniPatterns()
-        self.block_threadingz = False
-        self.block_threadingz = False
+def parse_dbw_data(dbwdata):
+    contents = _parse_dbw_into_struct(dbwdata)
+    result = dict()
+    
+    props = contents['properties']
+    result['author'] = props['author']
+    result['organization'] = props['organization']
+    result['notes'] = props['remarks']
 
-        self.range_patterns = MiniPatterns()
+    data = contents['data']
 
-        self.support_lines = []
+    size = data['size']
+    result['width'] = int(size['maxx1'])
+    result['height'] = int(size['maxy2'])
+    result['max_heddles'] = int(size['maxx1'])
+    result['max_treadles'] = int(size['maxy1'])
 
-        # TODO view settings
-        # TODO page setup
-        # TODO print settings
+    fields = data['fields']
+    result['data_threading'] = _dehex_short(fields['einzug']['data'])
+    result['data_tieup'] = _dehex_byte(fields['aufknuepfung']['data'])
+    result['data_treadling'] = _dehex_byte(fields['trittfolge']['trittfolge']['data'])
+    # TODO handle pegplan?
+    result['data_blatteinzug'] = _dehex_byte(fields['blatteinzug']['data'])
+    result['colors_warp'] = _dehex_byte(fields['kettfarben']['data'])
+    result['colors_weft'] = _dehex_byte(fields['schussfarben']['data'])
 
-    def to_json(self):
-        return json.dumps({
-            "author": self.author,
-            "organization": self.organization,
-            "notes": self.notes,
-            "width": self.width,
-            "height": self.height,
-            "max_heddles": self.max_heddles,
-            "max_treadling": self.max_treadling,
-            "data_threading": self.data_threading,
-            "data_tieup": self.data_tieup,
-            "data_pegplan": self.data_pegplan,
-            "data_treadling": self.data_treadling,
-            "data_blatteinzug": self.data_blatteinzug,
-            "data_colors_warp": self.data_colors_warp,
-            "data_colors_weft": self.data_colors_weft,
-            "color_palette": self.color_palette,
-            # TODO add rest
-        })
+    # TODO add rest
+    return result
 
-class MiniPatterns():
+
+def render_dbw_data(pattern):
+    # TODO fill contents as required by dbw format
+    # TODO serialize contents
     pass
+
 
 def _unsplit_lines(lines):
     result = []
@@ -69,6 +55,7 @@ def _unsplit_lines(lines):
             result.append(current)
             current = ""
     return result
+
 
 def _parse_dbw_into_struct(data):
     lines = [line for line in data.splitlines() if not line.startswith(";")]
@@ -94,47 +81,19 @@ def _parse_dbw_into_struct(data):
             raise RuntimeError("should not happen")
     return result
 
-def _data_dehex(data):
+
+def _dehex_byte(data):
     result = []
     while data:
         result.append(int(data[0:2], 16))
         data = data[2:]
     return result
 
-def _data_dehex_short(data):
+
+def _dehex_short(data):
     result = []
     while data:
         result.append(int(data[2:4] + data[0:2], 16))
         data = data[4:]
     return result
-
-def parse_dbw_data(data):
-    data = _parse_dbw_into_struct(data)
-    result = WeavePattern()
-    result.author = data['properties']['author']
-    result.organization = data['properties']['organization']
-    result.notes = data['properties']['remarks']
-    result.width = int(data['data']['size']['maxx1'])
-    result.height = int(data['data']['size']['maxy2'])
-    result.max_heddles = int(data['data']['size']['maxy1'])
-    result.max_treadling = int(data['data']['size']['maxx2'])
-    result.data_threading = _data_dehex_short(data['data']['fields']['einzug']['data'])
-    result.data_tieup = _data_dehex(data['data']['fields']['aufknuepfung']['data'])
-    result.data_pegplan = _data_dehex(data['data']['fields']['trittfolge']['trittfolge']['data'])
-    result.data_treadling = _data_dehex(data['data']['fields']['trittfolge']['trittfolge']['data'])
-    result.data_blatteinzug = _data_dehex(data['data']['fields']['blatteinzug']['data'])
-    result.data_colors_warp = _data_dehex(data['data']['fields']['kettfarben']['data'])
-    result.data_colors_weft = _data_dehex(data['data']['fields']['schussfarben']['data'])
-    # TODO add rest
-    return result
-
-
-def render_dbw_data(pattern):
-    pass
-
-def parse_wif_data(data):
-    pass
-
-def render_wif_data(pattern):
-    pass
 
