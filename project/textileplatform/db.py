@@ -52,6 +52,19 @@ document_table = Table(
     Column("public", Boolean)
 )
 
+permission_table = Table(
+    "txpermission",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("doc_id", Integer, nullable=False),
+    Column("user_id", Integer, nullable=False),
+    Column("view", Boolean),
+    Column("edit", Boolean),
+    Column("delete", Boolean),
+    Column("share", Boolean),
+    Column("publish", Boolean)
+)
+
 type_table = Table(
     "txtype",
     metadata,
