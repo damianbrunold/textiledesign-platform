@@ -6,8 +6,8 @@
 
 {% block content %}
   <form method="post">
-      <label for="name">{{ gettext('Name') }}</label>
-    <input name="name" id="name" required value="{{ user.name }}">
+    <label for="email">{{ gettext('E-Mail') }}</label>
+    <input name="email" id="email" required value="{{ user.email }}">
     <div>
         <input type="checkbox" name="darkmode" id="darkmode" {% if user.darkmode %}checked{% endif %}>
         <label for="darkmode" class="inline">{{ gettext('Dark mode') }}</label>

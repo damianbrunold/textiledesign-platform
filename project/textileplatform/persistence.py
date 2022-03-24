@@ -13,6 +13,7 @@ def add_user(user):
     with get_db().begin() as conn:
         user.id = conn.execute(
             insert(user_table).values(
+                display=user.display,
                 name=user.name,
                 email=user.email,
                 password=user.password,
@@ -30,6 +31,7 @@ def update_user(user):
     with get_db().begin() as conn:
         conn.execute(
             update(user_table).values(
+                display=user.display,
                 name=user.name,
                 email=user.email,
                 password=user.password,
@@ -47,6 +49,7 @@ def get_user_by_id(user_id):
         row = conn.execute(
             select(
                 user_table.c.id,
+                user_table.c.display,
                 user_table.c.name,
                 user_table.c.email,
                 user_table.c.password,
@@ -69,6 +72,7 @@ def get_user_by_email(email):
         row = conn.execute(
             select(
                 user_table.c.id,
+                user_table.c.display,
                 user_table.c.name,
                 user_table.c.email,
                 user_table.c.password,
@@ -80,6 +84,29 @@ def get_user_by_email(email):
             ).
             select_from(user_table).
             where(user_table.c.email == email)
+        ).fetchone()
+        if not row: return None
+        user = User.from_row(row)
+        return user
+
+
+def get_user_by_name(name):
+    with get_db().connect() as conn:
+        row = conn.execute(
+            select(
+                user_table.c.id,
+                user_table.c.display,
+                user_table.c.name,
+                user_table.c.email,
+                user_table.c.password,
+                user_table.c.darkmode,
+                user_table.c.verified,
+                user_table.c.disabled,
+                user_table.c.locale,
+                user_table.c.timezone
+            ).
+            select_from(user_table).
+            where(user_table.c.name == name)
         ).fetchone()
         if not row: return None
         user = User.from_row(row)

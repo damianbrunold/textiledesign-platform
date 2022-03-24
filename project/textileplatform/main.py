@@ -8,16 +8,28 @@ from flask import (
 
 bp = Blueprint('main', __name__)
 
-from textileplatform.persistence import update_user
+from textileplatform.persistence import update_user, get_user_by_name
 from textileplatform.auth import login_required
 
 
 @bp.route('/')
 def index():
-    patterns = []
-    if g.user:
+    return render_template('main/index.html')
+
+
+@bp.route('/<string:name>')
+def user(name):
+    user = get_user_by_name(name.lower())
+    if not user:
+        return redirect(url_for('main.index'))
+    elif g.user and g.user.name == user.name:
+        # show private view
         patterns = [] # TODO load patterns
-    return render_template('main/index.html', patterns=patterns)
+        return render_template('main/user_private.html', user=user, patterns=patterns)
+    else:
+        # show public view
+        patterns = [] # TODO load patterns
+        return render_template('main/user_public.html', user=user, patterns=patterns)
 
 
 @bp.route('/status')
@@ -33,11 +45,12 @@ def status():
 @login_required
 def profile():
     if request.method == 'POST':
-        name = request.form['name']
+        email = request.form['email']
         darkmode = 'darkmode' in request.form
         
         user = g.user
-        user.name = name
+        user.email = email
+        # TODO reset verified?!
         user.darkmode = darkmode
 
         error = None
@@ -48,7 +61,7 @@ def profile():
             app.logger.exception("Profile changes not changed")
             error = gettext('Changes could not be saved.')
         else:
-            return redirect(url_for("main.index"))
+            return redirect(url_for("main.user", name=user.name))
 
         flash(error)
 

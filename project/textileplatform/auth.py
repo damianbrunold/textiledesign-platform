@@ -1,7 +1,7 @@
 import datetime
 import functools
 
-import flask_babel
+from flask_babel import gettext, get_locale, get_timezone
 
 from sqlalchemy.exc import IntegrityError
 
@@ -16,6 +16,7 @@ from textileplatform.persistence import (
         get_user_by_email, 
         add_user
 )
+from textileplatform.name import from_display
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -38,19 +39,23 @@ def register():
         if error is None:
             try:
                 user = User()
-                user.name = name
+                user.display = name
+                user.name = from_display(name)
                 user.email = email
                 user.password = generate_password_hash(password)
                 user.darkmode = False
                 user.verified = True
                 user.disabled = False
-                user.locale = flask_babel.get_locale()
-                user.timezone = flask_babel.get_timezone()
+                user.locale = get_locale()
+                user.timezone = get_timezone()
                 add_user(user)
             except IntegrityError:
                 error = gettext('E-Mail {0} is already used').format(email)
             else:
-                return redirect(url_for("auth.login"))
+                session.clear()
+                session['user_id'] = user.id
+                session.permanent = True
+                return redirect(url_for('main.user', name=user.name))
 
         flash(error)
 
@@ -78,7 +83,7 @@ def login():
             session.clear()
             session['user_id'] = user.id
             session.permanent = True
-            return redirect(url_for('main.index'))
+            return redirect(url_for('main.user', name=user.name))
 
         flash(error)
 

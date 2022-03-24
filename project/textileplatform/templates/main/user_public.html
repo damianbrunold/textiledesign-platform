@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ user.display }} {% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div id="patterns">
+        {% for pattern in patterns %}
+            <div class="pattern">
+                {{ pattern.name }}
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}
+

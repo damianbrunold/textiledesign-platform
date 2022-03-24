@@ -9,6 +9,7 @@ class User:
     def from_row(cls, row):
         result = User()
         result.id = row.id
+        result.display = row.display
         result.name = row.name
         result.email = row.email
         result.password = row.password

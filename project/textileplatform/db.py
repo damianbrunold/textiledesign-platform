@@ -17,6 +17,7 @@ user_table = Table(
     "txuser",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("display", String(100), nullable=False),
     Column("name", String(100), nullable=False),
     Column("email", String(255), nullable=False),
     Column("password", String(255), nullable=False),
@@ -24,7 +25,9 @@ user_table = Table(
     Column("verified", Boolean),
     Column("disabled", Boolean),
     Column("locale", String(20)),
-    Column("timezone", String(20))
+    Column("timezone", String(20)),
+    UniqueConstraint("name"),
+    UniqueConstraint("email")
 )
 
 group_table = Table(
@@ -111,7 +114,8 @@ def init_db():
         conn.execute(
             insert(user_table).values(
                 id=0, 
-                name="Superuser",
+                display="Superuser",
+                name="superuser",
                 email="admin@textileplatform.ch",
                 darkmode=True, 
                 verified=True, 

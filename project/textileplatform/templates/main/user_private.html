@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{% block title %}{{ user.display }} {% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <div id="patterns">
+        {% for pattern in patterns %}
+            <div class="pattern">
+                <a class="action" href="{{ url_for('main.edit_pattern', pattern=pattern.name) }}">
+                    {{ pattern.name }}
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+
+    <p><a class="action" href="{{ url_for('main.upload_pattern') }}">{{ gettext('Upload Pattern') }}</a></p>
+
+    <p><a class="action" href="{{ url_for('main.create_pattern') }}">{{ gettext('New Pattern') }}</a></p>
+{% endblock %}
+
