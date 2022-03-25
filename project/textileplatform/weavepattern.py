@@ -66,7 +66,6 @@ def _parse_dbw_into_struct(data):
     stack = []
     current = result
     for line in lines:
-        print(line)
         if line.startswith("\\") and line.endswith("{"):
             child = dict()
             current[line[1:-1]] = child
