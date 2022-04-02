@@ -1,18 +1,9 @@
-import json
-
-def serialize_pattern(pattern):
-    return json.dumps(pattern)
-
-
-def deserialize_pattern(s):
-    return json.loads(s)
-
-
-def parse_dbw_data(dbwdata):
+def parse_dbw_data(dbwdata, name=''):
     contents = _parse_dbw_into_struct(dbwdata)
     result = dict()
     
     props = contents['properties']
+    result['name'] = name
     result['author'] = props['author']
     result['organization'] = props['organization']
     result['notes'] = props['remarks']

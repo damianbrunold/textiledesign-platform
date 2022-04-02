@@ -1,16 +1,7 @@
-import json
-
-def serialize_pattern(pattern):
-    return json.dumps(pattern)
-
-
-def deserialize_pattern(s):
-    return json.loads(s)
-
-
-def parse_jbb_data(jbbdata):
+def parse_jbb_data(jbbdata, name=''):
     contents = _parse_jbb_into_struct(jbbdata)
     result = dict()
+    result['name'] = name
     result['author'] = contents['author']
     result['organization'] = ''
     result['notes'] = contents['notes']

@@ -1,12 +1,97 @@
 import datetime
+import json
+import os
 
 from sqlalchemy import select, insert, update, delete, literal_column, func, or_, and_
 
 from textileplatform.db import (
     get_db, 
-    user_table 
+    user_table,
+    document_table
 )
-from textileplatform.model import User
+from textileplatform.model import User, Document
+
+def add_weave_pattern(pattern, user_id):
+    with get_db().begin() as conn:
+        now = datetime.datetime.now()
+        conn.execute(
+            insert(document_table).values(
+                owner_id=user_id,
+                type_id=0,
+                name=pattern['name'],
+                description=pattern['notes'],
+                contents=json.dumps(pattern),
+                created=now,
+                modified=now,
+                public=False
+            )
+        )
+
+
+def add_bead_pattern(pattern, user_id):
+    with get_db().begin() as conn:
+        now = datetime.datetime.now()
+        conn.execute(
+            insert(document_table).values(
+                owner_id=user_id,
+                type_id=1,
+                name=pattern['name'],
+                description=pattern['notes'],
+                contents=json.dumps(pattern),
+                created=now,
+                modified=now,
+                public=False
+            )
+        )
+
+
+def get_patterns_for_userid(user_id):
+    with get_db().connect() as conn:
+        rows = conn.execute(
+            select(
+                document_table.c.id,
+                document_table.c.owner_id,
+                document_table.c.type_id,
+                document_table.c.name,
+                document_table.c.description,
+                document_table.c.contents,
+                document_table.c.preview_image,
+                document_table.c.thumbnail_image,
+                document_table.c.created,
+                document_table.c.modified,
+                document_table.c.public
+            ).
+            select_from(document_table).
+            where(document_table.c.owner_id == user_id)
+        ).fetchall()
+        result = []
+        if rows:
+            for row in rows:
+                result.append(Document.from_row(row))
+        return result
+
+
+def get_pattern_by_name(user_id, name):
+    with get_db().connect() as conn:
+        row = conn.execute(
+            select(
+                document_table.c.id,
+                document_table.c.owner_id,
+                document_table.c.type_id,
+                document_table.c.name,
+                document_table.c.description,
+                document_table.c.contents,
+                document_table.c.preview_image,
+                document_table.c.thumbnail_image,
+                document_table.c.created,
+                document_table.c.modified,
+                document_table.c.public
+            ).
+            select_from(document_table).
+            where(document_table.c.owner_id == user_id)
+        ).fetchone()
+        if not row: return None
+        return Document.from_row(row)
 
 
 def add_user(user):

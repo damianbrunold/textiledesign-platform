@@ -8,7 +8,7 @@
     <div id="patterns">
         {% for pattern in patterns %}
             <div class="pattern">
-                <a class="action" href="{{ url_for('main.edit_pattern', pattern=pattern.name) }}">
+                <a class="action" href="{{ url_for('main.edit_pattern', user_name=g.user.name, pattern_name=pattern.name) }}">
                     {{ pattern.name }}
                 </a>
             </div>

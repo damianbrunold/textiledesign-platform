@@ -20,3 +20,21 @@ class User:
         result.timezone = row.timezone
         return result
 
+
+class Document:
+    @classmethod
+    def from_row(cls, row):
+        result = Document()
+        result.id = row.id
+        result.owner_id = row.owner_id
+        result.type_id = row.type_id
+        result.name = row.name
+        result.description = row.description
+        result.contents = row.contents
+        result.preview_image = row.preview_image
+        result.thumbnail_image = row.thumbnail_image
+        result.created = row.created
+        result.modified = row.modified
+        result.public = row.public
+        return result
+
