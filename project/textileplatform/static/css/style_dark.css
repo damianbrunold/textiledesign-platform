@@ -14,3 +14,7 @@ nav ul li span { color: white; }
 input.danger { color: #cc2f2e; }
 th { color: white; }
 td { color: white; }
+
+
+.pattern:hover { background: #222; }
+

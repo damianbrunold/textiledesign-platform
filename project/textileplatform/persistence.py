@@ -62,7 +62,8 @@ def get_patterns_for_userid(user_id):
                 document_table.c.public
             ).
             select_from(document_table).
-            where(document_table.c.owner_id == user_id)
+            where(document_table.c.owner_id == user_id).
+            order_by(document_table.c.type_id, document_table.c.name)
         ).fetchall()
         result = []
         if rows:

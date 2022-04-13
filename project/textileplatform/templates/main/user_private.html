@@ -8,15 +8,30 @@
     <div id="patterns">
         {% for pattern in patterns %}
             <div class="pattern">
-                <a class="action" href="{{ url_for('main.edit_pattern', user_name=g.user.name, pattern_name=pattern.name) }}">
-                    {{ pattern.name }}
-                </a>
+                <div class="pattern_name">
+                    <a class="action" href="{{ url_for('main.edit_pattern', 
+                                                       user_name=g.user.name, 
+                                                       pattern_name=pattern.name) }}">
+                        {{ pattern.name }}
+                    </a>
+                </div>
+                <div class="pattern_type">
+                    {{ pattern.type_label() }}
+                </div>
             </div>
         {% endfor %}
     </div>
 
-    <p><a class="action" href="{{ url_for('main.upload_pattern') }}">{{ gettext('Upload Pattern') }}</a></p>
+    <p>
+        <a class="action" href="{{ url_for('main.upload_pattern') }}">
+            {{ gettext('Upload Pattern') }}
+        </a>
+    </p>
 
-    <p><a class="action" href="{{ url_for('main.create_pattern') }}">{{ gettext('New Pattern') }}</a></p>
+    <p>
+        <a class="action" href="{{ url_for('main.create_pattern') }}">
+            {{ gettext('New Pattern') }}
+        </a>
+    </p>
 {% endblock %}
 

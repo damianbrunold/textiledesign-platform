@@ -3,6 +3,7 @@ import os
 import re
 
 from flask import current_app
+from flask_babel import gettext
 
 class User:
     @classmethod
@@ -37,4 +38,14 @@ class Document:
         result.modified = row.modified
         result.public = row.public
         return result
+
+    def type_label(self):
+        if self.type_id == 0:
+            return gettext("DB-WEAVE Pattern")
+        elif self.type_id == 1:
+            return gettext("JBEAD Pattern")
+        elif self.type_id == 2:
+            return gettext("Generic Image")
+        else:
+            return gettext("Unknown Type")
 

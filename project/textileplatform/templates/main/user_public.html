@@ -8,7 +8,12 @@
     <div id="patterns">
         {% for pattern in patterns %}
             <div class="pattern">
-                {{ pattern.name }}
+                <div class="pattern_name">
+                    {{ pattern.name }}
+                </div>
+                <div class="pattern_type">
+                    {{ pattern.type_label() }}
+                </div>
             </div>
         {% endfor %}
     </div>
