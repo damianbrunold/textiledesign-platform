@@ -113,12 +113,38 @@ def init_db():
         conn.execute(insert(type_table).values(id=2, label="Generic Image"))
         conn.execute(
             insert(user_table).values(
-                id=0, 
+                id=0,
                 display="Superuser",
                 name="superuser",
                 email="admin@textileplatform.ch",
-                darkmode=True, 
-                verified=True, 
+                darkmode=True,
+                verified=True,
+                disabled=False,
+                locale="en",
+                timezone="CET",
+                password=generate_password_hash(current_app.config['ADMIN_PASSWORD']))
+        )
+        conn.execute(
+            insert(user_table).values(
+                id=1,
+                display="Weave",
+                name="weave",
+                email="weave@textileplatform.ch",
+                darkmode=True,
+                verified=True,
+                disabled=False,
+                locale="en",
+                timezone="CET",
+                password=generate_password_hash(current_app.config['ADMIN_PASSWORD']))
+        )
+        conn.execute(
+            insert(user_table).values(
+                id=2,
+                display="Bead",
+                name="bead",
+                email="bead@textileplatform.ch",
+                darkmode=True,
+                verified=True,
                 disabled=False,
                 locale="en",
                 timezone="CET",
