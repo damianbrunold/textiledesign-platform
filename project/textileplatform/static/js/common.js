@@ -30,7 +30,6 @@ async function getPattern() {
     let response = await fetch(`/api/pattern/${user}/${pattern}`);
     let json_data = await response.json();
     data = json_data["pattern"];
-    console.log(data);
 }
 
 
