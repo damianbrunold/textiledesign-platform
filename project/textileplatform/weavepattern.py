@@ -13,7 +13,7 @@ def parse_dbw_data(dbwdata, name=''):
     size = data['size']
     result['width'] = int(size['maxx1'])
     result['height'] = int(size['maxy2'])
-    result['max_heddles'] = int(size['maxx1'])
+    result['max_heddles'] = int(size['maxx2'])
     result['max_treadles'] = int(size['maxy1'])
 
     fields = data['fields']
