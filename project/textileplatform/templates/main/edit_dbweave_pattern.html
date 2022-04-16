@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block headext %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dbweave.css') }}">
+    <script src="{{ url_for('static', filename='js/dbweave.js') }}"></script>
+{% endblock %}
+
+{% block header %}
+    <h1>{% block title %}{{ pattern.name }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    {% if pattern.description %}
+        <div class="pattern_description">
+            {{ pattern.description }}
+        </div>
+    {% endif %}
+
+    <canvas id="canvas"></canvas>
+
+    <p>
+        <a class="action" href="{{ url_for('main.user', name=user.name) }}">
+            {{ gettext('Close') }}
+        </a>
+    </p>
+{% endblock %}
+

@@ -89,7 +89,8 @@ def get_pattern_by_name(user_id, name):
                 document_table.c.public
             ).
             select_from(document_table).
-            where(document_table.c.owner_id == user_id)
+            where(document_table.c.owner_id == user_id).
+            where(document_table.c.name == name)
         ).fetchone()
         if not row: return None
         return Document.from_row(row)

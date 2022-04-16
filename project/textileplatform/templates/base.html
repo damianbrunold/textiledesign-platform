@@ -1,31 +1,39 @@
 <!doctype html>
-<title>{% block title %}{% endblock %} - {{ gettext('Textile Platform') }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-{% if g.user and g.user.darkmode %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_dark.css') }}">
-{% endif %}
-<link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
-<link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
-<nav>
-    <h1><a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/icons/icon.png') }}"> {{ gettext('Textile Platform') }}</a> {% block context %}{% endblock %}</h1>
-    <ul>
-    {% if g.user %}
-        <li><span>{{ g.user.display }}</span>
-        <li><a href="{{ url_for('main.profile') }}">{{ gettext('Profile') }}</a>
-        <li><a href="{{ url_for('auth.logout') }}">{{ gettext('Log out') }}</a>
-    {% else %}
-    <li><a href="{{ url_for('auth.register') }}">{{ gettext('Register') }}</a>
-        <li><a href="{{ url_for('auth.login') }}">{{ gettext('Log in') }}</a>
-    {% endif %}
-    </ul>
-</nav>
-<section class="content">
-    <header>
-        {% block header %}{% endblock %}
-    </header>
-    {% for message in get_flashed_messages() %}
-        <div class="flash">{{ message }}</div>
-    {% endfor %}
-    {% block content %}{% endblock %}
-</section>
+<html>
+    <head>
+        <title>{% block title %}{% endblock %} - {{ gettext('Textile Platform') }}</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+        {% if g.user and g.user.darkmode %}
+            <link rel="stylesheet" href="{{ url_for('static', filename='css/style_dark.css') }}">
+        {% endif %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
+        <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+        {% block headext %}{% endblock %}
+    </head>
+    <body>
+        <nav>
+            <h1><a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/icons/icon.png') }}"> {{ gettext('Textile Platform') }}</a> {% block context %}{% endblock %}</h1>
+            <ul>
+            {% if g.user %}
+                <li><span>{{ g.user.display }}</span>
+                <li><a href="{{ url_for('main.profile') }}">{{ gettext('Profile') }}</a>
+                <li><a href="{{ url_for('auth.logout') }}">{{ gettext('Log out') }}</a>
+            {% else %}
+                <li><a href="{{ url_for('auth.register') }}">{{ gettext('Register') }}</a>
+                <li><a href="{{ url_for('auth.login') }}">{{ gettext('Log in') }}</a>
+            {% endif %}
+            </ul>
+        </nav>
+        <section class="content">
+            <header>
+                {% block header %}{% endblock %}
+            </header>
 
+            {% for message in get_flashed_messages() %}
+                <div class="flash">{{ message }}</div>
+            {% endfor %}
+
+            {% block content %}{% endblock %}
+        </section>
+    </body>
+</html>

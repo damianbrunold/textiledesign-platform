@@ -18,6 +18,12 @@ from textileplatform.persistence import (
     get_patterns_for_userid,
     get_pattern_by_name
 )
+from textileplatform.model import (
+    get_type_label,
+    TYPE_DBWEAVE_PATTERN,
+    TYPE_JBEAD_PATTERN,
+    TYPE_GENERIC_IMAGE
+)
 from textileplatform.auth import login_required
 from textileplatform.weavepattern import parse_dbw_data
 from textileplatform.beadpattern import parse_jbb_data
@@ -52,9 +58,17 @@ def edit_pattern(user_name, pattern_name):
     if not user:
         return redirect(url_for('main.index'))
     elif g.user and g.user.name == user.name:
-        # TODO
         pattern = get_pattern_by_name(user.id, pattern_name)
-        return render_template('main/edit_pattern.html', user=user, pattern=pattern)
+        if not pattern:
+            return redirect(url_for('main.user', name=user_name))
+        if pattern.type_id == TYPE_DBWEAVE_PATTERN:
+            return render_template('main/edit_dbweave_pattern.html', user=user, pattern=pattern)
+        elif pattern.type_id == TYPE_JBEAD_PATTERN:
+            return render_template('main/edit_jbead_pattern.html', user=user, pattern=pattern)
+        elif pattern.type_id == TYPE_GENERIC_IMAGE_PATTERN:
+            return render_template('main/edit_generic_image_pattern.html', user=user, pattern=pattern)
+        else:
+            return redirect(url_for('main.user'), name=user_name)
     else:
         return redirect(url_for('main.user', name=user_name))
 

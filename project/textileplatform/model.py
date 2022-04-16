@@ -5,6 +5,22 @@ import re
 from flask import current_app
 from flask_babel import gettext
 
+TYPE_DBWEAVE_PATTERN = 0
+TYPE_JBEAD_PATTERN = 1
+TYPE_GENERIC_IMAGE = 2
+
+
+def get_type_label(type_id):
+    if type_id == TYPE_DBWEAVE_PATTERN:
+        return gettext("DB-WEAVE Pattern")
+    elif type_id == TYPE_JBEAD_PATTERN:
+        return gettext("JBEAD Pattern")
+    elif type_id == TYPE_GENERIC_IMAGE:
+        return gettext("Generic Image")
+    else:
+        return gettext("Unknown Pattern Type")
+
+
 class User:
     @classmethod
     def from_row(cls, row):
