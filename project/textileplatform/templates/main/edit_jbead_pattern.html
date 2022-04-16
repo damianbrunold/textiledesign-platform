@@ -22,12 +22,15 @@
 
     <canvas id="canvas"></canvas>
 
-    <input id="public" type="checkbox" {% if pattern.public %}checked{% endif %}> <label for="public">{{ gettext('Public') }}</label>
-
-    <p>
-        <a class="action" href="{{ url_for('main.user', name=user.name) }}">
-            {{ gettext('Close') }}
-        </a>
-    </p>
+    <div id="footer">
+        <div>
+            <input id="public" type="checkbox" {% if pattern.public %}checked{% endif %}>
+            {{ gettext('Public') }}
+        </div>
+        <div id="buttons">
+            <button id="save">{{ gettext('Save') }}</button>
+            <button id="close">{{ gettext('Close') }}</button>
+        </div>
+    </div>
 {% endblock %}
 
