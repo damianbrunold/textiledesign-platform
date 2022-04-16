@@ -7,20 +7,16 @@
 {% endblock %}
 
 {% block header %}
-    <h1>{% block title %}{{ pattern.name }}{% endblock %}</h1>
+    <h1 id="title">{% block title %}{{ pattern.name }}{% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
     <input type="hidden" id="user" value="{{user.name}}"/>
     <input type="hidden" id="pattern" value="{{pattern.name}}"/>
 
-    {% if pattern.description %}
-        <div class="pattern_description">
-            {{ pattern.description }}
-        </div>
-    {% endif %}
-
-    <canvas id="canvas"></canvas>
+    <div id="container">
+        <canvas id="canvas"></canvas>
+    </div>
 
     <div id="footer">
         <div>
