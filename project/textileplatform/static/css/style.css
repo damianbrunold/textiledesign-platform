@@ -63,6 +63,22 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
     padding: 0.4rem 0;
 }
 
+.pattern_info {
+    display: flex;
+}
+
+.pattern_public {
+    width: 5rem;
+    padding-left: 1rem;
+    text-align: right;
+}
+
+.pattern_type {
+    width: 10rem;
+    padding-left: 1rem;
+    text-align: right;
+}
+
 .pattern:hover {
     background: #cae6f6;
 }

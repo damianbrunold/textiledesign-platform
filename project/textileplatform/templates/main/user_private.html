@@ -15,8 +15,13 @@
                         {{ pattern.name }}
                     </a>
                 </div>
-                <div class="pattern_type">
-                    {{ pattern.type_label() }}
+                <div class="pattern_info">
+                    <div class="pattern_public">
+                        {{ gettext('Public') if pattern.public else gettext('Private') }}
+                    </div>
+                    <div class="pattern_type">
+                        {{ pattern.type_label() }}
+                    </div>
                 </div>
             </div>
         {% endfor %}
