@@ -13,7 +13,7 @@ from textileplatform.model import User, Document
 
 def add_weave_pattern(pattern, user_id):
     with get_db().begin() as conn:
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         conn.execute(
             insert(document_table).values(
                 owner_id=user_id,
@@ -30,7 +30,7 @@ def add_weave_pattern(pattern, user_id):
 
 def add_bead_pattern(pattern, user_id):
     with get_db().begin() as conn:
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         conn.execute(
             insert(document_table).values(
                 owner_id=user_id,
@@ -94,6 +94,21 @@ def get_pattern_by_name(user_id, name):
         ).fetchone()
         if not row: return None
         return Document.from_row(row)
+
+
+def update_pattern(pattern):
+    with get_db().begin() as conn:
+        conn.execute(
+            update(document_table).values(
+                name=pattern.name,
+                description=pattern.description,
+                contents=pattern.contents,
+                preview_image=pattern.preview_image,
+                thumbnail_image=pattern.thumbnail_image,
+                modified=datetime.datetime.utcnow(),
+                public=pattern.public
+            ).where(document_table.c.id == pattern.id)
+        )
 
 
 def add_user(user):
