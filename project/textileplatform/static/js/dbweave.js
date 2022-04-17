@@ -40,8 +40,8 @@ function init() {
 
     const container = document.getElementById("container");
 
-    gridw = Math.trunc(container.clientWidth / dx);
-    gridh = Math.trunc(container.clientHeight / dy);
+    gridw = Math.trunc((container.clientWidth - 1) / dx);
+    gridh = Math.trunc((container.clientHeight - 1) / dy);
 
     ctx.canvas.width = gridw * dx + 1;
     ctx.canvas.height = gridh * dy + 1;
