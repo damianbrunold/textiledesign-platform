@@ -95,7 +95,11 @@ function draw_grid(ctx) {
 function draw_cell(ctx, i, j, state) {
     if (state > 0) {
         ctx.fillStyle = colors[state];
-        ctx.fillRect(offset_x + 0.5 + i * dx + bx, offset_y + 0.5 + j * dy + by, dx - 2 * bx, dy - 2 * by);
+        ctx.fillRect(
+            offset_x + 0.5 + i * dx + 1, 
+            offset_y + 0.5 + j * dy + 1, 
+            dx - 1, 
+            dy - 1);
     }
 }
 
