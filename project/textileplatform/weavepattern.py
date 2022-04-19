@@ -67,7 +67,10 @@ def _parse_dbw_into_struct(data):
             current[key] = value
         elif line == "}":
             current = stack.pop()
+        elif line == "":
+            continue
         else:
+            print(line)
             raise RuntimeError("should not happen")
     return result
 
