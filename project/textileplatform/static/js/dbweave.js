@@ -7,6 +7,9 @@ window.addEventListener("load", () => {
     document.getElementById("close").addEventListener("click", function() { window.history.back() });
 });
 
+let view = "pattern";
+
+let colors = {};
 
 let canvas = null;
 let ctx = null;
@@ -91,9 +94,28 @@ function draw_grid(ctx) {
 }
 
 function draw_cell(ctx, i, j, state) {
-    if (state > 0) {
-        ctx.fillStyle = filled_style;
-        ctx.fillRect(offset_x + 0.5 + i * dx + bx, offset_y + 0.5 + j * dy + by, dx - 2 * bx, dy - 2 * by);
+    if (view == "color") {
+        if (state > 0) {
+            ctx.fillStyle = colors[data.colors_warp[i]];
+        } else {            
+            ctx.fillStyle = colors[data.colors_weft[j]];
+        }
+        ctx.fillRect(
+            offset_x + 0.5 + i * dx,
+            offset_y + 0.5 + j * dy,
+            dx,
+            dy
+        );
+    } else {
+        if (state > 0) {
+            ctx.fillStyle = filled_style;
+            ctx.fillRect(
+                offset_x + 0.5 + i * dx + bx,
+                offset_y + 0.5 + j * dy + by,
+                dx - 2 * bx,
+                dy - 2 * by
+            );
+        }
     }
 }
 
@@ -116,6 +138,12 @@ function repaint(ctx, pattern) {
 }
 
 function init_example_pattern(pattern) {
+    console.log(data);
+    let idx = 0;
+    for (const spec of data.palette) {
+        colors[idx++] = (`rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`);
+    }
+
     let min_pattern_x = 0;
     let max_pattern_x = 0;
     for (let i = 0; i < data.width; i++) {
