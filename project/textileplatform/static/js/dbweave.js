@@ -7,6 +7,52 @@ window.addEventListener("load", () => {
     document.getElementById("close").addEventListener("click", function() { window.history.back() });
 });
 
+class GridData {
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.data = new Array(this.width * this.height);
+    }
+
+    idx(i, j) {
+        return i + j * this.width;
+    }
+
+    get(i, j) {
+        return this.data[idx(i, j)];
+    }
+
+    set(i, j, value) {
+        this.data[idx(i, j)] = value;
+    }
+
+    toggle(i, j) {
+        const idx_ = idx(i, j);
+        const value = this.data[idx_];
+        if (value === 0) this.data[idx_] = 1;
+        else this.data[idx_] = -value;
+    }
+}
+
+class GridView {
+    constructor(data, view_width, view_height, x=0, y=0, dx=12, dy=null) {
+        this.data = data;
+        this.width = width;
+        this.height = height;
+        this.offsetx = 0;
+        this.offsety = 0;
+        this.x = x;
+        this.y = y;
+        this.dx = dx;
+        this.dy = dy || dx;
+    }
+
+    draw(ctx) {
+    }
+
+}
+
+
 let view = "pattern";
 
 let colors = {};
