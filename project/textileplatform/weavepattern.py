@@ -25,7 +25,10 @@ def parse_dbw_data(dbwdata, name=''):
     result['colors_warp'] = _dehex_byte(fields['kettfarben']['data'])
     result['colors_weft'] = _dehex_byte(fields['schussfarben']['data'])
 
+    result['palette'] = _dehex_colors(data['palette']['data2'])
+
     # TODO add rest
+    
     return result
 
 
@@ -90,3 +93,15 @@ def _dehex_short(data):
         data = data[4:]
     return result
 
+
+def _dehex_colors(data):
+    result = []
+    while data:
+        result.append([
+            int(data[0:2], 16),
+            int(data[2:4], 16),
+            int(data[4:6], 16),
+            int(data[6:8], 16)
+        ])
+        data = data[8:]
+    return result
