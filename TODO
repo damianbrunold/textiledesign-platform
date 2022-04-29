@@ -1,9 +1,6 @@
 Todo
 ----
 
-- redo screen layout to use full width, at least
-  when editing patterns.
-
 - before closing editor check for changes and
   prompt to save them. Or autosave?
 
