@@ -6,8 +6,20 @@ window.addEventListener("load", () => {
     document.getElementById("save").addEventListener("click", savePattern);
     document.getElementById("close").addEventListener("click", function() { window.history.back() });
 });
+window.addEventListener("resize", () => {
+    resize_canvas();
+    viewobj.layout();
+    viewobj.draw();
+});
 
-class GridData {
+function resize_canvas() {
+    canvas = document.getElementById('canvas');
+    const container = document.getElementById("container");
+    canvas.width = container.clientWidth - 2;
+    canvas.height = container.clientHeight - 2;
+}
+
+class Grid {
     constructor(width, height) {
         this.width = width;
         this.height = height;
@@ -23,22 +35,45 @@ class GridData {
     }
 
     set(i, j, value) {
-        this.data[idx(i, j)] = value;
+        this.data[this.idx(i, j)] = value;
     }
 
     toggle(i, j) {
-        const idx_ = idx(i, j);
+        const idx_ = this.idx(i, j);
         const value = this.data[idx_];
         if (value === 0) this.data[idx_] = 1;
         else this.data[idx_] = -value;
     }
 }
 
+class Threading {
+    constructor(width) {
+        this.width = width;
+        this.data = new Array(this.width);
+    }
+
+    get_heddle(i) {
+        return this.data[i];
+    }
+
+    set_heddle(i, heddle) {
+        this.data[i] = heddle;
+    }
+
+    get(i, j) {
+        return this.get_heddle(i) == j ? 1 : 0;
+    }
+
+    set(i, j, value) {
+        if (value) this.set_heddle(i, j);
+    }
+}
+
 class GridView {
     constructor(data, view_width, view_height, x=0, y=0, dx=12, dy=null) {
         this.data = data;
-        this.width = width;
-        this.height = height;
+        this.width = view_width;
+        this.height = view_height;
         this.offsetx = 0;
         this.offsety = 0;
         this.x = x;
@@ -48,10 +83,94 @@ class GridView {
     }
 
     draw(ctx) {
+        this.draw_grid(ctx);
+        this.draw_data(ctx);
     }
 
+    draw_grid(ctx) {
+        ctx.beginPath();
+        for (let i = 0; i <= this.width; i++) {
+            ctx.moveTo(this.x + 0.5 + i * this.dx, this.y + 0.5);
+            ctx.lineTo(this.x + 0.5 + i * this.dx, this.y + 0.5 + this.height * this.dy);
+        }
+        for (let j = 0; j <= this.height; j++) {
+            ctx.moveTo(this.x + 0.5, this.y + 0.5 + j * this.dy);
+            ctx.lineTo(this.x + 0.5 + this.width * this.dx, this.y + 0.5 + j * this.dy);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = darcula ? "#aaa" : "#000";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+    }
+
+    draw_data(ctx) {
+        // TODO
+    }
 }
 
+class Pattern {
+    constructor(width, height, max_heddle, max_treadle) {
+        this.color_warp = new Grid(width, 1);
+        this.color_weft = new Grid(1, height);
+        this.blade = new Grid(width, 1);
+        this.threading = new Threading(width);
+        this.tieup = new Grid(max_treadle, max_heddle);
+        this.treadling = new Grid(max_treadle, height);
+        this.pattern = new Grid(width, height);
+    }
+}
+
+class PatternView {
+    constructor(pattern, ctx, dx=12, dy=null) {
+        this.pattern = pattern;
+        this.ctx = ctx;
+        this.dx = dx;
+        this.dy = dy || this.dx;
+        this.layout();
+    }
+
+    layout() {
+        let availx = Math.trunc(this.ctx.canvas.width / this.dx);
+        let availy = Math.trunc(this.ctx.canvas.height / this.dy);
+
+        // TODO allow parts to hide/show
+
+        let width3 = 1;
+        let width2 = 16; // TODO take from saved data
+        let width1 = availx - width3 - 1 - width2 - 1 - 1;
+
+        let height4 = 1;
+        let height3 = 16; // TODO take from saved data
+        let height2 = 1;
+        let height1 = availy - height4 - 1 - height3 - 1 - height2 - 1 - 1;
+
+        this.color_warp = new GridView(this.pattern.color_warp, width1, height4, 0, 0);
+        this.threading = new GridView(this.pattern.threading, width1, height3, 0, (height4 + 1) * this.dy);
+        this.blade = new GridView(this.pattern.blade, width1, height2, 0, (height4 + 1 + height3 + 1) * this.dy);
+        this.tieup = new GridView(this.pattern.tieup, width2, height3, (width1 + 1) * this.dx, (height4 + 1) * this.dy);
+        this.pattern = new GridView(this.pattern.pattern, width1, height1, 0, (height4 + 1 + height3 + 1 + height2 + 1) * this.dy);
+        this.treadling = new GridView(this.pattern.treadling, width2, height1, (width1 + 1) * this.dx, (height4 + 1 + height3 + 1 + height2 + 1) * this.dy);
+        this.color_weft = new GridView(this.pattern.color_weft, width3, height1, (width1 + 1 + width2 + 1) * this.dx, (height4 + 1 + height3 + 1 + height2 + 1) * this.dy);
+
+        // TODO colorweft
+        // TODO colorwarp
+        // TODO blatteinzug
+        // TODO scrollbars...
+    }
+
+    draw() {
+        this.color_warp.draw(this.ctx);
+        this.threading.draw(this.ctx);
+        this.tieup.draw(this.ctx);
+        this.blade.draw(this.ctx);
+        this.treadling.draw(this.ctx);
+        this.pattern.draw(this.ctx);
+        this.color_weft.draw(this.ctx);
+    }
+}
+
+let dataobj = null;
+let viewobj = null;
 
 let view = "pattern";
 
@@ -95,6 +214,9 @@ function init() {
     ctx.canvas.width = gridw * dx + 1;
     ctx.canvas.height = gridh * dy + 1;
 
+    dataobj = new Pattern(300, 300, 35, 35);
+    viewobj = new PatternView(dataobj, ctx);
+
     canvas.addEventListener('click', function(event) {
         const x = event.offsetX;
         const y = gridh * dy - event.offsetY;
@@ -104,7 +226,7 @@ function init() {
         repaint(ctx, pattern);
     });
 
-    init_example_pattern(pattern);
+    //init_example_pattern(pattern);
     repaint(ctx, pattern);
 }
 
@@ -179,8 +301,9 @@ function clear_canvas(ctx) {
 
 function repaint(ctx, pattern) {
     clear_canvas(ctx);
-    draw_grid(ctx);
-    draw_pattern(ctx, pattern);
+    //draw_grid(ctx);
+    //draw_pattern(ctx, pattern);
+    viewobj.draw(ctx);
 }
 
 function init_example_pattern(pattern) {
