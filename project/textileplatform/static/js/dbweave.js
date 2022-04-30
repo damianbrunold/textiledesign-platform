@@ -118,7 +118,7 @@ class GridView {
     
     drawCell(ctx, settings, i, j, value) {
         if (value > 0) {
-            ctx.fillStyle = settings.filled_style;
+            ctx.fillStyle = settings.darcula ? "#fff" : "#000";
             ctx.fillRect(
                 0.5 + (this.x + i) * settings.dx + settings.bx,
                 0.5 + (this.y + this.height - j - 1) * settings.dy + settings.by,
@@ -151,7 +151,6 @@ class ViewSettings {
         this.bx = this.dx * 0.15;
         this.by = this.dy * 0.15;
         this.style = "pattern";
-        this.filled_style = this.darcula ? "#bbb" : "#000";
     }
 }
 
@@ -222,14 +221,16 @@ class PatternView {
 
 
 function init() {
+    const darkmode = document.getElementById("darkmode").value === "True";
     let canvas = document.getElementById('canvas');
     let ctx = canvas.getContext('2d');
     
     pattern = new Pattern(300, 300, 35, 35); // TODO take dimensions from data!
     settings = new ViewSettings();
+    settings.darcula = darkmode;
 
     const container = document.getElementById("container");
-    canvas.style.backgroundColor = settings.darcula ? "#444" : "#aaa";
+    canvas.style.backgroundColor = settings.darcula ? "#444" : "#fff";
     canvas.style.border = "none";
     canvas.width = container.clientWidth - 2;
     canvas.height = container.clientHeight - 2;
