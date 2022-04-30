@@ -62,9 +62,9 @@ class ViewDraft {
                 const x = 0.5 + (this.x + i) * dx;
                 const y = 0.5 + (this.y + this.height - j - 1) * dy;
                 ctx.fillStyle = colors[state];
-                ctx.fillRect( x, y, dx, dy);
+                ctx.fillRect(x, y, dx, dy);
                 ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-                ctx.strokeRect( x, y, dx, dy);
+                ctx.strokeRect(x, y, dx, dy);
             }
         }
     }
@@ -83,7 +83,36 @@ class ViewCorrected {
     }
 
     draw(ctx, settings) {
-        // TODO
+        const dx = settings.dx;
+        const dy = settings.dy;
+
+        for (let jj = 0; jj < this.data.height; jj++) {
+            for (let ii = 0; ii < this.data.width; ii++) {
+                let idx = ii + jj * this.data.width;
+                let j = 0;
+                let w = this.data.width;
+                while (idx >= w) {
+                    j++;
+                    idx -= w;
+                    w = j % 2 == 0 ? this.data.width : this.data.width + 1;
+                }
+                let i = idx;
+
+                if (j >= this.height) break;
+
+                const xoff = j % 2 == 0 ? 0 : -dx/2;
+
+                const state = this.data.get(ii, jj);
+
+                const x = 0.5 + xoff + (this.x + i) * dx;
+                const y = 0.5 + (this.y + this.height - j - 1) * dy;
+
+                ctx.fillStyle = colors[state];
+                ctx.fillRect(x, y, dx, dy);
+                ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+                ctx.strokeRect(x, y, dx, dy);
+            }
+        }
     }
 }
 
@@ -135,9 +164,9 @@ class PatternView {
 
         const x1 = 0;
         const x2 = width_ruler + 1;
-        const x3 = x2 + width_draft + 1;
-        const x4 = x3 + width_corrected + 1;
-        const x5 = x4 + width_simulated + 1;
+        const x3 = x2 + width_draft + 2;
+        const x4 = x3 + width_corrected + 2;
+        const x5 = x4 + width_simulated + 2;
 
         this.draft = new ViewDraft(this.pattern, x2, 0, width_draft, availy);
         this.corrected = new ViewCorrected(this.pattern, x3, 0, width_corrected, availy);
