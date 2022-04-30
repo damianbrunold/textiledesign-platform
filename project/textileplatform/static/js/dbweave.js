@@ -64,11 +64,11 @@ class Threading {
     }
 
     get(i, j) {
-        return this.get_heddle(i) == j ? 1 : 0;
+        return this.get_heddle(i) - 1 == j ? 1 : 0;
     }
 
     set(i, j, value) {
-        if (value) this.set_heddle(i, j);
+        if (value) this.set_heddle(i, j + 1);
     }
 }
 
