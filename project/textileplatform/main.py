@@ -114,32 +114,33 @@ def profile():
 def upload_pattern():
     if request.method == 'POST':
         name = request.form['name']
-        file = request.files['file']
         name = name.replace("..", "").replace("/", "").replace("\\", "")
-        if not name:
-            if file.filename:
-                name = os.path.splitext(file.filename)[0]
+        files = request.files.getlist('file')
+        for idx, file in enumerate(files):
+            if not name or len(files) > 1:
+                if file.filename:
+                    name = os.path.splitext(file.filename)[0]
+                else:
+                    name = f"unnamed {idx+1}"
+
+            filetype = "generic"
+            if file.filename.endswith(".dbw"):
+                filetype = "dbw"
+            elif file.filename.endswith(".jbb"):
+                filetype = "jbb"
+            bytedata = file.read()
+            data = bytedata.decode("latin-1", "ignore")
+            if data.startswith("@dbw3:"):
+                filetype = "dbw"
+            elif data.startswith("(jbb"):
+                filetype = "jbb"
+
+            if filetype == "dbw":
+                add_weave_pattern(parse_dbw_data(data, name), g.user.id)
+            elif filetype == "jbb":
+                add_bead_pattern(parse_jbb_data(data, name), g.user.id)
             else:
-                name = "unnamed"
-
-        filetype = "generic"
-        if file.filename.endswith(".dbw"):
-            filetype = "dbw"
-        elif file.filename.endswith(".jbb"):
-            filetype = "jbb"
-        bytedata = file.read()
-        data = bytedata.decode("latin-1", "ignore")
-        if data.startswith("@dbw3:"):
-            filetype = "dbw"
-        elif data.startswith("(jbb"):
-            filetype = "jbb"
-
-        if filetype == "dbw":
-            add_weave_pattern(parse_dbw_data(data, name), g.user.id)
-        elif filetype == "jbb":
-            add_bead_pattern(parse_jbb_data(data, name), g.user.id)
-        else:
-            pass
+                pass
 
         return redirect(url_for("main.user", name=g.user.name))
 
