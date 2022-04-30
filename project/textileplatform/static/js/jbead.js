@@ -53,44 +53,18 @@ class ViewDraft {
     }
 
     draw(ctx, settings) {
-        this.drawGrid(ctx, settings);
-        this.drawData(ctx, settings);
-    }
-
-    drawGrid(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
-
-        ctx.beginPath();
-        for (let i = 0; i <= this.width; i++) {
-            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5);
-            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + this.height * dy);
-        }
-        for (let j = 0; j <= this.height; j++) {
-            ctx.moveTo(0.5 + this.x * dx, 0.5 + j * dy);
-            ctx.lineTo(0.5 + (this.x + this.width) * dx, 0.5 + j * dy);
-        }
-        ctx.closePath();
-        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
-        ctx.lineWidth = 1.0;
-        ctx.stroke();
-    }
-
-    drawData(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
 
         for (let j = 0; j < this.height; j++) {
             for (let i = 0; i < this.width; i++) {
                 const state = this.data.get(i, j);
-                if (state > 0) {
-                    ctx.fillStyle = colors[state];
-                    ctx.fillRect(
-                        0.5 + (this.x + i) * dx + 0.5,
-                        0.5 + (this.y + this.height - j - 1) * dy + 0.5,
-                        dx - 1,
-                        dy - 1);
-                }
+                const x = 0.5 + (this.x + i) * dx;
+                const y = 0.5 + (this.y + this.height - j - 1) * dy;
+                ctx.fillStyle = colors[state];
+                ctx.fillRect( x, y, dx, dy);
+                ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+                ctx.strokeRect( x, y, dx, dy);
             }
         }
     }
@@ -207,29 +181,13 @@ function init() {
         const y = gridh * dy - event.offsetY;
         const i = Math.trunc(x / dx);
         const j = Math.trunc(y / dy);
-        toggle_pattern_at(pattern, i, j);
-        repaint(ctx, pattern);
+        // TODO convert coordinates to matching view coordinates
+        // TODO toggle pattern point
+        view.draw();
     });
 }
 
-function draw_grid(ctx) {
-    ctx.beginPath();
-    for (let i = 0; i <= gridw; i++) {
-        ctx.moveTo(offset_x + 0.5 + i * dx, offset_y + 0.5);
-        ctx.lineTo(offset_x + 0.5 + i * dx, offset_y + 0.5 + gridh * dy);
-    }
-    for (let j = 0; j <= gridh; j++) {
-        ctx.moveTo(offset_x + 0.5, offset_y + 0.5 + j * dy);
-        ctx.lineTo(offset_x + 0.5 + gridw * dx, offset_y + 0.5 + j * dy);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = darcula ? "#fff" : "#000";
-    ctx.lineWidth = 1.0;
-    ctx.stroke();
-}
-
 function initPattern(data, pattern) {
-    console.log(data);
     for (let i = 0; i < data.colors.length; i++) {
         const spec = data.colors[i];
         colors.push(`rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`);
