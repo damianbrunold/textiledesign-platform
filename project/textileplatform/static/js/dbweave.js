@@ -229,7 +229,8 @@ function init() {
     settings = new ViewSettings();
 
     const container = document.getElementById("container");
-    canvas.style.backgroundColor = settings.darcula ? "#333" : "#aaa";
+    canvas.style.backgroundColor = settings.darcula ? "#444" : "#aaa";
+    canvas.style.border = "none";
     canvas.width = container.clientWidth - 2;
     canvas.height = container.clientHeight - 2;
 

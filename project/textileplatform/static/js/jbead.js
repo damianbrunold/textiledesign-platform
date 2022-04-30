@@ -187,11 +187,11 @@ class PatternView {
 function init() {
     pattern = new Pattern(data.model[0].length, data.model.length);
     settings = new ViewSettings();
-    //settings.darcula = false;
 
     const container = document.getElementById("container");
     const canvas = document.getElementById('canvas');
-    canvas.style.backgroundColor = settings.darcula ? "#000" : "#fff";
+    canvas.style.backgroundColor = settings.darcula ? "#444" : "#aaa";
+    canvas.style.border = "none";
     const ctx = canvas.getContext('2d');
     ctx.canvas.width = container.clientWidth - 2;
     ctx.canvas.height = container.clientHeight - 2;
