@@ -1,23 +1,25 @@
 "use strict";
 
-window.addEventListener("load", () => {
-    getPattern().then(init);
-    document.getElementById("public").addEventListener("click", togglePublic);
-    document.getElementById("save").addEventListener("click", savePattern);
-    document.getElementById("close").addEventListener("click", function() { window.history.back() });
-});
-window.addEventListener("resize", () => {
-    resize_canvas();
-    viewobj.layout();
-    viewobj.draw();
-});
+// data is provided by common.js and contains the "raw" json data of the pattern.
 
-function resize_canvas() {
-    canvas = document.getElementById('canvas');
-    const container = document.getElementById("container");
-    canvas.width = container.clientWidth - 2;
-    canvas.height = container.clientHeight - 2;
-}
+// The pattern is an instance of the Pattern class and encapsulates the 
+// data from the data object in order to manipulate and visualize it easier.
+let pattern = null;
+
+
+// The view is an instance of the View class and provides the visualization
+// of a pattern.
+let view = null;
+
+
+// The settings is an instance of the ViewSettings class and gathers drawing
+// related settings for all the views.
+let settings = null;
+
+
+// The colors variable represents the color palette
+let colors = {};
+
 
 class Grid {
     constructor(width, height) {
@@ -31,7 +33,7 @@ class Grid {
     }
 
     get(i, j) {
-        return this.data[idx(i, j)];
+        return this.data[this.idx(i, j)];
     }
 
     set(i, j, value) {
@@ -45,6 +47,7 @@ class Grid {
         else this.data[idx_] = -value;
     }
 }
+
 
 class Threading {
     constructor(width) {
@@ -69,44 +72,63 @@ class Threading {
     }
 }
 
+
 class GridView {
-    constructor(data, view_width, view_height, x=0, y=0, dx=12, dy=null) {
+    constructor(data, x, y, width, height) {
         this.data = data;
-        this.width = view_width;
-        this.height = view_height;
-        this.offsetx = 0;
-        this.offsety = 0;
         this.x = x;
         this.y = y;
-        this.dx = dx;
-        this.dy = dy || dx;
+        this.width = width;
+        this.height = height;
+        this.offset_i = 0;
+        this.offset_j = 0;
     }
 
-    draw(ctx) {
-        this.draw_grid(ctx);
-        this.draw_data(ctx);
+    draw(ctx, settings) {
+        this.drawGrid(ctx, settings);
+        this.drawData(ctx, settings);
     }
 
-    draw_grid(ctx) {
+    drawGrid(ctx, settings) {
+        const dx = settings.dx;
+        const dy = settings.dy;
+
         ctx.beginPath();
         for (let i = 0; i <= this.width; i++) {
-            ctx.moveTo(this.x + 0.5 + i * this.dx, this.y + 0.5);
-            ctx.lineTo(this.x + 0.5 + i * this.dx, this.y + 0.5 + this.height * this.dy);
+            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + this.y * dy);
+            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
         }
         for (let j = 0; j <= this.height; j++) {
-            ctx.moveTo(this.x + 0.5, this.y + 0.5 + j * this.dy);
-            ctx.lineTo(this.x + 0.5 + this.width * this.dx, this.y + 0.5 + j * this.dy);
+            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + j) * dy);
+            ctx.lineTo(0.5 + (this.x + this.width) * dx, 0.5 + (this.y + j) * dy);
         }
         ctx.closePath();
-        ctx.strokeStyle = darcula ? "#aaa" : "#000";
+        ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
         ctx.lineWidth = 1.0;
         ctx.stroke();
     }
 
-    draw_data(ctx) {
-        // TODO
+    drawData(ctx, settings) {
+        for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
+            for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
+                this.drawCell(ctx, settings, i - this.offset_i, j - this.offset_j, this.data.get(i, j));
+            }
+        }
+    }
+    
+    drawCell(ctx, settings, i, j, value) {
+        if (value > 0) {
+            ctx.fillStyle = settings.filled_style;
+            ctx.fillRect(
+                0.5 + (this.x + i) * settings.dx + settings.bx,
+                0.5 + (this.y + this.height - j - 1) * settings.dy + settings.by,
+                settings.dx - 2 * settings.bx,
+                settings.dy - 2 * settings.by
+            );
+        }
     }
 }
+
 
 class Pattern {
     constructor(width, height, max_heddle, max_treadle) {
@@ -120,102 +142,102 @@ class Pattern {
     }
 }
 
-class PatternView {
-    constructor(pattern, ctx, dx=12, dy=null) {
-        this.pattern = pattern;
-        this.ctx = ctx;
+
+class ViewSettings {
+    constructor(dx=12, dy=null) {
         this.dx = dx;
         this.dy = dy || this.dx;
+        this.darcula = true;
+        this.bx = this.dx * 0.15;
+        this.by = this.dy * 0.15;
+        this.style = "pattern";
+        this.filled_style = this.darcula ? "#bbb" : "#000";
+    }
+}
+
+
+class PatternView {
+    constructor(pattern, settings, ctx) {
+        this.settings = settings;
+        this.pattern = pattern;
+        this.ctx = ctx;
         this.layout();
     }
 
     layout() {
-        let availx = Math.trunc(this.ctx.canvas.width / this.dx);
-        let availy = Math.trunc(this.ctx.canvas.height / this.dy);
+        const dx = this.settings.dx;
+        const dy = this.settings.dy;
+
+        const availx = Math.trunc(this.ctx.canvas.width / dx);
+        const availy = Math.trunc(this.ctx.canvas.height / dy);
 
         // TODO allow parts to hide/show
 
-        let width3 = 1;
-        let width2 = 16; // TODO take from saved data
-        let width1 = availx - width3 - 1 - width2 - 1 - 1;
+        const width3 = 1;
+        const width2 = 16; // TODO take from saved data
+        const width1 = availx - width3 - 1 - width2 - 1 - 1;
 
-        let height4 = 1;
-        let height3 = 16; // TODO take from saved data
-        let height2 = 1;
-        let height1 = availy - height4 - 1 - height3 - 1 - height2 - 1 - 1;
+        const height4 = 1;
+        const height3 = 16; // TODO take from saved data
+        const height2 = 1;
+        const height1 = availy - height4 - 1 - height3 - 1 - height2 - 1 - 1;
 
-        this.color_warp = new GridView(this.pattern.color_warp, width1, height4, 0, 0);
-        this.threading = new GridView(this.pattern.threading, width1, height3, 0, (height4 + 1) * this.dy);
-        this.blade = new GridView(this.pattern.blade, width1, height2, 0, (height4 + 1 + height3 + 1) * this.dy);
-        this.tieup = new GridView(this.pattern.tieup, width2, height3, (width1 + 1) * this.dx, (height4 + 1) * this.dy);
-        this.pattern = new GridView(this.pattern.pattern, width1, height1, 0, (height4 + 1 + height3 + 1 + height2 + 1) * this.dy);
-        this.treadling = new GridView(this.pattern.treadling, width2, height1, (width1 + 1) * this.dx, (height4 + 1 + height3 + 1 + height2 + 1) * this.dy);
-        this.color_weft = new GridView(this.pattern.color_weft, width3, height1, (width1 + 1 + width2 + 1) * this.dx, (height4 + 1 + height3 + 1 + height2 + 1) * this.dy);
+        const y4 = 0;
+        const y3 = y4 + height4 + 1;
+        const y2 = y3 + height3 + 1;
+        const y1 = y2 + height2 + 1;
 
-        // TODO colorweft
-        // TODO colorwarp
-        // TODO blatteinzug
+        const x1 = 0;
+        const x2 = x1 + width1 + 1;
+        const x3 = x2 + width2 + 1;
+
+        const p = this.pattern;
+
+        this.color_warp = new GridView(p.color_warp, x1, y4, width1, height4);
+        this.threading  = new GridView(p.threading,  x1, y3, width1, height3);
+        this.tieup      = new GridView(p.tieup,      x2, y3, width2, height3);
+        this.blade      = new GridView(p.blade,      x1, y2, width1, height2);
+        this.pattern    = new GridView(p.pattern,    x1, y1, width1, height1);
+        this.treadling  = new GridView(p.treadling,  x2, y1, width2, height1);
+        this.color_weft = new GridView(p.color_weft, x3, y1, width3, height1);
+
         // TODO scrollbars...
     }
 
     draw() {
-        this.color_warp.draw(this.ctx);
-        this.threading.draw(this.ctx);
-        this.tieup.draw(this.ctx);
-        this.blade.draw(this.ctx);
-        this.treadling.draw(this.ctx);
-        this.pattern.draw(this.ctx);
-        this.color_weft.draw(this.ctx);
+        this.clearCanvas();
+        this.color_warp.draw(this.ctx, this.settings);
+        this.threading.draw(this.ctx, this.settings);
+        this.tieup.draw(this.ctx, this.settings);
+        this.blade.draw(this.ctx, this.settings);
+        this.treadling.draw(this.ctx, this.settings);
+        this.pattern.draw(this.ctx, this.settings);
+        this.color_weft.draw(this.ctx, this.settings);
+    }
+
+    clearCanvas() {
+        this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     }
 }
 
-let dataobj = null;
-let viewobj = null;
-
-let view = "pattern";
-
-let colors = {};
-
-let canvas = null;
-let ctx = null;
-let darcula = true;
-
-let gridw = 60;
-let gridh = 35;
-
-const dx = 12;
-const dy = 12;
-
-const bx = dx * 0.15;
-const by = dy * 0.15;
-
-const offset_x = 0;
-const offset_y = 0;
-
-const pattern = new Array(gridw * gridh);
-
-const filled_style = darcula ? "#bbb" : "#000";
-
-for (let i = 0; i < pattern.length; i++) {
-    pattern[i] = -1;
-}
 
 function init() {
-    canvas = document.getElementById('canvas');
-    ctx = canvas.getContext('2d');
+    let canvas = document.getElementById('canvas');
+    let ctx = canvas.getContext('2d');
     
-    canvas.style.backgroundColor = darcula ? "#333" : "#aaa";
+    pattern = new Pattern(300, 300, 35, 35); // TODO take dimensions from data!
+    settings = new ViewSettings();
 
     const container = document.getElementById("container");
+    canvas.style.backgroundColor = settings.darcula ? "#333" : "#aaa";
+    canvas.width = container.clientWidth - 2;
+    canvas.height = container.clientHeight - 2;
 
-    gridw = Math.trunc((container.clientWidth - 1) / dx);
-    gridh = Math.trunc((container.clientHeight - 1) / dy);
+    view = new PatternView(pattern, settings, ctx);
 
-    ctx.canvas.width = gridw * dx + 1;
-    ctx.canvas.height = gridh * dy + 1;
+    initPattern(data, pattern);
 
-    dataobj = new Pattern(300, 300, 35, 35);
-    viewobj = new PatternView(dataobj, ctx);
+    view.draw();
 
     canvas.addEventListener('click', function(event) {
         const x = event.offsetX;
@@ -225,88 +247,10 @@ function init() {
         toggle_pattern_at(pattern, i, j);
         repaint(ctx, pattern);
     });
-
-    //init_example_pattern(pattern);
-    repaint(ctx, pattern);
 }
 
-function get_pattern_at(pattern, i, j) {
-    const idx = i + j * gridw;
-    return pattern[idx];
-}
 
-function set_pattern_at(pattern, i, j, value) {
-    const idx = i + j * gridw;
-    pattern[idx] = value;
-}
-
-function toggle_pattern_at(pattern, i, j) {
-    const idx = i + j * gridw;
-    pattern[idx] = - pattern[idx];
-}
-
-function draw_grid(ctx) {
-    ctx.beginPath();
-    for (let i = 0; i <= gridw; i++) {
-        ctx.moveTo(offset_x + 0.5 + i * dx, offset_y + 0.5);
-        ctx.lineTo(offset_x + 0.5 + i * dx, offset_y + 0.5 + gridh * dy);
-    }
-    for (let j = 0; j <= gridh; j++) {
-        ctx.moveTo(offset_x + 0.5, offset_y + 0.5 + j * dy);
-        ctx.lineTo(offset_x + 0.5 + gridw * dx, offset_y + 0.5 + j * dy);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = darcula ? "#aaa" : "#000";
-    ctx.lineWidth = 1.0;
-    ctx.stroke();
-}
-
-function draw_cell(ctx, i, j, state) {
-    if (view == "color") {
-        if (state > 0) {
-            ctx.fillStyle = colors[data.colors_warp[i]];
-        } else {            
-            ctx.fillStyle = colors[data.colors_weft[j]];
-        }
-        ctx.fillRect(
-            offset_x + 0.5 + i * dx,
-            offset_y + 0.5 + j * dy,
-            dx,
-            dy
-        );
-    } else {
-        if (state > 0) {
-            ctx.fillStyle = filled_style;
-            ctx.fillRect(
-                offset_x + 0.5 + i * dx + bx,
-                offset_y + 0.5 + j * dy + by,
-                dx - 2 * bx,
-                dy - 2 * by
-            );
-        }
-    }
-}
-
-function draw_pattern(ctx, pattern) {
-    for (let i = 0; i < gridw; i++) {
-        for (let j = 0; j < gridh; j++) {
-            draw_cell(ctx, i, gridh - j - 1, get_pattern_at(pattern, i, j));
-        }
-    }
-}
-
-function clear_canvas(ctx) {
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-}
-
-function repaint(ctx, pattern) {
-    clear_canvas(ctx);
-    //draw_grid(ctx);
-    //draw_pattern(ctx, pattern);
-    viewobj.draw(ctx);
-}
-
-function init_example_pattern(pattern) {
+function initPattern(data, pattern) {
     console.log(data);
     let idx = 0;
     for (const spec of data.palette) {
@@ -343,7 +287,7 @@ function init_example_pattern(pattern) {
                 if (treadle === 0) continue;
                 const tieup = data.data_tieup[k + (heddle - 1) * data.max_treadles];
                 if (tieup !== 0) {
-                    set_pattern_at(pattern, i, j, 1);
+                    pattern.pattern.set(i, j, tieup);
                     break;
                 }
             }
@@ -355,7 +299,7 @@ function init_example_pattern(pattern) {
         const heddle = data.data_threading[i];
         if (heddle == 0) continue;
         max_heddle = Math.max(max_heddle, heddle - 1);
-        set_pattern_at(pattern, i, (max_pattern_y - min_pattern_y + 1) + 1 + heddle - 1, 1);
+        pattern.threading.set_heddle(i, heddle);
     }
 
     let max_treadle = 0;
@@ -364,7 +308,7 @@ function init_example_pattern(pattern) {
             const treadle = data.data_treadling[k + j * data.max_treadles];
             if (treadle != 0) {
                 max_treadle = Math.max(max_treadle, k);
-                set_pattern_at(pattern, (max_pattern_x - min_pattern_x + 1) + 1 + k, j, 1);
+                pattern.treadling.set(k, j, 1);
             }
         }
     }
@@ -373,11 +317,18 @@ function init_example_pattern(pattern) {
         for (let j = 0; j <= max_heddle; j++) {
             const tieup = data.data_tieup[i + j * data.max_treadles];
             if (tieup !== 0) {
-                set_pattern_at(pattern,
-                    (max_pattern_x - min_pattern_x + 1) + 1 + i,
-                    (max_pattern_y - min_pattern_y + 1) + 1 + j,
-                    1);
+                pattern.tieup.set(i, j, tieup);
             }
         }
     }
 }
+
+
+window.addEventListener("load", () => {
+    getPattern().then(init);
+    document.getElementById("public").addEventListener("click", togglePublic);
+    document.getElementById("save").addEventListener("click", savePattern);
+    document.getElementById("close").addEventListener("click", closePattern);
+});
+
+window.addEventListener("resize", resizeWindow);

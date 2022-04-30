@@ -51,3 +51,19 @@ async function savePattern() {
         body: JSON.stringify(request)
     });
 }
+
+
+function closePattern() {
+    window.history.back();
+}
+
+
+function resizeWindow() {
+    const canvas = document.getElementById('canvas');
+    const container = document.getElementById("container");
+    canvas.width = container.clientWidth - 2;
+    canvas.height = container.clientHeight - 2;
+    // relayout and redraw the specialized view instance
+    view.layout();
+    view.draw();
+}
