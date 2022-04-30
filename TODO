@@ -31,8 +31,9 @@ Todo
 
 - dbweave
   - draw blade
-  - draw color bars
-  - add view styles (pattern, color, simulation)
+  + draw color bars
+  + add view styles (pattern, color)
+  - add view style simulation
   - calculate repeat
   - edit threading
   - edit treadling
@@ -51,3 +52,12 @@ Todo
   - draw info and bead list
   - add tools/menus
   - add color palette
+
+
+The webapp obviously needs to be usable with a mouse. But
+I also want it to be as usable as possible with the keyboard
+thus, moving the selection with arrow keys, ... Also, maybe
+it would be useful to have a command mode where one can enter
+commands (e.g. 'twill 2/2'). This would also help with
+further automation stuff (macros, checkerlang). But it needs
+to be unobtrusive.
