@@ -207,9 +207,11 @@ function init() {
 
     canvas.addEventListener('click', function(event) {
         const x = event.offsetX;
-        const y = gridh * dy - event.offsetY;
-        const i = Math.trunc(x / dx);
-        const j = Math.trunc(y / dy);
+        const y = event.offsetY;
+        const i = Math.trunc(x / settings.dx);
+        const j = view.draft.height - 1 - Math.trunc(y / settings.dy);
+        if (j < 0) return;
+        console.log(i, j);
         // TODO convert coordinates to matching view coordinates
         // TODO toggle pattern point
         view.draw();
