@@ -10,7 +10,7 @@ Todo
 +4- Upload and store DBW pattern file
  5- Download pattern file in DBW-Format
 +6- Very basic rendering of pattern
- 7- Very basic editing of pattern
++7- Very basic editing of pattern
  8- Save changes to pattern
 
 + Define bead pattern in-memory format
@@ -35,9 +35,9 @@ Todo
   + add view styles (pattern, color)
   - add view style simulation
   - calculate repeat
-  - edit threading
-  - edit treadling
-  - edit tieup
+  + edit threading
+  + edit treadling
+  + edit tieup
   - edit pattern with recalc
   - support scrolling
   - draw scroll bars
