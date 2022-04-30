@@ -27,6 +27,32 @@ def parse_dbw_data(dbwdata, name=''):
 
     result['palette'] = _dehex_colors(data['palette']['data2'])
 
+    view = contents['view']
+    result['visible_heddles'] = int(view['einzug']['hvisible'])
+    result['visible_treadles'] = int(view['trittfolge']['wvisible'])
+    result['warp_lifting'] = view['general']['hebung'] == '0'
+    result['zoom'] = int(view['general']['zoom'])
+    result['single_treadling'] = view['trittfolge']['single'] == '1'
+    result['show_repeat'] = view['general']['viewrapport'] == '1'
+
+    result['display_blade'] = view['blatteinzug']['visible'] == '1'
+    result['display_colors_warp'] = view['kettfarben']['visible'] == '1'
+    result['display_colors_weft'] = view['schussfarben']['visible'] == '1'
+
+    state = view['gewebe']['state']
+    if state == '0':
+        result['pattern_style'] = 'draft'
+    elif state == '1':
+        result['pattern_style'] = 'color'
+    elif state == '2':
+        result['pattern_style'] = 'simulation'
+    elif state == '3':
+        result['pattern_style'] = 'invisible'
+
+    result['threading_style'] = _decode_viewtype(view['einzug']['viewtype'])
+    result['treadling_style'] = _decode_viewtype(view['trittfolge']['viewtype'])
+    result['tieup_style'] = _decode_viewtype(view['aufknuepfung']['viewtype'])
+
     # TODO add rest
     
     return result
@@ -105,3 +131,28 @@ def _dehex_colors(data):
         ])
         data = data[8:]
     return result
+
+
+def _decode_viewtype(n):
+    if n == '0':
+        return "filled"
+    elif n == '1':
+        return "dash"
+    elif n == '2':
+        return "cross"
+    elif n == '3':
+        return "dot"
+    elif n == '4':
+        return "circle"
+    elif n == '5':
+        return "rising"
+    elif n == '6':
+        return "falling"
+    elif n == '7':
+        return "smallcross"
+    elif n == '8':
+        return "smallcircle"
+    elif n == '9':
+        return "number"
+    else:
+        return "filled"
