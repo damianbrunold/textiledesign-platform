@@ -130,6 +130,137 @@ class GridView {
 }
 
 
+class GridViewPattern {
+    constructor(data, x, y, width, height) {
+        this.data = data;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.offset_i = 0;
+        this.offset_j = 0;
+    }
+
+    draw(ctx, settings) {
+        this.drawGrid(ctx, settings);
+        if (settings.style === "pattern") {
+            this.drawDataPattern(ctx, settings);
+        } else if (settings.style === "color") {
+            this.drawDataColor(ctx, settings);
+        }
+    }
+
+    drawGrid(ctx, settings) {
+        const dx = settings.dx;
+        const dy = settings.dy;
+
+        ctx.beginPath();
+        for (let i = 0; i <= this.width; i++) {
+            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + this.y * dy);
+            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+        }
+        for (let j = 0; j <= this.height; j++) {
+            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + j) * dy);
+            ctx.lineTo(0.5 + (this.x + this.width) * dx, 0.5 + (this.y + j) * dy);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+    }
+
+    drawDataPattern(ctx, settings) {
+        for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
+            for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
+                const value = this.data.get(i, j);
+                if (value > 0) {
+                    ctx.fillStyle = settings.darcula ? "#fff" : "#000";
+                    ctx.fillRect(
+                        0.5 + (this.x + i - this.offset_i) * settings.dx + settings.bx,
+                        0.5 + (this.y + this.height - (j - this.offset_j) - 1) * settings.dy + settings.by,
+                        settings.dx - 2 * settings.bx,
+                        settings.dy - 2 * settings.by
+                    );
+                }
+            }
+        }
+    }
+    
+    drawDataColor(ctx, settings) {
+        for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
+            for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
+                const value = this.data.get(i, j);
+                let color = null;
+                if (value > 0) {
+                    color = colors[pattern.color_warp.get(i, 0)];
+                } else {
+                    color = colors[pattern.color_weft.get(j, 0)];
+                }
+                ctx.fillStyle = color;
+                ctx.fillRect(
+                    (this.x + i - this.offset_i) * settings.dx,
+                    (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
+                    settings.dx,
+                    settings.dy
+                );
+            }
+        }
+    }
+}
+
+
+class GridViewColors {
+    constructor(data, x, y, width, height) {
+        this.data = data;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.offset_i = 0;
+        this.offset_j = 0;
+    }
+
+    draw(ctx, settings) {
+        this.drawGrid(ctx, settings);
+        this.drawDataColor(ctx, settings);
+    }
+
+    drawGrid(ctx, settings) {
+        const dx = settings.dx;
+        const dy = settings.dy;
+
+        ctx.beginPath();
+        for (let i = 0; i <= this.width; i++) {
+            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + this.y * dy);
+            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+        }
+        for (let j = 0; j <= this.height; j++) {
+            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + j) * dy);
+            ctx.lineTo(0.5 + (this.x + this.width) * dx, 0.5 + (this.y + j) * dy);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+    }
+
+    drawDataColor(ctx, settings) {
+        for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
+            for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
+                const color = colors[this.data.get(i, j)];
+                ctx.fillStyle = color;
+                ctx.fillRect(
+                    1.0 + (this.x + i - this.offset_i) * settings.dx,
+                    1.0 + (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
+                    settings.dx - 1.0,
+                    settings.dy - 1.0
+                );
+            }
+        }
+    }
+}
+
+
 class Pattern {
     constructor(width, height, max_heddle, max_treadle) {
         this.color_warp = new Grid(width, 1);
@@ -192,13 +323,13 @@ class PatternView {
 
         const p = this.pattern;
 
-        this.color_warp = new GridView(p.color_warp, x1, y4, width1, height4);
-        this.threading  = new GridView(p.threading,  x1, y3, width1, height3);
-        this.tieup      = new GridView(p.tieup,      x2, y3, width2, height3);
-        this.blade      = new GridView(p.blade,      x1, y2, width1, height2);
-        this.pattern    = new GridView(p.pattern,    x1, y1, width1, height1);
-        this.treadling  = new GridView(p.treadling,  x2, y1, width2, height1);
-        this.color_weft = new GridView(p.color_weft, x3, y1, width3, height1);
+        this.color_warp = new GridViewColors(p.color_warp, x1, y4, width1, height4);
+        this.threading  = new GridView(p.threading,        x1, y3, width1, height3);
+        this.tieup      = new GridView(p.tieup,            x2, y3, width2, height3);
+        this.blade      = new GridView(p.blade,            x1, y2, width1, height2);
+        this.pattern    = new GridViewPattern(p.pattern,   x1, y1, width1, height1);
+        this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1);
+        this.color_weft = new GridViewColors(p.color_weft, x3, y1, width3, height1);
 
         // TODO scrollbars...
     }
@@ -257,6 +388,15 @@ function initPattern(data, pattern) {
     let idx = 0;
     for (const spec of data.palette) {
         colors[idx++] = (`rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`);
+    }
+
+
+    for (let i = 0; i < data.width; i++) {
+        pattern.color_warp.set(i, 0, data.colors_warp[i]);
+    }
+
+    for (let j = 0; j < data.height; j++) {
+        pattern.color_weft.set(0, j, data.colors_weft[j]);
     }
 
     let min_pattern_x = 0;
@@ -326,11 +466,27 @@ function initPattern(data, pattern) {
 }
 
 
+function keyDown(e) {
+    if (e.key === "1" && e.altKey) {
+        console.log("Pattern view");
+        settings.style = "pattern";
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "2" && e.altKey) {
+        console.log("Color view");
+        settings.style = "color";
+        view.draw();
+        e.preventDefault();
+    }
+}
+
+
 window.addEventListener("load", () => {
     getPattern().then(init);
     document.getElementById("public").addEventListener("click", togglePublic);
     document.getElementById("save").addEventListener("click", savePattern);
     document.getElementById("close").addEventListener("click", closePattern);
+    window.addEventListener("keydown", keyDown);
 });
 
 window.addEventListener("resize", resizeWindow);
