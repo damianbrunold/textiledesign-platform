@@ -26,6 +26,7 @@ class Grid {
         this.width = width;
         this.height = height;
         this.data = new Array(this.width * this.height);
+        this.data.fill(0);
     }
 
     idx(i, j) {
@@ -82,6 +83,13 @@ class GridView {
         this.height = height;
         this.offset_i = 0;
         this.offset_j = 0;
+    }
+
+    contains(i, j) {
+        console.log(this.x, i, this.width)
+        console.log(this.y, j, this.height)
+        return this.x <= i && i < this.x + this.width &&
+               this.y <= j && j < this.y + this.height;
     }
 
     draw(ctx, settings) {
@@ -271,6 +279,23 @@ class Pattern {
         this.treadling = new Grid(max_treadle, height);
         this.pattern = new Grid(width, height);
     }
+
+    recalc_pattern() {
+        this.pattern.data.fill(0);
+        for (let i = 0; i < this.pattern.width; i++) {
+            const heddle = this.threading.get_heddle(i);
+            if (heddle == 0) continue;
+            for (let j = 0; j < this.pattern.height; j++) {
+                for (let k = 0; k < this.treadling.width; k++) {
+                    if (this.treadling.get(k, j) <= 0) continue;
+                    const value = this.tieup.get(k, heddle - 1);
+                    if (value > 0) {
+                        this.pattern.set(i, j, value);
+                    }
+                }
+            }
+        }
+    }
 }
 
 
@@ -374,11 +399,33 @@ function init() {
 
     canvas.addEventListener('click', function(event) {
         const x = event.offsetX;
-        const y = gridh * dy - event.offsetY;
-        const i = Math.trunc(x / dx);
-        const j = Math.trunc(y / dy);
-        toggle_pattern_at(pattern, i, j);
-        repaint(ctx, pattern);
+        const y = event.offsetY;
+        const i = Math.trunc(x / settings.dx);
+        const j = Math.trunc(y / settings.dy);
+        console.log(i, j);
+        if (view.threading.contains(i, j)) {
+            const ii = i - view.threading.x + view.threading.offset_i;
+            const jj = view.threading.height - 1 - (j - view.threading.y) + view.threading.offset_j;
+            if (pattern.threading.get_heddle(ii) == jj + 1) {
+                pattern.threading.set_heddle(ii, 0);
+            } else {
+                pattern.threading.set_heddle(ii, jj + 1);
+            }
+            pattern.recalc_pattern();
+            view.draw();
+        } else if (view.treadling.contains(i, j)) {
+            const ii = i - view.treadling.x + view.treadling.offset_i;
+            const jj = view.treadling.height - 1 - (j - view.treadling.y) + view.treadling.offset_j;
+            pattern.treadling.toggle(ii, jj);
+            pattern.recalc_pattern();
+            view.draw();
+        } else if (view.tieup.contains(i, j)) {
+            const ii = i - view.tieup.x + view.tieup.offset_i;
+            const jj = view.tieup.height - 1 - (j - view.tieup.y) + view.tieup.offset_j;
+            pattern.tieup.toggle(ii, jj);
+            pattern.recalc_pattern();
+            view.draw();
+        }
     });
 }
 
