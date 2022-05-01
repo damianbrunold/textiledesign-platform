@@ -86,8 +86,6 @@ class GridView {
     }
 
     contains(i, j) {
-        console.log(this.x, i, this.width)
-        console.log(this.y, j, this.height)
         return this.x <= i && i < this.x + this.width &&
                this.y <= j && j < this.y + this.height;
     }
@@ -312,9 +310,9 @@ class ViewSettings {
 
 
 class PatternView {
-    constructor(pattern, settings, ctx) {
+    constructor(data, settings, ctx) {
         this.settings = settings;
-        this.pattern = pattern;
+        this.data = data;
         this.ctx = ctx;
         this.layout();
     }
@@ -346,7 +344,7 @@ class PatternView {
         const x2 = x1 + width1 + 1;
         const x3 = x2 + width2 + 1;
 
-        const p = this.pattern;
+        const p = this.data;
 
         this.color_warp = new GridViewColors(p.color_warp, x1, y4, width1, height4);
         this.threading  = new GridView(p.threading,        x1, y3, width1, height3);
@@ -402,7 +400,6 @@ function init() {
         const y = event.offsetY;
         const i = Math.trunc(x / settings.dx);
         const j = Math.trunc(y / settings.dy);
-        console.log(i, j);
         if (view.threading.contains(i, j)) {
             const ii = i - view.threading.x + view.threading.offset_i;
             const jj = view.threading.height - 1 - (j - view.threading.y) + view.threading.offset_j;
