@@ -102,7 +102,7 @@ def get_pattern_by_name(user_name, name):
         return Pattern.from_row(row)
 
 
-def update_pattern(pattern):
+def update_pattern(user_name, pattern):
     with get_db().begin() as conn:
         conn.execute(
             update(pattern_table).values(
@@ -114,6 +114,26 @@ def update_pattern(pattern):
                 modified=datetime.datetime.utcnow(),
                 public=pattern.public
             ).where(pattern_table.c.name == pattern.name)
+            .where(pattern_table.c.owner == user_name)
+        )
+
+
+def clone_pattern(user_name, pattern):
+    with get_db().begin() as conn:
+        conn.execute(
+            insert(pattern_table).values(
+                name=pattern.name,
+                label=pattern.label,
+                owner=user_name,
+                description=pattern.description,
+                pattern_type=pattern.pattern_type,
+                contents=pattern.contents,
+                preview_image=pattern.preview_image,
+                thumbnail_image=pattern.thumbnail_image,
+                created=datetime.datetime.utcnow(),
+                modified=datetime.datetime.utcnow(),
+                public=False
+            )
         )
 
 

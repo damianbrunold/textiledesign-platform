@@ -233,8 +233,13 @@ function initPattern(data, pattern) {
 
 window.addEventListener("load", () => {
     getPattern().then(init);
-    document.getElementById("public").addEventListener("click", togglePublic);
-    document.getElementById("save").addEventListener("click", savePattern);
+    if (!readonly) {
+        document.getElementById("public").addEventListener("click", togglePublic);
+        document.getElementById("save").addEventListener("click", savePattern);
+    } else {
+        const clone = document.getElementById("clone");
+        if (clone) clone.addEventListener("click", clonePattern);
+    }
     document.getElementById("close").addEventListener("click", closePattern);
 });
 

@@ -21,6 +21,9 @@ let settings = null;
 let colors = {};
 
 
+let readonly = false;
+
+
 class Grid {
     constructor(width, height) {
         this.width = width;
@@ -526,9 +529,15 @@ function keyDown(e) {
 
 
 window.addEventListener("load", () => {
+    readonly = document.getElementById("readonly").value === "True";
     getPattern().then(init);
-    document.getElementById("public").addEventListener("click", togglePublic);
-    document.getElementById("save").addEventListener("click", savePattern);
+    if (!readonly) {
+        document.getElementById("public").addEventListener("click", togglePublic);
+        document.getElementById("save").addEventListener("click", savePattern);
+    } else {
+        const clone = document.getElementById("clone");
+        if (clone) clone.addEventListener("click", clonePattern);
+    }
     document.getElementById("close").addEventListener("click", closePattern);
     window.addEventListener("keydown", keyDown);
 });

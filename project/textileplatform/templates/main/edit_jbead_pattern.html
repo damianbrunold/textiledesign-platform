@@ -7,31 +7,40 @@
 {% endblock %}
 
 {% block header %}
-    <h1>{% block title %}{{ pattern.name }}{% endblock %}</h1>
+    <h1 id="title">
+        {% block title %}
+            {% if readonly %}
+                {{ user.name }}:
+            {% endif %}
+            {{ pattern.name }}
+        {% endblock %}
+    </h1>
 {% endblock %}
 
 {% block content %}
     <input type="hidden" id="user" value="{{user.name}}"/>
     <input type="hidden" id="pattern" value="{{pattern.name}}"/>
-
-    {% if pattern.description %}
-        <div class="pattern_description">
-            {{ pattern.description }}
-        </div>
-    {% endif %}
+    <input type="hidden" id="viewer" value="{{g.user.name if g.user else ''}}"/>
+    <input type="hidden" id="darkmode" value="{{g.user.darkmode if g.user else 'False'}}"/>
+    <input type="hidden" id="readonly" value="{{readonly}}"/>
 
     <div id="container">
         <canvas id="canvas"></canvas>
     </div>
 
-
     <div id="footer">
         <div>
-            <input id="public" type="checkbox" {% if pattern.public %}checked{% endif %}>
-            {{ gettext('Public') }}
+            {% if not readonly %}
+                <input id="public" type="checkbox" {% if pattern.public %}checked{% endif %}>
+                {{ gettext('Public') }}
+            {% endif %}
         </div>
         <div id="buttons">
-            <button id="save">{{ gettext('Save') }}</button>
+            {% if readonly and g.user %}
+                <button id="clone">{{ gettext('Clone') }}</button>
+            {% elif g.user %}
+                <button id="save">{{ gettext('Save') }}</button>
+            {% endif %}
             <button id="close">{{ gettext('Close') }}</button>
         </div>
     </div>

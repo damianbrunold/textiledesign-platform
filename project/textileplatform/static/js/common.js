@@ -53,6 +53,33 @@ async function savePattern() {
 }
 
 
+async function clonePattern() {
+    const user = document.getElementById("user").value;
+    const viewer = document.getElementById("viewer").value;
+    const pattern = document.getElementById("pattern").value;
+    const request = {
+        action: "clone-pattern",
+        contents: data
+    };
+    await fetch(`/api/pattern/${user}/${pattern}`, {
+        method: "PUT",
+        mode: 'cors',
+        cache: 'no-cache',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        redirect: 'follow',
+        referrerPolicy: 'no-referrer',
+        body: JSON.stringify(request)
+    });
+    await gotoUser(viewer);
+}
+
+
+async function gotoUser(user) {
+    window.location.href = "/" + user
+}
+
+
 function closePattern() {
     window.history.back();
 }

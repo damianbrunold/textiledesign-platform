@@ -14,9 +14,9 @@ from textileplatform.db import get_db, pattern_table
 from textileplatform.persistence import (
         get_user_by_name,
         get_pattern_by_name,
-        update_pattern
+        update_pattern,
+        clone_pattern
 )
-from textileplatform.auth import login_required
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -37,14 +37,23 @@ def pattern(user_name, pattern_name):
     if request.method == "GET":
         return get_pattern(pattern)
     elif request.method == "PUT":
-        if not g.user or user.name != g.user.name:
-            return make_response(jsonify({"status": "NOK", "message": "Invalid user"}), 500)
         data = request.get_json()
         action = data['action']
         if action == 'set-publication-state':
+            if not g.user or user.name != g.user.name:
+                return make_response(jsonify({"status": "NOK", "message": "Invalid user"}), 500)
             return set_publication_state(pattern, data['publication_state'])
         elif action == 'save-pattern':
+            if not g.user or user.name != g.user.name:
+                return make_response(jsonify({"status": "NOK", "message": "Invalid user"}), 500)
             return save_pattern(pattern, data['contents'])
+        elif action == 'clone-pattern':
+            if not g.user:
+                return make_response(jsonify({"status": "NOK", "message": "Invalid user"}), 500)
+            pattern.owner = g.user.name
+            pattern.contents = json.dumps(data['contents'])
+            clone_pattern(g.user.name, pattern)
+            return make_response(jsonify({"status": "OK"}), 200)
         else:
             return make_response(jsonify({"status": "NOK", "message": "Illegal action"}), 500)
     else:
