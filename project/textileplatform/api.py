@@ -10,7 +10,7 @@ from flask import (
     g,
 )
 
-from textileplatform.db import get_db, document_table
+from textileplatform.db import get_db, pattern_table
 from textileplatform.persistence import (
         get_user_by_name,
         get_pattern_by_name,
@@ -22,21 +22,23 @@ bp = Blueprint('api', __name__, url_prefix='/api')
 
 
 @bp.route('/pattern/<string:user_name>/<string:pattern_name>', methods=('GET', 'PUT'))
-@login_required
 def pattern(user_name, pattern_name):
     user = get_user_by_name(user_name)
     if not user:
         return make_response(jsonify({"status": "NOK", "message": "User not found"}), 500)
-    if user.id != g.user.id:
-        return make_response(jsonify({"status": "NOK", "message": "Invalid user"}), 500)
     
-    pattern = get_pattern_by_name(user.id, pattern_name)
+    pattern = get_pattern_by_name(user.name, pattern_name)
     if not pattern:
         return make_response(jsonify({"status": "NOK", "message": "Pattern not found"}), 500)
+
+    if not pattern.public and (not g.user or user.name != g.user.name):
+        return make_response(jsonify({"status": "NOK", "message": "Invalid user"}), 500)
 
     if request.method == "GET":
         return get_pattern(pattern)
     elif request.method == "PUT":
+        if not g.user or user.name != g.user.name:
+            return make_response(jsonify({"status": "NOK", "message": "Invalid user"}), 500)
         data = request.get_json()
         action = data['action']
         if action == 'set-publication-state':
@@ -60,9 +62,9 @@ def get_pattern(pattern):
 def set_publication_state(pattern, publication_state):
     with get_db().begin() as conn:
         conn.execute(
-            update(document_table).values(
+            update(pattern_table).values(
                 public=publication_state
-            ).where(document_table.c.id == pattern.id)
+            ).where(pattern_table.c.name == pattern.name)
         )
     return make_response(jsonify({"status": "OK"}), 200)
 

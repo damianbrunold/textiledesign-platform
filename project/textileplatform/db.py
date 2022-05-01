@@ -16,9 +16,8 @@ metadata = MetaData()
 user_table = Table(
     "txuser",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("display", String(100), nullable=False),
-    Column("name", String(100), nullable=False),
+    Column("name", String(100), primary_key=True),
+    Column("label", String(255), nullable=False),
     Column("email", String(255), nullable=False),
     Column("password", String(255), nullable=False),
     Column("darkmode", Boolean),
@@ -27,68 +26,71 @@ user_table = Table(
     Column("locale", String(20)),
     Column("timezone", String(20)),
     UniqueConstraint("name"),
-    UniqueConstraint("email")
+    UniqueConstraint("label"),
+    UniqueConstraint("email"),
 )
 
 group_table = Table(
     "txgroup",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("owner_id", Integer, nullable=False),
-    Column("name", String(100), nullable=False),
+    Column("name", String(100), primary_key=True),
+    Column("label", String(255), nullable=False),
+    Column("owner", String(100), nullable=False),
     Column("description", Text, nullable=False),
+    UniqueConstraint("label"),
 )
 
-document_table = Table(
-    "txdoc",
+pattern_table = Table(
+    "txpattern",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("owner_id", Integer, nullable=False),
-    Column("type_id", Integer, nullable=False),
-    Column("name", String(255)),
+    Column("name", String(100), nullable=False),
+    Column("label", String(255), nullable=False),
+    Column("owner", String(100), nullable=False),
+    Column("pattern_type", String(100), nullable=False),
     Column("description", Text),
     Column("contents", Text),
     Column("preview_image", LargeBinary),
     Column("thumbnail_image", LargeBinary),
     Column("created", DateTime),
     Column("modified", DateTime),
-    Column("public", Boolean)
+    Column("public", Boolean),
+    PrimaryKeyConstraint("owner", "name"),
+    UniqueConstraint("owner", "label"),
 )
 
 permission_table = Table(
     "txpermission",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("doc_id", Integer, nullable=False),
-    Column("user_id", Integer, nullable=False),
+    Column("pattern", String(100), nullable=False),
+    Column("user", String(100), nullable=False),
     Column("view", Boolean),
     Column("edit", Boolean),
     Column("delete", Boolean),
     Column("share", Boolean),
-    Column("publish", Boolean)
+    Column("publish", Boolean),
+    PrimaryKeyConstraint("pattern", "user"),
 )
 
-type_table = Table(
+pattern_type_table = Table(
     "txtype",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("label", String(100), nullable=False)
+    Column("pattern_type", String(100), primary_key=True)
 )
 
 user_group_table = Table(
     "txusergroup",
     metadata,
-    Column("user_id", Integer, nullable=False),
-    Column("group_id", Integer, nullable=False),
-    PrimaryKeyConstraint("user_id", "group_id")
+    Column("user", String(100), nullable=False),
+    Column("group", String(100), nullable=False),
+    PrimaryKeyConstraint("user", "group")
 )
 
-document_pin_table = Table(
-    "txdocpin",
+pin_table = Table(
+    "txpin",
     metadata,
-    Column("doc_id", Integer, nullable=False),
-    Column("user_id", Integer, nullable=False),
-    PrimaryKeyConstraint("doc_id", "user_id")
+    Column("pattern", String(100), nullable=False),
+    Column("user", String(100), nullable=False),
+    PrimaryKeyConstraint("pattern", "user")
 )
 
 def get_db():
@@ -108,14 +110,13 @@ def init_db():
     metadata.create_all(engine)
 
     with engine.begin() as conn:
-        conn.execute(insert(type_table).values(id=0, label="DB-WEAVE Pattern"))
-        conn.execute(insert(type_table).values(id=1, label="JBEAD Pattern"))
-        conn.execute(insert(type_table).values(id=2, label="Generic Image"))
+        conn.execute(insert(pattern_type_table).values(pattern_type="DB-WEAVE Pattern"))
+        conn.execute(insert(pattern_type_table).values(pattern_type="JBead Pattern"))
+        conn.execute(insert(pattern_type_table).values(pattern_type="Generic Image"))
         conn.execute(
             insert(user_table).values(
-                id=0,
-                display="Superuser",
                 name="superuser",
+                label="Superuser",
                 email="admin@textileplatform.ch",
                 darkmode=True,
                 verified=True,
@@ -126,9 +127,8 @@ def init_db():
         )
         conn.execute(
             insert(user_table).values(
-                id=1,
-                display="Weave",
                 name="weave",
+                label="Weave",
                 email="weave@textileplatform.ch",
                 darkmode=True,
                 verified=True,
@@ -139,9 +139,8 @@ def init_db():
         )
         conn.execute(
             insert(user_table).values(
-                id=2,
-                display="Bead",
                 name="bead",
+                label="Bead",
                 email="bead@textileplatform.ch",
                 darkmode=True,
                 verified=True,
@@ -161,4 +160,3 @@ def init_db_command():
 def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
-

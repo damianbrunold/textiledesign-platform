@@ -5,7 +5,14 @@ from sqlalchemy.exc import IntegrityError
 from flask_babel import gettext
 
 from flask import (
-    Blueprint, flash, g, redirect, render_template, render_template_string, request, url_for
+    Blueprint,
+    flash,
+    g,
+    redirect,
+    render_template,
+    render_template_string,
+    request,
+    url_for
 )
 
 bp = Blueprint('main', __name__)
@@ -15,14 +22,8 @@ from textileplatform.persistence import (
     get_user_by_name, 
     add_weave_pattern,
     add_bead_pattern,
-    get_patterns_for_userid,
+    get_patterns_for_user_name,
     get_pattern_by_name
-)
-from textileplatform.model import (
-    get_type_label,
-    TYPE_DBWEAVE_PATTERN,
-    TYPE_JBEAD_PATTERN,
-    TYPE_GENERIC_IMAGE
 )
 from textileplatform.auth import login_required
 from textileplatform.weavepattern import parse_dbw_data
@@ -32,9 +33,14 @@ from textileplatform.beadpattern import parse_jbb_data
 @bp.route('/')
 def index():
     if g.user:
-        patterns = get_patterns_for_userid(g.user.id)
+        patterns = get_patterns_for_user_name(g.user.name)
         return render_template('main/user_private.html', user=g.user, patterns=patterns)
-    return render_template('main/index.html')
+    else:
+        weave_patterns = get_patterns_for_user_name("weave")
+        bead_patterns = get_patterns_for_user_name("bead")
+        return render_template('main/index.html',
+                               weave_patterns=weave_patterns,
+                               bead_patterns=bead_patterns)
 
 
 @bp.route('/<string:name>')
@@ -44,11 +50,11 @@ def user(name):
         return redirect(url_for('main.index'))
     elif g.user and g.user.name == user.name:
         # show private view
-        patterns = get_patterns_for_userid(g.user.id)
+        patterns = get_patterns_for_user_name(g.user.name)
         return render_template('main/user_private.html', user=user, patterns=patterns)
     else:
         # show public view
-        patterns = [pattern for pattern in get_patterns_for_userid(user.id) if pattern.public]
+        patterns = [pattern for pattern in get_patterns_for_user_name(user.name) if pattern.public]
         return render_template('main/user_public.html', user=user, patterns=patterns)
 
 
@@ -57,20 +63,24 @@ def edit_pattern(user_name, pattern_name):
     user = get_user_by_name(user_name.lower())
     if not user:
         return redirect(url_for('main.index'))
-    elif g.user and g.user.name == user.name:
-        pattern = get_pattern_by_name(user.id, pattern_name)
-        if not pattern:
-            return redirect(url_for('main.user', name=user_name))
-        if pattern.type_id == TYPE_DBWEAVE_PATTERN:
-            return render_template('main/edit_dbweave_pattern.html', user=user, pattern=pattern)
-        elif pattern.type_id == TYPE_JBEAD_PATTERN:
-            return render_template('main/edit_jbead_pattern.html', user=user, pattern=pattern)
-        elif pattern.type_id == TYPE_GENERIC_IMAGE_PATTERN:
-            return render_template('main/edit_generic_image_pattern.html', user=user, pattern=pattern)
-        else:
-            return redirect(url_for('main.user'), name=user_name)
-    else:
+    pattern = get_pattern_by_name(user.name, pattern_name)
+    if not pattern:
         return redirect(url_for('main.user', name=user_name))
+    if (not g.user or g.user.name != user.name) and not pattern.public:
+        return redirect(url_for('main.user', name=user_name))
+    readonly = not g.user or g.user.name != user.name
+    if pattern.pattern_type == "DB-WEAVE Pattern":
+        return render_template('main/edit_dbweave_pattern.html', 
+                               user=user,
+                               pattern=pattern,
+                               readonly=readonly)
+    elif pattern.pattern_type == "JBead Pattern":
+        return render_template('main/edit_jbead_pattern.html',
+                               user=user,
+                               pattern=pattern,
+                               readonly=readonly)
+    else:
+        return redirect(url_for('main.user'), name=user_name)
 
 
 @bp.route('/status')
@@ -136,9 +146,9 @@ def upload_pattern():
                 filetype = "jbb"
 
             if filetype == "dbw":
-                add_weave_pattern(parse_dbw_data(data, name), g.user.id)
+                add_weave_pattern(parse_dbw_data(data, name), g.user.name)
             elif filetype == "jbb":
-                add_bead_pattern(parse_jbb_data(data, name), g.user.id)
+                add_bead_pattern(parse_jbb_data(data, name), g.user.name)
             else:
                 pass
 
@@ -154,4 +164,3 @@ def create_pattern():
         pass
 
     return render_template('main/create_pattern.html')
-

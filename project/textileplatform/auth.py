@@ -12,7 +12,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from textileplatform.model import User
 from textileplatform.persistence import (
-        get_user_by_id, 
+        get_user_by_name, 
         get_user_by_email, 
         add_user
 )
@@ -39,8 +39,8 @@ def register():
         if error is None:
             try:
                 user = User()
-                user.display = name
                 user.name = from_display(name)
+                user.label = name
                 user.email = email
                 user.password = generate_password_hash(password)
                 user.darkmode = False
@@ -50,10 +50,10 @@ def register():
                 user.timezone = get_timezone()
                 add_user(user)
             except IntegrityError:
-                error = gettext('E-Mail {0} is already used').format(email)
+                error = gettext('Name or E-Mail is already used')
             else:
                 session.clear()
-                session['user_id'] = user.id
+                session['user_name'] = user.name
                 session.permanent = True
                 return redirect(url_for('main.user', name=user.name))
 
@@ -81,7 +81,7 @@ def login():
 
         if error is None:
             session.clear()
-            session['user_id'] = user.id
+            session['user_name'] = user.name
             session.permanent = True
             return redirect(url_for('main.user', name=user.name))
 
@@ -106,12 +106,12 @@ def recover():
 
 @bp.before_app_request
 def load_logged_in_user():
-    user_id = session.get('user_id')
+    user_name = session.get('user_name')
 
-    if user_id is None:
+    if user_name is None:
         g.user = None
     else:
-        g.user = get_user_by_id(user_id)
+        g.user = get_user_by_name(user_name)
 
 
 def login_required(view):
@@ -121,4 +121,3 @@ def login_required(view):
             return redirect(url_for('auth.login'))
         return view(**kwargs)
     return wrapped_view
-

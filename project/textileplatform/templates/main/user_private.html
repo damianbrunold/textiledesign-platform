@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 
 {% block header %}
-    <h1>{% block title %}{{ user.display }} {% endblock %}</h1>
+    <h1>{% block title %}{{ user.label }} {% endblock %}</h1>
 {% endblock %}
 
 {% block content %}
     <div id="patterns">
         {% for pattern in patterns %}
             <a class="action" href="{{ url_for('main.edit_pattern', 
-                                                   user_name=g.user.name, 
-                                                   pattern_name=pattern.name) }}">
+                                               user_name=g.user.name, 
+                                               pattern_name=pattern.name) }}">
                 <div class="pattern">
                     <div class="pattern_name">
                             {{ pattern.name }}
@@ -19,7 +19,7 @@
                             {{ gettext('Public') if pattern.public else gettext('Private') }}
                         </div>
                         <div class="pattern_type">
-                            {{ pattern.type_label() }}
+                            {{ gettext(pattern.pattern_type) }}
                         </div>
                     </div>
                 </div>

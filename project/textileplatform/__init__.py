@@ -43,4 +43,3 @@ app.register_blueprint(api.bp)
 from . import main
 app.register_blueprint(main.bp)
 app.add_url_rule('/', endpoint='index')
-
