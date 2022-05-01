@@ -7,23 +7,23 @@
 {% block content %}
     <div id="patterns">
         {% for pattern in patterns %}
-            <div class="pattern">
-                <div class="pattern_name">
-                    <a class="action" href="{{ url_for('main.edit_pattern', 
-                                                       user_name=g.user.name, 
+            <a class="action" href="{{ url_for('main.edit_pattern', 
+                                                   user_name=g.user.name, 
                                                        pattern_name=pattern.name) }}">
-                        {{ pattern.name }}
-                    </a>
-                </div>
-                <div class="pattern_info">
-                    <div class="pattern_public">
-                        {{ gettext('Public') if pattern.public else gettext('Private') }}
+                <div class="pattern">
+                    <div class="pattern_name">
+                            {{ pattern.name }}
                     </div>
-                    <div class="pattern_type">
-                        {{ pattern.type_label() }}
+                    <div class="pattern_info">
+                        <div class="pattern_public">
+                            {{ gettext('Public') if pattern.public else gettext('Private') }}
+                        </div>
+                        <div class="pattern_type">
+                            {{ pattern.type_label() }}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </a>
         {% endfor %}
 
         <p>
