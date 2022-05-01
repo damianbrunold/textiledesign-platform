@@ -1,6 +1,15 @@
 Todo
 ----
 
+- clone public pattern of other user: when you
+  view the pattern, you cannot save, but instead
+  you can "clone", thus creating a copy of the
+  pattern for your account. The original creator
+  has to be retained in the pattern, e.g. in the
+  field "original_author". Maybe we could also
+  retain the original author until the pattern
+  is edited and saved by the new user.
+
 - before closing editor check for changes and
   prompt to save them. Or autosave?
 
