@@ -25,18 +25,18 @@
                 </div>
             </div>
         {% endfor %}
+
+        <p>
+            <a class="action" href="{{ url_for('main.upload_pattern') }}">
+                {{ gettext('Upload Pattern') }}
+            </a>
+        </p>
+
+        <p>
+            <a class="action" href="{{ url_for('main.create_pattern') }}">
+                {{ gettext('New Pattern') }}
+            </a>
+        </p>
     </div>
-
-    <p>
-        <a class="action" href="{{ url_for('main.upload_pattern') }}">
-            {{ gettext('Upload Pattern') }}
-        </a>
-    </p>
-
-    <p>
-        <a class="action" href="{{ url_for('main.create_pattern') }}">
-            {{ gettext('New Pattern') }}
-        </a>
-    </p>
 {% endblock %}
 
