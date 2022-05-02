@@ -80,5 +80,5 @@ def set_publication_state(pattern, publication_state):
 
 def save_pattern(pattern, contents):
     pattern.contents = json.dumps(contents)
-    update_pattern(pattern)
+    update_pattern(g.user.name, pattern)
     return make_response(jsonify({"status": "OK"}), 200)

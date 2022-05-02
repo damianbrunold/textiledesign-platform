@@ -152,10 +152,14 @@ class GridViewPattern {
 
     draw(ctx, settings) {
         this.drawGrid(ctx, settings);
-        if (settings.style === "pattern") {
+        if (settings.style === "draft") {
             this.drawDataPattern(ctx, settings);
         } else if (settings.style === "color") {
             this.drawDataColor(ctx, settings);
+        } else if (settings.style == "simulation") {
+            // TODO
+        } else if (settings.style === "invisible") {
+            // empty! 
         }
     }
 
@@ -307,7 +311,7 @@ class ViewSettings {
         this.darcula = true;
         this.bx = this.dx * 0.15;
         this.by = this.dy * 0.15;
-        this.style = "pattern";
+        this.style = "draft";
     }
 }
 
@@ -385,6 +389,10 @@ function init() {
     pattern = new Pattern(300, 300, 35, 35); // TODO take dimensions from data!
     settings = new ViewSettings();
     settings.darcula = darkmode;
+    
+    console.log(data);
+    initSettings(data, settings);
+    initPatternData(data, pattern);
 
     const container = document.getElementById("container");
     canvas.style.backgroundColor = settings.darcula ? "#444" : "#fff";
@@ -393,9 +401,6 @@ function init() {
     canvas.height = container.clientHeight - 2;
 
     view = new PatternView(pattern, settings, ctx);
-
-    initPattern(data, pattern);
-
     view.draw();
 
     canvas.addEventListener('click', function(event) {
@@ -430,13 +435,26 @@ function init() {
 }
 
 
-function initPattern(data, pattern) {
-    console.log(data);
+function initSettings(data, settings) {
+    settings.style = data["pattern_style"];
+}
+
+
+function saveSettings(data, settings) {
+    data["pattern_style"] = settings.style;
+}
+
+
+function savePatternData(data, pattern) {
+    // TODO
+}
+
+
+function initPatternData(data, pattern) {
     let idx = 0;
     for (const spec of data.palette) {
         colors[idx++] = (`rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`);
     }
-
 
     for (let i = 0; i < data.width; i++) {
         pattern.color_warp.set(i, 0, data.colors_warp[i]);
@@ -515,13 +533,23 @@ function initPattern(data, pattern) {
 
 function keyDown(e) {
     if (e.key === "1" && e.altKey) {
-        console.log("Pattern view");
-        settings.style = "pattern";
+        console.log("Draft view");
+        settings.style = "draft";
         view.draw();
         e.preventDefault();
     } else if (e.key === "2" && e.altKey) {
         console.log("Color view");
         settings.style = "color";
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "3" && e.altKey) {
+        console.log("Simulation view");
+        settings.style = "simulation";
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "4" && e.altKey) {
+        console.log("Invisible view");
+        settings.style = "invisible";
         view.draw();
         e.preventDefault();
     }
@@ -533,7 +561,11 @@ window.addEventListener("load", () => {
     getPattern().then(init);
     if (!readonly) {
         document.getElementById("public").addEventListener("click", togglePublic);
-        document.getElementById("save").addEventListener("click", savePattern);
+        document.getElementById("save").addEventListener("click", () => {
+            saveSettings(data, settings);
+            savePatternData(data, pattern);
+            savePattern();
+        });
     } else {
         const clone = document.getElementById("clone");
         if (clone) clone.addEventListener("click", clonePattern);
