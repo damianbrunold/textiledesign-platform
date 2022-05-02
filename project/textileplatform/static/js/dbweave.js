@@ -583,22 +583,18 @@ function savePatternData(data, pattern) {
 
 function keyDown(e) {
     if (e.key === "1" && e.altKey) {
-        console.log("Draft view");
         settings.style = "draft";
         view.draw();
         e.preventDefault();
     } else if (e.key === "2" && e.altKey) {
-        console.log("Color view");
         settings.style = "color";
         view.draw();
         e.preventDefault();
     } else if (e.key === "3" && e.altKey) {
-        console.log("Simulation view");
         settings.style = "simulation";
         view.draw();
         e.preventDefault();
     } else if (e.key === "4" && e.altKey) {
-        console.log("Invisible view");
         settings.style = "invisible";
         view.draw();
         e.preventDefault();
