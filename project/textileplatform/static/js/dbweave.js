@@ -485,33 +485,37 @@ function initPatternData(data, pattern) {
     let min_pattern_x = 0;
     let max_pattern_x = 0;
     for (let i = 0; i < data.width; i++) {
-        if (data.data_threading[i] !== 0) {
+        if (data.data_threading[i] > 0) {
             min_pattern_x = Math.min(min_pattern_x, i);
             max_pattern_x = Math.max(max_pattern_x, i);
         }
     }
+    pattern.min_x = min_pattern_x;
+    pattern.max_x = max_pattern_x;
 
     let min_pattern_y = 0;
     let max_pattern_y = 0;
     for (let j = 0; j < data.height; j++) {
         for (let i = 0; i < data.max_treadles; i++) {
             const idx = i + j * data.max_treadles;
-            if (data.data_treadling[idx] !== 0) {
+            if (data.data_treadling[idx] > 0) {
                 min_pattern_y = Math.min(min_pattern_y, j);
                 max_pattern_y = Math.max(max_pattern_y, j);
             }
         }
     }
+    pattern.min_y = min_pattern_y;
+    pattern.max_y = max_pattern_y;
 
     for (let i = min_pattern_x; i <= max_pattern_x; i++) {
         const heddle = data.data_threading[i];
-        if (heddle === 0) continue;
+        if (heddle <= 0) continue;
         for (let j = min_pattern_y; j <= max_pattern_y; j++) {
             for (let k = 0; k < data.max_treadles; k++) {
                 const treadle = data.data_treadling[k + j * data.max_treadles];
-                if (treadle === 0) continue;
+                if (treadle <= 0) continue;
                 const tieup = data.data_tieup[k + (heddle - 1) * data.max_treadles];
-                if (tieup !== 0) {
+                if (tieup > 0) {
                     pattern.pattern.set(i, j, tieup);
                     break;
                 }
@@ -522,7 +526,7 @@ function initPatternData(data, pattern) {
     let max_heddle = 0;
     for (let i = min_pattern_x; i <= max_pattern_x; i++) {
         const heddle = data.data_threading[i];
-        if (heddle == 0) continue;
+        if (heddle <= 0) continue;
         max_heddle = Math.max(max_heddle, heddle - 1);
         pattern.threading.set_heddle(i, heddle);
     }
@@ -531,9 +535,9 @@ function initPatternData(data, pattern) {
     for (let j = min_pattern_y; j <= max_pattern_y; j++) {
         for (let k = 0; k < data.max_treadles; k++) {
             const treadle = data.data_treadling[k + j * data.max_treadles];
-            if (treadle != 0) {
+            if (treadle > 0) {
                 max_treadle = Math.max(max_treadle, k);
-                pattern.treadling.set(k, j, 1);
+                pattern.treadling.set(k, j, treadle);
             }
         }
     }
@@ -541,7 +545,7 @@ function initPatternData(data, pattern) {
     for (let i = 0; i <= max_treadle; i++) {
         for (let j = 0; j <= max_heddle; j++) {
             const tieup = data.data_tieup[i + j * data.max_treadles];
-            if (tieup !== 0) {
+            if (tieup > 0) {
                 pattern.tieup.set(i, j, tieup);
             }
         }
