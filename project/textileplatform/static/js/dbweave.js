@@ -317,10 +317,12 @@ class ViewSettings {
 
 
 class PatternView {
-    constructor(data, settings, ctx) {
+    constructor(data, settings, ctx, visible_heddles=16, visible_treadles=16) {
         this.settings = settings;
         this.data = data;
         this.ctx = ctx;
+        this.visible_heddles = visible_heddles;
+        this.visible_treadles = visible_treadles;
         this.layout();
     }
 
@@ -334,11 +336,11 @@ class PatternView {
         // TODO allow parts to hide/show
 
         const width3 = 1;
-        const width2 = 16; // TODO take from saved data
+        const width2 = this.visible_treadles;
         const width1 = availx - width3 - 1 - width2 - 1 - 1;
 
         const height4 = 1;
-        const height3 = 16; // TODO take from saved data
+        const height3 = this.visible_heddles;
         const height2 = 1;
         const height1 = availy - height4 - 1 - height3 - 1 - height2 - 1 - 1;
 
@@ -385,8 +387,13 @@ function init() {
     const darkmode = document.getElementById("darkmode").value === "True";
     let canvas = document.getElementById('canvas');
     let ctx = canvas.getContext('2d');
-    
-    pattern = new Pattern(300, 300, 35, 35); // TODO take dimensions from data!
+   
+    const width = data['width'];
+    const height = data['height'];
+    const max_heddles = data['max_heddles'];
+    const max_treadles = data['max_treadles'];
+
+    pattern = new Pattern(width, height, max_heddles, max_treadles);
     settings = new ViewSettings();
     settings.darcula = darkmode;
     
@@ -400,7 +407,10 @@ function init() {
     canvas.width = container.clientWidth - 2;
     canvas.height = container.clientHeight - 2;
 
-    view = new PatternView(pattern, settings, ctx);
+    const visible_heddles = data['visible_heddles'];
+    const visible_treadles = data['visible_treadles'];
+
+    view = new PatternView(pattern, settings, ctx, visible_heddles, visible_treadles);
     view.draw();
 
     canvas.addEventListener('click', function(event) {
