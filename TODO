@@ -11,7 +11,7 @@ Todo
  5- Download pattern file in DBW-Format
 +6- Very basic rendering of pattern
 +7- Very basic editing of pattern
- 8- Save changes to pattern
++8- Save changes to pattern
 
 + Define bead pattern in-memory format
 + Parse jbead format into in-memory format
@@ -30,7 +30,7 @@ Todo
 - Export jbead pattern as PDF
 
 - dbweave
-  - draw blade
+  + draw blade
   + draw color bars
   + add view styles (pattern, color)
   - add view style simulation
