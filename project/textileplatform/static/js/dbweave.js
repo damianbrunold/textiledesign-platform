@@ -481,11 +481,6 @@ function saveSettings(data, settings) {
 }
 
 
-function savePatternData(data, pattern) {
-    // TODO
-}
-
-
 function initPatternData(data, pattern) {
     let idx = 0;
     for (const spec of data.palette) {
@@ -554,6 +549,35 @@ function initPatternData(data, pattern) {
     }
 
     pattern.recalc_pattern();
+}
+
+
+function savePatternData(data, pattern) {
+    for (let i = 0; i < data.width; i++) {
+        data.colors_warp[i] = pattern.color_warp.get(i, 0);
+    }
+
+    for (let j = 0; j < data.height; j++) {
+        data.colors_weft[j] = pattern.color_weft.get(0, j);
+    }
+
+    for (let i = 0; i < data.width; i++) {
+        data.data_threading[i] = pattern.threading.get_heddle(i);
+    }
+
+    for (let j = 0; j < data.height; j++) {
+        for (let i = 0; i < data.max_treadles; i++) {
+            const idx = i + j * data.max_treadles;
+            data.data_treadling[idx] = pattern.treadling.get(i, j);
+        }
+    }
+
+    for (let i = 0; i < data.max_treadles; i++) {        
+        for (let j = 0; j <= data.max_heddles; j++) {
+            const idx = i + j * data.max_treadles;
+            data.data_tieup[idx] = pattern.tieup.get(i, j);
+        }
+    }
 }
 
 
