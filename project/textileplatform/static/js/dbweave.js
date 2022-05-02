@@ -57,6 +57,7 @@ class Threading {
     constructor(width) {
         this.width = width;
         this.data = new Array(this.width);
+        this.data.fill(0);
     }
 
     get_heddle(i) {
