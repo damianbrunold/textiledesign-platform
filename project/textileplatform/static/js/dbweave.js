@@ -45,10 +45,10 @@ class Grid {
     }
 
     toggle(i, j) {
-        const idx_ = this.idx(i, j);
-        const value = this.data[idx_];
-        if (value === 0) this.data[idx_] = 1;
-        else this.data[idx_] = -value;
+        const idx = this.idx(i, j);
+        const value = this.data[idx];
+        if (value === 0) this.data[idx] = 1;
+        else this.data[idx] = -value;
     }
 }
 
@@ -73,7 +73,8 @@ class Threading {
     }
 
     set(i, j, value) {
-        if (value) this.set_heddle(i, j + 1);
+        if (value > 0) this.set_heddle(i, j + 1);
+        else this.set_heddle(i, 0);
     }
 }
 
@@ -186,7 +187,7 @@ class GridViewPattern {
     drawDataPattern(ctx, settings) {
         for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
             for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
-                const value = this.data.get(i, j);
+                let value = this.data.get(i, j);
                 if (value > 0) {
                     ctx.fillStyle = settings.darcula ? "#fff" : "#000";
                     ctx.fillRect(
@@ -204,6 +205,7 @@ class GridViewPattern {
         for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
             if (i < pattern.min_x || pattern.max_x < i) continue;
             for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
+                if (j < pattern.min_y || pattern.max_y < j) continue;
                 const value = this.data.get(i, j);
                 let color = null;
                 if (value > 0) {
@@ -293,7 +295,7 @@ class Pattern {
         this.min_y = this.max_y = 0;
         for (let i = 0; i < this.pattern.width; i++) {
             const heddle = this.threading.get_heddle(i);
-            if (heddle == 0) continue;
+            if (heddle <= 0) continue;
             this.min_x = Math.min(this.min_x, i);
             this.max_x = Math.max(this.max_x, i);
             for (let j = 0; j < this.pattern.height; j++) {
@@ -507,22 +509,6 @@ function initPatternData(data, pattern) {
     pattern.min_y = min_pattern_y;
     pattern.max_y = max_pattern_y;
 
-    for (let i = min_pattern_x; i <= max_pattern_x; i++) {
-        const heddle = data.data_threading[i];
-        if (heddle <= 0) continue;
-        for (let j = min_pattern_y; j <= max_pattern_y; j++) {
-            for (let k = 0; k < data.max_treadles; k++) {
-                const treadle = data.data_treadling[k + j * data.max_treadles];
-                if (treadle <= 0) continue;
-                const tieup = data.data_tieup[k + (heddle - 1) * data.max_treadles];
-                if (tieup > 0) {
-                    pattern.pattern.set(i, j, tieup);
-                    break;
-                }
-            }
-        }
-    }
-
     let max_heddle = 0;
     for (let i = min_pattern_x; i <= max_pattern_x; i++) {
         const heddle = data.data_threading[i];
@@ -550,6 +536,8 @@ function initPatternData(data, pattern) {
             }
         }
     }
+
+    pattern.recalc_pattern();
 }
 
 
