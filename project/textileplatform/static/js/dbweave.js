@@ -54,8 +54,9 @@ class Grid {
 
 
 class Threading {
-    constructor(width) {
+    constructor(width, height) {
         this.width = width;
+        this.height = height;
         this.data = new Array(this.width);
         this.data.fill(0);
     }
@@ -103,15 +104,17 @@ class GridView {
     drawGrid(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
 
         ctx.beginPath();
-        for (let i = 0; i <= this.width; i++) {
-            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + this.y * dy);
+        for (let i = 0; i <= width; i++) {
+            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
             ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
         }
-        for (let j = 0; j <= this.height; j++) {
-            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + j) * dy);
-            ctx.lineTo(0.5 + (this.x + this.width) * dx, 0.5 + (this.y + j) * dy);
+        for (let j = 0; j <= height; j++) {
+            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
+            ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
@@ -168,15 +171,17 @@ class GridViewPattern {
     drawGrid(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
 
         ctx.beginPath();
-        for (let i = 0; i <= this.width; i++) {
-            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + this.y * dy);
+        for (let i = 0; i <= width; i++) {
+            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
             ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
         }
-        for (let j = 0; j <= this.height; j++) {
-            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + j) * dy);
-            ctx.lineTo(0.5 + (this.x + this.width) * dx, 0.5 + (this.y + j) * dy);
+        for (let j = 0; j <= height; j++) {
+            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
+            ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
@@ -185,8 +190,11 @@ class GridViewPattern {
     }
 
     drawDataPattern(ctx, settings) {
-        for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
-            for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
+
+        for (let i = this.offset_i; i < this.offset_i + width; i++) {
+            for (let j = this.offset_j; j < this.offset_j + height; j++) {
                 let value = this.data.get(i, j);
                 if (value > 0) {
                     ctx.fillStyle = settings.darcula ? "#fff" : "#000";
@@ -202,9 +210,12 @@ class GridViewPattern {
     }
     
     drawDataColor(ctx, settings) {
-        for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
+
+        for (let i = this.offset_i; i < this.offset_i + width; i++) {
             if (i < pattern.min_x || pattern.max_x < i) continue;
-            for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
+            for (let j = this.offset_j; j < this.offset_j + height; j++) {
                 if (j < pattern.min_y || pattern.max_y < j) continue;
                 const value = this.data.get(i, j);
                 let color = null;
@@ -245,15 +256,17 @@ class GridViewColors {
     drawGrid(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
 
         ctx.beginPath();
-        for (let i = 0; i <= this.width; i++) {
-            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + this.y * dy);
+        for (let i = 0; i <= width; i++) {
+            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
             ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
         }
-        for (let j = 0; j <= this.height; j++) {
-            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + j) * dy);
-            ctx.lineTo(0.5 + (this.x + this.width) * dx, 0.5 + (this.y + j) * dy);
+        for (let j = 0; j <= height; j++) {
+            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
+            ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
@@ -262,8 +275,11 @@ class GridViewColors {
     }
 
     drawDataColor(ctx, settings) {
-        for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
-            for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
+
+        for (let i = this.offset_i; i < this.offset_i + width; i++) {
+            for (let j = this.offset_j; j < this.offset_j + height; j++) {
                 const color = colors[this.data.get(i, j)];
                 ctx.fillStyle = color;
                 ctx.fillRect(
@@ -283,7 +299,7 @@ class Pattern {
         this.color_warp = new Grid(width, 1);
         this.color_weft = new Grid(1, height);
         this.blade = new Grid(width, 1);
-        this.threading = new Threading(width);
+        this.threading = new Threading(width, max_heddle);
         this.tieup = new Grid(max_treadle, max_heddle);
         this.treadling = new Grid(max_treadle, height);
         this.pattern = new Grid(width, height);
