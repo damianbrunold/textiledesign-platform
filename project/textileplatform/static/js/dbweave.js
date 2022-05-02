@@ -294,6 +294,66 @@ class GridViewColors {
 }
 
 
+class GridViewBlade {
+    constructor(data, x, y, width) {
+        this.data = data;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.offset_i = 0;
+    }
+
+    draw(ctx, settings) {
+        this.drawGrid(ctx, settings);
+        this.drawData(ctx, settings);
+    }
+
+    drawGrid(ctx, settings) {
+        const dx = settings.dx;
+        const dy = settings.dy;
+        const width = Math.min(this.width, this.data.width);
+
+        ctx.beginPath();
+        for (let i = 0; i <= width; i++) {
+            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + 1) * dy);
+            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + this.y * dy);
+        }
+        for (let j = 0; j <= 1; j++) {
+            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + j) * dy);
+            ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + j) * dy);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+    }
+
+    drawData(ctx, settings) {
+        const width = Math.min(this.width, this.data.width);
+
+        for (let i = this.offset_i; i < this.offset_i + width; i++) {
+            const value = this.data.get(i, 0);
+            ctx.fillStyle = settings.darcula ? "#fff" : "#000";
+            if (value <= 0) {
+                ctx.fillRect(
+                    1.0 + (this.x + i - this.offset_i) * settings.dx,
+                    1.0 + (this.y + 0.5) * settings.dy,
+                    settings.dx - 1.0,
+                    settings.dy / 2 - 1.0
+                );
+            } else {
+                ctx.fillRect(
+                    1.0 + (this.x + i - this.offset_i) * settings.dx,
+                    1.0 + this.y * settings.dy,
+                    settings.dx - 1.0,
+                    settings.dy / 2 - 1.0
+                );
+            }
+        }
+    }
+}
+
+
 class Pattern {
     constructor(width, height, max_heddle, max_treadle) {
         this.color_warp = new Grid(width, 1);
@@ -384,7 +444,7 @@ class PatternView {
         this.color_warp = new GridViewColors(p.color_warp, x1, y4, width1, height4);
         this.threading  = new GridView(p.threading,        x1, y3, width1, height3);
         this.tieup      = new GridView(p.tieup,            x2, y3, width2, height3);
-        this.blade      = new GridView(p.blade,            x1, y2, width1, height2);
+        this.blade      = new GridViewBlade(p.blade,       x1, y2, width1);
         this.pattern    = new GridViewPattern(p.pattern,   x1, y1, width1, height1);
         this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1);
         this.color_weft = new GridViewColors(p.color_weft, x3, y1, width3, height1);
@@ -489,6 +549,7 @@ function initPatternData(data, pattern) {
 
     for (let i = 0; i < data.width; i++) {
         pattern.color_warp.set(i, 0, data.colors_warp[i]);
+        pattern.blade.set(i, 0, data.data_blatteinzug[i]);
     }
 
     for (let j = 0; j < data.height; j++) {
@@ -554,15 +615,13 @@ function initPatternData(data, pattern) {
 
 function savePatternData(data, pattern) {
     for (let i = 0; i < data.width; i++) {
+        data.data_blatteinzug[i] = pattern.blade.get(i, 0);
         data.colors_warp[i] = pattern.color_warp.get(i, 0);
+        data.data_threading[i] = pattern.threading.get_heddle(i);
     }
 
     for (let j = 0; j < data.height; j++) {
         data.colors_weft[j] = pattern.color_weft.get(0, j);
-    }
-
-    for (let i = 0; i < data.width; i++) {
-        data.data_threading[i] = pattern.threading.get_heddle(i);
     }
 
     for (let j = 0; j < data.height; j++) {
