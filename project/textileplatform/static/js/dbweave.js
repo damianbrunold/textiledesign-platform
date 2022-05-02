@@ -202,6 +202,7 @@ class GridViewPattern {
     
     drawDataColor(ctx, settings) {
         for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
+            if (i < pattern.min_x || pattern.max_x < i) continue;
             for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
                 const value = this.data.get(i, j);
                 let color = null;
@@ -288,12 +289,18 @@ class Pattern {
 
     recalc_pattern() {
         this.pattern.data.fill(0);
+        this.min_x = this.max_x = 0;
+        this.min_y = this.max_y = 0;
         for (let i = 0; i < this.pattern.width; i++) {
             const heddle = this.threading.get_heddle(i);
             if (heddle == 0) continue;
+            this.min_x = Math.min(this.min_x, i);
+            this.max_x = Math.max(this.max_x, i);
             for (let j = 0; j < this.pattern.height; j++) {
                 for (let k = 0; k < this.treadling.width; k++) {
                     if (this.treadling.get(k, j) <= 0) continue;
+                    this.min_y = Math.min(this.min_y, j);
+                    this.max_y = Math.max(this.max_y, j);
                     const value = this.tieup.get(k, heddle - 1);
                     if (value > 0) {
                         this.pattern.set(i, j, value);
