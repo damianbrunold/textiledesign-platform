@@ -4,21 +4,11 @@ Todo
 - before closing editor check for changes and
   prompt to save them. Or autosave?
 
-+1- Define weave pattern in-memory format
-+2- Parse DBW-Format into in-memory format
- 3- Render in-memory format into DBW-Format
-+4- Upload and store DBW pattern file
- 5- Download pattern file in DBW-Format
-+6- Very basic rendering of pattern
-+7- Very basic editing of pattern
-+8- Save changes to pattern
+- Render in-memory format into DBW-Format
+- Download pattern file in DBW-Format
 
-+ Define bead pattern in-memory format
-+ Parse jbead format into in-memory format
 - Render in-memory format into jbead format
-+ Upload and store JBead pattern file
 - Download bead pattern file in JBead format
-+ Very basic rendering of bead pattern
 - Very basic editing of bead pattern
 - Save changes to bead pattern
 
@@ -30,15 +20,12 @@ Todo
 - Export jbead pattern as PDF
 
 - dbweave
-  + draw blade
-  + draw color bars
-  + add view styles (pattern, color)
   - add view style simulation
   - calculate repeat
-  + edit threading
-  + edit treadling
-  + edit tieup
+  - edit reed
   - edit pattern with recalc
+  - display color palette
+  - edit color bars
   - support scrolling
   - draw scroll bars
   - support cell styles (full, dot, dash, cross, plus, numbers, ...)
@@ -52,7 +39,6 @@ Todo
   - draw info and bead list
   - add tools/menus
   - add color palette
-
 
 The webapp obviously needs to be usable with a mouse. But
 I also want it to be as usable as possible with the keyboard
