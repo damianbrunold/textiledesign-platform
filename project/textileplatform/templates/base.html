@@ -1,6 +1,7 @@
 <!doctype html>
 <html>
     <head>
+        <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">
         <title>{% block title %}{% endblock %} - {{ gettext('Textile Platform') }}</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
         {% if g.user and g.user.darkmode %}
