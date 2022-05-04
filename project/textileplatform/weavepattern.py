@@ -26,6 +26,7 @@ def parse_dbw_data(dbwdata, name=''):
     result['colors_weft'] = _dehex_byte(fields['schussfarben']['data'])
 
     result['palette'] = _dehex_colors(data['palette']['data2'])
+    print(result['palette'])
 
     view = contents['view']
     result['visible_heddles'] = int(view['einzug']['hvisible'])

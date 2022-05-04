@@ -28,6 +28,7 @@ from textileplatform.persistence import (
 from textileplatform.auth import login_required
 from textileplatform.weavepattern import parse_dbw_data
 from textileplatform.beadpattern import parse_jbb_data
+from textileplatform.palette import default_weave_palette
 
 
 @bp.route('/')
@@ -161,6 +162,68 @@ def upload_pattern():
 @login_required
 def create_pattern():
     if request.method == 'POST':
-        pass
+        if request.form['pattern_type'] == "DB-WEAVE Pattern":
+            name = request.form['name']
+            width = request.form['width']
+            height = request.form['height']
+
+            # TODO validate width and height
+            width = int(width)
+            height = int(height)
+
+            pattern = dict()
+            pattern['name'] = name
+            pattern['author'] = g.user.label
+            pattern['organization'] = ""
+            pattern['notes'] = ""
+
+            pattern['width'] = width
+            pattern['height'] = height
+            pattern['max_heddles'] = 32
+            pattern['max_treadles'] = 32
+
+            pattern['data_threading'] = [0] * width
+            pattern['data_tieup'] = [0] * (pattern['max_heddles'] * pattern['max_treadles'])
+            pattern['data_treadling'] = [0] * (pattern['max_treadles'] * height)
+            pattern['data_blatteinzug'] = ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
+
+            pattern['colors_warp'] = [55] * width   # TODO use user default color
+            pattern['colors_weft'] = [49] * height  # TODO use user default color
+
+            pattern['palette'] = default_weave_palette  # TODO use user default palette?
+
+            pattern['visible_heddles'] = 12
+            pattern['visible_treadles'] = 12
+            pattern['warp_lifting'] = True
+            pattern['zoom'] = 3
+            pattern['single_treadling'] = True
+            pattern['show_repeat'] = False
+
+            pattern['display_blade'] = True
+            pattern['display_colors_warp'] = True
+            pattern['display_colors_weft'] = True
+
+            pattern['pattern_style'] = 'draft'
+            pattern['threading_style'] = 'filled' # TODO use user defaults
+            pattern['treadling_style'] = 'filled' # TODO use user defaults
+            pattern['tieup_style'] = 'filled' # TODO use user defaults
+
+            # TODO handle exceptions (e.g. due to duplicate name!)
+            add_weave_pattern(pattern, g.user.name)
+            
+            return redirect(url_for("main.edit_pattern", 
+                                    user_name=g.user.name, 
+                                    pattern_name=name))
+        elif request.form['pattern_type'] == "JBead Pattern":
+            label = request.form['name']
+            name = label.replace("..", "").replace("/", "").replace("\\", "")
+            width = request.form['width']
+            height = request.form['height']
+
+            # TODO
+
+            return redirect(url_for("main.edit_pattern", 
+                                    user_name=g.user.name, 
+                                    pattern_name=name))
 
     return render_template('main/create_pattern.html')

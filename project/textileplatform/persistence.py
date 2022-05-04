@@ -20,7 +20,7 @@ def add_weave_pattern(pattern, user_name):
         now = datetime.datetime.utcnow()
         conn.execute(
             insert(pattern_table).values(
-                name=pattern['name'],
+                name=pattern['name'].replace("..", "").replace("/", "").replace("\\", ""),
                 label=pattern['name'],
                 owner=user_name,
                 pattern_type="DB-WEAVE Pattern",
@@ -38,7 +38,7 @@ def add_bead_pattern(pattern, user_name):
         now = datetime.datetime.utcnow()
         conn.execute(
             insert(pattern_table).values(
-                name=pattern['name'],
+                name=pattern['name'].replace("..", "").replace("/", "").replace("\\", ""),
                 label=pattern['name'],
                 owner=user_name,
                 pattern_type="JBead Pattern",
