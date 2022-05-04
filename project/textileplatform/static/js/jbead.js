@@ -21,6 +21,9 @@ let settings = null;
 let colors = [];
 
 
+let readonly = false;
+
+
 class Pattern {
     constructor(width, height) {
         this.width = width;
@@ -232,6 +235,7 @@ function initPattern(data, pattern) {
 }
 
 window.addEventListener("load", () => {
+    readonly = document.getElementById("readonly").value === "True";
     getPattern().then(init);
     if (!readonly) {
         document.getElementById("public").addEventListener("click", togglePublic);

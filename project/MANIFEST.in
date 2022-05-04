@@ -1,0 +1,3 @@
+graft textileplatform/static
+graft textileplatform/templates
+global-exclude *.pyc

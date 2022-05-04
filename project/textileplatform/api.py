@@ -82,6 +82,7 @@ def set_publication_state(pattern, publication_state):
             update(pattern_table).values(
                 public=publication_state
             ).where(pattern_table.c.name == pattern.name)
+            .where(pattern_table.c.owner == pattern.owner)
         )
     return make_response(jsonify({"status": "OK"}), 200)
 
