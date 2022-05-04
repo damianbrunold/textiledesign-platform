@@ -52,7 +52,7 @@ def add_bead_pattern(pattern, user_name):
         )
 
 
-def get_patterns_for_user_name(user_name):
+def get_patterns_for_user_name(user_name, only_public=False):
     with get_db().connect() as conn:
         rows = conn.execute(
             select(
@@ -76,6 +76,8 @@ def get_patterns_for_user_name(user_name):
         result = []
         if rows:
             for row in rows:
+                if only_public and not row.public:
+                    continue
                 result.append(Pattern.from_row(row))
         return result
 

@@ -39,8 +39,8 @@ def index():
                                user=g.user,
                                patterns=patterns)
     else:
-        weave_patterns = get_patterns_for_user_name("weave")
-        bead_patterns = get_patterns_for_user_name("bead")
+        weave_patterns = get_patterns_for_user_name("weave", True)
+        bead_patterns = get_patterns_for_user_name("bead", True)
         return render_template('main/index.html',
                                weave_patterns=weave_patterns,
                                bead_patterns=bead_patterns)
@@ -59,8 +59,7 @@ def user(name):
                                patterns=patterns)
     else:
         # show public view
-        patterns = [pattern for pattern in get_patterns_for_user_name(
-            user.name) if pattern.public]
+        patterns = get_patterns_for_user_name(user.name, True)
         return render_template('main/user_public.html',
                                user=user,
                                patterns=patterns)
