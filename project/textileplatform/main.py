@@ -8,7 +8,8 @@ from textileplatform.persistence import (
     add_weave_pattern,
     add_bead_pattern,
     get_patterns_for_user_name,
-    get_pattern_by_name
+    get_pattern_by_name,
+    delete_pattern
 )
 import os
 
@@ -238,3 +239,25 @@ def create_pattern():
                                     pattern_name=name))
 
     return render_template('main/create_pattern.html')
+
+
+@bp.route('/delete/<string:pattern_name>', methods=('GET', 'POST'))
+@login_required
+def delete(pattern_name):
+    pattern = get_pattern_by_name(g.user.name, pattern_name)
+    if not pattern:
+        return redirect(url_for('main.user', name=g.user.name))
+
+    if request.method == 'POST':
+        error = None
+
+        try:
+            delete_pattern(g.user.name, pattern)
+        except Exception:
+            error = gettext('Pattern could not be deleted.')
+        else:
+            return redirect(url_for("main.user", name=g.user.name))
+
+        flash(error)
+
+    return render_template('main/delete_pattern.html', pattern=pattern)

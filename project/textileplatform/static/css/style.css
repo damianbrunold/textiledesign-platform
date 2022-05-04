@@ -59,6 +59,7 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 
 #patterns {
     margin: 0 1rem;
+    max-width: 60rem;
 }
 
 .pattern {
@@ -67,19 +68,36 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
     padding: 0.4rem 0;
 }
 
+.pattern_name {
+    flex-grow: 2;
+    padding: 0.3rem 0.3rem 0.3rem 0;
+}
+
+#patterns a {
+    display: block;
+}
+
 .pattern_info {
     display: flex;
+    padding: 0.3rem 0.3rem;
 }
 
 .pattern_public {
     width: 5rem;
     padding-left: 1rem;
-    text-align: right;
+    text-align: center;
+}
+
+.pattern_delete {
+    width: 5rem;
+    padding-left: 1rem;
+    text-align: center;
 }
 
 .pattern_type {
     width: 10rem;
     padding-left: 1rem;
+    padding-right: 1rem;
     text-align: right;
 }
 

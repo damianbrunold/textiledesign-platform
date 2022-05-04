@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}{{ gettext('Delete pattern') }} {{ pattern.label }}{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <form enctype="multipart/form-data" method="POST">
+        {{ gettext('Do you really want to delete this pattern?')}}
+        <input type="submit" value="{{ gettext('Delete') }}">
+    </form>
+    <a class="action" href="{{ url_for('main.user', name=g.user.name) }}">{{ gettext('Cancel') }}</a>
+{% endblock %}

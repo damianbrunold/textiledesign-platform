@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from sqlalchemy import select, insert, update
+from sqlalchemy import select, insert, update, delete, func
 
 from textileplatform.db import (
     get_db,
@@ -70,7 +70,8 @@ def get_patterns_for_user_name(user_name):
             ).
             select_from(pattern_table).
             where(pattern_table.c.owner == user_name).
-            order_by(pattern_table.c.pattern_type, pattern_table.c.label)
+            order_by(pattern_table.c.pattern_type,
+                     func.lower(pattern_table.c.label))
         ).fetchall()
         result = []
         if rows:
@@ -136,6 +137,15 @@ def clone_pattern(user_name, pattern):
                 modified=datetime.datetime.utcnow(),
                 public=False
             )
+        )
+
+
+def delete_pattern(user_name, pattern):
+    with get_db().begin() as conn:
+        conn.execute(
+            delete(pattern_table)
+            .where(pattern_table.c.name == pattern.name)
+            .where(pattern_table.c.owner == user_name)
         )
 
 
