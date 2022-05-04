@@ -1,4 +1,3 @@
-import datetime
 import functools
 
 from flask_babel import gettext, get_locale, get_timezone
@@ -12,13 +11,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from textileplatform.model import User
 from textileplatform.persistence import (
-        get_user_by_name, 
-        get_user_by_email, 
-        add_user
+    get_user_by_name,
+    get_user_by_email,
+    add_user
 )
 from textileplatform.name import from_display
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+
 
 @bp.route('/register', methods=('GET', 'POST'))
 def register():

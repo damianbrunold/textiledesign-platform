@@ -18,8 +18,10 @@ def render_jbb_data(pattern):
 
 
 def _parse_jbb_into_struct(data):
-    lines = [line.strip() for line in data.splitlines() if not line.startswith(";")]
-    if lines[0] == '(jbb': lines = lines[1:] # skip file identification line
+    lines = [line.strip() for line in data.splitlines()
+             if not line.startswith(";")]
+    if lines[0] == '(jbb':
+        lines = lines[1:]  # skip file identification line
     result = dict()
     current = result
     stack = []
@@ -71,4 +73,3 @@ def _parse_value(value):
         return False
     else:
         return int(value)
-

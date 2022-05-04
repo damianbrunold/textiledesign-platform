@@ -2,7 +2,7 @@
 
 // data is provided by common.js and contains the "raw" json data of the pattern.
 
-// The pattern is an instance of the Pattern class and encapsulates the 
+// The pattern is an instance of the Pattern class and encapsulates the
 // data from the data object in order to manipulate and visualize it easier.
 let pattern = null;
 
@@ -129,7 +129,7 @@ class GridView {
             }
         }
     }
-    
+
     drawCell(ctx, settings, i, j, value) {
         if (value > 0) {
             ctx.fillStyle = settings.darcula ? "#fff" : "#000";
@@ -164,7 +164,7 @@ class GridViewPattern {
         } else if (settings.style == "simulation") {
             // TODO
         } else if (settings.style === "invisible") {
-            // empty! 
+            // empty!
         }
     }
 
@@ -208,7 +208,7 @@ class GridViewPattern {
             }
         }
     }
-    
+
     drawDataColor(ctx, settings) {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
@@ -473,7 +473,7 @@ function init() {
     const darkmode = document.getElementById("darkmode").value === "True";
     let canvas = document.getElementById('canvas');
     let ctx = canvas.getContext('2d');
-   
+
     const width = data['width'];
     const height = data['height'];
     const max_shafts = data['max_shafts'];
@@ -482,7 +482,7 @@ function init() {
     pattern = new Pattern(width, height, max_shafts, max_treadles);
     settings = new ViewSettings();
     settings.darcula = darkmode;
-    
+
     console.log(data);
     initSettings(data, settings);
     initPatternData(data, pattern);
@@ -631,7 +631,7 @@ function savePatternData(data, pattern) {
         }
     }
 
-    for (let i = 0; i < data.max_treadles; i++) {        
+    for (let i = 0; i < data.max_treadles; i++) {
         for (let j = 0; j <= data.max_shafts; j++) {
             const idx = i + j * data.max_treadles;
             data.data_tieup[idx] = pattern.tieup.get(i, j);

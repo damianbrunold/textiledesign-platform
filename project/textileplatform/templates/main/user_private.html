@@ -7,8 +7,8 @@
 {% block content %}
     <div id="patterns">
         {% for pattern in patterns %}
-            <a class="action" href="{{ url_for('main.edit_pattern', 
-                                               user_name=g.user.name, 
+            <a class="action" href="{{ url_for('main.edit_pattern',
+                                               user_name=g.user.name,
                                                pattern_name=pattern.name) }}">
                 <div class="pattern">
                     <div class="pattern_name">
@@ -39,4 +39,3 @@
         </p>
     </div>
 {% endblock %}
-

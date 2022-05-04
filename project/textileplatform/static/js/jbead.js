@@ -2,7 +2,7 @@
 
 // data is provided by common.js and contains the "raw" json data of the pattern.
 
-// The pattern is an instance of the Pattern class and encapsulates the 
+// The pattern is an instance of the Pattern class and encapsulates the
 // data from the data object in order to manipulate and visualize it easier.
 let pattern = null;
 
@@ -202,7 +202,7 @@ function init() {
     view = new PatternView(pattern, settings, ctx);
 
     initPattern(data, pattern);
-    
+
     view.draw();
 
     canvas.addEventListener('click', function(event) {

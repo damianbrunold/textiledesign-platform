@@ -1,7 +1,7 @@
 def parse_dbw_data(dbwdata, name=''):
     contents = _parse_dbw_into_struct(dbwdata)
     result = dict()
-    
+
     props = contents['properties']
     result['name'] = name
     result['author'] = props['author']
@@ -19,7 +19,8 @@ def parse_dbw_data(dbwdata, name=''):
     fields = data['fields']
     result['data_entering'] = _dehex_short(fields['einzug']['data'])
     result['data_tieup'] = _dehex_byte(fields['aufknuepfung']['data'])
-    result['data_treadling'] = _dehex_byte(fields['trittfolge']['trittfolge']['data'])
+    result['data_treadling'] = _dehex_byte(
+        fields['trittfolge']['trittfolge']['data'])
     # TODO handle pegplan?
     result['data_reed'] = _dehex_byte(fields['blatteinzug']['data'])
     result['colors_warp'] = _dehex_byte(fields['kettfarben']['data'])
@@ -51,11 +52,12 @@ def parse_dbw_data(dbwdata, name=''):
         result['weave_style'] = 'invisible'
 
     result['entering_style'] = _decode_viewtype(view['einzug']['viewtype'])
-    result['treadling_style'] = _decode_viewtype(view['trittfolge']['viewtype'])
+    result['treadling_style'] = _decode_viewtype(
+        view['trittfolge']['viewtype'])
     result['tieup_style'] = _decode_viewtype(view['aufknuepfung']['viewtype'])
 
     # TODO add rest
-    
+
     return result
 
 
@@ -82,7 +84,8 @@ def _parse_dbw_into_struct(data):
     lines = [line for line in data.splitlines() if not line.startswith(";")]
     lines = _unsplit_lines(lines)
     lines = [line.strip() for line in lines]
-    if lines[0] == '@dbw3:file': lines = lines[1:] # skip file identification line
+    if lines[0] == '@dbw3:file':
+        lines = lines[1:]  # skip file identification line
     result = dict()
     stack = []
     current = result

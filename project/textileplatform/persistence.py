@@ -1,8 +1,7 @@
 import datetime
 import json
-import os
 
-from sqlalchemy import select, insert, update, delete
+from sqlalchemy import select, insert, update
 
 from textileplatform.db import (
     get_db,
@@ -20,7 +19,8 @@ def add_weave_pattern(pattern, user_name):
         now = datetime.datetime.utcnow()
         conn.execute(
             insert(pattern_table).values(
-                name=pattern['name'].replace("..", "").replace("/", "").replace("\\", ""),
+                name=pattern['name'].replace("..", "").replace(
+                    "/", "").replace("\\", ""),
                 label=pattern['name'],
                 owner=user_name,
                 pattern_type="DB-WEAVE Pattern",
@@ -38,7 +38,8 @@ def add_bead_pattern(pattern, user_name):
         now = datetime.datetime.utcnow()
         conn.execute(
             insert(pattern_table).values(
-                name=pattern['name'].replace("..", "").replace("/", "").replace("\\", ""),
+                name=pattern['name'].replace("..", "").replace(
+                    "/", "").replace("\\", ""),
                 label=pattern['name'],
                 owner=user_name,
                 pattern_type="JBead Pattern",
@@ -98,7 +99,8 @@ def get_pattern_by_name(user_name, name):
             where(pattern_table.c.owner == user_name).
             where(pattern_table.c.name == name)
         ).fetchone()
-        if not row: return None
+        if not row:
+            return None
         return Pattern.from_row(row)
 
 
@@ -187,7 +189,8 @@ def get_user_by_name(name):
             select_from(user_table).
             where(user_table.c.name == name)
         ).fetchone()
-        if not row: return None
+        if not row:
+            return None
         user = User.from_row(row)
         return user
 
@@ -209,6 +212,7 @@ def get_user_by_email(email):
             select_from(user_table).
             where(user_table.c.email == email)
         ).fetchone()
-        if not row: return None
+        if not row:
+            return None
         user = User.from_row(row)
         return user

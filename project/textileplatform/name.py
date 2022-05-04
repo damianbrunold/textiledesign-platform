@@ -1,3 +1,6 @@
 def from_display(display_name):
-    return display_name.lower().replace(" ", "-").replace("_", "-").replace("\t", "-")
-
+    result = display_name.lower()
+    result = result.replace(" ", "-")
+    result = result.replace("_", "-")
+    result = result.replace("\t", "-")
+    return result

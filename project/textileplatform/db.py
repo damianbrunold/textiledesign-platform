@@ -1,7 +1,15 @@
-import datetime
 import sqlalchemy
 
-from sqlalchemy import MetaData, Table, Column, Integer, String, DateTime, Boolean, Text, LargeBinary
+from sqlalchemy import (
+    MetaData,
+    Table,
+    Column,
+    String,
+    DateTime,
+    Boolean,
+    Text,
+    LargeBinary
+)
 from sqlalchemy import UniqueConstraint, PrimaryKeyConstraint
 from sqlalchemy import insert
 
@@ -9,7 +17,7 @@ import click
 from flask import current_app, g
 from flask.cli import with_appcontext
 
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash as gen_pw_hash
 
 metadata = MetaData()
 
@@ -93,15 +101,19 @@ pin_table = Table(
     PrimaryKeyConstraint("pattern", "user")
 )
 
+
 def get_db():
     if 'engine' not in g:
-        g.engine = sqlalchemy.create_engine(current_app.config['DATABASE'], client_encoding="utf8")
+        g.engine = sqlalchemy.create_engine(
+            current_app.config['DATABASE'], client_encoding="utf8")
     return g.engine
+
 
 def close_db(e=None):
     engine = g.pop('engine', None)
     if engine is not None:
         engine.dispose()
+
 
 def init_db():
     engine = get_db()
@@ -110,9 +122,12 @@ def init_db():
     metadata.create_all(engine)
 
     with engine.begin() as conn:
-        conn.execute(insert(pattern_type_table).values(pattern_type="DB-WEAVE Pattern"))
-        conn.execute(insert(pattern_type_table).values(pattern_type="JBead Pattern"))
-        conn.execute(insert(pattern_type_table).values(pattern_type="Generic Image"))
+        conn.execute(insert(pattern_type_table).values(
+            pattern_type="DB-WEAVE Pattern"))
+        conn.execute(insert(pattern_type_table).values(
+            pattern_type="JBead Pattern"))
+        conn.execute(insert(pattern_type_table).values(
+            pattern_type="Generic Image"))
         conn.execute(
             insert(user_table).values(
                 name="superuser",
@@ -123,7 +138,7 @@ def init_db():
                 disabled=False,
                 locale="en",
                 timezone="CET",
-                password=generate_password_hash(current_app.config['ADMIN_PASSWORD']))
+                password=gen_pw_hash(current_app.config['ADMIN_PASSWORD']))
         )
         conn.execute(
             insert(user_table).values(
@@ -135,7 +150,7 @@ def init_db():
                 disabled=False,
                 locale="en",
                 timezone="CET",
-                password=generate_password_hash(current_app.config['ADMIN_PASSWORD']))
+                password=gen_pw_hash(current_app.config['ADMIN_PASSWORD']))
         )
         conn.execute(
             insert(user_table).values(
@@ -147,8 +162,9 @@ def init_db():
                 disabled=False,
                 locale="en",
                 timezone="CET",
-                password=generate_password_hash(current_app.config['ADMIN_PASSWORD']))
+                password=gen_pw_hash(current_app.config['ADMIN_PASSWORD']))
         )
+
 
 @click.command('init-db')
 @with_appcontext
@@ -156,6 +172,7 @@ def init_db_command():
     """Clear the existing data and create new tables"""
     init_db()
     click.echo('Initialized the database.')
+
 
 def init_app(app):
     app.teardown_appcontext(close_db)

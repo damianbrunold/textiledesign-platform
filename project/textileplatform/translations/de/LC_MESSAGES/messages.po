@@ -110,4 +110,3 @@ msgstr "Status"
 #: templates/main/status.html:8
 msgid "textileplatform version"
 msgstr "textileplatform version"
-
