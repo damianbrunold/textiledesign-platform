@@ -179,11 +179,11 @@ def create_pattern():
 
             pattern['width'] = width
             pattern['height'] = height
-            pattern['max_heddles'] = 32
+            pattern['max_shafts'] = 32
             pattern['max_treadles'] = 32
 
-            pattern['data_threading'] = [0] * width
-            pattern['data_tieup'] = [0] * (pattern['max_heddles'] * pattern['max_treadles'])
+            pattern['data_entering'] = [0] * width
+            pattern['data_tieup'] = [0] * (pattern['max_shafts'] * pattern['max_treadles'])
             pattern['data_treadling'] = [0] * (pattern['max_treadles'] * height)
             pattern['data_reed'] = ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
 
@@ -192,7 +192,7 @@ def create_pattern():
 
             pattern['palette'] = default_weave_palette  # TODO use user default palette?
 
-            pattern['visible_heddles'] = 12
+            pattern['visible_shafts'] = 12
             pattern['visible_treadles'] = 12
             pattern['warp_lifting'] = True
             pattern['zoom'] = 3
@@ -203,8 +203,8 @@ def create_pattern():
             pattern['display_colors_warp'] = True
             pattern['display_colors_weft'] = True
 
-            pattern['pattern_style'] = 'draft'
-            pattern['threading_style'] = 'filled' # TODO use user defaults
+            pattern['weave_style'] = 'draft'
+            pattern['entering_style'] = 'filled' # TODO use user defaults
             pattern['treadling_style'] = 'filled' # TODO use user defaults
             pattern['tieup_style'] = 'filled' # TODO use user defaults
 

@@ -61,21 +61,21 @@ class Threading {
         this.data.fill(0);
     }
 
-    get_heddle(i) {
+    get_shaft(i) {
         return this.data[i];
     }
 
-    set_heddle(i, heddle) {
-        this.data[i] = heddle;
+    set_shaft(i, shaft) {
+        this.data[i] = shaft;
     }
 
     get(i, j) {
-        return this.get_heddle(i) - 1 == j ? 1 : 0;
+        return this.get_shaft(i) - 1 == j ? 1 : 0;
     }
 
     set(i, j, value) {
-        if (value > 0) this.set_heddle(i, j + 1);
-        else this.set_heddle(i, 0);
+        if (value > 0) this.set_shaft(i, j + 1);
+        else this.set_shaft(i, 0);
     }
 }
 
@@ -355,33 +355,33 @@ class GridViewBlade {
 
 
 class Pattern {
-    constructor(width, height, max_heddle, max_treadle) {
+    constructor(width, height, max_shaft, max_treadle) {
         this.color_warp = new Grid(width, 1);
         this.color_weft = new Grid(1, height);
         this.reed = new Grid(width, 1);
-        this.threading = new Threading(width, max_heddle);
-        this.tieup = new Grid(max_treadle, max_heddle);
+        this.entering = new Threading(width, max_shaft);
+        this.tieup = new Grid(max_treadle, max_shaft);
         this.treadling = new Grid(max_treadle, height);
-        this.pattern = new Grid(width, height);
+        this.weave = new Grid(width, height);
     }
 
-    recalc_pattern() {
-        this.pattern.data.fill(0);
+    recalc_weave() {
+        this.weave.data.fill(0);
         this.min_x = this.max_x = 0;
         this.min_y = this.max_y = 0;
-        for (let i = 0; i < this.pattern.width; i++) {
-            const heddle = this.threading.get_heddle(i);
-            if (heddle <= 0) continue;
+        for (let i = 0; i < this.weave.width; i++) {
+            const shaft = this.entering.get_shaft(i);
+            if (shaft <= 0) continue;
             this.min_x = Math.min(this.min_x, i);
             this.max_x = Math.max(this.max_x, i);
-            for (let j = 0; j < this.pattern.height; j++) {
+            for (let j = 0; j < this.weave.height; j++) {
                 for (let k = 0; k < this.treadling.width; k++) {
                     if (this.treadling.get(k, j) <= 0) continue;
                     this.min_y = Math.min(this.min_y, j);
                     this.max_y = Math.max(this.max_y, j);
-                    const value = this.tieup.get(k, heddle - 1);
+                    const value = this.tieup.get(k, shaft - 1);
                     if (value > 0) {
-                        this.pattern.set(i, j, value);
+                        this.weave.set(i, j, value);
                     }
                 }
             }
@@ -403,11 +403,11 @@ class ViewSettings {
 
 
 class PatternView {
-    constructor(data, settings, ctx, visible_heddles=16, visible_treadles=16) {
+    constructor(data, settings, ctx, visible_shafts=16, visible_treadles=16) {
         this.settings = settings;
         this.data = data;
         this.ctx = ctx;
-        this.visible_heddles = visible_heddles;
+        this.visible_shafts = visible_shafts;
         this.visible_treadles = visible_treadles;
         this.layout();
     }
@@ -426,7 +426,7 @@ class PatternView {
         const width1 = availx - width3 - 1 - width2 - 1 - 1;
 
         const height4 = 1;
-        const height3 = this.visible_heddles;
+        const height3 = this.visible_shafts;
         const height2 = 1;
         const height1 = availy - height4 - 1 - height3 - 1 - height2 - 1 - 1;
 
@@ -442,10 +442,10 @@ class PatternView {
         const p = this.data;
 
         this.color_warp = new GridViewColors(p.color_warp, x1, y4, width1, height4);
-        this.threading  = new GridView(p.threading,        x1, y3, width1, height3);
+        this.entering   = new GridView(p.entering,         x1, y3, width1, height3);
         this.tieup      = new GridView(p.tieup,            x2, y3, width2, height3);
         this.reed       = new GridViewBlade(p.reed,        x1, y2, width1);
-        this.pattern    = new GridViewPattern(p.pattern,   x1, y1, width1, height1);
+        this.weave      = new GridViewPattern(p.weave,     x1, y1, width1, height1);
         this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1);
         this.color_weft = new GridViewColors(p.color_weft, x3, y1, width3, height1);
 
@@ -455,11 +455,11 @@ class PatternView {
     draw() {
         this.clearCanvas();
         this.color_warp.draw(this.ctx, this.settings);
-        this.threading.draw(this.ctx, this.settings);
+        this.entering.draw(this.ctx, this.settings);
         this.tieup.draw(this.ctx, this.settings);
         this.reed.draw(this.ctx, this.settings);
         this.treadling.draw(this.ctx, this.settings);
-        this.pattern.draw(this.ctx, this.settings);
+        this.weave.draw(this.ctx, this.settings);
         this.color_weft.draw(this.ctx, this.settings);
     }
 
@@ -476,10 +476,10 @@ function init() {
    
     const width = data['width'];
     const height = data['height'];
-    const max_heddles = data['max_heddles'];
+    const max_shafts = data['max_shafts'];
     const max_treadles = data['max_treadles'];
 
-    pattern = new Pattern(width, height, max_heddles, max_treadles);
+    pattern = new Pattern(width, height, max_shafts, max_treadles);
     settings = new ViewSettings();
     settings.darcula = darkmode;
     
@@ -493,10 +493,10 @@ function init() {
     canvas.width = container.clientWidth - 2;
     canvas.height = container.clientHeight - 2;
 
-    const visible_heddles = data['visible_heddles'];
+    const visible_shafts = data['visible_shafts'];
     const visible_treadles = data['visible_treadles'];
 
-    view = new PatternView(pattern, settings, ctx, visible_heddles, visible_treadles);
+    view = new PatternView(pattern, settings, ctx, visible_shafts, visible_treadles);
     view.draw();
 
     canvas.addEventListener('click', function(event) {
@@ -504,27 +504,27 @@ function init() {
         const y = event.offsetY;
         const i = Math.trunc(x / settings.dx);
         const j = Math.trunc(y / settings.dy);
-        if (view.threading.contains(i, j)) {
-            const ii = i - view.threading.x + view.threading.offset_i;
-            const jj = view.threading.height - 1 - (j - view.threading.y) + view.threading.offset_j;
-            if (pattern.threading.get_heddle(ii) == jj + 1) {
-                pattern.threading.set_heddle(ii, 0);
+        if (view.entering.contains(i, j)) {
+            const ii = i - view.entering.x + view.entering.offset_i;
+            const jj = view.entering.height - 1 - (j - view.entering.y) + view.entering.offset_j;
+            if (pattern.entering.get_shaft(ii) == jj + 1) {
+                pattern.entering.set_shaft(ii, 0);
             } else {
-                pattern.threading.set_heddle(ii, jj + 1);
+                pattern.entering.set_shaft(ii, jj + 1);
             }
-            pattern.recalc_pattern();
+            pattern.recalc_weave();
             view.draw();
         } else if (view.treadling.contains(i, j)) {
             const ii = i - view.treadling.x + view.treadling.offset_i;
             const jj = view.treadling.height - 1 - (j - view.treadling.y) + view.treadling.offset_j;
             pattern.treadling.toggle(ii, jj);
-            pattern.recalc_pattern();
+            pattern.recalc_weave();
             view.draw();
         } else if (view.tieup.contains(i, j)) {
             const ii = i - view.tieup.x + view.tieup.offset_i;
             const jj = view.tieup.height - 1 - (j - view.tieup.y) + view.tieup.offset_j;
             pattern.tieup.toggle(ii, jj);
-            pattern.recalc_pattern();
+            pattern.recalc_weave();
             view.draw();
         }
     });
@@ -532,12 +532,12 @@ function init() {
 
 
 function initSettings(data, settings) {
-    settings.style = data["pattern_style"];
+    settings.style = data["weave_style"];
 }
 
 
 function saveSettings(data, settings) {
-    data["pattern_style"] = settings.style;
+    data["weave_style"] = settings.style;
 }
 
 
@@ -559,7 +559,7 @@ function initPatternData(data, pattern) {
     let min_pattern_x = 0;
     let max_pattern_x = 0;
     for (let i = 0; i < data.width; i++) {
-        if (data.data_threading[i] > 0) {
+        if (data.data_entering[i] > 0) {
             min_pattern_x = Math.min(min_pattern_x, i);
             max_pattern_x = Math.max(max_pattern_x, i);
         }
@@ -581,12 +581,12 @@ function initPatternData(data, pattern) {
     pattern.min_y = min_pattern_y;
     pattern.max_y = max_pattern_y;
 
-    let max_heddle = 0;
+    let max_shaft = 0;
     for (let i = min_pattern_x; i <= max_pattern_x; i++) {
-        const heddle = data.data_threading[i];
-        if (heddle <= 0) continue;
-        max_heddle = Math.max(max_heddle, heddle - 1);
-        pattern.threading.set_heddle(i, heddle);
+        const shaft = data.data_entering[i];
+        if (shaft <= 0) continue;
+        max_shaft = Math.max(max_shaft, shaft - 1);
+        pattern.entering.set_shaft(i, shaft);
     }
 
     let max_treadle = 0;
@@ -601,7 +601,7 @@ function initPatternData(data, pattern) {
     }
 
     for (let i = 0; i <= max_treadle; i++) {
-        for (let j = 0; j <= max_heddle; j++) {
+        for (let j = 0; j <= max_shaft; j++) {
             const tieup = data.data_tieup[i + j * data.max_treadles];
             if (tieup > 0) {
                 pattern.tieup.set(i, j, tieup);
@@ -609,7 +609,7 @@ function initPatternData(data, pattern) {
         }
     }
 
-    pattern.recalc_pattern();
+    pattern.recalc_weave();
 }
 
 
@@ -617,7 +617,7 @@ function savePatternData(data, pattern) {
     for (let i = 0; i < data.width; i++) {
         data.data_reed[i] = pattern.reed.get(i, 0);
         data.colors_warp[i] = pattern.color_warp.get(i, 0);
-        data.data_threading[i] = pattern.threading.get_heddle(i);
+        data.data_entering[i] = pattern.entering.get_shaft(i);
     }
 
     for (let j = 0; j < data.height; j++) {
@@ -632,7 +632,7 @@ function savePatternData(data, pattern) {
     }
 
     for (let i = 0; i < data.max_treadles; i++) {        
-        for (let j = 0; j <= data.max_heddles; j++) {
+        for (let j = 0; j <= data.max_shafts; j++) {
             const idx = i + j * data.max_treadles;
             data.data_tieup[idx] = pattern.tieup.get(i, j);
         }

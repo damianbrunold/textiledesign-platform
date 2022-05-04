@@ -13,11 +13,11 @@ def parse_dbw_data(dbwdata, name=''):
     size = data['size']
     result['width'] = int(size['maxx1'])
     result['height'] = int(size['maxy2'])
-    result['max_heddles'] = int(size['maxx2'])
+    result['max_shafts'] = int(size['maxx2'])
     result['max_treadles'] = int(size['maxy1'])
 
     fields = data['fields']
-    result['data_threading'] = _dehex_short(fields['einzug']['data'])
+    result['data_entering'] = _dehex_short(fields['einzug']['data'])
     result['data_tieup'] = _dehex_byte(fields['aufknuepfung']['data'])
     result['data_treadling'] = _dehex_byte(fields['trittfolge']['trittfolge']['data'])
     # TODO handle pegplan?
@@ -29,7 +29,7 @@ def parse_dbw_data(dbwdata, name=''):
     print(result['palette'])
 
     view = contents['view']
-    result['visible_heddles'] = int(view['einzug']['hvisible'])
+    result['visible_shafts'] = int(view['einzug']['hvisible'])
     result['visible_treadles'] = int(view['trittfolge']['wvisible'])
     result['warp_lifting'] = view['general']['hebung'] == '0'
     result['zoom'] = int(view['general']['zoom'])
@@ -42,15 +42,15 @@ def parse_dbw_data(dbwdata, name=''):
 
     state = view['gewebe']['state']
     if state == '0':
-        result['pattern_style'] = 'draft'
+        result['weave_style'] = 'draft'
     elif state == '1':
-        result['pattern_style'] = 'color'
+        result['weave_style'] = 'color'
     elif state == '2':
-        result['pattern_style'] = 'simulation'
+        result['weave_style'] = 'simulation'
     elif state == '3':
-        result['pattern_style'] = 'invisible'
+        result['weave_style'] = 'invisible'
 
-    result['threading_style'] = _decode_viewtype(view['einzug']['viewtype'])
+    result['entering_style'] = _decode_viewtype(view['einzug']['viewtype'])
     result['treadling_style'] = _decode_viewtype(view['trittfolge']['viewtype'])
     result['tieup_style'] = _decode_viewtype(view['aufknuepfung']['viewtype'])
 
