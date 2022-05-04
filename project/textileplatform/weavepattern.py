@@ -21,7 +21,7 @@ def parse_dbw_data(dbwdata, name=''):
     result['data_tieup'] = _dehex_byte(fields['aufknuepfung']['data'])
     result['data_treadling'] = _dehex_byte(fields['trittfolge']['trittfolge']['data'])
     # TODO handle pegplan?
-    result['data_blatteinzug'] = _dehex_byte(fields['blatteinzug']['data'])
+    result['data_reed'] = _dehex_byte(fields['blatteinzug']['data'])
     result['colors_warp'] = _dehex_byte(fields['kettfarben']['data'])
     result['colors_weft'] = _dehex_byte(fields['schussfarben']['data'])
 
@@ -36,7 +36,7 @@ def parse_dbw_data(dbwdata, name=''):
     result['single_treadling'] = view['trittfolge']['single'] == '1'
     result['show_repeat'] = view['general']['viewrapport'] == '1'
 
-    result['display_blade'] = view['blatteinzug']['visible'] == '1'
+    result['display_reed'] = view['blatteinzug']['visible'] == '1'
     result['display_colors_warp'] = view['kettfarben']['visible'] == '1'
     result['display_colors_weft'] = view['schussfarben']['visible'] == '1'
 

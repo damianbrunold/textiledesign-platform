@@ -185,7 +185,7 @@ def create_pattern():
             pattern['data_threading'] = [0] * width
             pattern['data_tieup'] = [0] * (pattern['max_heddles'] * pattern['max_treadles'])
             pattern['data_treadling'] = [0] * (pattern['max_treadles'] * height)
-            pattern['data_blatteinzug'] = ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
+            pattern['data_reed'] = ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
 
             pattern['colors_warp'] = [55] * width   # TODO use user default color
             pattern['colors_weft'] = [49] * height  # TODO use user default color
@@ -199,7 +199,7 @@ def create_pattern():
             pattern['single_treadling'] = True
             pattern['show_repeat'] = False
 
-            pattern['display_blade'] = True
+            pattern['display_reed'] = True
             pattern['display_colors_warp'] = True
             pattern['display_colors_weft'] = True
 

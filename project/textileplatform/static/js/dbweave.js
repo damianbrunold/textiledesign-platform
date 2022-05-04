@@ -358,7 +358,7 @@ class Pattern {
     constructor(width, height, max_heddle, max_treadle) {
         this.color_warp = new Grid(width, 1);
         this.color_weft = new Grid(1, height);
-        this.blade = new Grid(width, 1);
+        this.reed = new Grid(width, 1);
         this.threading = new Threading(width, max_heddle);
         this.tieup = new Grid(max_treadle, max_heddle);
         this.treadling = new Grid(max_treadle, height);
@@ -444,7 +444,7 @@ class PatternView {
         this.color_warp = new GridViewColors(p.color_warp, x1, y4, width1, height4);
         this.threading  = new GridView(p.threading,        x1, y3, width1, height3);
         this.tieup      = new GridView(p.tieup,            x2, y3, width2, height3);
-        this.blade      = new GridViewBlade(p.blade,       x1, y2, width1);
+        this.reed       = new GridViewBlade(p.reed,        x1, y2, width1);
         this.pattern    = new GridViewPattern(p.pattern,   x1, y1, width1, height1);
         this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1);
         this.color_weft = new GridViewColors(p.color_weft, x3, y1, width3, height1);
@@ -457,7 +457,7 @@ class PatternView {
         this.color_warp.draw(this.ctx, this.settings);
         this.threading.draw(this.ctx, this.settings);
         this.tieup.draw(this.ctx, this.settings);
-        this.blade.draw(this.ctx, this.settings);
+        this.reed.draw(this.ctx, this.settings);
         this.treadling.draw(this.ctx, this.settings);
         this.pattern.draw(this.ctx, this.settings);
         this.color_weft.draw(this.ctx, this.settings);
@@ -549,7 +549,7 @@ function initPatternData(data, pattern) {
 
     for (let i = 0; i < data.width; i++) {
         pattern.color_warp.set(i, 0, data.colors_warp[i]);
-        pattern.blade.set(i, 0, data.data_blatteinzug[i]);
+        pattern.reed.set(i, 0, data.data_reed[i]);
     }
 
     for (let j = 0; j < data.height; j++) {
@@ -615,7 +615,7 @@ function initPatternData(data, pattern) {
 
 function savePatternData(data, pattern) {
     for (let i = 0; i < data.width; i++) {
-        data.data_blatteinzug[i] = pattern.blade.get(i, 0);
+        data.data_reed[i] = pattern.reed.get(i, 0);
         data.colors_warp[i] = pattern.color_warp.get(i, 0);
         data.data_threading[i] = pattern.threading.get_heddle(i);
     }
