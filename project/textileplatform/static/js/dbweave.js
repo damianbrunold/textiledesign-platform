@@ -24,6 +24,154 @@ let colors = {};
 let readonly = false;
 
 
+function cellPainterFilled(ctx, settings, view, i, j, value) {
+    if (value > 0) {
+        ctx.fillStyle = settings.darcula ? "#fff" : "#000";
+        ctx.fillRect(
+            0.5 + (view.x + i) * settings.dx + settings.bx,
+            0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by,
+            settings.dx - 2 * settings.bx,
+            settings.dy - 2 * settings.by
+        );
+    }
+}
+
+
+function cellPainterDot(ctx, settings, view, i, j, value) {
+    if (value > 0) {
+        ctx.beginPath();
+        ctx.fillStyle = settings.darcula ? "#fff" : "#000";
+        ctx.ellipse(
+            0.5 + (view.x + i + 0.5) * settings.dx,
+            0.5 + (view.y + view.height - j - 0.5) * settings.dy,
+            (settings.dx - 2 * settings.bx) / 4,
+            (settings.dy - 2 * settings.by) / 4,
+            0,
+            0,
+            2*Math.PI
+        );
+        ctx.fill();
+    }
+}
+
+
+function cellPainterCross(ctx, settings, view, i, j, value) {
+    if (value > 0) {
+        ctx.beginPath();
+        ctx.moveTo(
+            0.5 + (view.x + i) * settings.dx + settings.bx,
+            0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by
+        )
+        ctx.lineTo(
+            0.5 + (view.x + i + 1) * settings.dx - settings.bx,
+            0.5 + (view.y + view.height - j) * settings.dy - settings.by
+        )
+        ctx.moveTo(
+            0.5 + (view.x + i) * settings.dx + settings.bx,
+            0.5 + (view.y + view.height - j) * settings.dy - settings.by
+        )
+        ctx.lineTo(
+            0.5 + (view.x + i + 1) * settings.dx - settings.bx,
+            0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by
+        )
+        ctx.closePath();
+        ctx.strikeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+}
+
+
+function cellPainterCircle(ctx, settings, view, i, j, value) {
+    cellPainterFilled(ctx, settings, view, i, j, value); // TODO
+}
+
+
+function cellPainterRising(ctx, settings, view, i, j, value) {
+    cellPainterFilled(ctx, settings, view, i, j, value); // TODO
+}
+
+
+function cellPainterFalling(ctx, settings, view, i, j, value) {
+    cellPainterFilled(ctx, settings, view, i, j, value); // TODO
+}
+
+
+function cellPainterHDash(ctx, settings, view, i, j, value) {
+    if (value > 0) {
+        ctx.beginPath();
+        ctx.moveTo(
+            0.5 + (view.x + i) * settings.dx,
+            0.5 + (view.y + view.height - j - 0.5) * settings.dy + settings.by
+        )
+        ctx.lineTo(
+            0.5 + (view.x + i + 1) * settings.dx,
+            0.5 + (view.y + view.height - j - 0.5) * settings.dy - settings.by
+        )
+        ctx.closePath();
+        ctx.strikeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+    }
+}
+
+
+function cellPainterVDash(ctx, settings, view, i, j, value) {
+    if (value > 0) {
+        ctx.beginPath();
+        ctx.moveTo(
+            0.5 + (view.x + i + 0.5) * settings.dx,
+            0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by
+        )
+        ctx.lineTo(
+            0.5 + (view.x + i + 0.5) * settings.dx,
+            0.5 + (view.y + view.height - j) * settings.dy - settings.by
+        )
+        ctx.closePath();
+        ctx.strikeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+    }
+}
+
+
+function cellPainterPlus(ctx, settings, view, i, j, value) {
+    cellPainterFilled(ctx, settings, view, i, j, value); // TODO
+}
+
+
+function cellPainterSmallcircle(ctx, settings, view, i, j, value) {
+    cellPainterFilled(ctx, settings, view, i, j, value); // TODO
+}
+
+
+function cellPainterSmallcross(ctx, settings, view, i, j, value) {
+    cellPainterFilled(ctx, settings, view, i, j, value); // TODO
+}
+
+
+function cellPainterNumber(ctx, settings, view, i, j, value) {
+    cellPainterFilled(ctx, settings, view, i, j, value); // TODO
+}
+
+
+const cellPainters = {
+    'filled':      cellPainterFilled,
+    'dot':         cellPainterDot,
+    'cross':       cellPainterCross,
+    'circle':      cellPainterCircle,
+    'rising':      cellPainterRising,
+    'falling':     cellPainterFalling,
+    'dash':        cellPainterVDash,
+    'hdash':       cellPainterHDash,
+    'vdash':       cellPainterVDash,
+    'plus':        cellPainterPlus,
+    'smallcircle': cellPainterSmallcircle,
+    'smallcross':  cellPainterSmallcross,
+    'number':      cellPainterNumber
+}
+
+
 class Grid {
     constructor(width, height) {
         this.width = width;
@@ -53,7 +201,7 @@ class Grid {
 }
 
 
-class Threading {
+class Entering {
     constructor(width, height) {
         this.width = width;
         this.height = height;
@@ -81,7 +229,7 @@ class Threading {
 
 
 class GridView {
-    constructor(data, x, y, width, height) {
+    constructor(data, x, y, width, height, painter_prop) {
         this.data = data;
         this.x = x;
         this.y = y;
@@ -89,6 +237,7 @@ class GridView {
         this.height = height;
         this.offset_i = 0;
         this.offset_j = 0;
+        this.painter_prop = painter_prop;
     }
 
     contains(i, j) {
@@ -123,22 +272,11 @@ class GridView {
     }
 
     drawData(ctx, settings) {
+        const painter = cellPainters[settings[this.painter_prop]];
         for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
             for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
-                this.drawCell(ctx, settings, i - this.offset_i, j - this.offset_j, this.data.get(i, j));
+                painter(ctx, settings, this, i - this.offset_i, j - this.offset_j, this.data.get(i, j));
             }
-        }
-    }
-
-    drawCell(ctx, settings, i, j, value) {
-        if (value > 0) {
-            ctx.fillStyle = settings.darcula ? "#fff" : "#000";
-            ctx.fillRect(
-                0.5 + (this.x + i) * settings.dx + settings.bx,
-                0.5 + (this.y + this.height - j - 1) * settings.dy + settings.by,
-                settings.dx - 2 * settings.bx,
-                settings.dy - 2 * settings.by
-            );
         }
     }
 }
@@ -359,7 +497,7 @@ class Pattern {
         this.color_warp = new Grid(width, 1);
         this.color_weft = new Grid(1, height);
         this.reed = new Grid(width, 1);
-        this.entering = new Threading(width, max_shaft);
+        this.entering = new Entering(width, max_shaft);
         this.tieup = new Grid(max_treadle, max_shaft);
         this.treadling = new Grid(max_treadle, height);
         this.weave = new Grid(width, height);
@@ -442,11 +580,11 @@ class PatternView {
         const p = this.data;
 
         this.color_warp = new GridViewColors(p.color_warp, x1, y4, width1, height4);
-        this.entering   = new GridView(p.entering,         x1, y3, width1, height3);
-        this.tieup      = new GridView(p.tieup,            x2, y3, width2, height3);
+        this.entering   = new GridView(p.entering,         x1, y3, width1, height3, 'entering_style');
+        this.tieup      = new GridView(p.tieup,            x2, y3, width2, height3, 'tieup_style');
         this.reed       = new GridViewBlade(p.reed,        x1, y2, width1);
         this.weave      = new GridViewPattern(p.weave,     x1, y1, width1, height1);
-        this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1);
+        this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1, 'treadling_style');
         this.color_weft = new GridViewColors(p.color_weft, x3, y1, width3, height1);
 
         // TODO scrollbars...
@@ -533,6 +671,9 @@ function init() {
 
 function initSettings(data, settings) {
     settings.style = data["weave_style"];
+    settings.entering_style = data['entering_style'];
+    settings.tieup_style = data['tieup_style'];
+    settings.treadling_style = data['treadling_style'];
 }
 
 
