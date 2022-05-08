@@ -180,6 +180,10 @@ class Grid {
         this.data.fill(0);
     }
 
+    clear() {
+        this.data.fill(0);
+    }
+
     idx(i, j) {
         return i + j * this.width;
     }
@@ -198,6 +202,46 @@ class Grid {
         if (value === 0) this.data[idx] = 1;
         else this.data[idx] = -value;
     }
+
+    rowsEqual(j1, j2) {
+        for (let i = 0; i < this.width; i++) {
+            if (this.get(i, j1) !== this.get(i, j2)) return false;
+        }
+        return true;
+    }
+
+    colsEqual(i1, i2) {
+        for (let j = 0; j < this.height; j++) {
+            if (this.get(i1, j) !== this.get(i2, j)) return false;
+        }
+        return true;
+    }
+
+    copyRow(src, dst) {
+        for (let i = 0; i < this.width; i++) {
+            this.set(i, dst, this.get(i, src));
+        }
+    }
+
+    copyCol(src, dst) {
+        for (let j = 0; j < this.height; j++) {
+            this.set(dst, j, this.get(src, j));
+        }
+    }
+
+    isColEmpty(i) {
+        for (let j = 0; j < this.height; j++) {
+            if (this.get(i, j) > 0) return false;
+        }
+        return true;
+    }
+
+    isRowEmpty(j) {
+        for (let i = 0; i < this.width; i++) {
+            if (this.get(i, j) > 0) return false;
+        }
+        return true;
+    }
 }
 
 
@@ -206,6 +250,10 @@ class Entering {
         this.width = width;
         this.height = height;
         this.data = new Array(this.width);
+        this.data.fill(0);
+    }
+
+    clear() {
         this.data.fill(0);
     }
 
@@ -291,6 +339,11 @@ class GridViewPattern {
         this.height = height;
         this.offset_i = 0;
         this.offset_j = 0;
+    }
+
+    contains(i, j) {
+        return this.x <= i && i < this.x + this.width &&
+               this.y <= j && j < this.y + this.height;
     }
 
     draw(ctx, settings) {
@@ -432,7 +485,7 @@ class GridViewColors {
 }
 
 
-class GridViewBlade {
+class GridViewReed {
     constructor(data, x, y, width) {
         this.data = data;
         this.x = x;
@@ -525,6 +578,97 @@ class Pattern {
             }
         }
     }
+
+    recalc_from_weave(settings) {
+        this.recalc_weave_extent();
+        const max_shaft = this.recalc_entering();
+        const max_treadle = this.recalc_treadling(settings);
+        this.recalc_tieup(max_shaft, max_treadle);
+    }
+
+    recalc_weave_extent() {
+        this.min_x = this.max_x = 0;
+        this.min_y = this.max_y = 0;
+        for (let i = 0; i < this.weave.width; i++) {
+            if (!this.weave.isColEmpty(i)) {
+                this.min_x = Math.min(this.min_x, i);
+                this.max_x = Math.max(this.max_x, i);
+            }
+        }
+        for (let j = 0; j < this.weave.height; j++) {
+            if (!this.weave.isRowEmpty(j)) {
+                this.min_y = Math.min(this.min_y, j);
+                this.max_y = Math.max(this.max_y, j);
+            }
+        }
+    }
+
+    recalc_entering() {
+        this.entering.clear();
+        let next_shaft = 1;
+        for (let i = this.min_x; i <= this.max_x; i++) {
+            let shaft = null;
+            for (let ii = this.min_x; ii < i; ii++) {
+                if (this.weave.colsEqual(i, ii)) {
+                    shaft = this.entering.get_shaft(ii);
+                    break;
+                }
+            }
+            if (shaft === null) {
+                shaft = next_shaft++;
+            }
+            this.entering.set_shaft(i, shaft);
+        }
+        return next_shaft - 1;
+    }
+
+    recalc_treadling(settings) {
+        if (settings.single_treadling) {
+            this.treadling.clear();
+            let next_treadle = 0;
+            for (let j = this.min_y; j <= this.max_y; j++) {
+                let found = false;
+                for (let jj = this.min_y; jj < j; jj++) {
+                    if (this.weave.rowsEqual(j, jj)) {
+                        found = true;
+                        this.treadling.copyRow(jj, j);
+                        break;
+                    }
+                }
+                if (!found) {
+                    this.treadling.set(next_treadle++, j, 1); // TODO use current bereich?
+                }
+            }
+            return next_treadle - 1;
+        } else {
+            // TODO how to handle this?
+        }
+    }
+
+    recalc_tieup(max_shaft, max_treadle) {
+        this.tieup.clear();
+        for (let i = 0; i <= max_treadle; i++) {
+            for (let j = 0; j <= max_shaft - 1; j++) {
+                let entering_i = null;
+                let treadling_j = null;
+                for (let ii = this.min_x; ii <= this.max_x; ii++) {
+                    if (this.entering.get_shaft(ii) == j + 1) {
+                        entering_i = ii;
+                        break;
+                    }
+                }
+                for (let jj = this.min_y; jj <= this.max_y; jj++) {
+                    if (this.treadling.get(i, jj) > 0) {
+                        treadling_j = jj;
+                        break;
+                    }
+                }
+                if (entering_i !== null && treadling_j !== null) {
+                    this.tieup.set(i, j, this.weave.get(entering_i, treadling_j));
+                }
+            }
+        }
+    }
 }
 
 
@@ -582,7 +726,7 @@ class PatternView {
         this.color_warp = new GridViewColors(p.color_warp, x1, y4, width1, height4);
         this.entering   = new GridView(p.entering,         x1, y3, width1, height3, 'entering_style');
         this.tieup      = new GridView(p.tieup,            x2, y3, width2, height3, 'tieup_style');
-        this.reed       = new GridViewBlade(p.reed,        x1, y2, width1);
+        this.reed       = new GridViewReed(p.reed,         x1, y2, width1);
         this.weave      = new GridViewPattern(p.weave,     x1, y1, width1, height1);
         this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1, 'treadling_style');
         this.color_weft = new GridViewColors(p.color_weft, x3, y1, width3, height1);
@@ -664,21 +808,32 @@ function init() {
             pattern.tieup.toggle(ii, jj);
             pattern.recalc_weave();
             view.draw();
+        } else if (view.weave.contains(i, j)) {
+            const ii = i - view.weave.x + view.weave.offset_i;
+            const jj = view.weave.height - 1 - (j - view.weave.y) + view.weave.offset_j;
+            pattern.weave.toggle(ii, jj);
+            pattern.recalc_from_weave(settings);
+            view.draw();
         }
     });
 }
 
 
 function initSettings(data, settings) {
-    settings.style = data["weave_style"];
-    settings.entering_style = data['entering_style'];
-    settings.tieup_style = data['tieup_style'];
-    settings.treadling_style = data['treadling_style'];
+    settings.style = data["weave_style"] || "draft";
+    settings.entering_style = data["entering_style"] || "filled";
+    settings.tieup_style = data["tieup_style"] || "filled";
+    settings.treadling_style = data["treadling_style"] || "filled";
+    settings.single_treadling = data["single_treadling"] || true;
 }
 
 
 function saveSettings(data, settings) {
     data["weave_style"] = settings.style;
+    data["entering_style"] = settings.entering_style;
+    data["tieup_style"] = settings.tieup_style;
+    data["treadling_style"] = settings.treadling_style;
+    data["single_treadling"] = settings.single_treadling;
 }
 
 
