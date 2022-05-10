@@ -75,7 +75,7 @@ function cellPainterCross(ctx, settings, view, i, j, value) {
             0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by
         )
         ctx.closePath();
-        ctx.strikeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
         ctx.lineWidth = 2;
         ctx.stroke();
     }
@@ -109,7 +109,7 @@ function cellPainterHDash(ctx, settings, view, i, j, value) {
             0.5 + (view.y + view.height - j - 0.5) * settings.dy - settings.by
         )
         ctx.closePath();
-        ctx.strikeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
         ctx.lineWidth = 2.5;
         ctx.stroke();
     }
@@ -128,7 +128,7 @@ function cellPainterVDash(ctx, settings, view, i, j, value) {
             0.5 + (view.y + view.height - j) * settings.dy - settings.by
         )
         ctx.closePath();
-        ctx.strikeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
         ctx.lineWidth = 2.5;
         ctx.stroke();
     }
@@ -684,6 +684,72 @@ class ViewSettings {
 }
 
 
+class ScrollbarHorz {
+    constructor(pattern, view, x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.pattern = pattern;
+        this.view = view;
+    }
+
+    draw(ctx, settings) {
+        const delta = 5;
+        ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
+        ctx.strokeRect(
+            0.5 + this.x * settings.dx,
+            0.5 + this.y * settings.dy + delta,
+            this.width * settings.dx,
+            this.height - delta
+        )
+        const w = this.width * settings.dx - 1;
+        const a = w / this.pattern.width * this.view.offset_i;
+        const b = w / this.pattern.width * this.view.width;
+        ctx.fillStyle = settings.darcula ? "#666" : "#999";
+        ctx.fillRect(
+            1.0 + this.x * settings.dx + a,
+            1.0 + this.y * settings.dy + delta,
+            b,
+            this.height - 1.0 - delta
+        );
+    }
+}
+
+
+class ScrollbarVert {
+    constructor(pattern, view, x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.pattern = pattern;
+        this.view = view;
+    }
+
+    draw(ctx, settings) {
+        const delta = 5;
+        ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
+        ctx.strokeRect(
+            0.5 + this.x * settings.dx + delta,
+            0.5 + this.y * settings.dy,
+            this.width - delta,
+            this.height * settings.dx
+        )
+        const h = this.height * settings.dy - 1;
+        const a = h / this.pattern.height * this.view.offset_j;
+        const b = h / this.pattern.height * this.view.height;
+        ctx.fillStyle = settings.darcula ? "#666" : "#999";
+        ctx.fillRect(
+            1.0 + this.x * settings.dx + delta,
+            1.0 + (this.y + this.height) * settings.dy - a - b,
+            this.width - 1.0 - delta,
+            b - 1,
+        );
+    }
+}
+
+
 class PatternView {
     constructor(data, settings, ctx, visible_shafts=16, visible_treadles=16) {
         this.settings = settings;
@@ -697,20 +763,21 @@ class PatternView {
     layout() {
         const dx = this.settings.dx;
         const dy = this.settings.dy;
+        const scroll = 15;
 
-        const availx = Math.trunc(this.ctx.canvas.width / dx);
-        const availy = Math.trunc(this.ctx.canvas.height / dy);
+        const availx = Math.trunc((this.ctx.canvas.width - scroll) / dx);
+        const availy = Math.trunc((this.ctx.canvas.height - scroll) / dy);
 
         // TODO allow parts to hide/show
 
         const width3 = 1;
         const width2 = this.visible_treadles;
-        const width1 = availx - width3 - 1 - width2 - 1 - 1;
+        const width1 = availx - width3 - 1 - width2 - 1;
 
         const height4 = 1;
         const height3 = this.visible_shafts;
         const height2 = 1;
-        const height1 = availy - height4 - 1 - height3 - 1 - height2 - 1 - 1;
+        const height1 = availy - height4 - 1 - height3 - 1 - height2 - 1;
 
         const y4 = 0;
         const y3 = y4 + height4 + 1;
@@ -731,7 +798,10 @@ class PatternView {
         this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1, 'treadling_style');
         this.color_weft = new GridViewColors(p.color_weft, x3, y1, width3, height1);
 
-        // TODO scrollbars...
+        this.scroll_1_hor = new ScrollbarHorz(p.weave,     this.weave,     x1, y1 + height1, width1, scroll);
+        this.scroll_1_ver = new ScrollbarVert(p.weave,     this.weave,     x3 + 1, y1, scroll, height1);
+        this.scroll_2_hor = new ScrollbarHorz(p.treadling, this.treadling, x2, y1 + height1, width2, scroll);
+        this.scroll_2_ver = new ScrollbarVert(p.entering,  this.entering,  x3 + 1, y3, scroll, height3);
     }
 
     draw() {
@@ -743,6 +813,11 @@ class PatternView {
         this.treadling.draw(this.ctx, this.settings);
         this.weave.draw(this.ctx, this.settings);
         this.color_weft.draw(this.ctx, this.settings);
+
+        this.scroll_1_hor.draw(this.ctx, this.settings);
+        this.scroll_1_ver.draw(this.ctx, this.settings);
+        this.scroll_2_hor.draw(this.ctx, this.settings);
+        this.scroll_2_ver.draw(this.ctx, this.settings);
     }
 
     clearCanvas() {
