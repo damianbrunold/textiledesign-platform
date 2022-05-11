@@ -23,12 +23,10 @@ Todo
   - add view style simulation
   - calculate repeat
   - edit reed
-  - edit pattern with recalc
   - display color palette
   - edit color bars
   - support scrolling
-  - draw scroll bars
-  - support cell styles (full, dot, dash, cross, plus, numbers, ...)
+  - support cell styles (plus, numbers, ...)
   - support alternate view arrangements (threading below pattern, ...)
   - support alternate draw direction (right-to-left, bottom-to-top, ...)
 
