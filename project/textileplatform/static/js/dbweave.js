@@ -1014,18 +1014,34 @@ function savePatternData(data, pattern) {
 function keyDown(e) {
     if (e.key === "1" && e.altKey) {
         settings.style = "draft";
+        document.getElementById("icon-weave-draft").className = "icon selected";
+        document.getElementById("icon-weave-color").className = "icon";
+        document.getElementById("icon-weave-simulation").className = "icon";
+        document.getElementById("icon-weave-empty").className = "icon";
         view.draw();
         e.preventDefault();
     } else if (e.key === "2" && e.altKey) {
         settings.style = "color";
+        document.getElementById("icon-weave-draft").className = "icon";
+        document.getElementById("icon-weave-color").className = "icon selected";
+        document.getElementById("icon-weave-simulation").className = "icon";
+        document.getElementById("icon-weave-empty").className = "icon";
         view.draw();
         e.preventDefault();
     } else if (e.key === "3" && e.altKey) {
         settings.style = "simulation";
+        document.getElementById("icon-weave-draft").className = "icon";
+        document.getElementById("icon-weave-color").className = "icon";
+        document.getElementById("icon-weave-simulation").className = "icon selected";
+        document.getElementById("icon-weave-empty").className = "icon";
         view.draw();
         e.preventDefault();
     } else if (e.key === "4" && e.altKey) {
         settings.style = "invisible";
+        document.getElementById("icon-weave-draft").className = "icon";
+        document.getElementById("icon-weave-color").className = "icon";
+        document.getElementById("icon-weave-simulation").className = "icon";
+        document.getElementById("icon-weave-empty").className = "icon selected";
         view.draw();
         e.preventDefault();
     }
@@ -1048,6 +1064,39 @@ window.addEventListener("load", () => {
     }
     document.getElementById("close").addEventListener("click", closePattern);
     window.addEventListener("keydown", keyDown);
+
+    document.getElementById("icon-weave-draft").addEventListener("click", () => {
+        document.getElementById("icon-weave-draft").className = "icon selected";
+        document.getElementById("icon-weave-color").className = "icon";
+        document.getElementById("icon-weave-simulation").className = "icon";
+        document.getElementById("icon-weave-empty").className = "icon";
+        settings.style = "draft";
+        view.draw();
+    });
+    document.getElementById("icon-weave-color").addEventListener("click", () => {
+        document.getElementById("icon-weave-draft").className = "icon";
+        document.getElementById("icon-weave-color").className = "icon selected";
+        document.getElementById("icon-weave-simulation").className = "icon";
+        document.getElementById("icon-weave-empty").className = "icon";
+        settings.style = "color";
+        view.draw();
+    });
+    document.getElementById("icon-weave-simulation").addEventListener("click", () => {
+        document.getElementById("icon-weave-draft").className = "icon";
+        document.getElementById("icon-weave-color").className = "icon";
+        document.getElementById("icon-weave-simulation").className = "icon selected";
+        document.getElementById("icon-weave-empty").className = "icon";
+        settings.style = "simulation";
+        view.draw();
+    });
+    document.getElementById("icon-weave-empty").addEventListener("click", () => {
+        document.getElementById("icon-weave-draft").className = "icon";
+        document.getElementById("icon-weave-color").className = "icon";
+        document.getElementById("icon-weave-simulation").className = "icon";
+        document.getElementById("icon-weave-empty").className = "icon selected";
+        settings.style = "empty";
+        view.draw();
+    });
 });
 
 window.addEventListener("resize", resizeWindow);

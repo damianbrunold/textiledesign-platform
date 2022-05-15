@@ -134,3 +134,7 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 #weave_width, #weave_height, #bead_width, #bead_height {
     width: 10rem;
 }
+
+img.icon.selected {
+    outline: 2px solid black;
+}

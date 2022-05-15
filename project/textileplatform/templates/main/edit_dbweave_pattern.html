@@ -34,6 +34,26 @@
                 <input id="public" type="checkbox" {% if pattern.public %}checked{% endif %}>
                 {{ gettext('Public') }}
             {% endif %}
+            <img
+                id="icon-weave-draft"
+                {% if pattern.pattern['weave_style'] == 'draft' %}class="icon selected"{% else %}class="icon"{% endif %}
+                height="26px"
+                src="{{ url_for('static', filename='img/icons/icon-weave-draft.svg')}}"/>
+            <img
+                id="icon-weave-color"
+                {% if pattern.pattern['weave_style'] == 'color' %}class="icon selected"{% else %}class="icon"{% endif %}
+                height="26px"
+                src="{{ url_for('static', filename='img/icons/icon-weave-color.svg')}}"/>
+            <img
+                id="icon-weave-simulation"
+                {% if pattern.pattern['weave_style'] == 'simulation' %}class="icon selected"{% else %}class="icon"{% endif %}
+                height="26px"
+                src="{{ url_for('static', filename='img/icons/icon-weave-simulation.svg')}}"/>
+            <img
+                id="icon-weave-empty"
+                {% if pattern.pattern['weave_style'] == 'empty' %}class="icon selected"{% else %}class="icon"{% endif %}
+                height="26px"
+                src="{{ url_for('static', filename='img/icons/icon-weave-empty.svg')}}"/>
         </div>
         <div id="buttons">
             {% if readonly and g.user %}
