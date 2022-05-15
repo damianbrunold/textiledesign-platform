@@ -20,7 +20,7 @@ Todo
 - Export jbead pattern as PDF
 
 - dbweave
-  - ui: show/change public/private flag (better than right now)
+  - ui: better public/private icon for dark mode
   - implement zoom
   - implement basic keyboard focus/movement
   - implement selection
