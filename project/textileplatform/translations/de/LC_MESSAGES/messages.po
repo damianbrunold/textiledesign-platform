@@ -7,71 +7,76 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Textile Platform\n"
 "Report-Msgid-Bugs-To: dab@dabsoft.ch\n"
-"POT-Creation-Date: 2022-03-22 19:22+0100\n"
+"POT-Creation-Date: 2022-05-15 11:39+0200\n"
 "PO-Revision-Date: 2022-03-22 15:35+0100\n"
 "Last-Translator: Damian Brunold <dab@dabsoft.ch>\n"
 "Language: de\n"
 "Language-Team: de <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.9.1\n"
+"Generated-By: Babel 2.10.1\n"
 
-#: auth.py:32
+#: auth.py:33
 msgid "Name is required"
-msgstr "Name muss ausgefüllt sein"
+msgstr "Name wird benötigt"
 
-#: auth.py:34
+#: auth.py:35
 msgid "E-Mail is required"
-msgstr "E-Mail muss ausgefüllt sein"
+msgstr "E-Mail wird benötigt"
 
-#: auth.py:36
+#: auth.py:37
 msgid "Password is required"
-msgstr "Passwort muss ausgefüllt sein"
+msgstr "Passwort wird benötigt"
 
-#: auth.py:51
-msgid "E-Mail {0} is already used"
-msgstr "E-Mail {0} wird bereits verwendet"
+#: auth.py:53
+msgid "Name or E-Mail is already used"
+msgstr "Name oder E-Mail wird bereits verwendet"
 
-#: auth.py:69 auth.py:71
+#: auth.py:74 auth.py:76
 msgid "Login data are not correct"
-msgstr "Anmeldedaten sind nicht korrekt"
+msgstr "Logindaten sind nicht korrekt"
 
-#: auth.py:73
+#: auth.py:78
 msgid "Account verification is pending"
-msgstr "Kontoverifikation ist ausstehend"
+msgstr "Kontoverifizierung ist ausstehend"
 
-#: auth.py:75
+#: auth.py:80
 msgid "Account is disabled"
-msgstr "Konto ist deaktiviert"
+msgstr "Konto ist gesperrt"
 
-#: main.py:46
+#: main.py:123
 msgid "Changes could not be saved."
 msgstr "Änderungen konnten nicht gespeichert werden."
 
-#: templates/base.html:2 templates/base.html:10
+#: main.py:259
+msgid "Pattern could not be deleted."
+msgstr "Muster konnte nicht gelöscht werden."
+
+#: templates/base.html:5 templates/base.html:16
 msgid "Textile Platform"
 msgstr "Textil-Plattform"
 
-#: templates/base.html:14 templates/main/profile.html:4
+#: templates/base.html:20 templates/main/profile.html:4
 msgid "Profile"
 msgstr "Profil"
 
-#: templates/base.html:15
+#: templates/base.html:21
 msgid "Log out"
 msgstr "Abmelden"
 
-#: templates/base.html:17
+#: templates/base.html:23
 msgid "Register"
 msgstr "Registrieren"
 
 #: templates/auth/login.html:4 templates/auth/login.html:13
-#: templates/base.html:18
+#: templates/base.html:24
 msgid "Log in"
 msgstr "Anmelden"
 
 #: templates/auth/login.html:9 templates/auth/register.html:11
+#: templates/main/profile.html:9
 msgid "E-Mail"
 msgstr "E-Mail"
 
@@ -81,27 +86,121 @@ msgstr "Passwort"
 
 #: templates/auth/login.html:15
 msgid "Recover password"
-msgstr "Passwort zurücksetzen"
+msgstr "Passwort vergessen"
 
 #: templates/auth/register.html:4
 msgid "Create Account"
 msgstr "Konto erstellen"
 
-#: templates/auth/register.html:9 templates/main/profile.html:9
+#: templates/auth/register.html:9 templates/main/create_pattern.html:12
+#: templates/main/create_pattern.html:28 templates/main/upload_pattern.html:9
 msgid "Name"
 msgstr "Name"
 
-#: templates/auth/register.html:15
+#: templates/auth/register.html:15 templates/main/create_pattern.html:22
+#: templates/main/create_pattern.html:38
 msgid "Create"
 msgstr "Erstellen"
+
+#: templates/main/create_pattern.html:4
+msgid "Create pattern"
+msgstr "Muster erstellen"
+
+#: templates/main/create_pattern.html:10
+msgid "Create DB-WEAVE Pattern"
+msgstr "Erstelle DB-WEAVE Muster"
+
+#: templates/main/create_pattern.html:15
+msgid "Width"
+msgstr "Breite"
+
+#: templates/main/create_pattern.html:18 templates/main/create_pattern.html:34
+msgid "Height"
+msgstr "Höhe"
+
+#: templates/main/create_pattern.html:26
+msgid "Create JBead Pattern"
+msgstr "Erstelle JBead Muster"
+
+#: templates/main/create_pattern.html:31
+msgid "Circumference"
+msgstr "Umfang"
+
+#: templates/main/delete_pattern.html:4
+msgid "Delete pattern"
+msgstr "Muster löschen"
+
+#: templates/main/delete_pattern.html:9
+msgid "Do you really want to delete this pattern?"
+msgstr "Möchten Sie diese Muster wirklich löschen?"
+
+#: templates/main/delete_pattern.html:10 templates/main/user_private.html:30
+msgid "Delete"
+msgstr "Löschen"
+
+#: templates/main/delete_pattern.html:12
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: templates/main/edit_dbweave_pattern.html:37
+msgid "Draft view"
+msgstr "Entwurfsansicht"
+
+#: templates/main/edit_dbweave_pattern.html:43
+msgid "Color view"
+msgstr "Farbansicht"
+
+#: templates/main/edit_dbweave_pattern.html:49
+msgid "Simulation view"
+msgstr "Simulationsansicht"
+
+#: templates/main/edit_dbweave_pattern.html:55
+msgid "Empty view"
+msgstr "Leere Ansicht"
+
+#: templates/main/edit_dbweave_pattern.html:64
+msgid "Public - visible to all users"
+msgstr "Öffentlich - sichtbar für alle"
+
+#: templates/main/edit_dbweave_pattern.html:67
+msgid "Private - not visible to other users"
+msgstr "Privat - nicht sichtbar für andere"
+
+#: templates/main/edit_dbweave_pattern.html:73
+#: templates/main/edit_jbead_pattern.html:40
+msgid "Clone"
+msgstr "Klonen"
+
+#: templates/main/edit_dbweave_pattern.html:75
+#: templates/main/edit_jbead_pattern.html:42 templates/main/profile.html:15
+msgid "Save"
+msgstr "Speichern"
+
+#: templates/main/edit_dbweave_pattern.html:77
+#: templates/main/edit_jbead_pattern.html:44
+msgid "Close"
+msgstr "Schliessen"
+
+#: templates/main/edit_jbead_pattern.html:35
+#: templates/main/user_private.html:23
+msgid "Public"
+msgstr "Öffentlich"
+
+#: templates/main/index.html:4
+msgid "Some example patterns"
+msgstr "Eine Beispielmuster"
+
+#: templates/main/index.html:10
+msgid "Weave Patterns"
+msgstr "Weberei-Muster"
+
+#: templates/main/index.html:27
+msgid "Bead Patterns"
+msgstr "JBead-Muster"
 
 #: templates/main/profile.html:13
 msgid "Dark mode"
 msgstr "Dunkelmodus"
-
-#: templates/main/profile.html:15
-msgid "Save"
-msgstr "Speichern"
 
 #: templates/main/status.html:4
 msgid "Status"
@@ -110,3 +209,96 @@ msgstr "Status"
 #: templates/main/status.html:8
 msgid "textileplatform version"
 msgstr "textileplatform version"
+
+#: templates/main/upload_pattern.html:4
+msgid "Upload pattern"
+msgstr "Muster hochladen"
+
+#: templates/main/upload_pattern.html:11
+msgid "Pattern File"
+msgstr "Musterdatei"
+
+#: templates/main/upload_pattern.html:13
+msgid "Upload"
+msgstr "Hochladen"
+
+#: templates/main/user_private.html:23
+msgid "Private"
+msgstr "Privat"
+
+#: templates/main/user_private.html:42
+msgid "Upload Pattern"
+msgstr "Muster hochladen"
+
+#: templates/main/user_private.html:48
+msgid "New Pattern"
+msgstr "Neues Muster"
+
+#~ msgid "Name is required"
+#~ msgstr "Name muss ausgefüllt sein"
+
+#~ msgid "E-Mail is required"
+#~ msgstr "E-Mail muss ausgefüllt sein"
+
+#~ msgid "Password is required"
+#~ msgstr "Passwort muss ausgefüllt sein"
+
+#~ msgid "E-Mail {0} is already used"
+#~ msgstr "E-Mail {0} wird bereits verwendet"
+
+#~ msgid "Login data are not correct"
+#~ msgstr "Anmeldedaten sind nicht korrekt"
+
+#~ msgid "Account verification is pending"
+#~ msgstr "Kontoverifikation ist ausstehend"
+
+#~ msgid "Account is disabled"
+#~ msgstr "Konto ist deaktiviert"
+
+#~ msgid "Changes could not be saved."
+#~ msgstr "Änderungen konnten nicht gespeichert werden."
+
+#~ msgid "Textile Platform"
+#~ msgstr "Textil-Plattform"
+
+#~ msgid "Profile"
+#~ msgstr "Profil"
+
+#~ msgid "Log out"
+#~ msgstr "Abmelden"
+
+#~ msgid "Register"
+#~ msgstr "Registrieren"
+
+#~ msgid "Log in"
+#~ msgstr "Anmelden"
+
+#~ msgid "E-Mail"
+#~ msgstr "E-Mail"
+
+#~ msgid "Password"
+#~ msgstr "Passwort"
+
+#~ msgid "Recover password"
+#~ msgstr "Passwort zurücksetzen"
+
+#~ msgid "Create Account"
+#~ msgstr "Konto erstellen"
+
+#~ msgid "Name"
+#~ msgstr "Name"
+
+#~ msgid "Create"
+#~ msgstr "Erstellen"
+
+#~ msgid "Dark mode"
+#~ msgstr "Dunkelmodus"
+
+#~ msgid "Save"
+#~ msgstr "Speichern"
+
+#~ msgid "Status"
+#~ msgstr "Status"
+
+#~ msgid "textileplatform version"
+#~ msgstr "textileplatform version"

@@ -8,69 +8,74 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2022-03-22 19:22+0100\n"
+"POT-Creation-Date: 2022-05-15 11:39+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.9.1\n"
+"Generated-By: Babel 2.10.1\n"
 
-#: auth.py:32
+#: auth.py:33
 msgid "Name is required"
 msgstr ""
 
-#: auth.py:34
+#: auth.py:35
 msgid "E-Mail is required"
 msgstr ""
 
-#: auth.py:36
+#: auth.py:37
 msgid "Password is required"
 msgstr ""
 
-#: auth.py:51
-msgid "E-Mail {0} is already used"
+#: auth.py:53
+msgid "Name or E-Mail is already used"
 msgstr ""
 
-#: auth.py:69 auth.py:71
+#: auth.py:74 auth.py:76
 msgid "Login data are not correct"
 msgstr ""
 
-#: auth.py:73
+#: auth.py:78
 msgid "Account verification is pending"
 msgstr ""
 
-#: auth.py:75
+#: auth.py:80
 msgid "Account is disabled"
 msgstr ""
 
-#: main.py:46
+#: main.py:123
 msgid "Changes could not be saved."
 msgstr ""
 
-#: templates/base.html:2 templates/base.html:10
+#: main.py:259
+msgid "Pattern could not be deleted."
+msgstr ""
+
+#: templates/base.html:5 templates/base.html:16
 msgid "Textile Platform"
 msgstr ""
 
-#: templates/base.html:14 templates/main/profile.html:4
+#: templates/base.html:20 templates/main/profile.html:4
 msgid "Profile"
 msgstr ""
 
-#: templates/base.html:15
+#: templates/base.html:21
 msgid "Log out"
 msgstr ""
 
-#: templates/base.html:17
+#: templates/base.html:23
 msgid "Register"
 msgstr ""
 
 #: templates/auth/login.html:4 templates/auth/login.html:13
-#: templates/base.html:18
+#: templates/base.html:24
 msgid "Log in"
 msgstr ""
 
 #: templates/auth/login.html:9 templates/auth/register.html:11
+#: templates/main/profile.html:9
 msgid "E-Mail"
 msgstr ""
 
@@ -86,20 +91,114 @@ msgstr ""
 msgid "Create Account"
 msgstr ""
 
-#: templates/auth/register.html:9 templates/main/profile.html:9
+#: templates/auth/register.html:9 templates/main/create_pattern.html:12
+#: templates/main/create_pattern.html:28 templates/main/upload_pattern.html:9
 msgid "Name"
 msgstr ""
 
-#: templates/auth/register.html:15
+#: templates/auth/register.html:15 templates/main/create_pattern.html:22
+#: templates/main/create_pattern.html:38
 msgid "Create"
+msgstr ""
+
+#: templates/main/create_pattern.html:4
+msgid "Create pattern"
+msgstr ""
+
+#: templates/main/create_pattern.html:10
+msgid "Create DB-WEAVE Pattern"
+msgstr ""
+
+#: templates/main/create_pattern.html:15
+msgid "Width"
+msgstr ""
+
+#: templates/main/create_pattern.html:18 templates/main/create_pattern.html:34
+msgid "Height"
+msgstr ""
+
+#: templates/main/create_pattern.html:26
+msgid "Create JBead Pattern"
+msgstr ""
+
+#: templates/main/create_pattern.html:31
+msgid "Circumference"
+msgstr ""
+
+#: templates/main/delete_pattern.html:4
+msgid "Delete pattern"
+msgstr ""
+
+#: templates/main/delete_pattern.html:9
+msgid "Do you really want to delete this pattern?"
+msgstr ""
+
+#: templates/main/delete_pattern.html:10 templates/main/user_private.html:30
+msgid "Delete"
+msgstr ""
+
+#: templates/main/delete_pattern.html:12
+msgid "Cancel"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:37
+msgid "Draft view"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:43
+msgid "Color view"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:49
+msgid "Simulation view"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:55
+msgid "Empty view"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:64
+msgid "Public - visible to all users"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:67
+msgid "Private - not visible to other users"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:73
+#: templates/main/edit_jbead_pattern.html:40
+msgid "Clone"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:75
+#: templates/main/edit_jbead_pattern.html:42 templates/main/profile.html:15
+msgid "Save"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:77
+#: templates/main/edit_jbead_pattern.html:44
+msgid "Close"
+msgstr ""
+
+#: templates/main/edit_jbead_pattern.html:35
+#: templates/main/user_private.html:23
+msgid "Public"
+msgstr ""
+
+#: templates/main/index.html:4
+msgid "Some example patterns"
+msgstr ""
+
+#: templates/main/index.html:10
+msgid "Weave Patterns"
+msgstr ""
+
+#: templates/main/index.html:27
+msgid "Bead Patterns"
 msgstr ""
 
 #: templates/main/profile.html:13
 msgid "Dark mode"
-msgstr ""
-
-#: templates/main/profile.html:15
-msgid "Save"
 msgstr ""
 
 #: templates/main/status.html:4
@@ -108,4 +207,28 @@ msgstr ""
 
 #: templates/main/status.html:8
 msgid "textileplatform version"
+msgstr ""
+
+#: templates/main/upload_pattern.html:4
+msgid "Upload pattern"
+msgstr ""
+
+#: templates/main/upload_pattern.html:11
+msgid "Pattern File"
+msgstr ""
+
+#: templates/main/upload_pattern.html:13
+msgid "Upload"
+msgstr ""
+
+#: templates/main/user_private.html:23
+msgid "Private"
+msgstr ""
+
+#: templates/main/user_private.html:42
+msgid "Upload Pattern"
+msgstr ""
+
+#: templates/main/user_private.html:48
+msgid "New Pattern"
 msgstr ""
