@@ -1,16 +1,4 @@
-from textileplatform.palette import default_weave_palette
-from textileplatform.beadpattern import parse_jbb_data
-from textileplatform.weavepattern import parse_dbw_data
-from textileplatform.auth import login_required
-from textileplatform.persistence import (
-    update_user,
-    get_user_by_name,
-    add_weave_pattern,
-    add_bead_pattern,
-    get_patterns_for_user_name,
-    get_pattern_by_name,
-    delete_pattern
-)
+import json
 import os
 
 from importlib.metadata import version
@@ -26,6 +14,20 @@ from flask import (
     render_template,
     request,
     url_for
+)
+
+from textileplatform.palette import default_weave_palette
+from textileplatform.beadpattern import parse_jbb_data
+from textileplatform.weavepattern import parse_dbw_data
+from textileplatform.auth import login_required
+from textileplatform.persistence import (
+    update_user,
+    get_user_by_name,
+    add_weave_pattern,
+    add_bead_pattern,
+    get_patterns_for_user_name,
+    get_pattern_by_name,
+    delete_pattern
 )
 
 bp = Blueprint('main', __name__)
@@ -76,6 +78,7 @@ def edit_pattern(user_name, pattern_name):
     if (not g.user or g.user.name != user.name) and not pattern.public:
         return redirect(url_for('main.user', name=user_name))
     readonly = not g.user or g.user.name != user.name
+    pattern.pattern = json.loads(pattern.contents)
     if pattern.pattern_type == "DB-WEAVE Pattern":
         return render_template('main/edit_dbweave_pattern.html',
                                user=user,
