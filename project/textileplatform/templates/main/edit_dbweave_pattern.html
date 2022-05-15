@@ -8,12 +8,10 @@
 
 {% block header %}
     <h1 id="title">
-        {% block title %}
-            {% if readonly %}
-                {{ user.name }}:
-            {% endif %}
-            {{ pattern.name }}
-        {% endblock %}
+        {% if readonly %}
+            {{ user.name }}:
+        {% endif %}
+        {{ pattern.name }}
     </h1>
 {% endblock %}
 
