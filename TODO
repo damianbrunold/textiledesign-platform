@@ -20,6 +20,10 @@ Todo
 - Export jbead pattern as PDF
 
 - dbweave
+  - ui: show/change public/private flag (better than right now)
+  - implement zoom
+  - implement basic keyboard focus/movement
+  - implement selection
   - add view style simulation
   - calculate repeat
   - edit reed
