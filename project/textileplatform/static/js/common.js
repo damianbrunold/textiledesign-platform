@@ -4,7 +4,17 @@ let data = null;
 
 
 function togglePublic() {
-    const state = document.getElementById("public").checked;
+    const icon = document.getElementById("public");
+    let state = undefined;
+    if (icon.src.endsWith("icon-public.svg")) {
+        icon.src = icon.src.replace("-public", "-private");
+        icon.title = "Private - not visible to others"; // TODO translate!
+        state = false;
+    } else {
+        icon.src = icon.src.replace("-private", "-public");
+        icon.title = "Public - visible to all users"; // TODO translate!
+        state = true;
+    }
     const user = document.getElementById("user").value;
     const pattern = document.getElementById("pattern").value;
     const request = {

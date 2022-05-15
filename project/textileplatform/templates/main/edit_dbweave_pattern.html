@@ -30,10 +30,6 @@
 
     <div id="footer">
         <div>
-            {% if not readonly %}
-                <input id="public" type="checkbox" {% if pattern.public %}checked{% endif %}>
-                {{ gettext('Public') }}
-            {% endif %}
             <img
                 id="icon-weave-draft"
                 {% if pattern.pattern['weave_style'] == 'draft' %}class="icon selected"{% else %}class="icon"{% endif %}
@@ -60,6 +56,19 @@
                 src="{{ url_for('static', filename='img/icons/icon-weave-empty.svg')}}"/>
         </div>
         <div id="buttons">
+            {% if not readonly %}
+                <img
+                    id="public"
+                    {% if pattern.public %}
+                        src="{{url_for('static', filename='img/icons/icon-public.svg')}}"
+                        title="{{ gettext('Public - visible to all users') }}"
+                    {% else %}
+                        src="{{url_for('static', filename='img/icons/icon-private.svg')}}"
+                        title="{{ gettext('Private - not visible to other users') }}"
+                    {% endif %}
+                    height="26px"
+                    class="icon"/>
+            {% endif %}
             {% if readonly and g.user %}
                 <button id="clone">{{ gettext('Clone') }}</button>
             {% elif g.user %}
