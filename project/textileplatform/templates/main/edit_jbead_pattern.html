@@ -22,11 +22,7 @@
     <input type="hidden" id="darkmode" value="{{g.user.darkmode if g.user else 'False'}}"/>
     <input type="hidden" id="readonly" value="{{readonly}}"/>
 
-    <div id="container">
-        <canvas id="canvas"></canvas>
-    </div>
-
-    <div id="footer">
+    <div id="header">
         <div>
             {% if not readonly %}
                 <input id="public" type="checkbox" {% if pattern.public %}checked{% endif %}>
@@ -41,5 +37,9 @@
             {% endif %}
             <button id="close">{{ gettext('Close') }}</button>
         </div>
+    </div>
+
+    <div id="container">
+        <canvas id="canvas"></canvas>
     </div>
 {% endblock %}

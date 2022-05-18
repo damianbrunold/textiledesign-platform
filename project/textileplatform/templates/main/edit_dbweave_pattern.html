@@ -22,11 +22,7 @@
     <input type="hidden" id="darkmode" value="{{g.user.darkmode if g.user else 'False'}}"/>
     <input type="hidden" id="readonly" value="{{readonly}}"/>
 
-    <div id="container">
-        <canvas id="canvas"></canvas>
-    </div>
-
-    <div id="footer">
+    <div id="header">
         <div>
             <img
                 id="icon-weave-draft"
@@ -75,4 +71,9 @@
             <button id="close">{{ gettext('Close') }}</button>
         </div>
     </div>
+
+    <div id="container">
+        <canvas id="canvas"></canvas>
+    </div>
+
 {% endblock %}

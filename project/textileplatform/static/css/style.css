@@ -105,10 +105,11 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
     background: #cae6f6;
 }
 
-#footer {
+#header {
     display: flex;
     justify-content: space-between;
     height: 2.5rem;
+    padding: 0.3rem 0.3rem;
 }
 
 #buttons {
