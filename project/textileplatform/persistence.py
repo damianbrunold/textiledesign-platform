@@ -228,3 +228,25 @@ def get_user_by_email(email):
             return None
         user = User.from_row(row)
         return user
+
+
+def get_all_users():
+    with get_db().connect() as conn:
+        rows = conn.execute(
+            select(
+                user_table.c.name,
+                user_table.c.label,
+                user_table.c.email,
+                user_table.c.password,
+                user_table.c.darkmode,
+                user_table.c.verified,
+                user_table.c.disabled,
+                user_table.c.locale,
+                user_table.c.timezone
+            ).
+            select_from(user_table)
+        ).fetchall()
+        result = []
+        for row in rows:
+            result.append(User.from_row(row))
+        return result

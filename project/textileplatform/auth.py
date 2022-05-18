@@ -121,3 +121,12 @@ def login_required(view):
             return redirect(url_for('auth.login'))
         return view(**kwargs)
     return wrapped_view
+
+
+def superuser_required(view):
+    @functools.wraps(view)
+    def wrapped_view(**kwargs):
+        if g.user is None or g.user.name != "superuser":
+            return redirect(url_for("main.index"))
+        return view(**kwargs)
+    return wrapped_view

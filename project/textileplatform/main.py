@@ -19,7 +19,9 @@ from flask import (
 from textileplatform.palette import default_weave_palette
 from textileplatform.beadpattern import parse_jbb_data
 from textileplatform.weavepattern import parse_dbw_data
-from textileplatform.auth import login_required
+from textileplatform.auth import (
+    login_required,
+)
 from textileplatform.persistence import (
     update_user,
     get_user_by_name,
@@ -27,7 +29,7 @@ from textileplatform.persistence import (
     add_bead_pattern,
     get_patterns_for_user_name,
     get_pattern_by_name,
-    delete_pattern
+    delete_pattern,
 )
 
 bp = Blueprint('main', __name__)

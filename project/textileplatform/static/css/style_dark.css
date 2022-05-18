@@ -18,3 +18,5 @@ td { color: white; }
 .pattern:hover { background: #222; }
 
 img.icon.selected { outline: 2px solid #999; }
+
+.user:hover { background: #333; }

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ gettext('Users') }}</h1>
+{% endblock %}
+
+{% block content %}
+    <div id="users">
+        {% for user in users %}
+            <a class="action" href="{{ url_for('admin.edit_user',
+                                               user_name=user.name) }}">
+                <div class="user">
+                    <div class="user_name">
+                        {{ user.name }}
+                    </div>
+                    <div class="user_label">
+                        {{ user.label }}
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+{% endblock %}

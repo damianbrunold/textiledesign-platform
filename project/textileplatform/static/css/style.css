@@ -138,3 +138,32 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 img.icon.selected {
     outline: 2px solid black;
 }
+
+#users {
+    margin: 0 1rem;
+    max-width: 60rem;
+}
+
+.user {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+}
+
+.user:hover {
+    background: #ccc;
+}
+
+.user_name {
+    width: 25rem;
+    padding: 0.3rem 0.3rem 0.3rem 0;
+}
+
+.user_label {
+    flex-grow: 2;
+    padding: 0.3rem 0.3rem 0.3rem 0;
+}
+
+#users a {
+    display: block;
+}

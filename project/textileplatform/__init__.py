@@ -1,4 +1,5 @@
 from . import main
+from . import admin
 from . import api
 from . import auth
 from . import db
@@ -41,10 +42,10 @@ except OSError:
 db.init_app(app)
 
 app.register_blueprint(auth.bp)
-
 app.register_blueprint(api.bp)
-
+app.register_blueprint(admin.bp)
 app.register_blueprint(main.bp)
+
 app.add_url_rule('/', endpoint='index')
 
 application = app
