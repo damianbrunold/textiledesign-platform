@@ -9,6 +9,8 @@ from textileplatform.auth import (
 )
 from textileplatform.persistence import (
     get_all_users,
+    get_user_by_name,
+    get_patterns_for_user_name,
 )
 
 bp = Blueprint('admin', __name__, url_prefix="/admin")
@@ -19,7 +21,6 @@ bp = Blueprint('admin', __name__, url_prefix="/admin")
 @superuser_required
 def users():
     all_users = get_all_users()
-    print(len(all_users))
     return render_template('admin/users.html', users=all_users)
 
 
@@ -27,4 +28,7 @@ def users():
 @login_required
 @superuser_required
 def edit_user(user_name):
-    pass
+    user = get_user_by_name(user_name)
+    patterns = get_patterns_for_user_name(user_name)
+    return render_template('admin/edit_user.html',
+                           user=user, patterns=patterns)

@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ user.label }}</h1>
+{% endblock %}
+
+{% block content %}
+    <div>
+        <div>name: {{ user.name }}</div>
+        <div>label: {{ user.label }}</div>
+        <div>email: {{ user.email }}</div>
+        <div>locale: {{ user.locale }}</div>
+    </div>
+
+    <h2>{{ gettext('Patterns') }}</h2>
+
+    <div id="patterns">
+        {% for pattern in patterns %}
+            <div class="pattern">
+                <div class="pattern_name">
+                    {{ pattern.name }}
+                </div>
+                <div>{{ pattern.pattern_type }}</div>
+                <div>{{ pattern.created }}</div>
+                <div>{{ pattern.modified }}</div>
+                <div>{{ pattern.public }}</div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}
