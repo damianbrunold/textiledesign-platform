@@ -12,4 +12,5 @@ def is_valid(name):
         "db",
         "auth",
         "admin",
+        "status",
     ]
