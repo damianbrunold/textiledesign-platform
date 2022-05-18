@@ -15,7 +15,10 @@ from textileplatform.persistence import (
     get_user_by_email,
     add_user
 )
-from textileplatform.name import from_display
+from textileplatform.name import (
+    from_display,
+    is_valid
+)
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -36,15 +39,21 @@ def register():
         elif not password:
             error = gettext('Password is required')
 
+        label = name
+        name = from_display(label)
+
+        if not is_valid(name):
+            error = gettext('Name is reserved and cannot be used')
+
         if error is None:
             try:
                 user = User()
-                user.name = from_display(name)
-                user.label = name
+                user.name = name
+                user.label = label
                 user.email = email
                 user.password = generate_password_hash(password)
                 user.darkmode = False
-                user.verified = True
+                user.verified = True  # TODO ok, later we need to verify!
                 user.disabled = False
                 user.locale = get_locale()
                 user.timezone = get_timezone()
