@@ -353,7 +353,7 @@ class GridViewPattern {
         } else if (settings.style === "color") {
             this.drawDataColor(ctx, settings);
         } else if (settings.style == "simulation") {
-            // TODO
+            this.drawDataSimulation(ctx, settings);
         } else if (settings.style === "invisible") {
             // empty!
         }
@@ -422,6 +422,61 @@ class GridViewPattern {
                     settings.dx,
                     settings.dy
                 );
+            }
+        }
+    }
+
+    drawDataSimulation(ctx, settings) {
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
+
+        for (let i = this.offset_i; i < this.offset_i + width; i++) {
+            if (i < pattern.min_x || pattern.max_x < i) continue;
+            for (let j = this.offset_j; j < this.offset_j + height; j++) {
+                if (j < pattern.min_y || pattern.max_y < j) continue;
+                const w = settings.dx / 5;
+                const h = settings.dy / 5;
+                const value = this.data.get(i, j);
+                const color_warp = colors[pattern.color_warp.get(i, 0)];
+                const color_weft = colors[pattern.color_weft.get(j, 0)];
+                ctx.fillStyle = settings.darcula ? "#444" : "#fff";
+                ctx.fillRect(
+                    (this.x + i - this.offset_i) * settings.dx,
+                    (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
+                    settings.dx,
+                    settings.dy
+                );
+                if (value > 0) {
+                    ctx.fillStyle = color_weft;
+                    ctx.fillRect(
+                        (this.x + i - this.offset_i) * settings.dx,
+                        (this.y + this.height - (j - this.offset_j) - 1) * settings.dy + h,
+                        settings.dx,
+                        settings.dy - 2*h
+                    );
+                    ctx.fillStyle = color_warp;
+                    ctx.fillRect(
+                        (this.x + i - this.offset_i) * settings.dx + w,
+                        (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
+                        settings.dx - 2*w,
+                        settings.dy
+                    );
+                } else {
+                    ctx.fillStyle = color_warp;
+                    ctx.fillRect(
+                        (this.x + i - this.offset_i) * settings.dx + w,
+                        (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
+                        settings.dx - 2*w,
+                        settings.dy
+                    );
+                    ctx.fillStyle = color_weft;
+                    ctx.fillRect(
+                        (this.x + i - this.offset_i) * settings.dx,
+                        (this.y + this.height - (j - this.offset_j) - 1) * settings.dy + h,
+                        settings.dx,
+                        settings.dy - 2*h
+                    );
+                }
             }
         }
     }

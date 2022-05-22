@@ -1,6 +1,10 @@
 Todo
 ----
 
+- Replace Close button with image button
+- Replace Clone button with image button
+- Replace Save button with autosave or at least an image button
+
 - before closing editor check for changes and
   prompt to save them. Or autosave?
 
@@ -24,7 +28,6 @@ Todo
   - implement zoom
   - implement basic keyboard focus/movement
   - implement selection
-  - add view style simulation
   - calculate repeat
   - edit reed
   - display color palette
