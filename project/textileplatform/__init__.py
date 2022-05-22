@@ -15,6 +15,11 @@ app.config.from_mapping(
     ADMIN_PASSWORD='dev'
 )
 app.config.from_pyfile('config.py', silent=True)
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+)
 
 babel = Babel(app)
 
