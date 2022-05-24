@@ -134,6 +134,8 @@ class ViewSimulated {
         const dx = settings.dx;
         const dy = settings.dy;
 
+        const even = this.width == Math.trunc(this.width);
+
         for (let jj = 0; jj < this.data.height; jj++) {
             for (let ii = 0; ii < this.data.width; ii++) {
                 let idx = ii + jj * this.data.width;
@@ -147,8 +149,8 @@ class ViewSimulated {
                 let i = idx;
 
                 if (j >= this.height) break;
-                if (i > this.width) continue;
-
+                if (j % 2 == 0 && i >= this.width) continue;
+                if (j % 2 == 1 && i > this.width) continue;
 
                 const xoff = j % 2 == 0 ? 0 : -dx/2;
 
@@ -157,18 +159,29 @@ class ViewSimulated {
                 let x = 0;
                 let d = dx;
 
-                if (i === 0 && j % 2 == 1) {
-                    x = 0.5 + xoff + this.x * dx;
-                    d = dx / 2;
-                } else if (i + 1 >= this.width && j % 2 == 0) {
-                    x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
-                    d = dx / 2;
+                if (even) {
+                    if (i === 0 && j % 2 == 1) {
+                        x = 0.5 + xoff + this.x * dx;
+                        d = dx / 2;
+                    } else if (i >= Math.trunc(this.width) && j % 2 == 1) {
+                        x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
+                        d = dx / 2;
+                    } else {
+                        x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
+                    }
                 } else {
-                    x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
+                    if (i === 0 && j % 2 == 1) {
+                        x = 0.5 + xoff + this.x * dx;
+                        d = dx / 2;
+                    } else if (i + 1 >= this.width && j % 2 == 0) {
+                        x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
+                        d = dx / 2;
+                    } else {
+                        x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
+                    }
                 }
 
                 const y = 0.5 + (this.y + this.height - j - 1) * dy;
-
 
                 ctx.fillStyle = colors[state];
                 ctx.fillRect(x, y, d, dy);
@@ -266,6 +279,7 @@ function init() {
 }
 
 function initPattern(data, pattern) {
+    console.log(data);
     for (let i = 0; i < data.colors.length; i++) {
         const spec = data.colors[i];
         colors.push(`rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`);
