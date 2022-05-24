@@ -16,7 +16,10 @@ from flask import (
     url_for
 )
 
-from textileplatform.palette import default_weave_palette
+from textileplatform.palette import (
+    default_weave_palette,
+    default_bead_palette,
+)
 from textileplatform.beadpattern import parse_jbb_data
 from textileplatform.weavepattern import parse_dbw_data
 from textileplatform.auth import (
@@ -233,10 +236,34 @@ def create_pattern():
         elif request.form['pattern_type'] == "JBead Pattern":
             label = request.form['name']
             name = label.replace("..", "").replace("/", "").replace("\\", "")
-            width = request.form['width']
-            height = request.form['height']
+            width = int(request.form['width'])
+            height = int(request.form['height'])
 
-            # TODO
+            pattern = dict()
+            pattern['name'] = label
+            pattern['author'] = g.user.label
+            pattern['organization'] = ""
+            pattern['notes'] = ""
+
+            pattern['model'] = [[0] * width] * height
+
+            # TODO use user default palette?
+            pattern['colors'] = default_bead_palette
+
+            view = dict()
+            view['draft-visible'] = True
+            view['corrected-visible'] = True
+            view['simulation-visible'] = True
+            view['report-visible'] = True
+            view['zoom'] = 2
+            view['shift'] = 0
+            view['scroll'] = 0
+            view['selected-tool'] = 'select'
+            view['selected-color'] = 0
+            pattern['view'] = view
+
+            # TODO handle exceptions (e.g. due to duplicate name!)
+            add_bead_pattern(pattern, g.user.name)
 
             return redirect(url_for("main.edit_pattern",
                                     user_name=g.user.name,
