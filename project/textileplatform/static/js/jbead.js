@@ -131,7 +131,51 @@ class ViewSimulated {
     }
 
     draw(ctx, settings) {
-        // TODO
+        const dx = settings.dx;
+        const dy = settings.dy;
+
+        for (let jj = 0; jj < this.data.height; jj++) {
+            for (let ii = 0; ii < this.data.width; ii++) {
+                let idx = ii + jj * this.data.width;
+                let j = 0;
+                let w = this.data.width;
+                while (idx >= w) {
+                    j++;
+                    idx -= w;
+                    w = j % 2 == 0 ? this.data.width : this.data.width + 1;
+                }
+                let i = idx;
+
+                if (j >= this.height) break;
+                if (i > this.width) continue;
+
+
+                const xoff = j % 2 == 0 ? 0 : -dx/2;
+
+                const state = this.data.get(ii, jj);
+
+                let x = 0;
+                let d = dx;
+
+                if (i === 0 && j % 2 == 1) {
+                    x = 0.5 + xoff + this.x * dx;
+                    d = dx / 2;
+                } else if (i + 1 >= this.width && j % 2 == 0) {
+                    x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
+                    d = dx / 2;
+                } else {
+                    x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
+                }
+
+                const y = 0.5 + (this.y + this.height - j - 1) * dy;
+
+
+                ctx.fillStyle = colors[state];
+                ctx.fillRect(x, y, d, dy);
+                ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+                ctx.strokeRect(x, y, d, dy);
+            }
+        }
     }
 }
 
@@ -163,7 +207,7 @@ class PatternView {
         const width_ruler = 3;
         const width_draft = this.pattern.width;
         const width_corrected = this.pattern.width + 1;
-        const width_simulated = Math.trunc((this.pattern.width + 1) / 2);
+        const width_simulated = this.pattern.width / 2;
 
         const x1 = 0;
         const x2 = width_ruler + 1;
@@ -226,6 +270,7 @@ function initPattern(data, pattern) {
         const spec = data.colors[i];
         colors.push(`rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`);
     }
+    console.log(colors);
     for (let j = 0; j < pattern.height; j++) {
         const row = data.model[j];
         for (let i = 0; i < row.length; i++) {
