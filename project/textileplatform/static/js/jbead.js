@@ -55,6 +55,11 @@ class ViewDraft {
         this.offset = 0;
     }
 
+    contains(i, j) {
+        return this.x <= i && i < this.x + this.width &&
+               this.y <= j && j < this.y + this.height;
+    }
+
     draw(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
@@ -83,6 +88,11 @@ class ViewCorrected {
         this.height = height;
         this.offset = 0;
         this.rotation = 0;
+    }
+
+    contains(i, j) {
+        return this.x <= i && i < this.x + this.width &&
+               this.y <= j && j < this.y + this.height;
     }
 
     draw(ctx, settings) {
@@ -128,6 +138,11 @@ class ViewSimulated {
         this.width = width;
         this.height = height;
         this.offset = 0;
+    }
+
+    contains(i, j) {
+        return this.x <= i && i < this.x + this.width &&
+               this.y <= j && j < this.y + this.height;
     }
 
     draw(ctx, settings) {
@@ -272,8 +287,16 @@ function init() {
         const j = view.draft.height - 1 - Math.trunc(y / settings.dy);
         if (j < 0) return;
         console.log(i, j);
-        // TODO convert coordinates to matching view coordinates
-        // TODO toggle pattern point
+        if (view.draft.contains(i, j)) {
+            const x = i - view.draft.x;
+            const y = j - view.draft.y + view.draft.offset;
+            const val = pattern.get(x, y);
+            if (val <= 0) {
+                pattern.set(x, y, 1); // TODO use selected color
+            } else {
+                pattern.set(x, y, -val);
+            }
+        }
         view.draw();
     });
 }
