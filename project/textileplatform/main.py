@@ -245,7 +245,7 @@ def create_pattern():
             pattern['organization'] = ""
             pattern['notes'] = ""
 
-            pattern['model'] = [[0] * width] * height
+            pattern['model'] = [[3] * width] * height
 
             # TODO use user default palette?
             pattern['colors'] = default_bead_palette
@@ -259,7 +259,7 @@ def create_pattern():
             view['shift'] = 0
             view['scroll'] = 0
             view['selected-tool'] = 'select'
-            view['selected-color'] = 0
+            view['selected-color'] = 1
             pattern['view'] = view
 
             # TODO handle exceptions (e.g. due to duplicate name!)

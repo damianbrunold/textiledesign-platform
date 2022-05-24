@@ -24,6 +24,10 @@ let colors = [];
 let readonly = false;
 
 
+let selected_color = 1;
+let background_color = 0;
+
+
 class Pattern {
     constructor(width, height) {
         this.width = width;
@@ -277,6 +281,7 @@ function init() {
     view = new PatternView(pattern, settings, ctx);
 
     initPattern(data, pattern);
+    selected_color = data['view']['selected-color']
 
     view.draw();
 
@@ -286,15 +291,14 @@ function init() {
         const i = Math.trunc(x / settings.dx);
         const j = view.draft.height - 1 - Math.trunc(y / settings.dy);
         if (j < 0) return;
-        console.log(i, j);
         if (view.draft.contains(i, j)) {
             const x = i - view.draft.x;
             const y = j - view.draft.y + view.draft.offset;
             const val = pattern.get(x, y);
-            if (val <= 0) {
-                pattern.set(x, y, 1); // TODO use selected color
+            if (val !== selected_color) {
+                pattern.set(x, y, selected_color);
             } else {
-                pattern.set(x, y, -val);
+                pattern.set(x, y, background_color);
             }
         }
         view.draw();
@@ -307,7 +311,6 @@ function initPattern(data, pattern) {
         const spec = data.colors[i];
         colors.push(`rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`);
     }
-    console.log(colors);
     for (let j = 0; j < pattern.height; j++) {
         const row = data.model[j];
         for (let i = 0; i < row.length; i++) {
