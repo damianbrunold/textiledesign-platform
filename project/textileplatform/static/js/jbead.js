@@ -220,6 +220,62 @@ class ViewSimulated {
 }
 
 
+class ViewColors {
+    constructor(palette, x, y, width, height) {
+        this.palette = palette;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+    }
+
+    contains(x, y) {
+        return this.x <= x && x < this.x + this.width &&
+               this.y <= y && y < this.y + this.height;
+    }
+
+    draw(ctx, settings) {
+        const d = 25; // TODO adapt on hdpi screens?
+
+        let i = 0;
+        let j = 0;
+        for (let idx = 0; idx < this.palette.length; idx++) {
+            const x = 0.5 + this.x + i * d;
+            const y = 0.5 + this.y + j * d;
+            ctx.fillStyle = this.palette[idx];
+            ctx.fillRect(x, y, d, d);
+            ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+            ctx.strokeRect(x, y, d, d);
+            i++;
+            if (i == 16) {
+                i = 0;
+                j = 1;
+            }
+        }
+
+        i = 0;
+        j = 0;
+        for (let idx = 0; idx < this.palette.length; idx++) {
+            if (selected_color === idx) {
+                const x = 0.5 + this.x + i * d;
+                const y = 0.5 + this.y + j * d;
+                ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, y, d, d);
+                ctx.lineWidth = 1;
+                break;
+            }
+            i++;
+            if (i == 16) {
+                i = 0;
+                j = 1;
+            }
+        }
+    }
+}
+
+
+
 class ViewSettings {
     constructor(dx=12, dy=null) {
         this.dx = dx;
@@ -247,7 +303,7 @@ class PatternView {
         const width_ruler = 3;
         const width_draft = this.pattern.width;
         const width_corrected = this.pattern.width + 1;
-        const width_simulated = this.pattern.width / 2;
+        const width_simulated = Math.trunc((this.pattern.width + 1) / 2);
 
         const x1 = 0;
         const x2 = width_ruler + 1;
@@ -258,6 +314,7 @@ class PatternView {
         this.draft = new ViewDraft(this.pattern, x2, 0, width_draft, availy);
         this.corrected = new ViewCorrected(this.pattern, x3, 0, width_corrected, availy);
         this.simulated = new ViewSimulated(this.pattern, x4, 0, width_simulated, availy);
+        this.colors = new ViewColors(colors, x5 * dx, 0, 16 * 25, 2 * 25);
         // TODO bead-list
     }
 
@@ -266,6 +323,7 @@ class PatternView {
         this.draft.draw(this.ctx, this.settings);
         this.corrected.draw(this.ctx, this.settings);
         this.simulated.draw(this.ctx, this.settings);
+        this.colors.draw(this.ctx, this.settings);
     }
 
     clearCanvas() {
@@ -310,6 +368,11 @@ function init() {
             } else {
                 pattern.set(x, y, background_color);
             }
+        } else if (view.colors.contains(x, y)) {
+            const ii = Math.trunc((x - view.colors.x) / 25);
+            const jj = Math.trunc((y - view.colors.y) / 25);
+            const idx = ii + 16 * jj;
+            selected_color = idx;
         }
         view.draw();
     });
