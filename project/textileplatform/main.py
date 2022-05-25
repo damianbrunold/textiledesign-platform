@@ -245,7 +245,7 @@ def create_pattern():
             pattern['organization'] = ""
             pattern['notes'] = ""
 
-            pattern['model'] = [[3] * width] * height
+            pattern['model'] = [[0] * width] * height
 
             # TODO use user default palette?
             pattern['colors'] = default_bead_palette
