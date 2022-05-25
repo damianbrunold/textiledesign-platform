@@ -203,9 +203,10 @@ class ViewSimulated {
                 const y = 0.5 + (this.y + this.height - j - 1) * dy;
 
                 ctx.fillStyle = colors[state];
-                ctx.fillRect(x, y, d, dy);
                 ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-                ctx.strokeRect(x, y, d, dy);
+                ctx.beginPath();
+                ctx.ellipse(x + d / 2, y + dy / 2, d / 2, dy / 2, 0, 0, 2 * Math.PI);
+                ctx.fill();
             }
         }
     }
