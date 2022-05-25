@@ -329,12 +329,29 @@ function initPattern(data, pattern) {
     }
 }
 
+function saveSettings(data, settings) {
+    // TODO
+}
+
+function savePatternData(data, pattern) {
+    for (let j = 0; j < data.model.length; j++) {
+        const row = data.model[j];
+        for (let i = 0; i < row.length; i++) {
+            row[i] = pattern.get(i, j);
+        }
+    }
+}
+
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
     getPattern().then(init);
     if (!readonly) {
         document.getElementById("public").addEventListener("click", togglePublic);
-        document.getElementById("save").addEventListener("click", savePattern);
+        document.getElementById("save").addEventListener("click", () => {
+            saveSettings(data, settings);
+            savePatternData(data, pattern);
+            savePattern();
+        });
     } else {
         const clone = document.getElementById("clone");
         if (clone) clone.addEventListener("click", clonePattern);
