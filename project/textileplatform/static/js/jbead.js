@@ -155,6 +155,14 @@ class ViewSimulated {
 
         const even = this.width == Math.trunc(this.width);
 
+        ctx.fillStyle = settings.darcula ? "#444" : "#aaa";
+        ctx.fillRect(
+            this.x * dx - dx / 2,
+            this.y * dy,
+            this.width * dx,
+            this.height * dy
+        );
+
         for (let jj = 0; jj < this.data.height; jj++) {
             for (let ii = 0; ii < this.data.width; ii++) {
                 let idx = ii + jj * this.data.width;
@@ -203,7 +211,6 @@ class ViewSimulated {
                 const y = 0.5 + (this.y + this.height - j - 1) * dy;
 
                 ctx.fillStyle = colors[state];
-                ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
                 ctx.beginPath();
                 ctx.ellipse(x + d / 2, y + dy / 2, d / 2, dy / 2, 0, 0, 2 * Math.PI);
                 ctx.fill();
@@ -268,12 +275,14 @@ class PatternView {
 
 
 function init() {
+    const darkmode = document.getElementById("darkmode").value === "True";
     pattern = new Pattern(data.model[0].length, data.model.length);
     settings = new ViewSettings();
+    settings.darcula = darkmode;
 
     const container = document.getElementById("container");
     const canvas = document.getElementById('canvas');
-    canvas.style.backgroundColor = settings.darcula ? "#444" : "#aaa";
+    canvas.style.backgroundColor = settings.darcula ? "#444" : "#fff";
     canvas.style.border = "none";
     const ctx = canvas.getContext('2d');
     ctx.canvas.width = container.clientWidth - 2;
