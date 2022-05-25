@@ -13,8 +13,6 @@ Todo
 
 - Render in-memory format into jbead format
 - Download bead pattern file in JBead format
-- Very basic editing of bead pattern
-- Save changes to bead pattern
 
 - Parse WIF-Format into in-memory format
 - Render in-memory format into WIF-Format
@@ -39,7 +37,6 @@ Todo
 
 - jbead
   - draw ruler
-  - draw simulated view
   - rotate simulated view
   - draw info and bead list
   - add tools/menus
