@@ -372,7 +372,9 @@ function init() {
             const ii = Math.trunc((x - view.colors.x) / 25);
             const jj = Math.trunc((y - view.colors.y) / 25);
             const idx = ii + 16 * jj;
-            selected_color = idx;
+            if (idx < colors.length) {
+                selected_color = idx;
+            }
         }
         view.draw();
     });
