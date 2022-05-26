@@ -49,6 +49,52 @@ class Pattern {
 }
 
 
+class ViewRuler {
+    constructor(x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.offset = 0;
+    }
+
+    contains(i, j) {
+        return this.x <= i && i < this.x + this.width &&
+               this.y <= j && j < this.y + this.height;
+    }
+
+    draw(ctx, settings) {
+        const dx = settings.dx;
+        const dy = settings.dy;
+
+        ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+        ctx.fillStyle = settings.darcula ? "#aaa" : "#222";
+        ctx.font = `${settings.dy}px sans-serif`;
+        ctx.textAlign = 'end';
+        for (let j = 0; j <= this.height; j++) {
+            const jj = j + this.offset + 1;
+            if (jj % 10 == 0) {
+                ctx.moveTo(
+                    0.5 + (this.x + 0.5) * dx,
+                    0.5 + (this.y + this.height - j - 1) * dy
+                )
+                ctx.lineTo(
+                    0.5 + (this.x + this.width) * dx,
+                    0.5 + (this.y + this.height - j - 1) * dy
+                )
+                ctx.stroke();
+
+                ctx.fillText(
+                    `${jj}`,
+                    (this.x + this.width) * dx,
+                    (this.y + this.height - j) * dy);
+            }
+        }
+    }
+}
+
+
+
 class ViewDraft {
     constructor(data, x, y, width, height) {
         this.data = data;
@@ -311,6 +357,7 @@ class PatternView {
         const x4 = x3 + width_corrected + 2;
         const x5 = x4 + width_simulated + 2;
 
+        this.ruler = new ViewRuler(x1, 0, width_ruler, availy);
         this.draft = new ViewDraft(this.pattern, x2, 0, width_draft, availy);
         this.corrected = new ViewCorrected(this.pattern, x3, 0, width_corrected, availy);
         this.simulated = new ViewSimulated(this.pattern, x4, 0, width_simulated, availy);
@@ -324,6 +371,7 @@ class PatternView {
         this.corrected.draw(this.ctx, this.settings);
         this.simulated.draw(this.ctx, this.settings);
         this.colors.draw(this.ctx, this.settings);
+        this.ruler.draw(this.ctx, this.settings);
     }
 
     clearCanvas() {

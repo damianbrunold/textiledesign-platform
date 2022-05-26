@@ -1,6 +1,11 @@
 Todo
 ----
 
+- Implement circular buffer undo/redo
+
+- Autosave changes in localstorage so that changes are not lost
+  due to restart, reload etc.
+
 - Replace Close button with image button
 - Replace Clone button with image button
 - Replace Save button with autosave or at least an image button
@@ -36,11 +41,9 @@ Todo
   - support alternate draw direction (right-to-left, bottom-to-top, ...)
 
 - jbead
-  - draw ruler
   - rotate simulated view
   - draw info and bead list
   - add tools/menus
-  - add color palette
 
 The webapp obviously needs to be usable with a mouse. But
 I also want it to be as usable as possible with the keyboard
