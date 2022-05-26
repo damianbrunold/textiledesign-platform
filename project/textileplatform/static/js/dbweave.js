@@ -433,52 +433,70 @@ class GridViewPattern {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
+        const dx = settings.dx;
+        const dy = settings.dy;
+
+        const w = dx / 5;
+        const h = dy / 5;
+
         for (let i = this.offset_i; i < this.offset_i + width; i++) {
             if (i < pattern.min_x || pattern.max_x < i) continue;
             for (let j = this.offset_j; j < this.offset_j + height; j++) {
                 if (j < pattern.min_y || pattern.max_y < j) continue;
-                const w = settings.dx / 5;
-                const h = settings.dy / 5;
+
                 const value = this.data.get(i, j);
+
                 const color_warp = colors[pattern.color_warp.get(i, 0)];
                 const color_weft = colors[pattern.color_weft.get(j, 0)];
+
+                const x0 = (this.x + i - this.offset_i) * settings.dx;
+                const x1 = x0 + w;
+                const x2 = x0 + settings.dx - w;
+                const x3 = x0 + settings.dx;
+
+                const y0 = (this.y + this.height - (j - this.offset_j) - 1) * settings.dy;
+                const y1 = y0 + h;
+                const y2 = y0 + settings.dy - h;
+                const y3 = y0 + settings.dy;
+
                 ctx.fillStyle = settings.darcula ? "#444" : "#fff";
-                ctx.fillRect(
-                    (this.x + i - this.offset_i) * settings.dx,
-                    (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
-                    settings.dx,
-                    settings.dy
-                );
+                ctx.fillRect(x0, y0, dx, dy);
                 if (value > 0) {
                     ctx.fillStyle = color_weft;
-                    ctx.fillRect(
-                        (this.x + i - this.offset_i) * settings.dx,
-                        (this.y + this.height - (j - this.offset_j) - 1) * settings.dy + h,
-                        settings.dx,
-                        settings.dy - 2*h
-                    );
+                    ctx.fillRect(x0, y1, dx, dy - 2*h);
+
                     ctx.fillStyle = color_warp;
-                    ctx.fillRect(
-                        (this.x + i - this.offset_i) * settings.dx + w,
-                        (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
-                        settings.dx - 2*w,
-                        settings.dy
-                    );
+                    ctx.fillRect(x1, y0, dx - 2*w, dy);
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#999";
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x1, y2);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#000";
+                    ctx.moveTo(x2, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
                 } else {
                     ctx.fillStyle = color_warp;
-                    ctx.fillRect(
-                        (this.x + i - this.offset_i) * settings.dx + w,
-                        (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
-                        settings.dx - 2*w,
-                        settings.dy
-                    );
+                    ctx.fillRect(x1, y0, dx - 2*w, dy);
+
                     ctx.fillStyle = color_weft;
-                    ctx.fillRect(
-                        (this.x + i - this.offset_i) * settings.dx,
-                        (this.y + this.height - (j - this.offset_j) - 1) * settings.dy + h,
-                        settings.dx,
-                        settings.dy - 2*h
-                    );
+                    ctx.fillRect(x0, y1, dx, dy - 2*h);
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#999";
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y1);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#000";
+                    ctx.moveTo(x1, y2);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
                 }
             }
         }
