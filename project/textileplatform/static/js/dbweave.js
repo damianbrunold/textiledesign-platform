@@ -21,6 +21,9 @@ let settings = null;
 let colors = {};
 
 
+let current_color = 0;
+
+
 let readonly = false;
 
 
@@ -952,6 +955,14 @@ function init() {
             const jj = view.weave.height - 1 - (j - view.weave.y) + view.weave.offset_j;
             pattern.weave.toggle(ii, jj);
             pattern.recalc_from_weave(settings);
+            view.draw();
+        } else if (view.color_warp.contains(i, j)) {
+            const ii = i - view.color_warp.x + view.color_warp.offset_i;
+            pattern.color_warp.set(ii, 0, current_color);
+            view.draw();
+        } else if (view.color_weft.contains(i, j)) {
+            const jj = view.color_weft.height - 1 - (j - view.color_weft.y) + view.color_weft.offset_j;
+            pattern.color_weft.set(0, jj, current_color);
             view.draw();
         } else if (view.reed.contains(i, j)) {
             const ii = i - view.reed.x + view.reed.offset_i;
