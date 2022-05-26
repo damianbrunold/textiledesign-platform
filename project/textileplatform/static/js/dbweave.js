@@ -494,6 +494,11 @@ class GridViewColors {
         this.offset_j = 0;
     }
 
+    contains(i, j) {
+        return this.x <= i && i < this.x + this.width &&
+               this.y <= j && j < this.y + this.height;
+    }
+
     draw(ctx, settings) {
         this.drawGrid(ctx, settings);
         this.drawDataColor(ctx, settings);
@@ -547,6 +552,10 @@ class GridViewReed {
         this.y = y;
         this.width = width;
         this.offset_i = 0;
+    }
+
+    contains(i, j) {
+        return this.x <= i && i < this.x + this.width && this.y == j;
     }
 
     draw(ctx, settings) {
@@ -943,6 +952,10 @@ function init() {
             const jj = view.weave.height - 1 - (j - view.weave.y) + view.weave.offset_j;
             pattern.weave.toggle(ii, jj);
             pattern.recalc_from_weave(settings);
+            view.draw();
+        } else if (view.reed.contains(i, j)) {
+            const ii = i - view.reed.x + view.reed.offset_i;
+            pattern.reed.toggle(ii, 0);
             view.draw();
         }
     });
