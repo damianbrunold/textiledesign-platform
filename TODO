@@ -28,16 +28,17 @@ Todo
 
 - dbweave
   - ui: better public/private icon for dark mode
-  - implement zoom
+  - implement zoom (or use browser zoom?)
   - implement basic keyboard focus/movement
   - implement selection
+  - selection operations (mirror v/h, rotate, invert, ...)
   - calculate repeat
   - display color palette
-  - edit color bars
   - support scrolling
   - support cell styles (plus, numbers, ...)
   - support alternate view arrangements (threading below pattern, ...)
   - support alternate draw direction (right-to-left, bottom-to-top, ...)
+  - view-toggle (swiss, scandinavian, american)
 
 - jbead
   - rotate simulated view
