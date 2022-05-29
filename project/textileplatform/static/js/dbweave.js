@@ -21,9 +21,6 @@ let settings = null;
 let colors = {};
 
 
-let current_color = 0;
-
-
 let readonly = false;
 
 
@@ -976,11 +973,11 @@ function init() {
             view.draw();
         } else if (view.color_warp.contains(i, j)) {
             const ii = i - view.color_warp.x + view.color_warp.offset_i;
-            pattern.color_warp.set(ii, 0, current_color);
+            pattern.color_warp.set(ii, 0, settings.current_color);
             view.draw();
         } else if (view.color_weft.contains(i, j)) {
             const jj = view.color_weft.height - 1 - (j - view.color_weft.y) + view.color_weft.offset_j;
-            pattern.color_weft.set(0, jj, current_color);
+            pattern.color_weft.set(0, jj, settings.current_color);
             view.draw();
         } else if (view.reed.contains(i, j)) {
             const ii = i - view.reed.x + view.reed.offset_i;
@@ -1011,6 +1008,7 @@ function initSettings(data, settings) {
     settings.direction_toptobottom = val(data, "direction_toptobottom", false);
     settings.warp_factor = val(data, "warp_factor", 1.0);
     settings.weft_factor = val(data, "weft_factor", 1.0);
+    settings.current_color = val(data, "current_color", 0);
 }
 
 
@@ -1027,6 +1025,7 @@ function saveSettings(data, settings) {
     data["direction_toptobottom"] = settings.direction_toptobottom;
     data["warp_factor"] = settings.warp_factor;
     data["weft_factor"] = settings.weft_factor;
+    data["current_color"] = settings.current_color;
 }
 
 
