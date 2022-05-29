@@ -188,7 +188,7 @@ msgstr "Öffentlich"
 
 #: templates/main/index.html:4
 msgid "Some example patterns"
-msgstr "Eine Beispielmuster"
+msgstr "Einige Beispielmuster"
 
 #: templates/main/index.html:10
 msgid "Weave Patterns"
