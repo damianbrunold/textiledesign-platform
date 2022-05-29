@@ -975,43 +975,49 @@ class PatternView {
             x3, y1, width3, height1
         );
 
+        let sby = y1 + height1;
         if (this.settings.entering_at_bottom) {
-            if (this.display_treadling) {
-                this.scroll_1_hor = new ScrollbarHorz(
-                    p.weave,
-                    this.weave,
-                    x1, y4 + height4, width1, scroll
-                );
-            } else {
-                this.scroll_1_hor = new GridViewDummy();
+            if (this.settings.display_colors_warp) {
+                sby = y4 + height4;
+            } else if (this.settings.display_entering) {
+                sby = y3 + height3;
+            } else if (this.settings.display_reed) {
+                sby = y2 + height2;
             }
+        }
+
+        this.scroll_1_hor = new ScrollbarHorz(
+            p.weave,
+            this.weave,
+            x1, sby, width1, scroll
+        );
+        if (this.settings.display_treadling) {
             this.scroll_2_hor = new ScrollbarHorz(
                 p.treadling,
                 this.treadling,
-                x2, y4 + height4, width2, scroll
+                x2, sby, width2, scroll
             );
         } else {
-            this.scroll_1_hor = new ScrollbarHorz(
-                p.weave,
-                this.weave,
-                x1, y1 + height1, width1, scroll
-            );
-            this.scroll_2_hor = new ScrollbarHorz(
-                p.treadling,
-                this.treadling,
-                x2, y1 + height1, width2, scroll
-            );
+            this.scroll_2_hor = new GridViewDummy();
         }
+
+        let sbx = x1 + width1;
+        if (this.settings.display_colors_weft) {
+            sbx = x3 + width3;
+        } else if (this.settings.display_treadling) {
+            sbx = x2 + width2;
+        }
+
         this.scroll_1_ver = new ScrollbarVert(
             p.weave,
             this.weave,
-            x3 + 1, y1, scroll, height1
+            sbx, y1, scroll, height1
         );
-        if (this.display_entering) {
+        if (this.settings.display_entering) {
             this.scroll_2_ver = new ScrollbarVert(
                 p.entering,
                 this.entering,
-                x3 + 1, y3, scroll, height3
+                sbx, y3, scroll, height3
             );
         } else {
             this.scroll_2_ver = new GridViewDummy();
@@ -1347,6 +1353,11 @@ function keyDown(e) {
     } else if (e.key === "d") { // TODO use better key shortcut
         settings.display_colors_warp = !settings.display_colors_warp;
         settings.display_colors_weft = !settings.display_colors_weft;
+        view.layout();
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "e") { // TODO use better key shortcut
+        settings.entering_at_bottom = !settings.entering_at_bottom;
         view.layout();
         view.draw();
         e.preventDefault();
