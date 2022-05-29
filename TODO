@@ -26,6 +26,8 @@ Todo
 - Export weave pattern as PDF
 - Export jbead pattern as PDF
 
+- parse bereich/block muster in dbweave
+
 - dbweave
   - ui: better public/private icon for dark mode
   - implement zoom (or use browser zoom?)
