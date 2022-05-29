@@ -822,8 +822,8 @@ class ScrollbarHorz {
             this.height - delta
         )
         const w = this.width * settings.dx - 1;
-        const a = w / this.pattern.width * this.view.offset_i;
-        const b = w / this.pattern.width * this.view.width;
+        const a = Math.min(w / this.pattern.width * this.view.offset_i, w);
+        const b = Math.min(w / this.pattern.width * this.view.width, w);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         ctx.fillRect(
             1.0 + this.x * settings.dx + a,
@@ -855,8 +855,8 @@ class ScrollbarVert {
             this.height * settings.dx
         )
         const h = this.height * settings.dy - 1;
-        const a = h / this.pattern.height * this.view.offset_j;
-        const b = h / this.pattern.height * this.view.height;
+        const a = Math.min(h / this.pattern.height * this.view.offset_j, h);
+        const b = Math.min(h / this.pattern.height * this.view.height, h);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         ctx.fillRect(
             1.0 + this.x * settings.dx + delta,
