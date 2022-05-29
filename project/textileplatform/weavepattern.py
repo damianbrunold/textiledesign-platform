@@ -33,12 +33,23 @@ def parse_dbw_data(dbwdata, name=''):
     result['visible_treadles'] = int(view['trittfolge']['wvisible'])
     result['warp_lifting'] = view['general']['hebung'] == '0'
     result['zoom'] = int(view['general']['zoom'])
+    result['current_color'] = int(view['general']['color'])
     result['single_treadling'] = view['trittfolge']['single'] == '1'
-    result['show_repeat'] = view['general']['viewrapport'] == '1'
+    result['weave_locked'] = view['gewebe']['locked'] == '1'
+    result['unit_width'] = int(view['gewebe']['stronglinex'])
+    result['unit_height'] = int(view['gewebe']['strongliney'])
+    result['warp_factor'] = float(view['general']['faktor_kette'])
+    result['weft_factor'] = float(view['general']['faktor_schuss'])
+    result['direction_righttoleft'] = view['general']['righttoleft'] == '1'
+    result['direction_toptobottom'] = view['general']['toptobottom'] == '1'
 
     result['display_reed'] = view['blatteinzug']['visible'] == '1'
     result['display_colors_warp'] = view['kettfarben']['visible'] == '1'
     result['display_colors_weft'] = view['schussfarben']['visible'] == '1'
+    result['display_hlines'] = view['general']['viewhlines'] == '1'
+    result['display_repeat'] = view['general']['viewrapport'] == '1'
+    result['display_palette'] = view['general']['viewpalette'] == '1'
+    result['display_pegplan'] = view['general']['viewpegplan'] == '1'
 
     state = view['gewebe']['state']
     if state == '0':

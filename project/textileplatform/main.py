@@ -216,8 +216,8 @@ def create_pattern():
             pattern['warp_lifting'] = True
             pattern['zoom'] = 3
             pattern['single_treadling'] = True
-            pattern['show_repeat'] = False
 
+            pattern['display_repeat'] = False
             pattern['display_reed'] = True
             pattern['display_colors_warp'] = True
             pattern['display_colors_weft'] = True
