@@ -276,6 +276,17 @@ class Entering {
 }
 
 
+class GridViewDummy {
+    contains(i, j) {
+        return false;
+    }
+
+    draw(ctx, settings) {
+        // empty
+    }
+}
+
+
 class GridView {
     constructor(data, x, y, width, height, painter_prop) {
         this.data = data;
@@ -878,6 +889,10 @@ class PatternView {
         this.layout();
     }
 
+    withBorder(n) {
+        return n == 0 ? n : n + 1;
+    }
+
     layout() {
         const dx = this.settings.dx;
         const dy = this.settings.dy;
@@ -888,38 +903,127 @@ class PatternView {
 
         // TODO allow parts to hide/show
 
-        const width3 = 1;
-        const width2 = this.visible_treadles;
-        const width1 = availx - width3 - 1 - width2 - 1;
+        const width3 = this.settings.display_colors_weft ? 1 : 0;
+        const width2 = this.settings.display_treadling ? this.visible_treadles : 0;
+        const width1 = availx - this.withBorder(width3) - this.withBorder(width2);
 
-        const height4 = 1;
-        const height3 = this.visible_shafts;
-        const height2 = 1;
-        const height1 = availy - height4 - 1 - height3 - 1 - height2 - 1;
+        const height4 = this.settings.display_colors_warp ? 1 : 0;
+        const height3 = this.settings.display_entering ? this.visible_shafts : 0;
+        const height2 = this.settings.display_reed ? 1 : 0;
+        const height1 = availy - this.withBorder(height4) - this.withBorder(height3) - this.withBorder(height2);
 
-        const y4 = 0;
-        const y3 = y4 + height4 + 1;
-        const y2 = y3 + height3 + 1;
-        const y1 = y2 + height2 + 1;
+        let y4; // warp color bar
+        let y3; // entering
+        let y2; // reed
+        let y1; // weave
+
+        if (this.settings.entering_at_bottom) {
+            y1 = 0;
+            y2 = y1 + this.withBorder(height1);
+            y3 = y2 + this.withBorder(height2);
+            y4 = y3 + this.withBorder(height3);
+        } else {
+            y4 = 0;
+            y3 = y4 + this.withBorder(height4);
+            y2 = y3 + this.withBorder(height3);
+            y1 = y2 + this.withBorder(height2);
+        }
 
         const x1 = 0;
-        const x2 = x1 + width1 + 1;
-        const x3 = x2 + width2 + 1;
+        const x2 = x1 + this.withBorder(width1);
+        const x3 = x2 + this.withBorder(width2);
 
         const p = this.data;
+        const s = this.settings;
 
-        this.color_warp = new GridViewColors(p.color_warp, x1, y4, width1, height4);
-        this.entering   = new GridView(p.entering,         x1, y3, width1, height3, 'entering_style');
-        this.tieup      = new GridView(p.tieup,            x2, y3, width2, height3, 'tieup_style');
-        this.reed       = new GridViewReed(p.reed,         x1, y2, width1);
-        this.weave      = new GridViewPattern(p.weave,     x1, y1, width1, height1);
-        this.treadling  = new GridView(p.treadling,        x2, y1, width2, height1, 'treadling_style');
-        this.color_weft = new GridViewColors(p.color_weft, x3, y1, width3, height1);
+        this.color_warp = this.make(
+            s.display_colors_warp,
+            GridViewColors, p.color_warp,
+            x1, y4, width1, height4
+        );
+        this.entering = this.make(
+            s.display_entering,
+            GridView, p.entering,
+            x1, y3, width1, height3,
+            'entering_style'
+        );
+        this.tieup = this.make(
+            s.display_entering && s.display_treadling,
+            GridView, p.tieup,
+            x2, y3, width2, height3,
+            'tieup_style'
+        );
+        this.reed = this.make(
+            s.display_reed,
+            GridViewReed, p.reed,
+            x1, y2, width1
+        );
+        this.weave = this.make(
+            true,
+            GridViewPattern, p.weave,
+            x1, y1, width1, height1
+        );
+        this.treadling = this.make(
+            s.display_treadling,
+            GridView, p.treadling,
+            x2, y1, width2, height1,
+            'treadling_style'
+        );
+        this.color_weft = this.make(
+            s.display_colors_weft,
+            GridViewColors, p.color_weft,
+            x3, y1, width3, height1
+        );
 
-        this.scroll_1_hor = new ScrollbarHorz(p.weave,     this.weave,     x1, y1 + height1, width1, scroll);
-        this.scroll_1_ver = new ScrollbarVert(p.weave,     this.weave,     x3 + 1, y1, scroll, height1);
-        this.scroll_2_hor = new ScrollbarHorz(p.treadling, this.treadling, x2, y1 + height1, width2, scroll);
-        this.scroll_2_ver = new ScrollbarVert(p.entering,  this.entering,  x3 + 1, y3, scroll, height3);
+        if (this.settings.entering_at_bottom) {
+            if (this.display_treadling) {
+                this.scroll_1_hor = new ScrollbarHorz(
+                    p.weave,
+                    this.weave,
+                    x1, y4 + height4, width1, scroll
+                );
+            } else {
+                this.scroll_1_hor = new GridViewDummy();
+            }
+            this.scroll_2_hor = new ScrollbarHorz(
+                p.treadling,
+                this.treadling,
+                x2, y4 + height4, width2, scroll
+            );
+        } else {
+            this.scroll_1_hor = new ScrollbarHorz(
+                p.weave,
+                this.weave,
+                x1, y1 + height1, width1, scroll
+            );
+            this.scroll_2_hor = new ScrollbarHorz(
+                p.treadling,
+                this.treadling,
+                x2, y1 + height1, width2, scroll
+            );
+        }
+        this.scroll_1_ver = new ScrollbarVert(
+            p.weave,
+            this.weave,
+            x3 + 1, y1, scroll, height1
+        );
+        if (this.display_entering) {
+            this.scroll_2_ver = new ScrollbarVert(
+                p.entering,
+                this.entering,
+                x3 + 1, y3, scroll, height3
+            );
+        } else {
+            this.scroll_2_ver = new GridViewDummy();
+        }
+    }
+
+    make(visible, viewclass, data, x, y, w, h, style) {
+        if (visible) {
+            return new viewclass(data, x, y, w, h, style);
+        } else {
+            return new GridViewDummy();
+        }
     }
 
     draw() {
@@ -1223,6 +1327,27 @@ function keyDown(e) {
         document.getElementById("icon-weave-color").className = "icon";
         document.getElementById("icon-weave-simulation").className = "icon";
         document.getElementById("icon-weave-empty").className = "icon selected";
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "a") {
+        settings.display_entering = !settings.display_entering;
+        view.layout();
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "b") {
+        settings.display_treadling = !settings.display_treadling;
+        view.layout();
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "c") {
+        settings.display_reed = !settings.display_reed;
+        view.layout();
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "d") {
+        settings.display_colors_warp = !settings.display_colors_warp;
+        settings.display_colors_weft = !settings.display_colors_weft;
+        view.layout();
         view.draw();
         e.preventDefault();
     }
