@@ -1050,6 +1050,7 @@ function initSettings(data, settings) {
     settings.unit_height = val(data, "unit_height", 4);
     settings.direction_righttoleft = val(data, "direction_righttoleft", false);
     settings.direction_toptobottom = val(data, "direction_toptobottom", false);
+    settings.entering_at_bottom = val(data, "entering_at_bottom", false);
     settings.warp_factor = val(data, "warp_factor", 1.0);
     settings.weft_factor = val(data, "weft_factor", 1.0);
     settings.current_color = val(data, "current_color", 0);
@@ -1067,6 +1068,7 @@ function saveSettings(data, settings) {
     data["unit_height"] = settings.unit_height;
     data["direction_righttoleft"] = settings.direction_righttoleft;
     data["direction_toptobottom"] = settings.direction_toptobottom;
+    data["entering_at_bottom"] = settings.entering_at_bottom;
     data["warp_factor"] = settings.warp_factor;
     data["weft_factor"] = settings.weft_factor;
     data["current_color"] = settings.current_color;

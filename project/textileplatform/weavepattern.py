@@ -42,6 +42,7 @@ def parse_dbw_data(dbwdata, name=''):
     result['weft_factor'] = float(view['general']['faktor_schuss'])
     result['direction_righttoleft'] = view['general']['righttoleft'] == '1'
     result['direction_toptobottom'] = view['general']['toptobottom'] == '1'
+    result['entering_at_bottom'] = view['einzug']['down'] == '1'
 
     result['display_reed'] = view['blatteinzug']['visible'] == '1'
     result['display_colors_warp'] = view['kettfarben']['visible'] == '1'
