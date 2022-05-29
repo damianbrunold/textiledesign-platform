@@ -1005,6 +1005,12 @@ function initSettings(data, settings) {
     settings.treadling_style = val(data, "treadling_style", "filled");
     settings.single_treadling = val(data, "single_treadling", true);
     settings.weave_locked = val(data, "weave_locked", false);
+    settings.unit_width = val(data, "unit_width", 4);
+    settings.unit_height = val(data, "unit_height", 4);
+    settings.direction_righttoleft = val(data, "direction_righttoleft", false);
+    settings.direction_toptobottom = val(data, "direction_toptobottom", false);
+    settings.warp_factor = val(data, "warp_factor", 1.0);
+    settings.weft_factor = val(data, "weft_factor", 1.0);
 }
 
 
@@ -1015,6 +1021,12 @@ function saveSettings(data, settings) {
     data["treadling_style"] = settings.treadling_style;
     data["single_treadling"] = settings.single_treadling;
     data["weave_locked"] = settings.weave_locked;
+    data["unit_width"] = settings.unit_width;
+    data["unit_height"] = settings.unit_height;
+    data["direction_righttoleft"] = settings.direction_righttoleft;
+    data["direction_toptobottom"] = settings.direction_toptobottom;
+    data["warp_factor"] = settings.warp_factor;
+    data["weft_factor"] = settings.weft_factor;
 }
 
 
