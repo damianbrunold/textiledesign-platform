@@ -968,7 +968,7 @@ function init() {
             pattern.tieup.toggle(ii, jj);
             pattern.recalc_weave();
             view.draw();
-        } else if (view.weave.contains(i, j)) {
+        } else if (view.weave.contains(i, j) && !settings.weave_locked) {
             const ii = i - view.weave.x + view.weave.offset_i;
             const jj = view.weave.height - 1 - (j - view.weave.y) + view.weave.offset_j;
             pattern.weave.toggle(ii, jj);
@@ -991,12 +991,20 @@ function init() {
 }
 
 
+function val(data, prop, defval) {
+    const result = data[prop];
+    if (result === undefined) return defval;
+    return result;
+}
+
+
 function initSettings(data, settings) {
-    settings.style = data["weave_style"] || "draft";
-    settings.entering_style = data["entering_style"] || "filled";
-    settings.tieup_style = data["tieup_style"] || "filled";
-    settings.treadling_style = data["treadling_style"] || "filled";
-    settings.single_treadling = data["single_treadling"] || true;
+    settings.style = val(data, "weave_style", "draft");
+    settings.entering_style = val(data, "entering_style", "filled");
+    settings.tieup_style = val(data, "tieup_style", "filled");
+    settings.treadling_style = val(data, "treadling_style", "filled");
+    settings.single_treadling = val(data, "single_treadling", true);
+    settings.weave_locked = val(data, "weave_locked", false);
 }
 
 
@@ -1006,6 +1014,7 @@ function saveSettings(data, settings) {
     data["tieup_style"] = settings.tieup_style;
     data["treadling_style"] = settings.treadling_style;
     data["single_treadling"] = settings.single_treadling;
+    data["weave_locked"] = settings.weave_locked;
 }
 
 
