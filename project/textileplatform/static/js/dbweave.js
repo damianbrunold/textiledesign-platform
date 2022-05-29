@@ -314,7 +314,25 @@ class GridView {
             ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
         }
         ctx.closePath();
-        ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
+        ctx.strokeStyle = settings.darcula ? "#aaa" : "#777";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (let i = 0; i <= width; i++) {
+            if ((i + this.offset_i) % settings.unit_width == 0) {
+                ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
+                ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+            }
+        }
+        for (let j = 0; j <= height; j++) {
+            if ((j + this.offset_j) % settings.unit_height == 0) {
+                ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
+                ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
+            }
+        }
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
         ctx.lineWidth = 1.0;
         ctx.stroke();
     }
@@ -375,7 +393,25 @@ class GridViewPattern {
             ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
         }
         ctx.closePath();
-        ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
+        ctx.strokeStyle = settings.darcula ? "#aaa" : "#777";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        ctx.beginPath();
+        for (let i = 0; i <= width; i++) {
+            if ((i + this.offset_i) % settings.unit_width == 0) {
+                ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
+                ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+            }
+        }
+        for (let j = 0; j <= height; j++) {
+            if ((j + this.offset_j) % settings.unit_height == 0) {
+                ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
+                ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
+            }
+        }
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
         ctx.lineWidth = 1.0;
         ctx.stroke();
     }
