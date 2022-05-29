@@ -1329,22 +1329,22 @@ function keyDown(e) {
         document.getElementById("icon-weave-empty").className = "icon selected";
         view.draw();
         e.preventDefault();
-    } else if (e.key === "a") {
+    } else if (e.key === "a") { // TODO use better key shortcut
         settings.display_entering = !settings.display_entering;
         view.layout();
         view.draw();
         e.preventDefault();
-    } else if (e.key === "b") {
+    } else if (e.key === "b") { // TODO use better key shortcut
         settings.display_treadling = !settings.display_treadling;
         view.layout();
         view.draw();
         e.preventDefault();
-    } else if (e.key === "c") {
+    } else if (e.key === "c") { // TODO use better key shortcut
         settings.display_reed = !settings.display_reed;
         view.layout();
         view.draw();
         e.preventDefault();
-    } else if (e.key === "d") {
+    } else if (e.key === "d") { // TODO use better key shortcut
         settings.display_colors_warp = !settings.display_colors_warp;
         settings.display_colors_weft = !settings.display_colors_weft;
         view.layout();
