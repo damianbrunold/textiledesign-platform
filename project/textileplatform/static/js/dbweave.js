@@ -1054,6 +1054,15 @@ function initSettings(data, settings) {
     settings.warp_factor = val(data, "warp_factor", 1.0);
     settings.weft_factor = val(data, "weft_factor", 1.0);
     settings.current_color = val(data, "current_color", 0);
+    settings.display_colors_warp = val(data, "display_colors_warp", true);
+    settings.display_colors_weft = val(data, "display_colors_weft", true);
+    settings.display_hlines = val(data, "display_hlines", true);
+    settings.display_palette = val(data, "display_palette", false);
+    settings.display_pegplan = val(data, "display_pegplan", false);
+    settings.display_reed = val(data, "display_reed", true);
+    settings.display_repeat = val(data, "display_repeat", false);
+    settings.display_entering = val(data, "display_entering", true);
+    settings.display_treadling = val(data, "display_treadling", true);
 }
 
 
@@ -1072,6 +1081,15 @@ function saveSettings(data, settings) {
     data["warp_factor"] = settings.warp_factor;
     data["weft_factor"] = settings.weft_factor;
     data["current_color"] = settings.current_color;
+    data["display_colors_warp"] = settings.display_colors_warp;
+    data["display_colors_weft"] = settings.display_colors_weft;
+    data["display_hlines"] = settings.display_hlines;
+    data["display_palette"] = settings.display_palette;
+    data["display_pegplan"] = settings.display_pegplan;
+    data["display_reed"] = settings.display_reed;
+    data["display_repeat"] = settings.display_repeat;
+    data["display_entering"] = settings.display_entering;
+    data["display_treadling"] = settings.display_treadling;
 }
 
 

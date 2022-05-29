@@ -20,7 +20,8 @@ def parse_dbw_data(dbwdata, name=''):
     result['data_entering'] = _dehex_short(fields['einzug']['data'])
     result['data_tieup'] = _dehex_byte(fields['aufknuepfung']['data'])
     result['data_treadling'] = _dehex_byte(
-        fields['trittfolge']['trittfolge']['data'])
+        fields['trittfolge']['trittfolge']['data']
+    )
     # TODO handle pegplan?
     result['data_reed'] = _dehex_byte(fields['blatteinzug']['data'])
     result['colors_warp'] = _dehex_byte(fields['kettfarben']['data'])
@@ -34,6 +35,7 @@ def parse_dbw_data(dbwdata, name=''):
     result['warp_lifting'] = view['general']['hebung'] == '0'
     result['zoom'] = int(view['general']['zoom'])
     result['current_color'] = int(view['general']['color'])
+    result['color_effect_with_grid'] = view['gewebe']['withgrid'] == '1'
     result['single_treadling'] = view['trittfolge']['single'] == '1'
     result['weave_locked'] = view['gewebe']['locked'] == '1'
     result['unit_width'] = int(view['gewebe']['stronglinex'])
@@ -51,6 +53,8 @@ def parse_dbw_data(dbwdata, name=''):
     result['display_repeat'] = view['general']['viewrapport'] == '1'
     result['display_palette'] = view['general']['viewpalette'] == '1'
     result['display_pegplan'] = view['general']['viewpegplan'] == '1'
+    result['display_entering'] = view['einzug']['visible'] == '1'
+    result['display_treadling'] = view['trittfolge']['visible'] == '1'
 
     state = view['gewebe']['state']
     if state == '0':
@@ -67,7 +71,10 @@ def parse_dbw_data(dbwdata, name=''):
         view['trittfolge']['viewtype'])
     result['tieup_style'] = _decode_viewtype(view['aufknuepfung']['viewtype'])
 
-    # TODO add rest
+    # TODO add fixeinzug?
+    # TODO add block/bereich data
+    # TODO add page setup
+    # TODO add weave stuff
 
     return result
 
