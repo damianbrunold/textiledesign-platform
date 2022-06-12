@@ -11,6 +11,7 @@ class User:
         result.disabled = row.disabled
         result.locale = row.locale
         result.timezone = row.timezone
+        result.verification_code = row.verification_code
         return result
 
 

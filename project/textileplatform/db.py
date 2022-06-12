@@ -33,6 +33,7 @@ user_table = Table(
     Column("disabled", Boolean),
     Column("locale", String(20)),
     Column("timezone", String(20)),
+    Column("verification_code", String(100)),
     UniqueConstraint("name"),
     UniqueConstraint("label"),
     UniqueConstraint("email"),
