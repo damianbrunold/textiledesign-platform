@@ -1,8 +1,6 @@
 Todo
 ----
 
-- Add mail-based password recovery...
-
 - Implement circular buffer undo/redo
 
 - Autosave changes in localstorage so that changes are not lost
