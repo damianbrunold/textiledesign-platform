@@ -123,8 +123,7 @@ def verify(user_name, verification_code):
         try:
             update_user(user)
         except IntegrityError:
-            # return render_template('auth/verification_failed.html')
-            raise
+            return render_template('auth/verification_failed.html')
         else:
             return render_template('auth/verification_successful.html')
     return render_template('auth/verification_failed.html')
