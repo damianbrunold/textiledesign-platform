@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2022-05-15 11:39+0200\n"
+"POT-Creation-Date: 2022-06-12 19:16+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,39 +17,75 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.10.1\n"
 
-#: auth.py:33
+#: auth.py:40
 msgid "Name is required"
 msgstr ""
 
-#: auth.py:35
+#: auth.py:42
 msgid "E-Mail is required"
 msgstr ""
 
-#: auth.py:37
+#: auth.py:44
 msgid "Password is required"
 msgstr ""
 
-#: auth.py:53
+#: auth.py:50
+msgid "Name is reserved and cannot be used"
+msgstr ""
+
+#: auth.py:67
 msgid "Name or E-Mail is already used"
 msgstr ""
 
-#: auth.py:74 auth.py:76
+#: auth.py:90 auth.py:92
 msgid "Login data are not correct"
 msgstr ""
 
-#: auth.py:78
+#: auth.py:94
 msgid "Account verification is pending"
 msgstr ""
 
-#: auth.py:80
+#: auth.py:96
 msgid "Account is disabled"
 msgstr ""
 
-#: main.py:123
+#: auth.py:139
+msgid "E-Mail is required."
+msgstr ""
+
+#: auth.py:142
+msgid "E-Mail is unknown."
+msgstr ""
+
+#: auth.py:154 auth.py:180
+msgid "Could not save changes."
+msgstr ""
+
+#: auth.py:173
+msgid "Password is required."
+msgstr ""
+
+#: auth.py:220
+msgid "Please verify your account by clicking or entering the following link:"
+msgstr ""
+
+#: auth.py:230
+msgid "Texile-Platform account verification"
+msgstr ""
+
+#: auth.py:241
+msgid "Reset your password by clicking or entering the following link:"
+msgstr ""
+
+#: auth.py:251
+msgid "Texile-Platform password reset"
+msgstr ""
+
+#: main.py:128
 msgid "Changes could not be saved."
 msgstr ""
 
-#: main.py:259
+#: main.py:288
 msgid "Pattern could not be deleted."
 msgstr ""
 
@@ -70,21 +106,85 @@ msgid "Register"
 msgstr ""
 
 #: templates/auth/login.html:4 templates/auth/login.html:13
-#: templates/base.html:24
+#: templates/auth/recover_success.html:10
+#: templates/auth/verification_failed.html:10
+#: templates/auth/verification_successful.html:10 templates/base.html:24
 msgid "Log in"
 msgstr ""
 
-#: templates/auth/login.html:9 templates/auth/register.html:11
-#: templates/main/profile.html:9
+#: templates/admin/edit_user.html:15
+msgid "Patterns"
+msgstr ""
+
+#: templates/admin/users.html:4 templates/main/user_private.html:56
+msgid "Users"
+msgstr ""
+
+#: templates/auth/login.html:9 templates/auth/recover.html:10
+#: templates/auth/register.html:11 templates/main/profile.html:9
 msgid "E-Mail"
 msgstr ""
 
-#: templates/auth/login.html:11 templates/auth/register.html:13
+#: templates/auth/login.html:11 templates/auth/recover_set_password.html:10
+#: templates/auth/register.html:13
 msgid "Password"
 msgstr ""
 
 #: templates/auth/login.html:15
 msgid "Recover password"
+msgstr ""
+
+#: templates/auth/recover.html:4
+msgid "Reset Passwort"
+msgstr ""
+
+#: templates/auth/recover.html:9
+msgid ""
+"Please enter your e-mail address. We will send you an e-mail with "
+"instructions for resetting your password"
+msgstr ""
+
+#: templates/auth/recover.html:12
+msgid "Send"
+msgstr ""
+
+#: templates/auth/recover_failed.html:4
+msgid "Password reset failed"
+msgstr ""
+
+#: templates/auth/recover_failed.html:8
+msgid "An error occurred while resetting your password"
+msgstr ""
+
+#: templates/auth/recover_mail_sent.html:4
+#: templates/auth/recover_set_password.html:4
+msgid "Reset Password"
+msgstr ""
+
+#: templates/auth/recover_mail_sent.html:8
+msgid "We sent an email to"
+msgstr ""
+
+#: templates/auth/recover_mail_sent.html:10
+msgid "with instructions on how to reset your password."
+msgstr ""
+
+#: templates/auth/recover_set_password.html:9
+msgid "Please choose a new password for your account."
+msgstr ""
+
+#: templates/auth/recover_set_password.html:12
+#: templates/main/edit_dbweave_pattern.html:69
+#: templates/main/edit_jbead_pattern.html:36 templates/main/profile.html:15
+msgid "Save"
+msgstr ""
+
+#: templates/auth/recover_success.html:4
+msgid "Reset password successfully"
+msgstr ""
+
+#: templates/auth/recover_success.html:8
+msgid "Your password was successfully reset. Please log in."
 msgstr ""
 
 #: templates/auth/register.html:4
@@ -99,6 +199,30 @@ msgstr ""
 #: templates/auth/register.html:15 templates/main/create_pattern.html:22
 #: templates/main/create_pattern.html:38
 msgid "Create"
+msgstr ""
+
+#: templates/auth/verification_failed.html:4
+msgid "Verification failed"
+msgstr ""
+
+#: templates/auth/verification_failed.html:8
+msgid "There was a problem with the verification link."
+msgstr ""
+
+#: templates/auth/verification_pending.html:4
+msgid "Verification pending"
+msgstr ""
+
+#: templates/auth/verification_pending.html:8
+msgid "We sent you an email for verifying your account to"
+msgstr ""
+
+#: templates/auth/verification_successful.html:4
+msgid "Verification successful"
+msgstr ""
+
+#: templates/auth/verification_successful.html:8
+msgid "Your account is now verified. Please log in."
 msgstr ""
 
 #: templates/main/create_pattern.html:4
@@ -141,46 +265,41 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:37
+#: templates/main/edit_dbweave_pattern.html:31
 msgid "Draft view"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:43
+#: templates/main/edit_dbweave_pattern.html:37
 msgid "Color view"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:49
+#: templates/main/edit_dbweave_pattern.html:43
 msgid "Simulation view"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:55
+#: templates/main/edit_dbweave_pattern.html:49
 msgid "Empty view"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:64
+#: templates/main/edit_dbweave_pattern.html:58
 msgid "Public - visible to all users"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:67
+#: templates/main/edit_dbweave_pattern.html:61
 msgid "Private - not visible to other users"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:73
-#: templates/main/edit_jbead_pattern.html:40
+#: templates/main/edit_dbweave_pattern.html:67
+#: templates/main/edit_jbead_pattern.html:34
 msgid "Clone"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:75
-#: templates/main/edit_jbead_pattern.html:42 templates/main/profile.html:15
-msgid "Save"
-msgstr ""
-
-#: templates/main/edit_dbweave_pattern.html:77
-#: templates/main/edit_jbead_pattern.html:44
+#: templates/main/edit_dbweave_pattern.html:71
+#: templates/main/edit_jbead_pattern.html:38
 msgid "Close"
 msgstr ""
 
-#: templates/main/edit_jbead_pattern.html:35
+#: templates/main/edit_jbead_pattern.html:29
 #: templates/main/user_private.html:23
 msgid "Public"
 msgstr ""
@@ -231,4 +350,8 @@ msgstr ""
 
 #: templates/main/user_private.html:48
 msgid "New Pattern"
+msgstr ""
+
+#: templates/main/user_private.html:53
+msgid "Admin"
 msgstr ""

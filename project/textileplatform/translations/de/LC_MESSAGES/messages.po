@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Textile Platform\n"
 "Report-Msgid-Bugs-To: dab@dabsoft.ch\n"
-"POT-Creation-Date: 2022-05-15 11:39+0200\n"
+"POT-Creation-Date: 2022-06-12 19:16+0200\n"
 "PO-Revision-Date: 2022-03-22 15:35+0100\n"
 "Last-Translator: Damian Brunold <dab@dabsoft.ch>\n"
 "Language: de\n"
@@ -18,39 +18,75 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.10.1\n"
 
-#: auth.py:33
+#: auth.py:40
 msgid "Name is required"
 msgstr "Name wird benötigt"
 
-#: auth.py:35
+#: auth.py:42
 msgid "E-Mail is required"
 msgstr "E-Mail wird benötigt"
 
-#: auth.py:37
+#: auth.py:44
 msgid "Password is required"
 msgstr "Passwort wird benötigt"
 
-#: auth.py:53
+#: auth.py:50
+msgid "Name is reserved and cannot be used"
+msgstr "Name is reserviert und kann nicht verwendet werden"
+
+#: auth.py:67
 msgid "Name or E-Mail is already used"
 msgstr "Name oder E-Mail wird bereits verwendet"
 
-#: auth.py:74 auth.py:76
+#: auth.py:90 auth.py:92
 msgid "Login data are not correct"
 msgstr "Logindaten sind nicht korrekt"
 
-#: auth.py:78
+#: auth.py:94
 msgid "Account verification is pending"
 msgstr "Kontoverifizierung ist ausstehend"
 
-#: auth.py:80
+#: auth.py:96
 msgid "Account is disabled"
 msgstr "Konto ist gesperrt"
 
-#: main.py:123
+#: auth.py:139
+msgid "E-Mail is required."
+msgstr "E-Mail wird benötigt."
+
+#: auth.py:142
+msgid "E-Mail is unknown."
+msgstr "E-Mail ist unbekannt."
+
+#: auth.py:154 auth.py:180
+msgid "Could not save changes."
+msgstr "Änderungen konnten nicht gespeichert werden."
+
+#: auth.py:173
+msgid "Password is required."
+msgstr "Passwort wird benötigt."
+
+#: auth.py:220
+msgid "Please verify your account by clicking or entering the following link:"
+msgstr "Bitte verifizieren Sie Ihr Konto indem Sie auf folgenden Link klicken:"
+
+#: auth.py:230
+msgid "Texile-Platform account verification"
+msgstr "Textil-Plattform Kontoverifikation"
+
+#: auth.py:241
+msgid "Reset your password by clicking or entering the following link:"
+msgstr "Setzen Sie Ihr Passwort neu, indem Sie auf folgenden Link klicken:"
+
+#: auth.py:251
+msgid "Texile-Platform password reset"
+msgstr "Textil-Plattform Passwort zurücksetzen"
+
+#: main.py:128
 msgid "Changes could not be saved."
 msgstr "Änderungen konnten nicht gespeichert werden."
 
-#: main.py:259
+#: main.py:288
 msgid "Pattern could not be deleted."
 msgstr "Muster konnte nicht gelöscht werden."
 
@@ -71,22 +107,88 @@ msgid "Register"
 msgstr "Registrieren"
 
 #: templates/auth/login.html:4 templates/auth/login.html:13
-#: templates/base.html:24
+#: templates/auth/recover_success.html:10
+#: templates/auth/verification_failed.html:10
+#: templates/auth/verification_successful.html:10 templates/base.html:24
 msgid "Log in"
 msgstr "Anmelden"
 
-#: templates/auth/login.html:9 templates/auth/register.html:11
-#: templates/main/profile.html:9
+#: templates/admin/edit_user.html:15
+msgid "Patterns"
+msgstr "Muster"
+
+#: templates/admin/users.html:4 templates/main/user_private.html:56
+msgid "Users"
+msgstr "Benutzer"
+
+#: templates/auth/login.html:9 templates/auth/recover.html:10
+#: templates/auth/register.html:11 templates/main/profile.html:9
 msgid "E-Mail"
 msgstr "E-Mail"
 
-#: templates/auth/login.html:11 templates/auth/register.html:13
+#: templates/auth/login.html:11 templates/auth/recover_set_password.html:10
+#: templates/auth/register.html:13
 msgid "Password"
 msgstr "Passwort"
 
 #: templates/auth/login.html:15
 msgid "Recover password"
 msgstr "Passwort vergessen"
+
+#: templates/auth/recover.html:4
+msgid "Reset Passwort"
+msgstr "Passwort vergessen"
+
+#: templates/auth/recover.html:9
+msgid ""
+"Please enter your e-mail address. We will send you an e-mail with "
+"instructions for resetting your password"
+msgstr ""
+"Bitte geben Sie Ihre E-Mail-Adresse ein. Wir werden Ihnen eine E-Mail "
+"zusenden mit Anweisungen um das Passwort zurückzusetzen"
+
+#: templates/auth/recover.html:12
+msgid "Send"
+msgstr "Senden"
+
+#: templates/auth/recover_failed.html:4
+msgid "Password reset failed"
+msgstr "Passwort zurücksetzen fehlgeschlagen"
+
+#: templates/auth/recover_failed.html:8
+msgid "An error occurred while resetting your password"
+msgstr "Es trat ein Fehler während des Zurücksetzens des Passwortes auf."
+
+#: templates/auth/recover_mail_sent.html:4
+#: templates/auth/recover_set_password.html:4
+msgid "Reset Password"
+msgstr "Passwort vergessen"
+
+#: templates/auth/recover_mail_sent.html:8
+msgid "We sent an email to"
+msgstr "Wir haben eine E-Mail geschickt an"
+
+#: templates/auth/recover_mail_sent.html:10
+msgid "with instructions on how to reset your password."
+msgstr "mit Anweisungen um das Passwort zurückzusetzen."
+
+#: templates/auth/recover_set_password.html:9
+msgid "Please choose a new password for your account."
+msgstr "Bitte wählen Sie ein neues Passwort für Ihr Konto."
+
+#: templates/auth/recover_set_password.html:12
+#: templates/main/edit_dbweave_pattern.html:69
+#: templates/main/edit_jbead_pattern.html:36 templates/main/profile.html:15
+msgid "Save"
+msgstr "Speichern"
+
+#: templates/auth/recover_success.html:4
+msgid "Reset password successfully"
+msgstr "Passwort erfolgreich zurückgesetzt"
+
+#: templates/auth/recover_success.html:8
+msgid "Your password was successfully reset. Please log in."
+msgstr "Ihr Passwort wurde erfolgreich zurückgesetzt. Bitte melden Sie sich an."
 
 #: templates/auth/register.html:4
 msgid "Create Account"
@@ -101,6 +203,30 @@ msgstr "Name"
 #: templates/main/create_pattern.html:38
 msgid "Create"
 msgstr "Erstellen"
+
+#: templates/auth/verification_failed.html:4
+msgid "Verification failed"
+msgstr "Kontoverifizierung ist fehlgeschlagen"
+
+#: templates/auth/verification_failed.html:8
+msgid "There was a problem with the verification link."
+msgstr "Es trat ein Problem mit dem Verifikationslink auf."
+
+#: templates/auth/verification_pending.html:4
+msgid "Verification pending"
+msgstr "Kontoverifizierung ist ausstehend"
+
+#: templates/auth/verification_pending.html:8
+msgid "We sent you an email for verifying your account to"
+msgstr "Wir haben Ihnen für die Kontoverifikation eine E-Mail geschickt an"
+
+#: templates/auth/verification_successful.html:4
+msgid "Verification successful"
+msgstr "Verifikation erfolgreich"
+
+#: templates/auth/verification_successful.html:8
+msgid "Your account is now verified. Please log in."
+msgstr "Ihr Konto ist nun verifiziert. Bitte melden Sie sich an."
 
 #: templates/main/create_pattern.html:4
 msgid "Create pattern"
@@ -132,7 +258,7 @@ msgstr "Muster löschen"
 
 #: templates/main/delete_pattern.html:9
 msgid "Do you really want to delete this pattern?"
-msgstr "Möchten Sie diese Muster wirklich löschen?"
+msgstr "Möchten Sie dieses Muster wirklich löschen?"
 
 #: templates/main/delete_pattern.html:10 templates/main/user_private.html:30
 msgid "Delete"
@@ -142,46 +268,41 @@ msgstr "Löschen"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: templates/main/edit_dbweave_pattern.html:37
+#: templates/main/edit_dbweave_pattern.html:31
 msgid "Draft view"
 msgstr "Entwurfsansicht"
 
-#: templates/main/edit_dbweave_pattern.html:43
+#: templates/main/edit_dbweave_pattern.html:37
 msgid "Color view"
 msgstr "Farbansicht"
 
-#: templates/main/edit_dbweave_pattern.html:49
+#: templates/main/edit_dbweave_pattern.html:43
 msgid "Simulation view"
 msgstr "Simulationsansicht"
 
-#: templates/main/edit_dbweave_pattern.html:55
+#: templates/main/edit_dbweave_pattern.html:49
 msgid "Empty view"
 msgstr "Leere Ansicht"
 
-#: templates/main/edit_dbweave_pattern.html:64
+#: templates/main/edit_dbweave_pattern.html:58
 msgid "Public - visible to all users"
 msgstr "Öffentlich - sichtbar für alle"
 
-#: templates/main/edit_dbweave_pattern.html:67
+#: templates/main/edit_dbweave_pattern.html:61
 msgid "Private - not visible to other users"
 msgstr "Privat - nicht sichtbar für andere"
 
-#: templates/main/edit_dbweave_pattern.html:73
-#: templates/main/edit_jbead_pattern.html:40
+#: templates/main/edit_dbweave_pattern.html:67
+#: templates/main/edit_jbead_pattern.html:34
 msgid "Clone"
 msgstr "Klonen"
 
-#: templates/main/edit_dbweave_pattern.html:75
-#: templates/main/edit_jbead_pattern.html:42 templates/main/profile.html:15
-msgid "Save"
-msgstr "Speichern"
-
-#: templates/main/edit_dbweave_pattern.html:77
-#: templates/main/edit_jbead_pattern.html:44
+#: templates/main/edit_dbweave_pattern.html:71
+#: templates/main/edit_jbead_pattern.html:38
 msgid "Close"
 msgstr "Schliessen"
 
-#: templates/main/edit_jbead_pattern.html:35
+#: templates/main/edit_jbead_pattern.html:29
 #: templates/main/user_private.html:23
 msgid "Public"
 msgstr "Öffentlich"
@@ -234,71 +355,6 @@ msgstr "Muster hochladen"
 msgid "New Pattern"
 msgstr "Neues Muster"
 
-#~ msgid "Name is required"
-#~ msgstr "Name muss ausgefüllt sein"
-
-#~ msgid "E-Mail is required"
-#~ msgstr "E-Mail muss ausgefüllt sein"
-
-#~ msgid "Password is required"
-#~ msgstr "Passwort muss ausgefüllt sein"
-
-#~ msgid "E-Mail {0} is already used"
-#~ msgstr "E-Mail {0} wird bereits verwendet"
-
-#~ msgid "Login data are not correct"
-#~ msgstr "Anmeldedaten sind nicht korrekt"
-
-#~ msgid "Account verification is pending"
-#~ msgstr "Kontoverifikation ist ausstehend"
-
-#~ msgid "Account is disabled"
-#~ msgstr "Konto ist deaktiviert"
-
-#~ msgid "Changes could not be saved."
-#~ msgstr "Änderungen konnten nicht gespeichert werden."
-
-#~ msgid "Textile Platform"
-#~ msgstr "Textil-Plattform"
-
-#~ msgid "Profile"
-#~ msgstr "Profil"
-
-#~ msgid "Log out"
-#~ msgstr "Abmelden"
-
-#~ msgid "Register"
-#~ msgstr "Registrieren"
-
-#~ msgid "Log in"
-#~ msgstr "Anmelden"
-
-#~ msgid "E-Mail"
-#~ msgstr "E-Mail"
-
-#~ msgid "Password"
-#~ msgstr "Passwort"
-
-#~ msgid "Recover password"
-#~ msgstr "Passwort zurücksetzen"
-
-#~ msgid "Create Account"
-#~ msgstr "Konto erstellen"
-
-#~ msgid "Name"
-#~ msgstr "Name"
-
-#~ msgid "Create"
-#~ msgstr "Erstellen"
-
-#~ msgid "Dark mode"
-#~ msgstr "Dunkelmodus"
-
-#~ msgid "Save"
-#~ msgstr "Speichern"
-
-#~ msgid "Status"
-#~ msgstr "Status"
-
-#~ msgid "textileplatform version"
-#~ msgstr "textileplatform version"
+#: templates/main/user_private.html:53
+msgid "Admin"
+msgstr "Administration"
