@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{{ gettext('Reset Password') }}</h1>
+{% endblock %}
+
+{% block content %}
+    <p>{{ gettext('We sent an email to') }}
+      {{ user.email }}
+      {{ gettext('with instructions on how to reset your password.') }}</p>
+{% endblock %}

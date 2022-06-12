@@ -129,12 +129,61 @@ def verify(user_name, verification_code):
     return render_template('auth/verification_failed.html')
 
 
-@bp.route('/recover', methods=('GET', 'POST'))
+@bp.route("/recover", methods=("GET", "POST"))
 def recover():
-    if request.method == 'POST':
-        # TODO
-        pass
-    return render_template('auth/recover.html')
+    if request.method == "POST":
+        error = None
+
+        email = request.form["email"]
+        if not email:
+            error = gettext("E-Mail is required.")
+        user = get_user_by_email(email)
+        if not user:
+            error = gettext("E-Mail is unknown.")
+
+        if error is None:
+            try:
+                user.verification_code = secrets.token_urlsafe(30)
+                update_user(user)
+                send_recover_mail(user)
+                return render_template(
+                    "auth/recover_mail_sent.html",
+                    user=user
+                )
+            except IntegrityError:
+                error = gettext("Could not save changes.")
+
+        flash(error)
+
+    return render_template("auth/recover.html")
+
+
+@bp.route("/reset-password/<string:user_name>/<string:verification_code>", methods=("GET", "POST"))  # noqa E501
+def reset_password(user_name, verification_code):
+    user = get_user_by_name(user_name)
+    if not user:
+        return render_template("auth/recover_failed.html")
+    if user.verification_code != verification_code:
+        return render_template("auth/recover_failed.html")
+
+    if request.method == "POST":
+        error = None
+        password = request.form["password"]
+        if not password:
+            error = gettext("Password is required.")
+
+        if error is None:
+            try:
+                user.password = generate_password_hash(password)
+                update_user(user)
+            except IntegrityError:
+                error = gettext("Could not save changes.")
+            else:
+                return render_template("auth/recover_success.html")
+
+        flash(error)
+
+    return render_template("auth/recover_set_password.html")
 
 
 @bp.before_app_request
@@ -168,7 +217,7 @@ def superuser_required(view):
 def send_verification_mail(user):
     msg = email.message.EmailMessage()
     msg.set_content(
-        gettext('Please verify your account by entering the following link:') +
+        gettext('Please verify your account by clicking or entering the following link:') +  # noqa E501
         '\r\n' +
         '\r\n' +
         url_for(
@@ -179,6 +228,27 @@ def send_verification_mail(user):
         )
     )
     msg['Subject'] = gettext('Texile-Platform account verification')
+    msg['From'] = 'admin@textil-plattform.ch'
+    msg['To'] = user.email
+    s = smtplib.SMTP('localhost')
+    s.send_message(msg)
+    s.quit()
+
+
+def send_recover_mail(user):
+    msg = email.message.EmailMessage()
+    msg.set_content(
+        gettext('Reset your password by clicking or entering the following link:') +  # noqa E501
+        '\r\n' +
+        '\r\n' +
+        url_for(
+            'auth.reset_password',
+            user_name=user.name,
+            verification_code=user.verification_code,
+            _external=True
+        )
+    )
+    msg['Subject'] = gettext('Texile-Platform password reset')
     msg['From'] = 'admin@textil-plattform.ch'
     msg['To'] = user.email
     s = smtplib.SMTP('localhost')
