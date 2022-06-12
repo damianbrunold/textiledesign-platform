@@ -196,7 +196,8 @@ def get_user_by_name(name):
                 user_table.c.verified,
                 user_table.c.disabled,
                 user_table.c.locale,
-                user_table.c.timezone
+                user_table.c.timezone,
+                user_table.c.verification_code,
             ).
             select_from(user_table).
             where(user_table.c.name == name)
@@ -219,7 +220,8 @@ def get_user_by_email(email):
                 user_table.c.verified,
                 user_table.c.disabled,
                 user_table.c.locale,
-                user_table.c.timezone
+                user_table.c.timezone,
+                user_table.c.verification_code,
             ).
             select_from(user_table).
             where(user_table.c.email == email)
@@ -242,7 +244,8 @@ def get_all_users():
                 user_table.c.verified,
                 user_table.c.disabled,
                 user_table.c.locale,
-                user_table.c.timezone
+                user_table.c.timezone,
+                user_table.c.verification_code,
             ).
             select_from(user_table)
         ).fetchall()
