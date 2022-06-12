@@ -47,7 +47,7 @@ def add_bead_pattern(pattern, user_name):
                 contents=json.dumps(pattern),
                 created=now,
                 modified=now,
-                public=False
+                public=False,
             )
         )
 
@@ -66,7 +66,7 @@ def get_patterns_for_user_name(user_name, only_public=False):
                 pattern_table.c.thumbnail_image,
                 pattern_table.c.created,
                 pattern_table.c.modified,
-                pattern_table.c.public
+                pattern_table.c.public,
             ).
             select_from(pattern_table).
             where(pattern_table.c.owner == user_name).
@@ -96,7 +96,7 @@ def get_pattern_by_name(user_name, name):
                 pattern_table.c.thumbnail_image,
                 pattern_table.c.created,
                 pattern_table.c.modified,
-                pattern_table.c.public
+                pattern_table.c.public,
             ).
             select_from(pattern_table).
             where(pattern_table.c.owner == user_name).
@@ -117,7 +117,7 @@ def update_pattern(user_name, pattern):
                 preview_image=pattern.preview_image,
                 thumbnail_image=pattern.thumbnail_image,
                 modified=datetime.datetime.utcnow(),
-                public=pattern.public
+                public=pattern.public,
             ).where(pattern_table.c.name == pattern.name)
             .where(pattern_table.c.owner == user_name)
         )
@@ -137,7 +137,7 @@ def clone_pattern(user_name, pattern):
                 thumbnail_image=pattern.thumbnail_image,
                 created=datetime.datetime.utcnow(),
                 modified=datetime.datetime.utcnow(),
-                public=False
+                public=False,
             )
         )
 
@@ -163,7 +163,7 @@ def add_user(user):
                 verified=user.verified,
                 disabled=user.disabled,
                 locale=user.locale,
-                timezone=user.timezone
+                timezone=user.timezone,
             )
         )
 
@@ -179,7 +179,7 @@ def update_user(user):
                 verified=user.verified,
                 disabled=user.disabled,
                 locale=user.locale,
-                timezone=user.timezone
+                timezone=user.timezone,
             ).where(user_table.c.name == user.name)
         )
 
