@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ gettext('Verification successful') }}</h1>
+{% endblock %}
+
+{% block content %}
+  <p>{{ gettext('Your account is now verified. Please log in.') }}</p>
+
+  <p><a href="{{ url_for('auth.login') }}">{{ gettext('Log in') }}</a></p>
+{% endblock %}

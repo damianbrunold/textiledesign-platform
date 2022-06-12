@@ -164,6 +164,7 @@ def add_user(user):
                 disabled=user.disabled,
                 locale=user.locale,
                 timezone=user.timezone,
+                verification_code=user.verification_code,
             )
         )
 
@@ -180,6 +181,7 @@ def update_user(user):
                 disabled=user.disabled,
                 locale=user.locale,
                 timezone=user.timezone,
+                verification_code=user.verification_code,
             ).where(user_table.c.name == user.name)
         )
 
