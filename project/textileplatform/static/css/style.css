@@ -57,6 +57,22 @@ h2 { font-size: 1.2rem; font-weight: bold; }
 h3 { font-size: 1.2rem; font-weight: normal; text-decoration: underline; }
 h4 { font-size: 1.2rem; font-variant: small-caps; }
 
+.with-margin { margin: 0 1rem; }
+
+#user_info {
+    margin: 0 1rem 1rem 1rem;
+}
+
+#user_info>div {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.info_label {
+    width: 10rem;
+    padding: 0.1rem 1rem 0.1rem 0;
+}
+
 #patterns {
     margin: 0 1rem;
     max-width: 60rem;

@@ -5,14 +5,14 @@
 {% endblock %}
 
 {% block content %}
-    <div>
-        <div>name: {{ user.name }}</div>
-        <div>label: {{ user.label }}</div>
-        <div>email: {{ user.email }}</div>
-        <div>locale: {{ user.locale }}</div>
+    <div id="user_info">
+        <div><div class="info_label">name:</div><div>{{ user.name }}</div></div>
+        <div><div class="info_label">label:</div><div>{{ user.label }}</div></div>
+        <div><div class="info_label">email:</div><div>{{ user.email }}</div></div>
+        <div><div class="info_label">locale:</div><div>{{ user.locale }}</div></div>
     </div>
 
-    <h2>{{ gettext('Patterns') }}</h2>
+    <h2 class="with-margin">{{ gettext('Patterns') }}</h2>
 
     <div id="patterns">
         {% for pattern in patterns %}
