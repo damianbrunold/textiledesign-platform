@@ -67,6 +67,7 @@ def register():
                 error = gettext('Name or E-Mail is already used')
             else:
                 send_verification_mail(user)
+                send_admin_notification_mail(user, "User created account")
                 print(f'verify/{user.name}/{user.verification_code}')
                 return render_template(
                     'auth/verification_pending.html',
@@ -122,6 +123,8 @@ def verify(user_name, verification_code):
         user.verification_code = None
         try:
             update_user(user)
+            send_admin_notification_mail(
+                user, "User completed email account verification step")
         except IntegrityError:
             return render_template('auth/verification_failed.html')
         else:
@@ -146,6 +149,8 @@ def recover():
                 user.verification_code = secrets.token_urlsafe(30)
                 update_user(user)
                 send_recover_mail(user)
+                send_admin_notification_mail(
+                    user, "User requested password recovery")
                 return render_template(
                     "auth/recover_mail_sent.html",
                     user=user
@@ -176,6 +181,8 @@ def reset_password(user_name, verification_code):
             try:
                 user.password = generate_password_hash(password)
                 update_user(user)
+                send_admin_notification_mail(
+                    user, "User successfully reset password")
             except IntegrityError:
                 error = gettext("Could not save changes.")
             else:
@@ -214,43 +221,58 @@ def superuser_required(view):
     return wrapped_view
 
 
-def send_verification_mail(user):
+def send_mail(receiver, subject, message):
     msg = email.message.EmailMessage()
-    msg.set_content(
-        gettext('Please verify your account by clicking or entering the following link:') +  # noqa E501
-        '\r\n' +
-        '\r\n' +
+    msg.set_content(message)
+    msg['Subject'] = subject
+    msg['From'] = 'admin@texil-plattform.ch'
+    msg['To'] = receiver
+    s = smtplib.SMTP('localhost')
+    s.send_message(msg)
+    s.quit()
+
+
+def send_verification_mail(user):
+    message = '\r\n'.join([
+        gettext('Please verify your account by clicking or entering the following link:'),  # noqa E501
+        '',
+        '',
         url_for(
             'auth.verify',
             user_name=user.name,
             verification_code=user.verification_code,
             _external=True
-        )
+        ),
+    ])
+    send_mail(
+        user.email,
+        gettext('Texile-Platform account verification'),
+        message,
     )
-    msg['Subject'] = gettext('Texile-Platform account verification')
-    msg['From'] = 'admin@textil-plattform.ch'
-    msg['To'] = user.email
-    s = smtplib.SMTP('localhost')
-    s.send_message(msg)
-    s.quit()
 
 
 def send_recover_mail(user):
-    msg = email.message.EmailMessage()
-    msg.set_content(
-        gettext('Reset your password by clicking or entering the following link:') +  # noqa E501
-        '\r\n' +
-        '\r\n' +
+    message = '\r\n'.join([
+        gettext('Reset your password by clicking or entering the following link:'),  # noqa E501
+        '',
+        '',
         url_for(
             'auth.reset_password',
             user_name=user.name,
             verification_code=user.verification_code,
             _external=True
-        )
+        ),
+    ])
+    send_mail(
+        user.email,
+        gettext('Texile-Platform password reset'),
+        message,
     )
-    msg['Subject'] = gettext('Texile-Platform password reset')
-    msg['From'] = 'admin@textil-plattform.ch'
-    msg['To'] = user.email
-    s = smtplib.SMTP('localhost')
-    s.send_message(msg)
-    s.quit()
+
+
+def send_admin_notification_mail(user, message):
+    send_mail(
+        'admin@textil-plattform.ch',
+        'Textile-Platform admin notification',
+        f'{user.name} <{user.email}>: {message}',
+    )
