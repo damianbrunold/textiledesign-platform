@@ -564,14 +564,14 @@ class GridViewPattern {
 
                     ctx.beginPath();
                     ctx.strokeStyle = "#999";
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x1, y2);
+                    ctx.moveTo(settings.direction_righttoleft ? x1 : x2, y1);
+                    ctx.lineTo(settings.direction_righttoleft ? x1 : x2, y2);
                     ctx.stroke();
 
                     ctx.beginPath();
                     ctx.strokeStyle = "#000";
-                    ctx.moveTo(x2, y1);
-                    ctx.lineTo(x2, y2);
+                    ctx.moveTo(settings.direction_righttoleft ? x2 : x1, y1);
+                    ctx.lineTo(settings.direction_righttoleft ? x2 : x1, y2);
                     ctx.stroke();
                 } else {
                     ctx.fillStyle = color_warp;
@@ -582,14 +582,14 @@ class GridViewPattern {
 
                     ctx.beginPath();
                     ctx.strokeStyle = "#999";
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y1);
+                    ctx.moveTo(x1, settings.direction_toptobottom ? y1 : y2);
+                    ctx.lineTo(x2, settings.direction_toptobottom ? y1 : y2);
                     ctx.stroke();
 
                     ctx.beginPath();
                     ctx.strokeStyle = "#000";
-                    ctx.moveTo(x1, y2);
-                    ctx.lineTo(x2, y2);
+                    ctx.moveTo(x1, settings.direction_toptobottom ? y2 : y1);
+                    ctx.lineTo(x2, settings.direction_toptobottom ? y2 : y1);
                     ctx.stroke();
                 }
             }
