@@ -24,6 +24,56 @@ let colors = {};
 let readonly = false;
 
 
+function get_x_calculator(view, settings, with_offset=true) {
+    if (with_offset) {
+        if (settings.direction_righttoleft) {
+            return function(i) {
+                return 0.5 + (view.x + view.width - 1 - (i - view.offset_i)) * settings.dx;
+            }
+        } else {
+            return function(i) {
+                return 0.5 + (view.x + i - view.offset_i) * settings.dx;
+            }
+        }
+    } else {
+        if (settings.direction_righttoleft) {
+            return function(i) {
+                return 0.5 + (view.x + view.width - 1 - i) * settings.dx;
+            }
+        } else {
+            return function(i) {
+                return 0.5 + (view.x + i) * settings.dx;
+            }
+        }
+    }
+}
+
+
+function get_y_calculator(view, settings, with_offset=true) {
+    if (with_offset) {
+        if (settings.direction_toptobottom) {
+            return function(j) {
+                return 0.5 + (view.y + j - view.offset_j) * settings.dy;
+            }
+        } else {
+            return function(j) {
+                return 0.5 + (view.y + view.height - 1 - (j - view.offset_j)) * settings.dy;
+            }
+        }
+    } else {
+        if (settings.direction_toptobottom) {
+            return function(j) {
+                return 0.5 + (view.y + j) * settings.dy;
+            }
+        } else {
+            return function(j) {
+                return 0.5 + (view.y + view.height - 1 - j) * settings.dy;
+            }
+        }
+    }
+}
+
+
 function cellPainterFilled(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.fillStyle = settings.darcula ? "#fff" : "#000";
