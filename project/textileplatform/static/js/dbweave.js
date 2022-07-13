@@ -911,7 +911,6 @@ class ScrollbarHorz {
         const w = this.width * settings.dx - 1;
         const a = Math.min(w / this.pattern.width * this.view.offset_i, w);
         const b = Math.min(w / this.pattern.width * this.view.width, w);
-        console.log(a, b, w);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         fillRect(
             ctx,
