@@ -24,8 +24,8 @@ let colors = {};
 let readonly = false;
 
 
-function get_x_calculator(view, settings) {
-    if (settings.direction_righttoleft) {
+function get_x_calculator(view, settings, righttoleft) {
+    if (righttoleft) {
         return function(i) {
             return 0.5 + (view.x + view.width - i) * settings.dx;
         }
@@ -37,8 +37,8 @@ function get_x_calculator(view, settings) {
 }
 
 
-function get_y_calculator(view, settings) {
-    if (settings.direction_toptobottom) {
+function get_y_calculator(view, settings, toptobottom) {
+    if (toptobottom) {
         return function(j) {
             return 0.5 + (view.y + j) * settings.dy;
         }
@@ -64,10 +64,10 @@ function cellPainterFilled(ctx, settings, view, i, j, value) {
         ctx.fillStyle = settings.darcula ? "#fff" : "#000";
         fillRect(
             ctx,
-            settings.calc_x(i + settings.bxf),
-            settings.calc_y(j + settings.byf),
-            settings.calc_x(i + 1 - settings.bxf),
-            settings.calc_y(j + 1 - settings.byf)
+            view.calc_x(i + settings.bxf),
+            view.calc_y(j + settings.byf),
+            view.calc_x(i + 1 - settings.bxf),
+            view.calc_y(j + 1 - settings.byf)
         );
     }
 }
@@ -78,8 +78,8 @@ function cellPainterDot(ctx, settings, view, i, j, value) {
         ctx.beginPath();
         ctx.fillStyle = settings.darcula ? "#fff" : "#000";
         ctx.ellipse(
-            settings.calc_x(i + 0.5),
-            settings.calc_y(j + 0.5),
+            view.calc_x(i + 0.5),
+            view.calc_y(j + 0.5),
             (settings.dx - 2 * settings.bx) / 4,
             (settings.dy - 2 * settings.by) / 4,
             0,
@@ -95,20 +95,20 @@ function cellPainterCross(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.beginPath();
         ctx.moveTo(
-            settings.calc_x(i + settings.bxf),
-            settings.calc_y(j + settings.byf)
+            view.calc_x(i + settings.bxf),
+            view.calc_y(j + settings.byf)
         )
         ctx.lineTo(
-            settings.calc_x(i + 1 - settings.bxf),
-            settings.calc_y(j + 1 - settings.byf)
+            view.calc_x(i + 1 - settings.bxf),
+            view.calc_y(j + 1 - settings.byf)
         )
         ctx.moveTo(
-            settings.calc_x(i + settings.bxf),
-            settings.calc_y(j + 1 - settings.byf)
+            view.calc_x(i + settings.bxf),
+            view.calc_y(j + 1 - settings.byf)
         )
         ctx.lineTo(
-            settings.calc_x(i + 1 - settings.bxf),
-            settings.calc_y(j + settings.byf)
+            view.calc_x(i + 1 - settings.bxf),
+            view.calc_y(j + settings.byf)
         )
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
@@ -137,12 +137,12 @@ function cellPainterHDash(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.beginPath();
         ctx.moveTo(
-            settings.calc_x(i + settings.bxf),
-            settings.calc_y(j + 0.5)
+            view.calc_x(i + settings.bxf),
+            view.calc_y(j + 0.5)
         )
         ctx.lineTo(
-            settings.calc_x(i + 1 - settings.bxf),
-            settings.calc_y(j + 0.5)
+            view.calc_x(i + 1 - settings.bxf),
+            view.calc_y(j + 0.5)
         )
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
@@ -156,12 +156,12 @@ function cellPainterVDash(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.beginPath();
         ctx.moveTo(
-            settings.calc_x(i + 0.5),
-            settings.calc_y(j + settings.byf)
+            view.calc_x(i + 0.5),
+            view.calc_y(j + settings.byf)
         )
         ctx.lineTo(
-            settings.calc_x(i + 0.5),
-            settings.calc_y(j + 1 - settings.byf)
+            view.calc_x(i + 0.5),
+            view.calc_y(j + 1 - settings.byf)
         )
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
@@ -324,7 +324,7 @@ class GridViewDummy {
 
 
 class GridView {
-    constructor(data, x, y, width, height, painter_prop) {
+    constructor(data, x, y, width, height, painter_prop, righttoleft, toptobottom) {
         this.data = data;
         this.x = x;
         this.y = y;
@@ -333,6 +333,8 @@ class GridView {
         this.offset_i = 0;
         this.offset_j = 0;
         this.painter_prop = painter_prop;
+        this.calc_x = get_x_calculator(this, settings, righttoleft);
+        this.calc_y = get_y_calculator(this, settings, toptobottom);
     }
 
     contains(i, j) {
@@ -341,9 +343,6 @@ class GridView {
     }
 
     draw(ctx, settings) {
-        settings.calc_x = get_x_calculator(this, settings);
-        settings.calc_y = get_y_calculator(this, settings);
-
         this.drawGrid(ctx, settings);
         this.drawData(ctx, settings);
     }
@@ -356,14 +355,14 @@ class GridView {
 
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            const x = settings.calc_x(i);
-            ctx.moveTo(x, settings.calc_y(0));
-            ctx.lineTo(x, settings.calc_y(height));
+            const x = this.calc_x(i);
+            ctx.moveTo(x, this.calc_y(0));
+            ctx.lineTo(x, this.calc_y(height));
         }
         for (let j = 0; j <= height; j++) {
-            const y = settings.calc_y(j);
-            ctx.moveTo(settings.calc_x(0), y);
-            ctx.lineTo(settings.calc_x(width), y);
+            const y = this.calc_y(j);
+            ctx.moveTo(this.calc_x(0), y);
+            ctx.lineTo(this.calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#777";
@@ -373,16 +372,16 @@ class GridView {
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
             if ((i + this.offset_i) % settings.unit_width == 0) {
-                const x = settings.calc_x(i);
-                ctx.moveTo(x, settings.calc_y(0));
-                ctx.lineTo(x, settings.calc_y(height));
+                const x = this.calc_x(i);
+                ctx.moveTo(x, this.calc_y(0));
+                ctx.lineTo(x, this.calc_y(height));
             }
         }
         for (let j = 0; j <= height; j++) {
             if ((j + this.offset_j) % settings.unit_height == 0) {
-                const y = settings.calc_y(j);
-                ctx.moveTo(settings.calc_x(0), y);
-                ctx.lineTo(settings.calc_x(width), y);
+                const y = this.calc_y(j);
+                ctx.moveTo(this.calc_x(0), y);
+                ctx.lineTo(this.calc_x(width), y);
             }
         }
         ctx.closePath();
@@ -403,7 +402,7 @@ class GridView {
 
 
 class GridViewPattern {
-    constructor(data, x, y, width, height) {
+    constructor(data, x, y, width, height, dummystyle, righttoleft, toptobottom) {
         this.data = data;
         this.x = x;
         this.y = y;
@@ -411,6 +410,8 @@ class GridViewPattern {
         this.height = height;
         this.offset_i = 0;
         this.offset_j = 0;
+        this.calc_x = get_x_calculator(this, settings, righttoleft);
+        this.calc_y = get_y_calculator(this, settings, toptobottom);
     }
 
     contains(i, j) {
@@ -419,9 +420,6 @@ class GridViewPattern {
     }
 
     draw(ctx, settings) {
-        settings.calc_x = get_x_calculator(this, settings);
-        settings.calc_y = get_y_calculator(this, settings);
-
         this.drawGrid(ctx, settings);
         if (settings.style === "draft") {
             this.drawDataPattern(ctx, settings);
@@ -442,14 +440,14 @@ class GridViewPattern {
 
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            const x = settings.calc_x(i);
-            ctx.moveTo(x, settings.calc_y(0));
-            ctx.lineTo(x, settings.calc_y(height));
+            const x = this.calc_x(i);
+            ctx.moveTo(x, this.calc_y(0));
+            ctx.lineTo(x, this.calc_y(height));
         }
         for (let j = 0; j <= height; j++) {
-            const y = settings.calc_y(j);
-            ctx.moveTo(settings.calc_x(0), y);
-            ctx.lineTo(settings.calc_x(width), y);
+            const y = this.calc_y(j);
+            ctx.moveTo(this.calc_x(0), y);
+            ctx.lineTo(this.calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#777";
@@ -459,16 +457,16 @@ class GridViewPattern {
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
             if ((i + this.offset_i) % settings.unit_width == 0) {
-                const x = settings.calc_x(i);
-                ctx.moveTo(x, settings.calc_y(0));
-                ctx.lineTo(x, settings.calc_y(height));
+                const x = this.calc_x(i);
+                ctx.moveTo(x, this.calc_y(0));
+                ctx.lineTo(x, this.calc_y(height));
             }
         }
         for (let j = 0; j <= height; j++) {
             if ((j + this.offset_j) % settings.unit_height == 0) {
-                const y = settings.calc_y(j);
-                ctx.moveTo(settings.calc_x(0), y);
-                ctx.lineTo(settings.calc_x(width), y);
+                const y = this.calc_y(j);
+                ctx.moveTo(this.calc_x(0), y);
+                ctx.lineTo(this.calc_x(width), y);
             }
         }
         ctx.closePath();
@@ -488,10 +486,10 @@ class GridViewPattern {
                     ctx.fillStyle = settings.darcula ? "#fff" : "#000";
                     fillRect(
                         ctx,
-                        settings.calc_x(i-this.offset_i + settings.bxf),
-                        settings.calc_y(j-this.offset_j + settings.byf),
-                        settings.calc_x(i-this.offset_i + 1 - settings.bxf),
-                        settings.calc_y(j-this.offset_j + 1 - settings.byf)
+                        this.calc_x(i-this.offset_i + settings.bxf),
+                        this.calc_y(j-this.offset_j + settings.byf),
+                        this.calc_x(i-this.offset_i + 1 - settings.bxf),
+                        this.calc_y(j-this.offset_j + 1 - settings.byf)
                     );
                 }
             }
@@ -516,10 +514,10 @@ class GridViewPattern {
                 ctx.fillStyle = color;
                 fillRect(
                     ctx,
-                    settings.calc_x(i-this.offset_i),
-                    settings.calc_y(j-this.offset_j),
-                    settings.calc_x(i-this.offset_i + 1),
-                    settings.calc_y(j-this.offset_j + 1),
+                    this.calc_x(i-this.offset_i),
+                    this.calc_y(j-this.offset_j),
+                    this.calc_x(i-this.offset_i + 1),
+                    this.calc_y(j-this.offset_j + 1),
                     -0.5
                 );
             }
@@ -543,15 +541,15 @@ class GridViewPattern {
                 const color_warp = colors[pattern.color_warp.get(i, 0)];
                 const color_weft = colors[pattern.color_weft.get(j, 0)];
 
-                const x0 = settings.calc_x(i-this.offset_i);
-                const x1 = settings.calc_x(i-this.offset_i + 0.2);
-                const x2 = settings.calc_x(i-this.offset_i + 1 - 0.2);
-                const x3 = settings.calc_x(i-this.offset_i + 1);
+                const x0 = this.calc_x(i-this.offset_i);
+                const x1 = this.calc_x(i-this.offset_i + 0.2);
+                const x2 = this.calc_x(i-this.offset_i + 1 - 0.2);
+                const x3 = this.calc_x(i-this.offset_i + 1);
 
-                const y0 = settings.calc_y(j-this.offset_j);
-                const y1 = settings.calc_y(j-this.offset_j + 0.2);
-                const y2 = settings.calc_y(j-this.offset_j + 1 - 0.2);
-                const y3 = settings.calc_y(j-this.offset_j + 1);
+                const y0 = this.calc_y(j-this.offset_j);
+                const y1 = this.calc_y(j-this.offset_j + 0.2);
+                const y2 = this.calc_y(j-this.offset_j + 1 - 0.2);
+                const y3 = this.calc_y(j-this.offset_j + 1);
 
                 ctx.fillStyle = settings.darcula ? "#444" : "#fff";
                 fillRect(ctx, x0, y0, x3, y3);
@@ -599,7 +597,7 @@ class GridViewPattern {
 
 
 class GridViewColors {
-    constructor(data, x, y, width, height) {
+    constructor(data, x, y, width, height, dummystyle, righttoleft, toptobottom) {
         this.data = data;
         this.x = x;
         this.y = y;
@@ -607,6 +605,8 @@ class GridViewColors {
         this.height = height;
         this.offset_i = 0;
         this.offset_j = 0;
+        this.calc_x = get_x_calculator(this, settings, righttoleft);
+        this.calc_y = get_y_calculator(this, settings, toptobottom);
     }
 
     contains(i, j) {
@@ -615,9 +615,6 @@ class GridViewColors {
     }
 
     draw(ctx, settings) {
-        settings.calc_x = get_x_calculator(this, settings);
-        settings.calc_y = get_y_calculator(this, settings);
-
         this.drawGrid(ctx, settings);
         this.drawDataColor(ctx, settings);
     }
@@ -630,14 +627,14 @@ class GridViewColors {
 
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            const x = settings.calc_x(i);
-            ctx.moveTo(x, settings.calc_y(0));
-            ctx.lineTo(x, settings.calc_y(height));
+            const x = this.calc_x(i);
+            ctx.moveTo(x, this.calc_y(0));
+            ctx.lineTo(x, this.calc_y(height));
         }
         for (let j = 0; j <= height; j++) {
-            const y = settings.calc_y(j);
-            ctx.moveTo(settings.calc_x(0), y);
-            ctx.lineTo(settings.calc_x(width), y);
+            const y = this.calc_y(j);
+            ctx.moveTo(this.calc_x(0), y);
+            ctx.lineTo(this.calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
@@ -655,10 +652,10 @@ class GridViewColors {
                 ctx.fillStyle = color;
                 fillRect(
                     ctx,
-                    settings.calc_x(i-this.offset_i),
-                    settings.calc_y(j-this.offset_j),
-                    settings.calc_x(i-this.offset_i + 1),
-                    settings.calc_y(j-this.offset_j + 1),
+                    this.calc_x(i-this.offset_i),
+                    this.calc_y(j-this.offset_j),
+                    this.calc_x(i-this.offset_i + 1),
+                    this.calc_y(j-this.offset_j + 1),
                     0.5
                 );
             }
@@ -668,7 +665,7 @@ class GridViewColors {
 
 
 class GridViewReed {
-    constructor(data, x, y, width) {
+    constructor(data, x, y, width, dummystyle, righttoleft, toptobottom) {
         this.data = data;
         this.x = x;
         this.y = y;
@@ -676,6 +673,8 @@ class GridViewReed {
         this.height = 1;
         this.offset_i = 0;
         this.offset_j = 0;
+        this.calc_x = get_x_calculator(this, settings, righttoleft);
+        this.calc_y = get_y_calculator(this, settings, toptobottom);
     }
 
     contains(i, j) {
@@ -683,9 +682,6 @@ class GridViewReed {
     }
 
     draw(ctx, settings) {
-        settings.calc_x = get_x_calculator(this, settings);
-        settings.calc_y = get_y_calculator(this, settings);
-
         this.drawGrid(ctx, settings);
         this.drawData(ctx, settings);
     }
@@ -697,14 +693,14 @@ class GridViewReed {
 
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            const x = settings.calc_x(i);
-            ctx.moveTo(x, settings.calc_y(0));
-            ctx.lineTo(x, settings.calc_y(0));
+            const x = this.calc_x(i);
+            ctx.moveTo(x, this.calc_y(0));
+            ctx.lineTo(x, this.calc_y(0));
         }
         for (let j = 0; j <= 1; j++) {
-            const y = settings.calc_y(j);
-            ctx.moveTo(settings.calc_x(0), y);
-            ctx.lineTo(settings.calc_x(width), y);
+            const y = this.calc_y(j);
+            ctx.moveTo(this.calc_x(0), y);
+            ctx.lineTo(this.calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
@@ -721,18 +717,18 @@ class GridViewReed {
             if (value <= 0) {
                 fillRect(
                     ctx,
-                    settings.calc_x(i),
-                    settings.calc_y(0.5),
-                    settings.calc_x(i+1),
-                    settings.calc_y(1)
+                    this.calc_x(i),
+                    this.calc_y(0.5),
+                    this.calc_x(i+1),
+                    this.calc_y(1)
                 );
             } else {
                 fillRect(
                     ctx,
-                    settings.calc_x(i),
-                    settings.calc_y(0),
-                    settings.calc_x(i+1),
-                    settings.calc_y(0.5)
+                    this.calc_x(i),
+                    this.calc_y(0),
+                    this.calc_x(i+1),
+                    this.calc_y(0.5)
                 );
             }
         }
@@ -882,13 +878,15 @@ class ViewSettings {
 
 
 class ScrollbarHorz {
-    constructor(pattern, view, x, y, width, height) {
+    constructor(pattern, view, x, y, width, height, righttoleft) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.pattern = pattern;
         this.view = view;
+        this.calc_x = get_x_calculator(this, settings, righttoleft);
+        this.calc_y = get_y_calculator(this, settings, false);
     }
 
     draw(ctx, settings) {
@@ -915,13 +913,15 @@ class ScrollbarHorz {
 
 
 class ScrollbarVert {
-    constructor(pattern, view, x, y, width, height) {
+    constructor(pattern, view, x, y, width, height, toptobottom) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.pattern = pattern;
         this.view = view;
+        this.calc_x = get_x_calculator(this, settings, false);
+        this.calc_y = get_y_calculator(this, settings, toptobottom);
     }
 
     draw(ctx, settings) {
@@ -969,8 +969,6 @@ class PatternView {
         const availx = Math.trunc((this.ctx.canvas.width - scroll) / dx);
         const availy = Math.trunc((this.ctx.canvas.height - scroll) / dy);
 
-        // TODO allow parts to hide/show
-
         const width3 = this.settings.display_colors_weft ? 1 : 0;
         const width2 = this.settings.display_treadling ? this.visible_treadles : 0;
         const width1 = availx - this.withBorder(width3) - this.withBorder(width2);
@@ -1007,40 +1005,51 @@ class PatternView {
         this.color_warp = this.make(
             s.display_colors_warp,
             GridViewColors, p.color_warp,
-            x1, y4, width1, height4
+            x1, y4, width1, height4,
+            '',
+            s.direction_righttoleft, false
         );
         this.entering = this.make(
             s.display_entering,
             GridView, p.entering,
             x1, y3, width1, height3,
-            'entering_style'
+            'entering_style',
+            s.direction_righttoleft, s.direction_toptobottom
         );
         this.tieup = this.make(
             s.display_entering && s.display_treadling,
             GridView, p.tieup,
             x2, y3, width2, height3,
-            'tieup_style'
+            'tieup_style',
+            false, s.direction_toptobottom
         );
         this.reed = this.make(
             s.display_reed,
             GridViewReed, p.reed,
-            x1, y2, width1
+            x1, y2, width1,
+            '',
+            s.direction_rigthtoleft, false
         );
         this.weave = this.make(
             true,
             GridViewPattern, p.weave,
-            x1, y1, width1, height1
+            x1, y1, width1, height1,
+            '',
+            s.direction_righttoleft, false
         );
         this.treadling = this.make(
             s.display_treadling,
             GridView, p.treadling,
             x2, y1, width2, height1,
-            'treadling_style'
+            'treadling_style',
+            false, false
         );
         this.color_weft = this.make(
             s.display_colors_weft,
             GridViewColors, p.color_weft,
-            x3, y1, width3, height1
+            x3, y1, width3, height1,
+            '',
+            false, false
         );
 
         let sby = y1 + height1;
@@ -1057,13 +1066,15 @@ class PatternView {
         this.scroll_1_hor = new ScrollbarHorz(
             p.weave,
             this.weave,
-            x1, sby, width1, scroll
+            x1, sby, width1, scroll,
+            s.direction_righttoleft
         );
         if (this.settings.display_treadling) {
             this.scroll_2_hor = new ScrollbarHorz(
                 p.treadling,
                 this.treadling,
-                x2, sby, width2, scroll
+                x2, sby, width2, scroll,
+                false
             );
         } else {
             this.scroll_2_hor = new GridViewDummy();
@@ -1079,22 +1090,24 @@ class PatternView {
         this.scroll_1_ver = new ScrollbarVert(
             p.weave,
             this.weave,
-            sbx, y1, scroll, height1
+            sbx, y1, scroll, height1,
+            false
         );
         if (this.settings.display_entering) {
             this.scroll_2_ver = new ScrollbarVert(
                 p.entering,
                 this.entering,
-                sbx, y3, scroll, height3
+                sbx, y3, scroll, height3,
+                s.direction_toptobottom
             );
         } else {
             this.scroll_2_ver = new GridViewDummy();
         }
     }
 
-    make(visible, viewclass, data, x, y, w, h, style) {
+    make(visible, viewclass, data, x, y, w, h, style, righttoleft, toptobottom) {
         if (visible) {
-            return new viewclass(data, x, y, w, h, style);
+            return new viewclass(data, x, y, w, h, style, righttoleft, toptobottom);
         } else {
             return new GridViewDummy();
         }
@@ -1429,7 +1442,7 @@ function keyDown(e) {
         view.layout();
         view.draw();
         e.preventDefault();
-    } else if (e.key === "q") { // TODO use better key shortcut
+    } else if (e.key === "i") { // TODO use better key shortcut
         // set swiss/german standard
         settings.entering_style = "dash";
         settings.treadling_style = "dot";
@@ -1445,7 +1458,7 @@ function keyDown(e) {
         view.layout();
         view.draw();
         e.preventDefault();
-    } else if (e.key === "w") { // TODO use better key shortcut
+    } else if (e.key === "o") { // TODO use better key shortcut
         // set scandinavian standard
         settings.entering_style = "filled";
         settings.treadling_style = "filled";
@@ -1461,7 +1474,7 @@ function keyDown(e) {
         view.layout();
         view.draw();
         e.preventDefault();
-    } else if (e.key === "e") { // TODO use better key shortcut
+    } else if (e.key === "p") { // TODO use better key shortcut
         // set american standard
         settings.entering_style = "filled";
         settings.treadling_style = "filled";
