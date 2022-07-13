@@ -14,4 +14,5 @@
     </div>
     <input type="submit" value="{{ gettext('Save') }}">
   </form>
+  <p><a href="{{ url_for('auth.logout') }}">{{ gettext('Log out') }}</p>
 {% endblock %}

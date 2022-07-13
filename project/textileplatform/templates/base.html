@@ -16,9 +16,7 @@
             <h1><a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/icons/icon.png') }}"> {{ gettext('Textile Platform') }}</a> {% block context %}{% endblock %}</h1>
             <ul>
             {% if g.user %}
-                <li><span>{{ g.user.label }}</span>
-                <li><a href="{{ url_for('main.profile') }}">{{ gettext('Profile') }}</a>
-                <li><a href="{{ url_for('auth.logout') }}">{{ gettext('Log out') }}</a>
+                <li><a href="{{ url_for('main.profile') }}">{{ g.user.label }}</a>
             {% else %}
                 <li><a href="{{ url_for('auth.register') }}">{{ gettext('Register') }}</a>
                 <li><a href="{{ url_for('auth.login') }}">{{ gettext('Log in') }}</a>
