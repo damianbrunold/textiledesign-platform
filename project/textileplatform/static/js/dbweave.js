@@ -1437,6 +1437,54 @@ function keyDown(e) {
         view.layout();
         view.draw();
         e.preventDefault();
+    } else if (e.key === "q") { // TODO use better key shortcut
+        // set swiss/german standard
+        settings.entering_style = "dash";
+        settings.treadling_style = "dot";
+        settings.tieup_style = "cross";
+        settings.display_reed = true;
+        settings.display_entering = true;
+        settings.display_treadling = true;
+        settings.display_colors_warp = true;
+        settings.display_colors_weft = true;
+        settings.entering_at_bottom = false;
+        settings.direction_toptobottom = false;
+        settings.direction_righttoleft = false;
+        view.layout();
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "w") { // TODO use better key shortcut
+        // set scandinavian standard
+        settings.entering_style = "filled";
+        settings.treadling_style = "filled";
+        settings.tieup_style = "filled";
+        settings.display_reed = false;
+        settings.display_entering = true;
+        settings.display_treadling = true;
+        settings.display_colors_warp = true;
+        settings.display_colors_weft = true;
+        settings.entering_at_bottom = true;
+        settings.direction_toptobottom = true;
+        settings.direction_righttoleft = true;
+        view.layout();
+        view.draw();
+        e.preventDefault();
+    } else if (e.key === "e") { // TODO use better key shortcut
+        // set american standard
+        settings.entering_style = "filled";
+        settings.treadling_style = "filled";
+        settings.tieup_style = "filled";
+        settings.display_reed = true;
+        settings.display_entering = true;
+        settings.display_treadling = true;
+        settings.display_colors_warp = true;
+        settings.display_colors_weft = true;
+        settings.entering_at_bottom = false;
+        settings.direction_toptobottom = false;
+        settings.direction_righttoleft = true;
+        view.layout();
+        view.draw();
+        e.preventDefault();
     }
 }
 
