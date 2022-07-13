@@ -1,6 +1,8 @@
 Todo
 ----
 
+- Adjust mouse click handling for toptobottom and righttoleft
+
 - Implement circular buffer undo/redo
 
 - Autosave changes in localstorage so that changes are not lost
