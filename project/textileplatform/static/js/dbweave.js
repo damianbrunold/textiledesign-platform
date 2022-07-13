@@ -59,6 +59,15 @@ function fillRect(ctx, x1, y1, x2, y2, b=0.0) {
 }
 
 
+function strokeRect(ctx, x1, y1, x2, y2, b=0.0) {
+    const x = Math.min(x1, x2);
+    const y = Math.min(y1, y2);
+    const w = Math.abs(x1 - x2);
+    const h = Math.abs(y1 - y2);
+    ctx.strokeRect(x+b, y+b, w-2*b, h-2*b);
+}
+
+
 function cellPainterFilled(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.fillStyle = settings.darcula ? "#fff" : "#000";
@@ -892,23 +901,27 @@ class ScrollbarHorz {
     draw(ctx, settings) {
         const delta = 5;
         ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
-        ctx.strokeRect(
-            0.5 + this.x * settings.dx,
+        strokeRect(
+            ctx,
+            this.calc_x(0),
             0.5 + this.y * settings.dy + delta,
-            this.width * settings.dx,
-            this.height - delta
-        )
+            this.calc_x(this.width),
+            0.5 + this.y * settings.dy + this.height
+        );
         const w = this.width * settings.dx - 1;
         const a = Math.min(w / this.pattern.width * this.view.offset_i, w);
         const b = Math.min(w / this.pattern.width * this.view.width, w);
+        console.log(a, b, w);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
-        ctx.fillRect(
-            1.0 + this.x * settings.dx + a,
-            1.0 + this.y * settings.dy + delta,
-            b,
-            this.height - 1.0 - delta
+        fillRect(
+            ctx,
+            this.calc_x(a / settings.dx),
+            0.5 + this.y * settings.dy + delta,
+            this.calc_x(b / settings.dx),
+            0.5 + this.y * settings.dy + this.height,
+            1.0
         );
-    }
+   }
 }
 
 
@@ -927,21 +940,23 @@ class ScrollbarVert {
     draw(ctx, settings) {
         const delta = 5;
         ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
-        ctx.strokeRect(
+        strokeRect(
+            ctx,
             0.5 + this.x * settings.dx + delta,
-            0.5 + this.y * settings.dy,
-            this.width - delta,
-            this.height * settings.dx
-        )
+            this.calc_y(0),
+            0.5 + this.x * settings.dx + this.width,
+            this.calc_y(this.height)
+        );
         const h = this.height * settings.dy - 1;
         const a = Math.min(h / this.pattern.height * this.view.offset_j, h);
         const b = Math.min(h / this.pattern.height * this.view.height, h);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
-        ctx.fillRect(
-            1.0 + this.x * settings.dx + delta,
-            1.0 + (this.y + this.height) * settings.dy - a - b,
-            this.width - 1.0 - delta,
-            b - 1,
+        fillRect(
+            ctx,
+            0.5 + this.x * settings.dx + delta,
+            this.calc_y(a / settings.dy),
+            0.5 + this.x * settings.dx + this.width,
+            this.calc_y(b / settings.dy)
         );
     }
 }
