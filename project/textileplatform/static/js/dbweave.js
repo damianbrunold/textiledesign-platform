@@ -533,9 +533,6 @@ class GridViewPattern {
         const dx = settings.dx;
         const dy = settings.dy;
 
-        const w = dx / 5;
-        const h = dy / 5;
-
         for (let i = this.offset_i; i < this.offset_i + width; i++) {
             if (i < pattern.min_x || pattern.max_x < i) continue;
             for (let j = this.offset_j; j < this.offset_j + height; j++) {
@@ -546,24 +543,24 @@ class GridViewPattern {
                 const color_warp = colors[pattern.color_warp.get(i, 0)];
                 const color_weft = colors[pattern.color_weft.get(j, 0)];
 
-                const x0 = (this.x + i - this.offset_i) * settings.dx;
-                const x1 = x0 + w;
-                const x2 = x0 + settings.dx - w;
-                const x3 = x0 + settings.dx;
+                const x0 = settings.calc_x(i-this.offset_i);
+                const x1 = settings.calc_x(i-this.offset_i + 0.2);
+                const x2 = settings.calc_x(i-this.offset_i + 1 - 0.2);
+                const x3 = settings.calc_x(i-this.offset_i + 1);
 
-                const y0 = (this.y + this.height - (j - this.offset_j) - 1) * settings.dy;
-                const y1 = y0 + h;
-                const y2 = y0 + settings.dy - h;
-                const y3 = y0 + settings.dy;
+                const y0 = settings.calc_y(j-this.offset_j);
+                const y1 = settings.calc_y(j-this.offset_j + 0.2);
+                const y2 = settings.calc_y(j-this.offset_j + 1 - 0.2);
+                const y3 = settings.calc_y(j-this.offset_j + 1);
 
                 ctx.fillStyle = settings.darcula ? "#444" : "#fff";
-                ctx.fillRect(x0, y0, dx, dy);
+                fillRect(ctx, x0, y0, x3, y3);
                 if (value > 0) {
                     ctx.fillStyle = color_weft;
-                    ctx.fillRect(x0, y1, dx, dy - 2*h);
+                    fillRect(ctx, x0, y1, x3, y2, -0.5);
 
                     ctx.fillStyle = color_warp;
-                    ctx.fillRect(x1, y0, dx - 2*w, dy);
+                    fillRect(ctx, x1, y0, x2, y3, -0.5);
 
                     ctx.beginPath();
                     ctx.strokeStyle = "#999";
@@ -578,10 +575,10 @@ class GridViewPattern {
                     ctx.stroke();
                 } else {
                     ctx.fillStyle = color_warp;
-                    ctx.fillRect(x1, y0, dx - 2*w, dy);
+                    fillRect(ctx, x1, y0, x2, y3, -0.5);
 
                     ctx.fillStyle = color_weft;
-                    ctx.fillRect(x0, y1, dx, dy - 2*h);
+                    fillRect(ctx, x0, y1, x3, y2, -0.5);
 
                     ctx.beginPath();
                     ctx.strokeStyle = "#999";
