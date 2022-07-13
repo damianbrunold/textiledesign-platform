@@ -24,64 +24,50 @@ let colors = {};
 let readonly = false;
 
 
-function get_x_calculator(view, settings, with_offset=true) {
-    if (with_offset) {
-        if (settings.direction_righttoleft) {
-            return function(i) {
-                return 0.5 + (view.x + view.width - 1 - (i - view.offset_i)) * settings.dx;
-            }
-        } else {
-            return function(i) {
-                return 0.5 + (view.x + i - view.offset_i) * settings.dx;
-            }
+function get_x_calculator(view, settings) {
+    if (settings.direction_righttoleft) {
+        return function(i) {
+            return 0.5 + (view.x + view.width - i) * settings.dx;
         }
     } else {
-        if (settings.direction_righttoleft) {
-            return function(i) {
-                return 0.5 + (view.x + view.width - 1 - i) * settings.dx;
-            }
-        } else {
-            return function(i) {
-                return 0.5 + (view.x + i) * settings.dx;
-            }
+        return function(i) {
+            return 0.5 + (view.x + i) * settings.dx;
         }
     }
 }
 
 
-function get_y_calculator(view, settings, with_offset=true) {
-    if (with_offset) {
-        if (settings.direction_toptobottom) {
-            return function(j) {
-                return 0.5 + (view.y + j - view.offset_j) * settings.dy;
-            }
-        } else {
-            return function(j) {
-                return 0.5 + (view.y + view.height - 1 - (j - view.offset_j)) * settings.dy;
-            }
+function get_y_calculator(view, settings) {
+    if (settings.direction_toptobottom) {
+        return function(j) {
+            return 0.5 + (view.y + j) * settings.dy;
         }
     } else {
-        if (settings.direction_toptobottom) {
-            return function(j) {
-                return 0.5 + (view.y + j) * settings.dy;
-            }
-        } else {
-            return function(j) {
-                return 0.5 + (view.y + view.height - 1 - j) * settings.dy;
-            }
+        return function(j) {
+            return 0.5 + (view.y + view.height - j) * settings.dy;
         }
     }
+}
+
+
+function fillRect(ctx, x1, y1, x2, y2) {
+    const x = Math.min(x1, x2);
+    const y = Math.min(y1, y2);
+    const w = Math.abs(x1 - x2);
+    const h = Math.abs(y1 - y2);
+    ctx.fillRect(x, y, w, h);
 }
 
 
 function cellPainterFilled(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.fillStyle = settings.darcula ? "#fff" : "#000";
-        ctx.fillRect(
-            0.5 + (view.x + i) * settings.dx + settings.bx,
-            0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by,
-            settings.dx - 2 * settings.bx,
-            settings.dy - 2 * settings.by
+        fillRect(
+            ctx,
+            settings.calc_x(i + settings.bxf),
+            settings.calc_y(j + settings.byf),
+            settings.calc_x(i + 1 - settings.bxf),
+            settings.calc_y(j + 1 - settings.byf)
         );
     }
 }
@@ -92,8 +78,8 @@ function cellPainterDot(ctx, settings, view, i, j, value) {
         ctx.beginPath();
         ctx.fillStyle = settings.darcula ? "#fff" : "#000";
         ctx.ellipse(
-            0.5 + (view.x + i + 0.5) * settings.dx,
-            0.5 + (view.y + view.height - j - 0.5) * settings.dy,
+            settings.calc_x(i + 0.5),
+            settings.calc_y(j + 0.5),
             (settings.dx - 2 * settings.bx) / 4,
             (settings.dy - 2 * settings.by) / 4,
             0,
@@ -109,20 +95,20 @@ function cellPainterCross(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.beginPath();
         ctx.moveTo(
-            0.5 + (view.x + i) * settings.dx + settings.bx,
-            0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by
+            settings.calc_x(i + settings.bxf),
+            settings.calc_y(j + settings.byf)
         )
         ctx.lineTo(
-            0.5 + (view.x + i + 1) * settings.dx - settings.bx,
-            0.5 + (view.y + view.height - j) * settings.dy - settings.by
+            settings.calc_x(i + 1 - settings.bxf),
+            settings.calc_y(j + 1 - settings.byf)
         )
         ctx.moveTo(
-            0.5 + (view.x + i) * settings.dx + settings.bx,
-            0.5 + (view.y + view.height - j) * settings.dy - settings.by
+            settings.calc_x(i + settings.bxf),
+            settings.calc_y(j + 1 - settings.byf)
         )
         ctx.lineTo(
-            0.5 + (view.x + i + 1) * settings.dx - settings.bx,
-            0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by
+            settings.calc_x(i + 1 - settings.bxf),
+            settings.calc_y(j + settings.byf)
         )
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
@@ -151,12 +137,12 @@ function cellPainterHDash(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.beginPath();
         ctx.moveTo(
-            0.5 + (view.x + i) * settings.dx,
-            0.5 + (view.y + view.height - j - 0.5) * settings.dy + settings.by
+            settings.calc_x(i + settings.bxf),
+            settings.calc_y(j + 0.5)
         )
         ctx.lineTo(
-            0.5 + (view.x + i + 1) * settings.dx,
-            0.5 + (view.y + view.height - j - 0.5) * settings.dy - settings.by
+            settings.calc_x(i + 1 - settings.bxf),
+            settings.calc_y(j + 0.5)
         )
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
@@ -170,12 +156,12 @@ function cellPainterVDash(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.beginPath();
         ctx.moveTo(
-            0.5 + (view.x + i + 0.5) * settings.dx,
-            0.5 + (view.y + view.height - j - 1) * settings.dy + settings.by
+            settings.calc_x(i + 0.5),
+            settings.calc_y(j + settings.byf)
         )
         ctx.lineTo(
-            0.5 + (view.x + i + 0.5) * settings.dx,
-            0.5 + (view.y + view.height - j) * settings.dy - settings.by
+            settings.calc_x(i + 0.5),
+            settings.calc_y(j + 1 - settings.byf)
         )
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
@@ -355,6 +341,9 @@ class GridView {
     }
 
     draw(ctx, settings) {
+        settings.calc_x = get_x_calculator(this, settings);
+        settings.calc_y = get_y_calculator(this, settings);
+
         this.drawGrid(ctx, settings);
         this.drawData(ctx, settings);
     }
@@ -365,19 +354,16 @@ class GridView {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
-        const calc_x = get_x_calculator(this, settings, false);
-        const calc_y = get_y_calculator(this, settings, false);
-
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            const x = calc_x(i);
-            ctx.moveTo(x, calc_y(0)+dy);
-            ctx.lineTo(x, calc_y(height)+dy);
+            const x = settings.calc_x(i);
+            ctx.moveTo(x, settings.calc_y(0));
+            ctx.lineTo(x, settings.calc_y(height));
         }
         for (let j = 0; j <= height; j++) {
-            const y = calc_y(j) + dy;
-            ctx.moveTo(calc_x(0), y);
-            ctx.lineTo(calc_x(width), y);
+            const y = settings.calc_y(j);
+            ctx.moveTo(settings.calc_x(0), y);
+            ctx.lineTo(settings.calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#777";
@@ -387,16 +373,16 @@ class GridView {
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
             if ((i + this.offset_i) % settings.unit_width == 0) {
-                const x = calc_x(i);
-                ctx.moveTo(x, calc_y(0)+dy);
-                ctx.lineTo(x, calc_y(height)+dy);
+                const x = settings.calc_x(i);
+                ctx.moveTo(x, settings.calc_y(0));
+                ctx.lineTo(x, settings.calc_y(height));
             }
         }
         for (let j = 0; j <= height; j++) {
             if ((j + this.offset_j) % settings.unit_height == 0) {
-                const y = calc_y(j) + dy;
-                ctx.moveTo(calc_x(0), y);
-                ctx.lineTo(calc_x(width), y);
+                const y = settings.calc_y(j);
+                ctx.moveTo(settings.calc_x(0), y);
+                ctx.lineTo(settings.calc_x(width), y);
             }
         }
         ctx.closePath();
@@ -433,6 +419,9 @@ class GridViewPattern {
     }
 
     draw(ctx, settings) {
+        settings.calc_x = get_x_calculator(this, settings);
+        settings.calc_y = get_y_calculator(this, settings);
+
         this.drawGrid(ctx, settings);
         if (settings.style === "draft") {
             this.drawDataPattern(ctx, settings);
@@ -451,19 +440,16 @@ class GridViewPattern {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
-        const calc_x = get_x_calculator(this, settings, false);
-        const calc_y = get_y_calculator(this, settings, false);
-
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            const x = calc_x(i);
-            ctx.moveTo(x, calc_y(0)+dy);
-            ctx.lineTo(x, calc_y(height)+dy);
+            const x = settings.calc_x(i);
+            ctx.moveTo(x, settings.calc_y(0));
+            ctx.lineTo(x, settings.calc_y(height));
         }
         for (let j = 0; j <= height; j++) {
-            const y = calc_y(j) + dy;
-            ctx.moveTo(calc_x(0), y);
-            ctx.lineTo(calc_x(width), y);
+            const y = settings.calc_y(j);
+            ctx.moveTo(settings.calc_x(0), y);
+            ctx.lineTo(settings.calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#777";
@@ -473,16 +459,16 @@ class GridViewPattern {
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
             if ((i + this.offset_i) % settings.unit_width == 0) {
-                const x = calc_x(i);
-                ctx.moveTo(x, calc_y(0)+dy);
-                ctx.lineTo(x, calc_y(height)+dy);
+                const x = settings.calc_x(i);
+                ctx.moveTo(x, settings.calc_y(0));
+                ctx.lineTo(x, settings.calc_y(height));
             }
         }
         for (let j = 0; j <= height; j++) {
             if ((j + this.offset_j) % settings.unit_height == 0) {
-                const y = calc_y(j) + dy;
-                ctx.moveTo(calc_x(0), y);
-                ctx.lineTo(calc_x(width), y);
+                const y = settings.calc_y(j);
+                ctx.moveTo(settings.calc_x(0), y);
+                ctx.lineTo(settings.calc_x(width), y);
             }
         }
         ctx.closePath();
@@ -629,6 +615,9 @@ class GridViewColors {
     }
 
     draw(ctx, settings) {
+        settings.calc_x = get_x_calculator(this, settings);
+        settings.calc_y = get_y_calculator(this, settings);
+
         this.drawGrid(ctx, settings);
         this.drawDataColor(ctx, settings);
     }
@@ -639,19 +628,16 @@ class GridViewColors {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
-        const calc_x = get_x_calculator(this, settings, false);
-        const calc_y = get_y_calculator(this, settings, false);
-
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            const x = calc_x(i);
-            ctx.moveTo(x, calc_y(0)+dy);
-            ctx.lineTo(x, calc_y(height)+dy);
+            const x = settings.calc_x(i);
+            ctx.moveTo(x, settings.calc_y(0));
+            ctx.lineTo(x, settings.calc_y(height));
         }
         for (let j = 0; j <= height; j++) {
-            const y = calc_y(j) + dy;
-            ctx.moveTo(calc_x(0), y);
-            ctx.lineTo(calc_x(width), y);
+            const y = settings.calc_y(j);
+            ctx.moveTo(settings.calc_x(0), y);
+            ctx.lineTo(settings.calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
@@ -695,6 +681,9 @@ class GridViewReed {
     }
 
     draw(ctx, settings) {
+        settings.calc_x = get_x_calculator(this, settings);
+        settings.calc_y = get_y_calculator(this, settings);
+
         this.drawGrid(ctx, settings);
         this.drawData(ctx, settings);
     }
@@ -704,19 +693,16 @@ class GridViewReed {
         const dy = settings.dy;
         const width = Math.min(this.width, this.data.width);
 
-        const calc_x = get_x_calculator(this, settings, false);
-        const calc_y = get_y_calculator(this, settings, false);
-
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            const x = calc_x(i);
-            ctx.moveTo(x, calc_y(0));
-            ctx.lineTo(x, calc_y(0)+dy);
+            const x = settings.calc_x(i);
+            ctx.moveTo(x, settings.calc_y(0));
+            ctx.lineTo(x, settings.calc_y(0));
         }
         for (let j = 0; j <= 1; j++) {
-            const y = calc_y(j) + dy;
-            ctx.moveTo(calc_x(0), y);
-            ctx.lineTo(calc_x(width), y);
+            const y = settings.calc_y(j);
+            ctx.moveTo(settings.calc_x(0), y);
+            ctx.lineTo(settings.calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
@@ -882,8 +868,10 @@ class ViewSettings {
         this.dx = dx;
         this.dy = dy || this.dx;
         this.darcula = true;
-        this.bx = this.dx * 0.15;
-        this.by = this.dy * 0.15;
+        this.bxf = 0.15;
+        this.byf = 0.15;
+        this.bx = this.dx * this.bxf;
+        this.by = this.dy * this.byf;
         this.style = "draft";
     }
 }
