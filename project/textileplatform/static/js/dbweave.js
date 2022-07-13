@@ -365,14 +365,19 @@ class GridView {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
+        const calc_x = get_x_calculator(this, settings, false);
+        const calc_y = get_y_calculator(this, settings, false);
+
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
-            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+            const x = calc_x(i);
+            ctx.moveTo(x, calc_y(0)+dy);
+            ctx.lineTo(x, calc_y(height)+dy);
         }
         for (let j = 0; j <= height; j++) {
-            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
-            ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
+            const y = calc_y(j) + dy;
+            ctx.moveTo(calc_x(0), y);
+            ctx.lineTo(calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#777";
@@ -382,14 +387,16 @@ class GridView {
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
             if ((i + this.offset_i) % settings.unit_width == 0) {
-                ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
-                ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+                const x = calc_x(i);
+                ctx.moveTo(x, calc_y(0)+dy);
+                ctx.lineTo(x, calc_y(height)+dy);
             }
         }
         for (let j = 0; j <= height; j++) {
             if ((j + this.offset_j) % settings.unit_height == 0) {
-                ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
-                ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
+                const y = calc_y(j) + dy;
+                ctx.moveTo(calc_x(0), y);
+                ctx.lineTo(calc_x(width), y);
             }
         }
         ctx.closePath();
@@ -444,14 +451,19 @@ class GridViewPattern {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
+        const calc_x = get_x_calculator(this, settings, false);
+        const calc_y = get_y_calculator(this, settings, false);
+
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
-            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+            const x = calc_x(i);
+            ctx.moveTo(x, calc_y(0)+dy);
+            ctx.lineTo(x, calc_y(height)+dy);
         }
         for (let j = 0; j <= height; j++) {
-            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
-            ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
+            const y = calc_y(j) + dy;
+            ctx.moveTo(calc_x(0), y);
+            ctx.lineTo(calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#777";
@@ -461,14 +473,16 @@ class GridViewPattern {
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
             if ((i + this.offset_i) % settings.unit_width == 0) {
-                ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
-                ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+                const x = calc_x(i);
+                ctx.moveTo(x, calc_y(0)+dy);
+                ctx.lineTo(x, calc_y(height)+dy);
             }
         }
         for (let j = 0; j <= height; j++) {
             if ((j + this.offset_j) % settings.unit_height == 0) {
-                ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
-                ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
+                const y = calc_y(j) + dy;
+                ctx.moveTo(calc_x(0), y);
+                ctx.lineTo(calc_x(width), y);
             }
         }
         ctx.closePath();
@@ -625,14 +639,19 @@ class GridViewColors {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
+        const calc_x = get_x_calculator(this, settings, false);
+        const calc_y = get_y_calculator(this, settings, false);
+
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height - height) * dy);
-            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + this.height) * dy);
+            const x = calc_x(i);
+            ctx.moveTo(x, calc_y(0)+dy);
+            ctx.lineTo(x, calc_y(height)+dy);
         }
         for (let j = 0; j <= height; j++) {
-            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + this.height - j) * dy);
-            ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + this.height - j) * dy);
+            const y = calc_y(j) + dy;
+            ctx.moveTo(calc_x(0), y);
+            ctx.lineTo(calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
@@ -666,7 +685,9 @@ class GridViewReed {
         this.x = x;
         this.y = y;
         this.width = width;
+        this.height = 1;
         this.offset_i = 0;
+        this.offset_j = 0;
     }
 
     contains(i, j) {
@@ -683,14 +704,19 @@ class GridViewReed {
         const dy = settings.dy;
         const width = Math.min(this.width, this.data.width);
 
+        const calc_x = get_x_calculator(this, settings, false);
+        const calc_y = get_y_calculator(this, settings, false);
+
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
-            ctx.moveTo(0.5 + (this.x + i) * dx, 0.5 + (this.y + 1) * dy);
-            ctx.lineTo(0.5 + (this.x + i) * dx, 0.5 + this.y * dy);
+            const x = calc_x(i);
+            ctx.moveTo(x, calc_y(0));
+            ctx.lineTo(x, calc_y(0)+dy);
         }
         for (let j = 0; j <= 1; j++) {
-            ctx.moveTo(0.5 + this.x * dx, 0.5 + (this.y + j) * dy);
-            ctx.lineTo(0.5 + (this.x + width) * dx, 0.5 + (this.y + j) * dy);
+            const y = calc_y(j) + dy;
+            ctx.moveTo(calc_x(0), y);
+            ctx.lineTo(calc_x(width), y);
         }
         ctx.closePath();
         ctx.strokeStyle = settings.darcula ? "#aaa" : "#000";
