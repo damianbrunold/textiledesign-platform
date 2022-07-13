@@ -38,8 +38,6 @@ Todo
   - display color palette
   - support scrolling
   - support cell styles (plus, numbers, ...)
-  - support alternate draw direction (right-to-left, bottom-to-top, ...)
-  - view-toggle (swiss, scandinavian, american)
 
 - jbead
   - rotate simulated view
