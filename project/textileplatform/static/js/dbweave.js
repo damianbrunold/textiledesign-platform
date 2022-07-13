@@ -50,12 +50,12 @@ function get_y_calculator(view, settings) {
 }
 
 
-function fillRect(ctx, x1, y1, x2, y2) {
+function fillRect(ctx, x1, y1, x2, y2, b=0.0) {
     const x = Math.min(x1, x2);
     const y = Math.min(y1, y2);
     const w = Math.abs(x1 - x2);
     const h = Math.abs(y1 - y2);
-    ctx.fillRect(x, y, w, h);
+    ctx.fillRect(x+b, y+b, w-2*b, h-2*b);
 }
 
 
@@ -486,11 +486,12 @@ class GridViewPattern {
                 let value = this.data.get(i, j);
                 if (value > 0) {
                     ctx.fillStyle = settings.darcula ? "#fff" : "#000";
-                    ctx.fillRect(
-                        0.5 + (this.x + i - this.offset_i) * settings.dx + settings.bx,
-                        0.5 + (this.y + this.height - (j - this.offset_j) - 1) * settings.dy + settings.by,
-                        settings.dx - 2 * settings.bx,
-                        settings.dy - 2 * settings.by
+                    fillRect(
+                        ctx,
+                        settings.calc_x(i-this.offset_i + settings.bxf),
+                        settings.calc_y(j-this.offset_j + settings.byf),
+                        settings.calc_x(i-this.offset_i + 1 - settings.bxf),
+                        settings.calc_y(j-this.offset_j + 1 - settings.byf)
                     );
                 }
             }
@@ -513,11 +514,13 @@ class GridViewPattern {
                     color = colors[pattern.color_weft.get(j, 0)];
                 }
                 ctx.fillStyle = color;
-                ctx.fillRect(
-                    (this.x + i - this.offset_i) * settings.dx,
-                    (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
-                    settings.dx,
-                    settings.dy
+                fillRect(
+                    ctx,
+                    settings.calc_x(i-this.offset_i),
+                    settings.calc_y(j-this.offset_j),
+                    settings.calc_x(i-this.offset_i + 1),
+                    settings.calc_y(j-this.offset_j + 1),
+                    -0.5
                 );
             }
         }
@@ -653,11 +656,13 @@ class GridViewColors {
             for (let j = this.offset_j; j < this.offset_j + height; j++) {
                 const color = colors[this.data.get(i, j)];
                 ctx.fillStyle = color;
-                ctx.fillRect(
-                    1.0 + (this.x + i - this.offset_i) * settings.dx,
-                    1.0 + (this.y + this.height - (j - this.offset_j) - 1) * settings.dy,
-                    settings.dx - 1.0,
-                    settings.dy - 1.0
+                fillRect(
+                    ctx,
+                    settings.calc_x(i-this.offset_i),
+                    settings.calc_y(j-this.offset_j),
+                    settings.calc_x(i-this.offset_i + 1),
+                    settings.calc_y(j-this.offset_j + 1),
+                    0.5
                 );
             }
         }
@@ -717,18 +722,20 @@ class GridViewReed {
             const value = this.data.get(i, 0);
             ctx.fillStyle = settings.darcula ? "#fff" : "#000";
             if (value <= 0) {
-                ctx.fillRect(
-                    1.0 + (this.x + i - this.offset_i) * settings.dx,
-                    1.0 + (this.y + 0.5) * settings.dy,
-                    settings.dx - 1.0,
-                    settings.dy / 2 - 1.0
+                fillRect(
+                    ctx,
+                    settings.calc_x(i),
+                    settings.calc_y(0.5),
+                    settings.calc_x(i+1),
+                    settings.calc_y(1)
                 );
             } else {
-                ctx.fillRect(
-                    1.0 + (this.x + i - this.offset_i) * settings.dx,
-                    1.0 + this.y * settings.dy,
-                    settings.dx - 1.0,
-                    settings.dy / 2 - 1.0
+                fillRect(
+                    ctx,
+                    settings.calc_x(i),
+                    settings.calc_y(0),
+                    settings.calc_x(i+1),
+                    settings.calc_y(0.5)
                 );
             }
         }
