@@ -1149,6 +1149,16 @@ class PatternView {
 }
 
 
+function i_doc_to_view(i, view, righttoleft) {
+    // TODO Handle righttoleft
+    return i - view.x + view.offset_i;
+}
+
+function j_doc_to_view(j, view, toptobottom) {
+    // TODO Handle toptobottom
+    return view.height - 1 - (j - view.y) + view.offset_j;
+}
+
 function init() {
     const darkmode = document.getElementById("darkmode").value === "True";
     let canvas = document.getElementById('canvas');
@@ -1185,8 +1195,8 @@ function init() {
         const i = Math.trunc(x / settings.dx);
         const j = Math.trunc(y / settings.dy);
         if (view.entering.contains(i, j)) {
-            const ii = i - view.entering.x + view.entering.offset_i;
-            const jj = view.entering.height - 1 - (j - view.entering.y) + view.entering.offset_j;
+            const ii = i_doc_to_view(i, view.entering, settings.righttoleft);
+            const jj = j_doc_to_view(j, view.entering, settings.toptobottom);
             if (pattern.entering.get_shaft(ii) == jj + 1) {
                 pattern.entering.set_shaft(ii, 0);
             } else {
@@ -1195,25 +1205,25 @@ function init() {
             pattern.recalc_weave();
             view.draw();
         } else if (view.treadling.contains(i, j)) {
-            const ii = i - view.treadling.x + view.treadling.offset_i;
-            const jj = view.treadling.height - 1 - (j - view.treadling.y) + view.treadling.offset_j;
+            const ii = i_doc_to_view(i, view.treadling, false);
+            const jj = j_doc_to_view(j, view.treadling, false);
             pattern.treadling.toggle(ii, jj);
             pattern.recalc_weave();
             view.draw();
         } else if (view.tieup.contains(i, j)) {
-            const ii = i - view.tieup.x + view.tieup.offset_i;
-            const jj = view.tieup.height - 1 - (j - view.tieup.y) + view.tieup.offset_j;
+            const ii = i_doc_to_view(i, view.tieup, false);
+            const jj = j_doc_to_view(j, view.tieup, settings.toptobottom);
             pattern.tieup.toggle(ii, jj);
             pattern.recalc_weave();
             view.draw();
         } else if (view.weave.contains(i, j) && !settings.weave_locked) {
-            const ii = i - view.weave.x + view.weave.offset_i;
-            const jj = view.weave.height - 1 - (j - view.weave.y) + view.weave.offset_j;
+            const ii = i_doc_to_view(i, view.weave, settings.righttoleft);
+            const jj = j_doc_to_view(j, view.weave, false);
             pattern.weave.toggle(ii, jj);
             pattern.recalc_from_weave(settings);
             view.draw();
         } else if (view.color_warp.contains(i, j)) {
-            const ii = i - view.color_warp.x + view.color_warp.offset_i;
+            const ii = i_doc_to_view(i, view.color_warp, settings.righttoleft);
             if (event.ctrlKey) {
                 settings.current_color = pattern.color_warp.get(ii, 0);
             } else {
@@ -1221,7 +1231,7 @@ function init() {
                 view.draw();
             }
         } else if (view.color_weft.contains(i, j)) {
-            const jj = view.color_weft.height - 1 - (j - view.color_weft.y) + view.color_weft.offset_j;
+            const jj = j_doc_to_view(j, view.color_weft, false);
             if (event.ctrlKey) {
                 settings.current_color = pattern.color_weft.get(0, jj);
             } else {
@@ -1229,7 +1239,7 @@ function init() {
                 view.draw();
             }
         } else if (view.reed.contains(i, j)) {
-            const ii = i - view.reed.x + view.reed.offset_i;
+            const ii = i_doc_to_view(i, view.reed, settings.righttoleft);
             pattern.reed.toggle(ii, 0);
             view.draw();
         }
