@@ -1042,7 +1042,7 @@ class PatternView {
             GridViewReed, p.reed,
             x1, y2, width1,
             '',
-            s.direction_rigthtoleft, false
+            s.direction_righttoleft, false
         );
         this.weave = this.make(
             true,
@@ -1149,14 +1149,20 @@ class PatternView {
 }
 
 
-function i_doc_to_view(i, view, righttoleft) {
-    // TODO Handle righttoleft
-    return i - view.x + view.offset_i;
+function i_to_doc(i, view, righttoleft) {
+    if (righttoleft) {
+        return view.width - 1 - (i - view.x) + view.offset_i;
+    } else {
+        return i - view.x + view.offset_i;
+    }
 }
 
-function j_doc_to_view(j, view, toptobottom) {
-    // TODO Handle toptobottom
-    return view.height - 1 - (j - view.y) + view.offset_j;
+function j_to_doc(j, view, toptobottom) {
+    if (toptobottom) {
+        return j - view.y + view.offset_j;
+    } else {
+        return view.height - 1 - (j - view.y) + view.offset_j;
+    }
 }
 
 function init() {
@@ -1195,8 +1201,8 @@ function init() {
         const i = Math.trunc(x / settings.dx);
         const j = Math.trunc(y / settings.dy);
         if (view.entering.contains(i, j)) {
-            const ii = i_doc_to_view(i, view.entering, settings.righttoleft);
-            const jj = j_doc_to_view(j, view.entering, settings.toptobottom);
+            const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
+            const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
             if (pattern.entering.get_shaft(ii) == jj + 1) {
                 pattern.entering.set_shaft(ii, 0);
             } else {
@@ -1205,25 +1211,25 @@ function init() {
             pattern.recalc_weave();
             view.draw();
         } else if (view.treadling.contains(i, j)) {
-            const ii = i_doc_to_view(i, view.treadling, false);
-            const jj = j_doc_to_view(j, view.treadling, false);
+            const ii = i_to_doc(i, view.treadling, false);
+            const jj = j_to_doc(j, view.treadling, false);
             pattern.treadling.toggle(ii, jj);
             pattern.recalc_weave();
             view.draw();
         } else if (view.tieup.contains(i, j)) {
-            const ii = i_doc_to_view(i, view.tieup, false);
-            const jj = j_doc_to_view(j, view.tieup, settings.toptobottom);
+            const ii = i_to_doc(i, view.tieup, false);
+            const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
             pattern.tieup.toggle(ii, jj);
             pattern.recalc_weave();
             view.draw();
         } else if (view.weave.contains(i, j) && !settings.weave_locked) {
-            const ii = i_doc_to_view(i, view.weave, settings.righttoleft);
-            const jj = j_doc_to_view(j, view.weave, false);
+            const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
+            const jj = j_to_doc(j, view.weave, false);
             pattern.weave.toggle(ii, jj);
             pattern.recalc_from_weave(settings);
             view.draw();
         } else if (view.color_warp.contains(i, j)) {
-            const ii = i_doc_to_view(i, view.color_warp, settings.righttoleft);
+            const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
             if (event.ctrlKey) {
                 settings.current_color = pattern.color_warp.get(ii, 0);
             } else {
@@ -1231,7 +1237,7 @@ function init() {
                 view.draw();
             }
         } else if (view.color_weft.contains(i, j)) {
-            const jj = j_doc_to_view(j, view.color_weft, false);
+            const jj = j_to_doc(j, view.color_weft, false);
             if (event.ctrlKey) {
                 settings.current_color = pattern.color_weft.get(0, jj);
             } else {
@@ -1239,7 +1245,7 @@ function init() {
                 view.draw();
             }
         } else if (view.reed.contains(i, j)) {
-            const ii = i_doc_to_view(i, view.reed, settings.righttoleft);
+            const ii = i_to_doc(i, view.reed, settings.direction_righttoleft);
             pattern.reed.toggle(ii, 0);
             view.draw();
         }
