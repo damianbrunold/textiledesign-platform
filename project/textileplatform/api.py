@@ -1,22 +1,16 @@
+import datetime
 import json
 
-from sqlalchemy import update
+from flask import Blueprint
+from flask import request
+from flask import make_response
+from flask import jsonify
+from flask import g
 
-from flask import (
-    Blueprint,
-    request,
-    make_response,
-    jsonify,
-    g,
-)
-
-from textileplatform.db import get_db, pattern_table
-from textileplatform.persistence import (
-    get_user_by_name,
-    get_pattern_by_name,
-    update_pattern,
-    clone_pattern
-)
+from textileplatform.db import db
+from textileplatform.persistence import get_user_by_name
+from textileplatform.persistence import get_pattern_by_name
+from textileplatform.persistence import clone_pattern
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -77,17 +71,13 @@ def get_pattern(pattern):
 
 
 def set_publication_state(pattern, publication_state):
-    with get_db().begin() as conn:
-        conn.execute(
-            update(pattern_table).values(
-                public=publication_state
-            ).where(pattern_table.c.name == pattern.name)
-            .where(pattern_table.c.owner == pattern.owner)
-        )
+    pattern.public = publication_state
+    db.session.commit()
     return make_response(jsonify({"status": "OK"}), 200)
 
 
 def save_pattern(pattern, contents):
     pattern.contents = json.dumps(contents)
-    update_pattern(g.user.name, pattern)
+    pattern.modified = datetime.datetime.utcnow()
+    db.session.commit()
     return make_response(jsonify({"status": "OK"}), 200)

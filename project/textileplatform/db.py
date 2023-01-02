@@ -1,136 +1,101 @@
-import sqlalchemy
-
-from sqlalchemy import (
-    MetaData,
-    Table,
-    Column,
-    String,
-    DateTime,
-    Boolean,
-    Text,
-    LargeBinary
-)
-from sqlalchemy import UniqueConstraint, PrimaryKeyConstraint
-from sqlalchemy import insert
-
-import click
-from flask import current_app, g
-from flask.cli import with_appcontext
-
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash as gen_pw_hash
 
-metadata = MetaData()
+db = SQLAlchemy()
 
-user_table = Table(
-    "txuser",
-    metadata,
-    Column("name", String(100), primary_key=True),
-    Column("label", String(255), nullable=False),
-    Column("email", String(255), nullable=False),
-    Column("password", String(255), nullable=False),
-    Column("darkmode", Boolean),
-    Column("verified", Boolean),
-    Column("disabled", Boolean),
-    Column("locale", String(20)),
-    Column("timezone", String(20)),
-    Column("verification_code", String(100)),
-    UniqueConstraint("name"),
-    UniqueConstraint("label"),
-    UniqueConstraint("email"),
-)
 
-group_table = Table(
-    "txgroup",
-    metadata,
-    Column("name", String(100), primary_key=True),
-    Column("label", String(255), nullable=False),
-    Column("owner", String(100), nullable=False),
-    Column("description", Text, nullable=False),
-    UniqueConstraint("label"),
-)
-
-pattern_table = Table(
-    "txpattern",
-    metadata,
-    Column("name", String(100), nullable=False),
-    Column("label", String(255), nullable=False),
-    Column("owner", String(100), nullable=False),
-    Column("pattern_type", String(100), nullable=False),
-    Column("description", Text),
-    Column("contents", Text),
-    Column("preview_image", LargeBinary),
-    Column("thumbnail_image", LargeBinary),
-    Column("created", DateTime),
-    Column("modified", DateTime),
-    Column("public", Boolean),
-    PrimaryKeyConstraint("owner", "name"),
-    UniqueConstraint("owner", "label"),
-)
-
-permission_table = Table(
-    "txpermission",
-    metadata,
-    Column("pattern", String(100), nullable=False),
-    Column("user", String(100), nullable=False),
-    Column("view", Boolean),
-    Column("edit", Boolean),
-    Column("delete", Boolean),
-    Column("share", Boolean),
-    Column("publish", Boolean),
-    PrimaryKeyConstraint("pattern", "user"),
-)
-
-pattern_type_table = Table(
-    "txtype",
-    metadata,
-    Column("pattern_type", String(100), primary_key=True)
-)
-
-user_group_table = Table(
+user_group_table = db.Table(
     "txusergroup",
-    metadata,
-    Column("user", String(100), nullable=False),
-    Column("group", String(100), nullable=False),
-    PrimaryKeyConstraint("user", "group")
+    db.Column(
+        "user",
+        db.String(100),
+        db.ForeignKey("txuser.name"),
+        primary_key=True,
+    ),
+    db.Column(
+        "group",
+        db.String(100),
+        db.ForeignKey("txgroup.name"),
+        primary_key=True,
+    )
 )
 
-pin_table = Table(
-    "txpin",
-    metadata,
-    Column("pattern", String(100), nullable=False),
-    Column("user", String(100), nullable=False),
-    PrimaryKeyConstraint("pattern", "user")
-)
+
+class User(db.Model):
+    __tablename__ = "txuser"
+
+    name = db.Column(db.String(100), primary_key=True)
+    label = db.Column(db.String(255), nullable=False, unique=True)
+    email = db.Column(db.String(255), nullable=False, unique=True)
+    password = db.Column(db.String(255), nullable=False)
+    darkmode = db.Column(db.Boolean)
+    verified = db.Column(db.Boolean)
+    disabled = db.Column(db.Boolean)
+    locale = db.Column(db.String(20))
+    timezone = db.Column(db.String(20))
+    verification_code = db.Column(db.String(100))
+
+    groups = db.relationship(
+        "Group",
+        secondary=user_group_table,
+        backref=db.backref("users", lazy=True),
+    )
 
 
-def get_db():
-    if 'engine' not in g:
-        g.engine = sqlalchemy.create_engine(
-            current_app.config['DATABASE'], client_encoding="utf8")
-    return g.engine
+class Group(db.Model):
+    __tablename__ = "txgroup"
+
+    name = db.Column(db.String(100), primary_key=True)
+    label = db.Column(db.String(255), nullable=False, unique=True)
+    owner = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
 
 
-def close_db(e=None):
-    engine = g.pop('engine', None)
-    if engine is not None:
-        engine.dispose()
+class Pattern(db.Model):
+    __tablename__ = "txpattern"
+
+    name = db.Column(db.String(100), primary_key=True)
+    owner = db.Column(db.String(100), primary_key=True)
+    label = db.Column(db.String(255), nullable=False)
+    pattern_type = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    contents = db.Column(db.Text)
+    preview_image = db.Column(db.LargeBinary)
+    thumbnail_image = db.Column(db.LargeBinary)
+    created = db.Column(db.DateTime)
+    modified = db.Column(db.DateTime)
+    public = db.Column(db.Boolean)
+
+    db.UniqueConstraint(owner, label)
 
 
-def init_db():
-    engine = get_db()
+class Permission(db.Model):
+    __tablename__ = "txpermission"
 
-    metadata.drop_all(engine)
-    metadata.create_all(engine)
+    pattern = db.Column(db.String(100), primary_key=True)
+    user = db.Column(db.String(100), primary_key=True)
+    view = db.Column(db.Boolean)
+    edit = db.Column(db.Boolean)
+    delete = db.Column(db.Boolean)
+    share = db.Column(db.Boolean)
+    publish = db.Column(db.Boolean)
 
-    with engine.begin() as conn:
-        conn.execute(insert(pattern_type_table).values(
-            pattern_type="DB-WEAVE Pattern"))
-        conn.execute(insert(pattern_type_table).values(
-            pattern_type="JBead Pattern"))
-        conn.execute(insert(pattern_type_table).values(
-            pattern_type="Generic Image"))
-        conn.execute(
-            insert(user_table).values(
+
+class PatternType(db.Model):
+    __tablename__ = "txtype"
+
+    pattern_type = db.Column(db.String(100), primary_key=True)
+
+
+def ensure_db_contents(app):
+    with app.app_context():
+        if PatternType.query.count() == 0:
+            db.session.add(PatternType(pattern_type="DB-WEAVE Pattern"))
+            db.session.add(PatternType(pattern_type="JBead Pattern"))
+            db.session.add(PatternType(pattern_type="Generic Image"))
+            db.session.commit()
+        if User.query.count() == 0:
+            db.session.add(User(
                 name="superuser",
                 label="Superuser",
                 email="admin@textileplatform.ch",
@@ -139,10 +104,9 @@ def init_db():
                 disabled=False,
                 locale="en",
                 timezone="CET",
-                password=gen_pw_hash(current_app.config['ADMIN_PASSWORD']))
-        )
-        conn.execute(
-            insert(user_table).values(
+                password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
+            ))
+            db.session.add(User(
                 name="weave",
                 label="Weave",
                 email="weave@textileplatform.ch",
@@ -151,10 +115,9 @@ def init_db():
                 disabled=False,
                 locale="en",
                 timezone="CET",
-                password=gen_pw_hash(current_app.config['ADMIN_PASSWORD']))
-        )
-        conn.execute(
-            insert(user_table).values(
+                password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
+            ))
+            db.session.add(User(
                 name="bead",
                 label="Bead",
                 email="bead@textileplatform.ch",
@@ -163,18 +126,6 @@ def init_db():
                 disabled=False,
                 locale="en",
                 timezone="CET",
-                password=gen_pw_hash(current_app.config['ADMIN_PASSWORD']))
-        )
-
-
-@click.command('init-db')
-@with_appcontext
-def init_db_command():
-    """Clear the existing data and create new tables"""
-    init_db()
-    click.echo('Initialized the database.')
-
-
-def init_app(app):
-    app.teardown_appcontext(close_db)
-    app.cli.add_command(init_db_command)
+                password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
+            ))
+            db.session.commit()

@@ -1,24 +1,32 @@
-from . import main
-from . import admin
-from . import api
 from . import auth
-from . import db
+from . import api
+from . import admin
+from . import main
+from textileplatform.db import ensure_db_contents
+from textileplatform.db import db
 import os
 
-from flask import Flask, g, request
+import click
+from dotenv import load_dotenv
+from flask import Flask
+from flask import g
+from flask import request
 from flask_babel import Babel
+from flask_migrate import Migrate
 
-app = Flask(__name__, instance_relative_config=True)
-app.config.from_mapping(
-    SECRET_KEY='dev',
-    DATABASE="postgresql+pg8000://textileplatform:textileplatform@localhost/textileplatform",  # noqa
-    ADMIN_PASSWORD='dev'
-)
-app.config.from_pyfile('config.py', silent=True)
+load_dotenv()
+
+
+app = Flask(__name__)
+
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
+    SQLALCHEMY_DATABASE_URI=os.environ["SQLALCHEMY_DATABASE_URI"],
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    SECRET_KEY=os.environ["SECRET_KEY"],
+    ADMIN_PASSWORD=os.environ["ADMIN_PASSWORD"],
 )
 
 babel = Babel(app)
@@ -45,6 +53,16 @@ except OSError:
     pass
 
 db.init_app(app)
+Migrate(app, db)
+
+
+@click.command('init-db')
+def init_db_command():
+    ensure_db_contents(app)
+    click.echo('Prepared the database.')
+
+
+app.cli.add_command(init_db_command)
 
 app.register_blueprint(auth.bp)
 app.register_blueprint(api.bp)

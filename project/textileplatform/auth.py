@@ -3,26 +3,26 @@ import functools
 import secrets
 import smtplib
 
-from flask_babel import gettext, get_locale, get_timezone
-
+from flask_babel import gettext
+from flask_babel import get_locale
+from flask_babel import get_timezone
+from flask import Blueprint
+from flask import flash
+from flask import g
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import session
+from flask import url_for
 from sqlalchemy.exc import IntegrityError
-
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from textileplatform.model import User
-from textileplatform.persistence import (
-    get_user_by_name,
-    get_user_by_email,
-    add_user,
-    update_user,
-)
-from textileplatform.name import (
-    from_display,
-    is_valid
-)
+from textileplatform.db import db
+from textileplatform.db import User
+from textileplatform.persistence import get_user_by_name
+from textileplatform.persistence import get_user_by_email
+from textileplatform.name import from_display
+from textileplatform.name import is_valid
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -51,18 +51,20 @@ def register():
 
         if error is None:
             try:
-                user = User()
-                user.name = name
-                user.label = label
-                user.email = email
-                user.password = generate_password_hash(password)
-                user.darkmode = False
-                user.verified = False
-                user.disabled = False
-                user.locale = get_locale()
-                user.timezone = get_timezone()
-                user.verification_code = secrets.token_urlsafe(30)
-                add_user(user)
+                user = User(
+                    name=name,
+                    label=label,
+                    email=email,
+                    password=generate_password_hash(password),
+                    darkmode=False,
+                    verified=False,
+                    disabled=False,
+                    locale=get_locale(),
+                    timezone=get_timezone(),
+                    verification_code=secrets.token_urlsafe(30),
+                )
+                db.session.add(user)
+                db.session.commit()
             except IntegrityError:
                 error = gettext('Name or E-Mail is already used')
             else:
@@ -122,7 +124,7 @@ def verify(user_name, verification_code):
         user.verified = True
         user.verification_code = None
         try:
-            update_user(user)
+            db.session.commit()
             send_admin_notification_mail(
                 user, "User completed email account verification step")
         except IntegrityError:
@@ -147,10 +149,12 @@ def recover():
         if error is None:
             try:
                 user.verification_code = secrets.token_urlsafe(30)
-                update_user(user)
+                db.session.commit()
                 send_recover_mail(user)
                 send_admin_notification_mail(
-                    user, "User requested password recovery")
+                    user,
+                    "User requested password recovery",
+                )
                 return render_template(
                     "auth/recover_mail_sent.html",
                     user=user
@@ -180,9 +184,11 @@ def reset_password(user_name, verification_code):
         if error is None:
             try:
                 user.password = generate_password_hash(password)
-                update_user(user)
+                db.session.commit()
                 send_admin_notification_mail(
-                    user, "User successfully reset password")
+                    user,
+                    "User successfully reset password",
+                )
             except IntegrityError:
                 error = gettext("Could not save changes.")
             else:
@@ -196,7 +202,6 @@ def reset_password(user_name, verification_code):
 @bp.before_app_request
 def load_logged_in_user():
     user_name = session.get('user_name')
-
     if user_name is None:
         g.user = None
     else:

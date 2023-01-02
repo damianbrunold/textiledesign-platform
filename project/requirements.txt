@@ -1,9 +1,11 @@
 flask
+flask-sqlalchemy
+flask-migrate
 flask-babel
+python-dotenv
 pg8000
 pillow
 reportlab
-sqlalchemy
 pre-commit
 flake8
 autopep8

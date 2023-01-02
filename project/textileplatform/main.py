@@ -1,39 +1,31 @@
 import json
 import os
-
 from importlib.metadata import version
+
 from sqlalchemy.exc import IntegrityError
 from flask_babel import gettext
+from flask import Blueprint
+from flask import flash
+from flask import g
+from flask import current_app
+from flask import redirect
+from flask import render_template
+from flask import request
+from flask import url_for
 
-from flask import (
-    Blueprint,
-    flash,
-    g,
-    current_app,
-    redirect,
-    render_template,
-    request,
-    url_for
-)
-
-from textileplatform.palette import (
-    default_weave_palette,
-    default_bead_palette,
-)
+from textileplatform.db import db
+from textileplatform.palette import default_weave_palette
+from textileplatform.palette import default_bead_palette
 from textileplatform.beadpattern import parse_jbb_data
 from textileplatform.weavepattern import parse_dbw_data
-from textileplatform.auth import (
-    login_required,
-)
-from textileplatform.persistence import (
-    update_user,
-    get_user_by_name,
-    add_weave_pattern,
-    add_bead_pattern,
-    get_patterns_for_user_name,
-    get_pattern_by_name,
-    delete_pattern,
-)
+from textileplatform.auth import login_required
+from textileplatform.persistence import get_user_by_name
+from textileplatform.persistence import add_weave_pattern
+from textileplatform.persistence import add_bead_pattern
+from textileplatform.persistence import get_patterns_for_user_name
+from textileplatform.persistence import get_pattern_by_name
+from textileplatform.persistence import delete_pattern
+
 
 bp = Blueprint('main', __name__)
 
@@ -122,7 +114,7 @@ def profile():
         error = None
 
         try:
-            update_user(user)
+            db.session.commit()
         except IntegrityError:
             current_app.logger.exception("Profile changes not changed")
             error = gettext('Changes could not be saved.')
