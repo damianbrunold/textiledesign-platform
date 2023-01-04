@@ -52,9 +52,8 @@ def pattern(user_name, pattern_name):
         elif action == 'clone-pattern':
             if not g.user:
                 return respond("NOK", "Invalid user")
-            pattern.owner = g.user.name
-            pattern.contents = json.dumps(data['contents'])
-            clone_pattern(g.user.name, pattern)
+            contents = json.dumps(data['contents'])
+            clone_pattern(g.user.name, pattern, contents)
             return make_response(jsonify({"status": "OK"}), 200)
         else:
             return respond("NOK", "Illegal action")

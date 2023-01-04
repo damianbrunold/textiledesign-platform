@@ -45,7 +45,7 @@ def add_bead_pattern(pattern, user_name):
 def get_patterns_for_user_name(user_name, only_public=False):
     query = Pattern.query.filter(Pattern.owner == user_name)
     if only_public:
-        query = query.filter(Pattern.public is True)
+        query = query.filter(Pattern.public)
     query = query.order_by(Pattern.pattern_type, db.func.lower(Pattern.label))
     return query.all()
 
@@ -56,14 +56,21 @@ def get_pattern_by_name(user_name, name):
     return query.first()
 
 
-def clone_pattern(user_name, pattern):
+def clone_pattern(user_name, pattern, contents):
     now = datetime.datetime.utcnow()
-    db.session.expunge(pattern)
-    pattern.owner = user_name
-    pattern.created = now
-    pattern.modified = now
-    pattern.public = False
-    db.session.add(pattern)
+    db.session.add(Pattern(
+        name=pattern.name,
+        label=pattern.label,
+        owner=user_name,
+        pattern_type=pattern.pattern_type,
+        description=pattern.description,
+        contents=contents,
+        preview_image=pattern.preview_image,
+        thumbnail_image=pattern.thumbnail_image,
+        created=now,
+        modified=now,
+        public=False,
+    ))
     db.session.commit()
 
 
