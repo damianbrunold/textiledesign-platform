@@ -24,8 +24,8 @@ def parse_dbw_data(dbwdata, name=''):
     )
     # TODO handle pegplan?
     result['data_reed'] = _dehex_byte(fields['blatteinzug']['data'])
-    result['colors_warp'] = _dehex_byte(fields['kettfarben']['data'])
-    result['colors_weft'] = _dehex_byte(fields['schussfarben']['data'])
+    result['colors_warp'] = _dehex_ubyte(fields['kettfarben']['data'])
+    result['colors_weft'] = _dehex_ubyte(fields['schussfarben']['data'])
 
     result['palette'] = _dehex_colors(data['palette']['data2'])
 
@@ -134,6 +134,14 @@ def _dehex_byte(data):
             result.append(v)
         else:
             result.append(v - 256)
+        data = data[2:]
+    return result
+
+
+def _dehex_ubyte(data):
+    result = []
+    while data:
+        result.append(int(data[0:2], 16))
         data = data[2:]
     return result
 
