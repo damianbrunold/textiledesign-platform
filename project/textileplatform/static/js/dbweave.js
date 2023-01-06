@@ -21,6 +21,44 @@ let settings = null;
 let colors = {};
 
 
+// The fixed colors for the various ranges
+let rangecolors = {
+    "light": [
+        "rgb(255, 255, 255)",
+        "rgb(0, 0, 0)",
+        "rgb(50, 50, 255)",
+        "rgb(128, 0, 0)",
+        "rgb(0, 140, 255)",
+        "rgb(56, 56, 56)",
+        "rgb(0, 194, 78)",
+        "rgb(255, 123, 0)",
+        "rgb(255, 210, 0)",
+        "rgb(0, 87, 0)",
+        "rgb(128, 128, 128)",
+        "rgb(255, 255, 255)",
+        "rgb(255, 255, 255)"
+    ],
+    "dark": [
+        // TODO adapt colors for dark mode
+        "rgb(0, 0, 0)",
+        "rgb(255, 255, 255)",
+        "rgb(50, 50, 255)",
+        "rgb(128, 0, 0)",
+        "rgb(0, 140, 255)",
+        "rgb(56, 56, 56)",
+        "rgb(0, 194, 78)",
+        "rgb(255, 123, 0)",
+        "rgb(255, 210, 0)",
+        "rgb(0, 87, 0)",
+        "rgb(128, 128, 128)",
+        "rgb(0, 0, 0)",
+        "rgb(0, 0, 0)"
+    ],
+};
+
+// TODO define colors for anbindung, abbindung and aushebung
+
+
 let readonly = false;
 
 
@@ -68,9 +106,18 @@ function strokeRect(ctx, x1, y1, x2, y2, b=0.0) {
 }
 
 
+function getRangeColor(settings, value) {
+    if (settings.darcula) {
+        return rangecolors["dark"][value];
+    } else {
+        return rangecolors["light"][value];
+    }
+}
+
+
 function cellPainterFilled(ctx, settings, view, i, j, value) {
     if (value > 0) {
-        ctx.fillStyle = settings.darcula ? "#fff" : "#000";
+        ctx.fillStyle = getRangeColor(settings, value);
         fillRect(
             ctx,
             view.calc_x(i + settings.bxf),
@@ -85,7 +132,7 @@ function cellPainterFilled(ctx, settings, view, i, j, value) {
 function cellPainterDot(ctx, settings, view, i, j, value) {
     if (value > 0) {
         ctx.beginPath();
-        ctx.fillStyle = settings.darcula ? "#fff" : "#000";
+        ctx.fillStyle = getRangeColor(settings, value);
         ctx.ellipse(
             view.calc_x(i + 0.5),
             view.calc_y(j + 0.5),
@@ -120,7 +167,7 @@ function cellPainterCross(ctx, settings, view, i, j, value) {
             view.calc_y(j + settings.byf)
         )
         ctx.closePath();
-        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.strokeStyle = getRangeColor(settings, value);
         ctx.lineWidth = 2;
         ctx.stroke();
     }
@@ -154,7 +201,7 @@ function cellPainterHDash(ctx, settings, view, i, j, value) {
             view.calc_y(j + 0.5)
         )
         ctx.closePath();
-        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.strokeStyle = getRangeColor(settings, value);
         ctx.lineWidth = 2.5;
         ctx.stroke();
     }
@@ -173,7 +220,7 @@ function cellPainterVDash(ctx, settings, view, i, j, value) {
             view.calc_y(j + 1 - settings.byf)
         )
         ctx.closePath();
-        ctx.strokeStyle = settings.darcula ? "#fff" : "#000";
+        ctx.strokeStyle = getRangeColor(settings, value);
         ctx.lineWidth = 2.5;
         ctx.stroke();
     }
