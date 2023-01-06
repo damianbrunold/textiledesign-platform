@@ -129,7 +129,11 @@ def _parse_dbw_into_struct(data):
 def _dehex_byte(data):
     result = []
     while data:
-        result.append(int(data[0:2], 16))
+        v = int(data[0:2], 16)
+        if v < 128:
+            result.append(v)
+        else:
+            result.append(v - 256)
         data = data[2:]
     return result
 
@@ -137,7 +141,11 @@ def _dehex_byte(data):
 def _dehex_short(data):
     result = []
     while data:
-        result.append(int(data[2:4] + data[0:2], 16))
+        v = int(data[2:4] + data[0:2], 16)
+        if v < 32768:
+            result.append(v)
+        else:
+            result.append(v - 65536)
         data = data[4:]
     return result
 
