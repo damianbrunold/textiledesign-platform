@@ -49,7 +49,7 @@
             src="{{ url_for('static', filename='img/icons/icon-weave-empty.svg')}}"/>
 
         <div id="range-selector">
-            <div id="current-range">{{ gettext('Range 1') }}</div>
+            <div id="current-range" title="{{ gettext('Active range') }}">{{ gettext('Range 1') }}</div>
             <div id="ranges">
                 <div id="range1" class="current">{{ gettext('Range 1') }}</div>
                 <div id="range2">{{ gettext('Range 2') }}</div>
