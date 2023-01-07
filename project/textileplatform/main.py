@@ -32,17 +32,11 @@ bp = Blueprint('main', __name__)
 
 @bp.route('/')
 def index():
-    if g.user:
-        patterns = get_patterns_for_user_name(g.user.name)
-        return render_template('main/user_private.html',
-                               user=g.user,
-                               patterns=patterns)
-    else:
-        weave_patterns = get_patterns_for_user_name("weave", True)
-        bead_patterns = get_patterns_for_user_name("bead", True)
-        return render_template('main/index.html',
-                               weave_patterns=weave_patterns,
-                               bead_patterns=bead_patterns)
+    weave_patterns = get_patterns_for_user_name("weave", True)
+    bead_patterns = get_patterns_for_user_name("bead", True)
+    return render_template('main/index.html',
+                           weave_patterns=weave_patterns,
+                           bead_patterns=bead_patterns)
 
 
 @bp.route('/<string:name>')

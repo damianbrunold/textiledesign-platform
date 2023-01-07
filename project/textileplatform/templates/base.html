@@ -13,7 +13,19 @@
     </head>
     <body>
         <nav>
-            <h1><a href="{{ url_for('main.index') }}"><img src="{{ url_for('static', filename='img/icons/icon.png') }}"> {{ gettext('Textile Platform') }}</a> {% block context %}{% endblock %}</h1>
+            <h1>
+                <a href="{{ url_for('main.index') }}">
+                    <img src="{{ url_for('static', filename='img/icons/icon.png') }}">
+                </a>
+                {% if user %}
+                <a href="{{ url_for('main.user', name=user.name) }}">
+                    {{ user.label }}
+                </a>
+                {% else %}
+                    {{ gettext('Textile Platform') }}
+                {% endif %}
+                {% block context %}{% endblock %}
+            </h1>
             <ul>
             {% if g.user %}
                 <li><a href="{{ url_for('main.profile') }}">{{ g.user.label }}</a>
