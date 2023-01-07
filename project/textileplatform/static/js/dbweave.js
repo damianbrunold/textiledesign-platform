@@ -539,7 +539,7 @@ class GridViewPattern {
             for (let j = this.offset_j; j < this.offset_j + height; j++) {
                 let value = this.data.get(i, j);
                 if (value > 0) {
-                    ctx.fillStyle = settings.darcula ? "#fff" : "#000";
+                    ctx.fillStyle = getRangeColor(settings, value);
                     fillRect(
                         ctx,
                         this.calc_x(i-this.offset_i + settings.bxf),
