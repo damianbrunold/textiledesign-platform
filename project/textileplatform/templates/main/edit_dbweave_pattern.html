@@ -7,12 +7,7 @@
 {% endblock %}
 
 {% block header %}
-    <h1 id="title">
-        {% if readonly %}
-            {{ user.name }}:
-        {% endif %}
-        {{ pattern.name }}
-    </h1>
+    <h1 id="title">{{ pattern.name }}</h1>
 {% endblock %}
 
 {% block content %}
@@ -48,25 +43,25 @@
             title="{{ gettext('Empty view') }}"
             src="{{ url_for('static', filename='img/icons/icon-weave-empty.svg')}}"/>
 
-        <div id="range-selector">
-            <div id="current-range" title="{{ gettext('Active range') }}">{{ gettext('Range 1') }}</div>
-            <div id="ranges">
-                <div id="range1" class="current">{{ gettext('Range 1') }}</div>
-                <div id="range2">{{ gettext('Range 2') }}</div>
-                <div id="range3">{{ gettext('Range 3') }}</div>
-                <div id="range4">{{ gettext('Range 4') }}</div>
-                <div id="range5">{{ gettext('Range 5') }}</div>
-                <div id="range6">{{ gettext('Range 6') }}</div>
-                <div id="range7">{{ gettext('Range 7') }}</div>
-                <div id="range8">{{ gettext('Range 8') }}</div>
-                <div id="range9">{{ gettext('Range 9') }}</div>
-                <div id="range10">{{ gettext('Aushebung') }}</div>
-                <div id="range11">{{ gettext('Anbindung') }}</div>
-                <div id="range12">{{ gettext('Abbindung') }}</div>
-            </div>
-        </div>
-
         {% if not readonly %}
+            <div id="range-selector">
+                <div id="current-range" title="{{ gettext('Active range') }}">{{ gettext('Range 1') }}</div>
+                <div id="ranges">
+                    <div id="range1" class="current">{{ gettext('Range 1') }}</div>
+                    <div id="range2">{{ gettext('Range 2') }}</div>
+                    <div id="range3">{{ gettext('Range 3') }}</div>
+                    <div id="range4">{{ gettext('Range 4') }}</div>
+                    <div id="range5">{{ gettext('Range 5') }}</div>
+                    <div id="range6">{{ gettext('Range 6') }}</div>
+                    <div id="range7">{{ gettext('Range 7') }}</div>
+                    <div id="range8">{{ gettext('Range 8') }}</div>
+                    <div id="range9">{{ gettext('Range 9') }}</div>
+                    <div id="range10">{{ gettext('Aushebung') }}</div>
+                    <div id="range11">{{ gettext('Anbindung') }}</div>
+                    <div id="range12">{{ gettext('Abbindung') }}</div>
+                </div>
+            </div>
+
             <img
                 id="public"
                 {% if pattern.public %}
@@ -80,11 +75,11 @@
                 class="icon"/>
         {% endif %}
         {% if readonly and g.user %}
-            <button id="clone">{{ gettext('Clone') }}</button>
+            <div id="clone">{{ gettext('Clone') }}</div>
         {% elif g.user %}
-            <button id="save">{{ gettext('Save') }}</button>
+            <div id="save">{{ gettext('Save') }}</div>
         {% endif %}
-        <button id="close">{{ gettext('Close') }}</button>
+        <div id="close">{{ gettext('Close') }}</div>
     </div>
 
     <div id="container">

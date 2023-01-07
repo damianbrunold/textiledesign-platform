@@ -17,6 +17,18 @@ td { color: white; }
 
 .pattern:hover { background: #222; }
 
+#clone, #save, #close {
+    outline: none;
+    border: 1px solid #777;
+    background: #666;
+}
+
+#clone:hover, #save:hover, #close:hover {
+    outline: none;
+    border: 1px solid #777;
+    background: #777;
+}
+
 #current-range {
     border: 1px solid #777;
     background: #666;

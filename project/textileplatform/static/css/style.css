@@ -131,6 +131,21 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
     cursor: pointer;
 }
 
+#clone, #save, #close {
+    height: 26px;
+    border: 1px solid #ccc;
+    background: #ddd;
+    margin: 0 0.3rem;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+}
+
+#clone:hover, #save:hover, #close:hover {
+    outline: none;
+    border: 1px solid #ccc;
+    background: #eee;
+}
+
 #range-selector {
     display: flex;
     flex-direction: column;

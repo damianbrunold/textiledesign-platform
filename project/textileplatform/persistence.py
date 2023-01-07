@@ -1,6 +1,8 @@
 import datetime
 import json
 
+from sqlalchemy.exc import IntegrityError
+
 from textileplatform.db import db
 from textileplatform.db import User
 from textileplatform.db import Pattern
@@ -57,21 +59,39 @@ def get_pattern_by_name(user_name, name):
 
 
 def clone_pattern(user_name, pattern, contents):
-    now = datetime.datetime.utcnow()
-    db.session.add(Pattern(
-        name=pattern.name,
-        label=pattern.label,
-        owner=user_name,
-        pattern_type=pattern.pattern_type,
-        description=pattern.description,
-        contents=contents,
-        preview_image=pattern.preview_image,
-        thumbnail_image=pattern.thumbnail_image,
-        created=now,
-        modified=now,
-        public=False,
-    ))
-    db.session.commit()
+    suffix = None
+    while True:
+        if suffix and suffix > 10:
+            break
+        try:
+            now = datetime.datetime.utcnow()
+            if suffix:
+                name = pattern.name + " - " + str(suffix)
+                label = pattern.label + " - " + str(suffix)
+            else:
+                name = pattern.name
+                label = pattern.label
+            db.session.add(Pattern(
+                name=name,
+                label=label,
+                owner=user_name,
+                pattern_type=pattern.pattern_type,
+                description=pattern.description,
+                contents=contents,
+                preview_image=pattern.preview_image,
+                thumbnail_image=pattern.thumbnail_image,
+                created=now,
+                modified=now,
+                public=False,
+            ))
+            db.session.commit()
+            break
+        except IntegrityError:
+            db.session.rollback()
+            if not suffix:
+                suffix = 1
+            else:
+                suffix += 1
 
 
 def delete_pattern(user_name, pattern):
