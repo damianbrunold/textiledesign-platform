@@ -34,9 +34,9 @@ let rangecolors = {
         "rgb(255, 123, 0)",
         "rgb(255, 210, 0)",
         "rgb(0, 87, 0)",
-        "rgb(128, 128, 128)",
-        "rgb(255, 255, 255)",
-        "rgb(255, 255, 255)"
+        "rgb(255, 255, 255)", // aushebung
+        "#fbfb8e",   // anbindung
+        "#72b472",   // abbindung
     ],
     "dark": [
         // TODO adapt colors for dark mode
@@ -45,18 +45,16 @@ let rangecolors = {
         "rgb(50, 50, 255)",
         "rgb(128, 0, 0)",
         "rgb(0, 140, 255)",
-        "rgb(56, 56, 56)",
+        "#757575",
         "rgb(0, 194, 78)",
         "rgb(255, 123, 0)",
         "rgb(255, 210, 0)",
-        "rgb(0, 87, 0)",
-        "rgb(128, 128, 128)",
-        "rgb(0, 0, 0)",
-        "rgb(0, 0, 0)"
+        "#007700",
+        "rgb(128, 128, 128)", // aushebung
+        "rgb(30, 120, 30)",   // anbindung
+        "#ccaa22",   // abbindung
     ],
 };
-
-// TODO define colors for anbindung, abbindung and aushebung
 
 
 let readonly = false;
@@ -114,6 +112,85 @@ function getRangeColor(settings, value) {
     }
 }
 
+
+function aushebungPainter(ctx, settings, view, i, j) {
+    ctx.beginPath();
+    ctx.moveTo(
+        view.calc_x(i + settings.bxf),
+        view.calc_y(j + settings.byf)
+    )
+    ctx.lineTo(
+        view.calc_x(i + 1 - settings.bxf),
+        view.calc_y(j + 1 - settings.byf)
+    )
+    ctx.closePath();
+    ctx.strokeStyle = getRangeColor(settings, 1);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+
+function anbindungPainter(ctx, settings, view, i, j, withBackground) {
+    if (withBackground) {
+        ctx.fillStyle = getRangeColor(settings, 11);
+        fillRect(
+            ctx,
+            view.calc_x(i + settings.bxf / 2),
+            view.calc_y(j + settings.byf / 2),
+            view.calc_x(i + 1 - settings.bxf / 2),
+            view.calc_y(j + 1 - settings.byf / 2)
+        );
+    }
+    ctx.beginPath();
+    ctx.moveTo(
+        view.calc_x(i + settings.bxf * 2),
+        view.calc_y(j + settings.byf * 2)
+    )
+    ctx.lineTo(
+        view.calc_x(i + 1 - settings.bxf * 2),
+        view.calc_y(j + 1 - settings.byf * 2)
+    )
+    ctx.moveTo(
+        view.calc_x(i + settings.bxf * 2),
+        view.calc_y(j + 1 - settings.byf * 2)
+    )
+    ctx.lineTo(
+        view.calc_x(i + 1 - settings.bxf * 2),
+        view.calc_y(j + settings.byf * 2)
+    )
+    ctx.closePath();
+    ctx.strokeStyle = getRangeColor(settings, 1);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function abbindungPainter(ctx, settings, view, i, j, withBackground) {
+    if (withBackground) {
+        ctx.fillStyle = getRangeColor(settings, 12);
+        fillRect(
+            ctx,
+            view.calc_x(i + settings.bxf / 2),
+            view.calc_y(j + settings.byf / 2),
+            view.calc_x(i + 1 - settings.bxf / 2),
+            view.calc_y(j + 1 - settings.byf / 2)
+        );
+    }
+    ctx.beginPath();
+    ctx.ellipse(
+        view.calc_x(i + 0.5),
+        view.calc_y(j + 0.5),
+        (settings.dx - 2 * settings.bx) / 3,
+        (settings.dy - 2 * settings.by) / 3,
+        0,
+        0,
+        2*Math.PI
+    );
+    ctx.closePath();
+    ctx.fillStyle = getRangeColor(settings, 1);
+    ctx.strokeStyle = getRangeColor(settings, 1);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+}
 
 function cellPainterFilled(ctx, settings, view, i, j, value) {
     if (value > 0) {
@@ -450,7 +527,16 @@ class GridView {
         const painter = cellPainters[settings[this.painter_prop]];
         for (let i = this.offset_i; i < this.offset_i + this.width; i++) {
             for (let j = this.offset_j; j < this.offset_j + this.height; j++) {
-                painter(ctx, settings, this, i - this.offset_i, j - this.offset_j, this.data.get(i, j));
+                const value = this.data.get(i, j);
+                if (value <= 9) {
+                    painter(ctx, settings, this, i - this.offset_i, j - this.offset_j, value);
+                } else if (value == 10) {
+                    aushebungPainter(ctx, settings, this, i - this.offset_i, j - this.offset_j);
+                } else if (value == 11) {
+                    anbindungPainter(ctx, settings, this, i - this.offset_i, j - this.offset_j, false);
+                } else if (value == 12) {
+                    abbindungPainter(ctx, settings, this, i - this.offset_i, j - this.offset_j, false);
+                }
             }
         }
     }
@@ -539,14 +625,22 @@ class GridViewPattern {
             for (let j = this.offset_j; j < this.offset_j + height; j++) {
                 let value = this.data.get(i, j);
                 if (value > 0) {
-                    ctx.fillStyle = getRangeColor(settings, value);
-                    fillRect(
-                        ctx,
-                        this.calc_x(i-this.offset_i + settings.bxf),
-                        this.calc_y(j-this.offset_j + settings.byf),
-                        this.calc_x(i-this.offset_i + 1 - settings.bxf),
-                        this.calc_y(j-this.offset_j + 1 - settings.byf)
-                    );
+                    if (value <= 9) {
+                        ctx.fillStyle = getRangeColor(settings, value);
+                        fillRect(
+                            ctx,
+                            this.calc_x(i-this.offset_i + settings.bxf),
+                            this.calc_y(j-this.offset_j + settings.byf),
+                            this.calc_x(i-this.offset_i + 1 - settings.bxf),
+                            this.calc_y(j-this.offset_j + 1 - settings.byf)
+                        );
+                    } else if (value == 10) {
+                        aushebungPainter(ctx, settings, this, i - this.offset_i, j - this.offset_j);
+                    } else if (value == 11) {
+                        anbindungPainter(ctx, settings, this, i - this.offset_i, j - this.offset_j, true);
+                    } else if (value == 12) {
+                        abbindungPainter(ctx, settings, this, i - this.offset_i, j - this.offset_j, true);
+                    }
                 }
             }
         }
