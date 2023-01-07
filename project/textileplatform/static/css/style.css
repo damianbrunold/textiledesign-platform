@@ -123,9 +123,50 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 
 #header {
     display: flex;
-    justify-content: space-between;
     height: 2.5rem;
     padding: 0.3rem 0.3rem;
+}
+
+#header img {
+    cursor: pointer;
+}
+
+#range-selector {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    cursor: pointer;
+}
+
+#current-range {
+    width: 5.5rem;
+    height: 26px;
+    margin: 0 0.3rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid #ccc;
+    background: #ddd;
+}
+#current-range:hover {
+    background: #eee;
+}
+
+#ranges {
+    position: absolute;
+    top: 26px;
+    left: 0.3rem;
+    display: none;
+    flex-direction: column;
+}
+#ranges div {
+    border: 1px solid #ccc;
+    background: #ddd;
+    padding: 0.2rem 0.5rem;
+}
+#ranges div.current {
+    background: #fff;
+}
+#ranges div:hover {
+    background: #eee;
 }
 
 #buttons {
@@ -153,7 +194,8 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 }
 
 img.icon.selected {
-    outline: 2px solid black;
+    outline: 2px solid #666;
+    margin: 0 2px;
 }
 
 #users {
@@ -183,4 +225,8 @@ img.icon.selected {
 
 #users a {
     display: block;
+}
+
+.hidden {
+    display: none;
 }

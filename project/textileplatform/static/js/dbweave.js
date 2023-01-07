@@ -365,10 +365,10 @@ class Grid {
         this.data[this.idx(i, j)] = value;
     }
 
-    toggle(i, j) {
+    toggle(i, j, default_value=1) {
         const idx = this.idx(i, j);
         const value = this.data[idx];
-        if (value === 0) this.data[idx] = 1;
+        if (value === 0) this.data[idx] = default_value;
         else this.data[idx] = -value;
     }
 
@@ -1360,13 +1360,13 @@ function init() {
         } else if (view.tieup.contains(i, j)) {
             const ii = i_to_doc(i, view.tieup, false);
             const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
-            pattern.tieup.toggle(ii, jj);
+            pattern.tieup.toggle(ii, jj, settings.current_range);
             pattern.recalc_weave();
             view.draw();
         } else if (view.weave.contains(i, j) && !settings.weave_locked) {
             const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
             const jj = j_to_doc(j, view.weave, false);
-            pattern.weave.toggle(ii, jj);
+            pattern.weave.toggle(ii, jj, settings.current_range);
             pattern.recalc_from_weave(settings);
             view.draw();
         } else if (view.color_warp.contains(i, j)) {
@@ -1425,6 +1425,7 @@ function initSettings(data, settings) {
     settings.display_repeat = val(data, "display_repeat", false);
     settings.display_entering = val(data, "display_entering", true);
     settings.display_treadling = val(data, "display_treadling", true);
+    settings.current_range = 1; // TODO maybe save/restore in data?
 }
 
 
@@ -1452,6 +1453,7 @@ function saveSettings(data, settings) {
     data["display_repeat"] = settings.display_repeat;
     data["display_entering"] = settings.display_entering;
     data["display_treadling"] = settings.display_treadling;
+    // TODO maybe set current_range in data?
 }
 
 
@@ -1714,6 +1716,26 @@ window.addEventListener("load", () => {
         settings.style = "empty";
         view.draw();
     });
+
+    document.getElementById("current-range").addEventListener("click", () => {
+        const popup = document.getElementById("ranges");
+        if (popup.style.display === "") {
+            popup.style.display = "flex";
+        } else {
+            popup.style.display = "";
+        }
+    });
+    const range_handler = function(e) {
+        const range = parseInt(e.target.id.substring(5));
+        document.getElementById(`range${settings.current_range}`).className = "";
+        settings.current_range = range;
+        document.getElementById(`range${range}`).className = "current";
+        document.getElementById("current-range").innerText = e.target.innerText;
+        document.getElementById("ranges").style.display = "";
+    };
+    for (let i = 1; i <= 12; i++) {
+        document.getElementById(`range${i}`).addEventListener("click", range_handler);
+    }
 });
 
 window.addEventListener("resize", resizeWindow);

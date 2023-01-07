@@ -23,53 +23,68 @@
     <input type="hidden" id="readonly" value="{{readonly}}"/>
 
     <div id="header">
-        <div>
-            <img
-                id="icon-weave-draft"
-                {% if pattern.pattern['weave_style'] == 'draft' %}class="icon selected"{% else %}class="icon"{% endif %}
-                height="26px"
-                title="{{ gettext('Draft view') }}"
-                src="{{ url_for('static', filename='img/icons/icon-weave-draft.svg')}}"/>
-            <img
-                id="icon-weave-color"
-                {% if pattern.pattern['weave_style'] == 'color' %}class="icon selected"{% else %}class="icon"{% endif %}
-                height="26px"
-                title="{{ gettext('Color view') }}"
-                src="{{ url_for('static', filename='img/icons/icon-weave-color.svg')}}"/>
-            <img
-                id="icon-weave-simulation"
-                {% if pattern.pattern['weave_style'] == 'simulation' %}class="icon selected"{% else %}class="icon"{% endif %}
-                height="26px"
-                title="{{ gettext('Simulation view') }}"
-                src="{{ url_for('static', filename='img/icons/icon-weave-simulation.svg')}}"/>
-            <img
-                id="icon-weave-empty"
-                {% if pattern.pattern['weave_style'] == 'empty' %}class="icon selected"{% else %}class="icon"{% endif %}
-                height="26px"
-                title="{{ gettext('Empty view') }}"
-                src="{{ url_for('static', filename='img/icons/icon-weave-empty.svg')}}"/>
+        <img
+            id="icon-weave-draft"
+            {% if pattern.pattern['weave_style'] == 'draft' %}class="icon selected"{% else %}class="icon"{% endif %}
+            height="26px"
+            title="{{ gettext('Draft view') }}"
+            src="{{ url_for('static', filename='img/icons/icon-weave-draft.svg')}}"/>
+        <img
+            id="icon-weave-color"
+            {% if pattern.pattern['weave_style'] == 'color' %}class="icon selected"{% else %}class="icon"{% endif %}
+            height="26px"
+            title="{{ gettext('Color view') }}"
+            src="{{ url_for('static', filename='img/icons/icon-weave-color.svg')}}"/>
+        <img
+            id="icon-weave-simulation"
+            {% if pattern.pattern['weave_style'] == 'simulation' %}class="icon selected"{% else %}class="icon"{% endif %}
+            height="26px"
+            title="{{ gettext('Simulation view') }}"
+            src="{{ url_for('static', filename='img/icons/icon-weave-simulation.svg')}}"/>
+        <img
+            id="icon-weave-empty"
+            {% if pattern.pattern['weave_style'] == 'empty' %}class="icon selected"{% else %}class="icon"{% endif %}
+            height="26px"
+            title="{{ gettext('Empty view') }}"
+            src="{{ url_for('static', filename='img/icons/icon-weave-empty.svg')}}"/>
+
+        <div id="range-selector">
+            <div id="current-range">Bereich 1</div>
+            <div id="ranges">
+                <div id="range1" class="current">Bereich 1</div>
+                <div id="range2">Bereich 2</div>
+                <div id="range3">Bereich 3</div>
+                <div id="range4">Bereich 4</div>
+                <div id="range5">Bereich 5</div>
+                <div id="range6">Bereich 6</div>
+                <div id="range7">Bereich 7</div>
+                <div id="range8">Bereich 8</div>
+                <div id="range9">Bereich 9</div>
+                <div id="range10">Aushebung</div>
+                <div id="range11">Anbindung</div>
+                <div id="range12">Abbindung</div>
+            </div>
         </div>
-        <div id="buttons">
-            {% if not readonly %}
-                <img
-                    id="public"
-                    {% if pattern.public %}
-                        src="{{url_for('static', filename='img/icons/icon-public.svg')}}"
-                        title="{{ gettext('Public - visible to all users') }}"
-                    {% else %}
-                        src="{{url_for('static', filename='img/icons/icon-private.svg')}}"
-                        title="{{ gettext('Private - not visible to other users') }}"
-                    {% endif %}
-                    height="26px"
-                    class="icon"/>
-            {% endif %}
-            {% if readonly and g.user %}
-                <button id="clone">{{ gettext('Clone') }}</button>
-            {% elif g.user %}
-                <button id="save">{{ gettext('Save') }}</button>
-            {% endif %}
-            <button id="close">{{ gettext('Close') }}</button>
-        </div>
+
+        {% if not readonly %}
+            <img
+                id="public"
+                {% if pattern.public %}
+                    src="{{url_for('static', filename='img/icons/icon-public.svg')}}"
+                    title="{{ gettext('Public - visible to all users') }}"
+                {% else %}
+                    src="{{url_for('static', filename='img/icons/icon-private.svg')}}"
+                    title="{{ gettext('Private - not visible to other users') }}"
+                {% endif %}
+                height="26px"
+                class="icon"/>
+        {% endif %}
+        {% if readonly and g.user %}
+            <button id="clone">{{ gettext('Clone') }}</button>
+        {% elif g.user %}
+            <button id="save">{{ gettext('Save') }}</button>
+        {% endif %}
+        <button id="close">{{ gettext('Close') }}</button>
     </div>
 
     <div id="container">
