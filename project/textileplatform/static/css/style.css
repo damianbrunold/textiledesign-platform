@@ -152,7 +152,6 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
     position: relative;
     cursor: pointer;
 }
-
 #current-range {
     width: 5.5rem;
     height: 26px;
@@ -164,7 +163,6 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 #current-range:hover {
     background: #eee;
 }
-
 #ranges {
     position: absolute;
     top: 26px;
@@ -181,6 +179,72 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
     background: #fff;
 }
 #ranges div:hover {
+    background: #eee;
+}
+
+#color-selector {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    cursor: pointer;
+}
+#current-color {
+    width: 26px;
+    height: 26px;
+    margin: 0 0.3rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid #ccc;
+    background: #ddd;
+}
+#colors {
+    position: absolute;
+    top: 26px;
+    left: 0.3rem;
+    display: none;
+    flex-direction: column;
+}
+#colors div {
+    border: 1px solid #ccc;
+    background: #ddd;
+    padding: 0.2rem 0.5rem;
+}
+#colors div.current {
+    outline: 2px solid #999;
+}
+
+#layout-selector {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    cursor: pointer;
+}
+#current-layout {
+    width: 2.2rem;
+    height: 26px;
+    margin: 0 0.3rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid #ccc;
+    background: #ddd;
+}
+#current-layout:hover {
+    background: #eee;
+}
+#layouts {
+    position: absolute;
+    top: 26px;
+    left: 0.3rem;
+    display: none;
+    flex-direction: column;
+}
+#layouts div {
+    border: 1px solid #ccc;
+    background: #ddd;
+    padding: 0.2rem 0.5rem;
+}
+#layouts div.current {
+    background: #fff;
+}
+#layouts div:hover {
     background: #eee;
 }
 

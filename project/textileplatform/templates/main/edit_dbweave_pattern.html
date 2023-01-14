@@ -62,6 +62,21 @@
                 </div>
             </div>
 
+            <div id="color-selector">
+                <div id="current-color" title="{{ gettext('Active color') }}">1</div>
+                <div id="colors"></div>
+            </div>
+
+            <div id="layout-selector">
+                <div id="current-layout" title="{{ gettext('Active layout') }}">DE</div>
+                <div id="layouts">
+                    <div id="layout-DE">DE</div>
+                    <div id="layout-SK">SK</div>
+                    <div id="layout-US">US</div>
+                    <div id="layout-AA">AA</div>
+                </div>
+            </div>
+
             <img
                 id="public"
                 {% if pattern.public %}

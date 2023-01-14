@@ -1429,6 +1429,96 @@ function initSettings(data, settings) {
 }
 
 
+function get_current_layout(settings) {
+    if (settings.entering_style === "filled"
+        && settings.tieup_style === "filled"
+        && settings.treadling_style === "filled"
+        && settings.display_reed === true
+        && settings.display_entering === true
+        && settings.display_treadling === true
+        && settings.display_colors_warp === true
+        && settings.display_colors_weft === true
+        && settings.direction_righttoleft === true
+        && settings.direction_toptobottom === false
+        && settings.entering_at_bottom === false) {
+        return "US";
+    } else if (settings.entering_style === "dash"
+        && settings.tieup_style === "cross"
+        && settings.treadling_style === "dot"
+        && settings.display_reed === true
+        && settings.display_entering === true
+        && settings.display_treadling === true
+        && settings.display_colors_warp === true
+        && settings.display_colors_weft === true
+        && settings.direction_righttoleft === false
+        && settings.direction_toptobottom === false
+        && settings.entering_at_bottom === false) {
+        return "DE";
+    } else if (settings.entering_style === "filled"
+        && settings.tieup_style === "filled"
+        && settings.treadling_style === "filled"
+        && settings.display_reed === false
+        && settings.display_entering === true
+        && settings.display_treadling === true
+        && settings.display_colors_warp === true
+        && settings.display_colors_weft === true
+        && settings.direction_righttoleft === true
+        && settings.direction_toptobottom === true
+        && settings.entering_at_bottom === true) {
+        return "SK";
+    } else {
+        return "AA";
+    }
+}
+
+
+function set_current_layout(layout) {
+    if (layout === "DE") {
+        settings.entering_style = "dash";
+        settings.treadling_style = "dot";
+        settings.tieup_style = "cross";
+        settings.display_reed = true;
+        settings.display_entering = true;
+        settings.display_treadling = true;
+        settings.display_colors_warp = true;
+        settings.display_colors_weft = true;
+        settings.entering_at_bottom = false;
+        settings.direction_toptobottom = false;
+        settings.direction_righttoleft = false;
+        view.layout();
+        view.draw();
+    } else if (layout === "SK") {
+        settings.entering_style = "filled";
+        settings.treadling_style = "filled";
+        settings.tieup_style = "filled";
+        settings.display_reed = false;
+        settings.display_entering = true;
+        settings.display_treadling = true;
+        settings.display_colors_warp = true;
+        settings.display_colors_weft = true;
+        settings.entering_at_bottom = true;
+        settings.direction_toptobottom = true;
+        settings.direction_righttoleft = true;
+        view.layout();
+        view.draw();
+    } else if (layout === "US") {
+        settings.entering_style = "filled";
+        settings.treadling_style = "filled";
+        settings.tieup_style = "filled";
+        settings.display_reed = true;
+        settings.display_entering = true;
+        settings.display_treadling = true;
+        settings.display_colors_warp = true;
+        settings.display_colors_weft = true;
+        settings.entering_at_bottom = false;
+        settings.direction_toptobottom = false;
+        settings.direction_righttoleft = true;
+        view.layout();
+        view.draw();
+    }
+}
+
+
 function saveSettings(data, settings) {
     data["weave_style"] = settings.style;
     data["entering_style"] = settings.entering_style;
@@ -1617,6 +1707,7 @@ function keyDown(e) {
         e.preventDefault();
     } else if (e.key === "i") { // TODO use better key shortcut
         // set swiss/german standard
+        settings.layout = "DE";
         settings.entering_style = "dash";
         settings.treadling_style = "dot";
         settings.tieup_style = "cross";
@@ -1633,6 +1724,7 @@ function keyDown(e) {
         e.preventDefault();
     } else if (e.key === "o") { // TODO use better key shortcut
         // set scandinavian standard
+        settings.layout = "SK";
         settings.entering_style = "filled";
         settings.treadling_style = "filled";
         settings.tieup_style = "filled";
@@ -1649,6 +1741,7 @@ function keyDown(e) {
         e.preventDefault();
     } else if (e.key === "p") { // TODO use better key shortcut
         // set american standard
+        settings.layout = "US";
         settings.entering_style = "filled";
         settings.treadling_style = "filled";
         settings.tieup_style = "filled";
@@ -1667,9 +1760,16 @@ function keyDown(e) {
 }
 
 
+function init_layout_selector() {
+    const layout = get_current_layout(settings);
+    document.getElementById("current-layout").innerText = layout;
+    document.getElementById(`layout-${layout}`).className = "current";
+}
+
+
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    getPattern().then(init);
+    getPattern().then(init).then(init_layout_selector);
     if (!readonly) {
         document.getElementById("public").addEventListener("click", togglePublic);
         document.getElementById("save").addEventListener("click", () => {
@@ -1736,6 +1836,28 @@ window.addEventListener("load", () => {
     for (let i = 1; i <= 12; i++) {
         document.getElementById(`range${i}`).addEventListener("click", range_handler);
     }
+
+    document.getElementById("current-layout").addEventListener("click", () => {
+        const popup = document.getElementById("layouts");
+        if (popup.style.display === "") {
+            popup.style.display = "flex";
+        } else {
+            popup.style.display = "";
+        }
+    });
+    const layout_handler = function(e) {
+        const layout = e.target.id.substring(7);
+        const current_layout = get_current_layout(settings);
+        document.getElementById(`layout-${current_layout}`).className = "";
+        set_current_layout(layout);
+        document.getElementById(`layout-${layout}`).className = "current";
+        document.getElementById("current-layout").innerText = layout;
+        document.getElementById("layouts").style.display = "";
+    };
+    document.getElementById("layout-DE").addEventListener("click", layout_handler);
+    document.getElementById("layout-SK").addEventListener("click", layout_handler);
+    document.getElementById("layout-US").addEventListener("click", layout_handler);
+    document.getElementById("layout-AA").addEventListener("click", layout_handler);
 });
 
 window.addEventListener("resize", resizeWindow);

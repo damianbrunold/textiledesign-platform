@@ -36,7 +36,6 @@ td { color: white; }
 #current-range:hover {
     background: #777;
 }
-
 #ranges div {
     border: 1px solid #777;
     background: #666;
@@ -46,6 +45,38 @@ td { color: white; }
     background: #999;
 }
 #ranges div:hover {
+    background: #777;
+}
+
+#current-color {
+    border: 1px solid #777;
+    background: #666;
+}
+#colors div {
+    border: 1px solid #777;
+    background: #666;
+    padding: 0.2rem 0.5rem;
+}
+#colors div.current {
+    outline: 2px solid #999;
+}
+
+#current-layout {
+    border: 1px solid #777;
+    background: #666;
+}
+#current-layout:hover {
+    background: #777;
+}
+#layouts div {
+    border: 1px solid #777;
+    background: #666;
+    padding: 0.2rem 0.5rem;
+}
+#layouts div.current {
+    background: #999;
+}
+#layouts div:hover {
     background: #777;
 }
 
