@@ -1436,11 +1436,6 @@ function get_current_layout(settings) {
     if (settings.entering_style === "filled"
         && settings.tieup_style === "filled"
         && settings.treadling_style === "filled"
-        && settings.display_reed === true
-        && settings.display_entering === true
-        && settings.display_treadling === true
-        && settings.display_colors_warp === true
-        && settings.display_colors_weft === true
         && settings.direction_righttoleft === true
         && settings.direction_toptobottom === false
         && settings.entering_at_bottom === false) {
@@ -1448,11 +1443,6 @@ function get_current_layout(settings) {
     } else if (settings.entering_style === "dash"
         && settings.tieup_style === "cross"
         && settings.treadling_style === "dot"
-        && settings.display_reed === true
-        && settings.display_entering === true
-        && settings.display_treadling === true
-        && settings.display_colors_warp === true
-        && settings.display_colors_weft === true
         && settings.direction_righttoleft === false
         && settings.direction_toptobottom === false
         && settings.entering_at_bottom === false) {
@@ -1460,17 +1450,12 @@ function get_current_layout(settings) {
     } else if (settings.entering_style === "filled"
         && settings.tieup_style === "filled"
         && settings.treadling_style === "filled"
-        && settings.display_reed === false
-        && settings.display_entering === true
-        && settings.display_treadling === true
-        && settings.display_colors_warp === true
-        && settings.display_colors_weft === true
         && settings.direction_righttoleft === true
         && settings.direction_toptobottom === true
         && settings.entering_at_bottom === true) {
         return "SK";
     } else {
-        return "AA";
+        return "--";
     }
 }
 
@@ -1480,11 +1465,6 @@ function set_current_layout(layout) {
         settings.entering_style = "dash";
         settings.treadling_style = "dot";
         settings.tieup_style = "cross";
-        settings.display_reed = true;
-        settings.display_entering = true;
-        settings.display_treadling = true;
-        settings.display_colors_warp = true;
-        settings.display_colors_weft = true;
         settings.entering_at_bottom = false;
         settings.direction_toptobottom = false;
         settings.direction_righttoleft = false;
@@ -1494,11 +1474,6 @@ function set_current_layout(layout) {
         settings.entering_style = "filled";
         settings.treadling_style = "filled";
         settings.tieup_style = "filled";
-        settings.display_reed = false;
-        settings.display_entering = true;
-        settings.display_treadling = true;
-        settings.display_colors_warp = true;
-        settings.display_colors_weft = true;
         settings.entering_at_bottom = true;
         settings.direction_toptobottom = true;
         settings.direction_righttoleft = true;
@@ -1508,11 +1483,6 @@ function set_current_layout(layout) {
         settings.entering_style = "filled";
         settings.treadling_style = "filled";
         settings.tieup_style = "filled";
-        settings.display_reed = true;
-        settings.display_entering = true;
-        settings.display_treadling = true;
-        settings.display_colors_warp = true;
-        settings.display_colors_weft = true;
         settings.entering_at_bottom = false;
         settings.direction_toptobottom = false;
         settings.direction_righttoleft = true;
@@ -1709,61 +1679,22 @@ function keyDown(e) {
         view.draw();
         e.preventDefault();
     } else if (e.key === "i") { // TODO use better key shortcut
-        // set swiss/german standard
-        settings.layout = "DE";
-        settings.entering_style = "dash";
-        settings.treadling_style = "dot";
-        settings.tieup_style = "cross";
-        settings.display_reed = true;
-        settings.display_entering = true;
-        settings.display_treadling = true;
-        settings.display_colors_warp = true;
-        settings.display_colors_weft = true;
-        settings.entering_at_bottom = false;
-        settings.direction_toptobottom = false;
-        settings.direction_righttoleft = false;
-        view.layout();
-        view.draw();
+        set_current_layout("DE");
+        update_layout_selector(settings);
         e.preventDefault();
     } else if (e.key === "o") { // TODO use better key shortcut
-        // set scandinavian standard
-        settings.layout = "SK";
-        settings.entering_style = "filled";
-        settings.treadling_style = "filled";
-        settings.tieup_style = "filled";
-        settings.display_reed = false;
-        settings.display_entering = true;
-        settings.display_treadling = true;
-        settings.display_colors_warp = true;
-        settings.display_colors_weft = true;
-        settings.entering_at_bottom = true;
-        settings.direction_toptobottom = true;
-        settings.direction_righttoleft = true;
-        view.layout();
-        view.draw();
+        set_current_layout("SK");
+        update_layout_selector(settings);
         e.preventDefault();
     } else if (e.key === "p") { // TODO use better key shortcut
-        // set american standard
-        settings.layout = "US";
-        settings.entering_style = "filled";
-        settings.treadling_style = "filled";
-        settings.tieup_style = "filled";
-        settings.display_reed = true;
-        settings.display_entering = true;
-        settings.display_treadling = true;
-        settings.display_colors_warp = true;
-        settings.display_colors_weft = true;
-        settings.entering_at_bottom = false;
-        settings.direction_toptobottom = false;
-        settings.direction_righttoleft = true;
-        view.layout();
-        view.draw();
+        set_current_layout("US");
+        update_layout_selector(settings);
         e.preventDefault();
     }
 }
 
 
-function init_layout_selector() {
+function update_layout_selector() {
     const layout = get_current_layout(settings);
     document.getElementById("current-layout").innerText = layout;
     document.getElementById(`layout-${layout}`).className = "current";
@@ -1779,7 +1710,7 @@ function update_color_selector(settings) {
 
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    getPattern().then(init).then(init_layout_selector);
+    getPattern().then(init).then(update_layout_selector);
     if (!readonly) {
         document.getElementById("public").addEventListener("click", togglePublic);
         document.getElementById("save").addEventListener("click", () => {
@@ -1867,7 +1798,7 @@ window.addEventListener("load", () => {
     document.getElementById("layout-DE").addEventListener("click", layout_handler);
     document.getElementById("layout-SK").addEventListener("click", layout_handler);
     document.getElementById("layout-US").addEventListener("click", layout_handler);
-    document.getElementById("layout-AA").addEventListener("click", layout_handler);
+    document.getElementById("layout---").addEventListener("click", layout_handler);
 });
 
 window.addEventListener("resize", resizeWindow);
