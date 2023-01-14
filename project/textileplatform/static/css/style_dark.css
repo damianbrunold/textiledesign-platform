@@ -39,7 +39,6 @@ td { color: white; }
 #ranges div {
     border: 1px solid #777;
     background: #666;
-    padding: 0.2rem 0.5rem;
 }
 #ranges div.current {
     background: #999;
@@ -55,7 +54,6 @@ td { color: white; }
 #colors div {
     border: 1px solid #777;
     background: #666;
-    padding: 0.2rem 0.5rem;
 }
 #colors div.current {
     outline: 2px solid #999;
@@ -71,12 +69,29 @@ td { color: white; }
 #layouts div {
     border: 1px solid #777;
     background: #666;
-    padding: 0.2rem 0.5rem;
 }
 #layouts div.current {
     background: #999;
 }
 #layouts div:hover {
+    background: #777;
+}
+
+#view-options-menu {
+    border: 1px solid #777;
+    background: #666;
+}
+#view-options-menu:hover {
+    background: #777;
+}
+#view-options div {
+    border: 1px solid #777;
+    background: #666;
+}
+#view-options div.checked {
+    background: #999;
+}
+#view-options div:hover {
     background: #777;
 }
 

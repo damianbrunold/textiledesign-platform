@@ -1324,6 +1324,7 @@ function init() {
     initSettings(data, settings);
     initPatternData(data, pattern);
     update_color_selector(settings);
+    update_view_options(settings);
 
     const container = document.getElementById("container");
     canvas.style.backgroundColor = settings.darcula ? "#444" : "#fff";
@@ -1654,22 +1655,26 @@ function keyDown(e) {
         e.preventDefault();
     } else if (e.key === "a") { // TODO use better key shortcut
         settings.display_entering = !settings.display_entering;
+        update_view_options(settings);
         view.layout();
         view.draw();
         e.preventDefault();
     } else if (e.key === "b") { // TODO use better key shortcut
         settings.display_treadling = !settings.display_treadling;
+        update_view_options(settings);
         view.layout();
         view.draw();
         e.preventDefault();
     } else if (e.key === "c") { // TODO use better key shortcut
         settings.display_reed = !settings.display_reed;
+        update_view_options(settings);
         view.layout();
         view.draw();
         e.preventDefault();
     } else if (e.key === "d") { // TODO use better key shortcut
         settings.display_colors_warp = !settings.display_colors_warp;
         settings.display_colors_weft = !settings.display_colors_weft;
+        update_view_options(settings);
         view.layout();
         view.draw();
         e.preventDefault();
@@ -1705,6 +1710,15 @@ function update_color_selector(settings) {
     const elem = document.getElementById("current-color");
     elem.style.backgroundColor = colors[settings.current_color];
     elem.style.color = colors[settings.current_color];
+}
+
+
+function update_view_options(settings) {
+    document.getElementById("entering-visible").className = settings.display_entering ? "checked" : "";
+    document.getElementById("treadling-visible").className = settings.display_treadling ? "checked" : "";
+    document.getElementById("reed-visible").className = settings.display_reed ? "checked" : "";
+    document.getElementById("colors-visible").className = settings.display_colors_warp || settings.display_colors_weft ? "checked" : "";
+    document.getElementById("hlines-visible").className = settings.display_hlines ? "checked" : "";
 }
 
 
@@ -1799,6 +1813,66 @@ window.addEventListener("load", () => {
     document.getElementById("layout-SK").addEventListener("click", layout_handler);
     document.getElementById("layout-US").addEventListener("click", layout_handler);
     document.getElementById("layout---").addEventListener("click", layout_handler);
+
+    document.getElementById("view-options-menu").addEventListener("click", () => {
+        const popup = document.getElementById("view-options");
+        if (popup.style.display === "") {
+            popup.style.display = "flex";
+        } else {
+            popup.style.display = "";
+        }
+    });
+    document.getElementById("entering-visible").addEventListener("click", (e) => {
+        if (e.target.className === "checked") {
+            e.target.className = "";
+        } else {
+            e.target.className = "checked";
+        }
+        settings.display_entering = e.target.className == "checked";
+        view.layout();
+        view.draw();
+    });
+    document.getElementById("treadling-visible").addEventListener("click", (e) => {
+        if (e.target.className === "checked") {
+            e.target.className = "";
+        } else {
+            e.target.className = "checked";
+        }
+        settings.display_treadling = e.target.className == "checked";
+        view.layout();
+        view.draw();
+    });
+    document.getElementById("reed-visible").addEventListener("click", (e) => {
+        if (e.target.className === "checked") {
+            e.target.className = "";
+        } else {
+            e.target.className = "checked";
+        }
+        settings.display_reed = e.target.className == "checked";
+        view.layout();
+        view.draw();
+    });
+    document.getElementById("colors-visible").addEventListener("click", (e) => {
+        if (e.target.className === "checked") {
+            e.target.className = "";
+        } else {
+            e.target.className = "checked";
+        }
+        settings.display_colors_warp = e.target.className == "checked";
+        settings.display_colors_weft = e.target.className == "checked";
+        view.layout();
+        view.draw();
+    });
+    document.getElementById("hlines-visible").addEventListener("click", (e) => {
+        if (e.target.className === "checked") {
+            e.target.className = "";
+        } else {
+            e.target.className = "checked";
+        }
+        settings.display_hlines = e.target.className == "checked";
+        view.layout();
+        view.draw();
+    });
 });
 
 window.addEventListener("resize", resizeWindow);
