@@ -1323,6 +1323,7 @@ function init() {
     console.log(data);
     initSettings(data, settings);
     initPatternData(data, pattern);
+    update_color_selector(settings);
 
     const container = document.getElementById("container");
     canvas.style.backgroundColor = settings.darcula ? "#444" : "#fff";
@@ -1373,6 +1374,7 @@ function init() {
             const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
             if (event.ctrlKey) {
                 settings.current_color = pattern.color_warp.get(ii, 0);
+                update_color_selector(settings);
             } else {
                 pattern.color_warp.set(ii, 0, settings.current_color);
                 view.draw();
@@ -1381,6 +1383,7 @@ function init() {
             const jj = j_to_doc(j, view.color_weft, false);
             if (event.ctrlKey) {
                 settings.current_color = pattern.color_weft.get(0, jj);
+                update_color_selector(settings);
             } else {
                 pattern.color_weft.set(0, jj, settings.current_color);
                 view.draw();
@@ -1764,6 +1767,13 @@ function init_layout_selector() {
     const layout = get_current_layout(settings);
     document.getElementById("current-layout").innerText = layout;
     document.getElementById(`layout-${layout}`).className = "current";
+}
+
+
+function update_color_selector(settings) {
+    const elem = document.getElementById("current-color");
+    elem.style.backgroundColor = colors[settings.current_color];
+    elem.style.color = colors[settings.current_color];
 }
 
 
