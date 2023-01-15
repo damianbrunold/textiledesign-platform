@@ -47,7 +47,7 @@ def register():
         name = from_display(label)
 
         if not is_valid(name):
-            error = gettext('Name is reserved and cannot be used')
+            error = gettext('Name is invalid and cannot be used')
 
         if error is None:
             try:
@@ -102,7 +102,7 @@ def login():
             session.clear()
             session['user_name'] = user.name
             session.permanent = True
-            return redirect(url_for('main.user', name=user.name))
+            return redirect(url_for('main.user', user_name=user.name))
 
         flash(error)
 
