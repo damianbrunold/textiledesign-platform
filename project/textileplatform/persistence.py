@@ -9,7 +9,26 @@ from textileplatform.db import Pattern
 
 
 def clean_name(name):
-    return name.replace("..", "").replace("/", "").replace("\\", "")
+    return (
+        name.replace("..", "")
+            .replace("/", "")
+            .replace("\\", "")
+            .replace("@", "")
+            .replace(":", "")
+            .replace(";", "")
+            .replace("?", "")
+            .replace("<", "")
+            .replace(">", "")
+            .replace("&", "")
+            .replace(" ", "-")
+            .replace("_", "-")
+            .replace("\t", "-")
+            .replace("\n", "-")
+            .replace("\r", "-")
+            .replace("----", "-")
+            .replace("---", "-")
+            .replace("--", "-")
+    )
 
 
 def add_weave_pattern(pattern, user_name):

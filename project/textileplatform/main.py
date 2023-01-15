@@ -74,9 +74,9 @@ def edit_pattern(user_name, pattern_name):
         return redirect(url_for('main.index'))
     pattern = get_pattern_by_name(user.name, pattern_name)
     if not pattern:
-        return redirect(url_for('main.user', name=user_name))
+        return redirect(url_for('main.user', user_name=user_name))
     if (not g.user or g.user.name != user.name) and not pattern.public:
-        return redirect(url_for('main.user', name=user_name))
+        return redirect(url_for('main.user', user_name=user_name))
     readonly = not g.user or g.user.name != user.name
     pattern.pattern = json.loads(pattern.contents)
     if pattern.pattern_type == "DB-WEAVE Pattern":
@@ -90,7 +90,7 @@ def edit_pattern(user_name, pattern_name):
                                pattern=pattern,
                                readonly=readonly)
     else:
-        return redirect(url_for('main.user'), name=user_name)
+        return redirect(url_for('main.user'), user_name=user_name)
 
 
 @bp.route('/status')
@@ -122,7 +122,7 @@ def profile():
             current_app.logger.exception("Profile changes not changed")
             error = gettext('Changes could not be saved.')
         else:
-            return redirect(url_for("main.user", name=user.name))
+            return redirect(url_for("main.user", user_name=user.name))
 
         flash(error)
 
@@ -162,7 +162,7 @@ def upload_pattern():
             else:
                 pass
 
-        return redirect(url_for("main.user", name=g.user.name))
+        return redirect(url_for("main.user", user_name=g.user.name))
 
     return render_template('main/upload_pattern.html', user=g.user)
 
@@ -272,7 +272,7 @@ def create_pattern():
 def delete(pattern_name):
     pattern = get_pattern_by_name(g.user.name, pattern_name)
     if not pattern:
-        return redirect(url_for('main.user', name=g.user.name))
+        return redirect(url_for('main.user', user_name=g.user.name))
 
     if request.method == 'POST':
         error = None
@@ -282,7 +282,7 @@ def delete(pattern_name):
         except Exception:
             error = gettext('Pattern could not be deleted.')
         else:
-            return redirect(url_for("main.user", name=g.user.name))
+            return redirect(url_for("main.user", user_name=g.user.name))
 
         flash(error)
 
