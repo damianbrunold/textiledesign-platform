@@ -56,7 +56,7 @@ def add_weave_pattern(pattern, user_name):
                 public=False
             ))
             db.session.commit()
-            break
+            return name
         except IntegrityError:
             db.session.rollback()
             if suffix:
@@ -90,7 +90,7 @@ def add_bead_pattern(pattern, user_name):
                 public=False,
             ))
             db.session.commit()
-            break
+            return name
         except IntegrityError:
             db.session.rollback()
             if suffix:

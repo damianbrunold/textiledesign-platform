@@ -204,7 +204,7 @@ def create_pattern():
             pattern['colors_weft'] = [49] * height
 
             # TODO use user default palette?
-            pattern['palette'] = default_weave_palette
+            pattern['palette'] = default_weave_palette[:]
 
             pattern['visible_shafts'] = 12
             pattern['visible_treadles'] = 12
@@ -216,14 +216,21 @@ def create_pattern():
             pattern['display_reed'] = True
             pattern['display_colors_warp'] = True
             pattern['display_colors_weft'] = True
+            pattern['display_entering'] = True
+            pattern['display_threading'] = True
+
+            # TODO use user defaults
+            pattern['direction_righttoleft'] = False
+            pattern['directon_toptobottom'] = False
+            pattern['direction_entering_at_bottom'] = False
+            pattern['entering_style'] = 'dash'
+            pattern['treadling_style'] = 'dot'
+            pattern['tieup_style'] = 'cross'
 
             pattern['weave_style'] = 'draft'
-            pattern['entering_style'] = 'filled'  # TODO use user defaults
-            pattern['treadling_style'] = 'filled'  # TODO use user defaults
-            pattern['tieup_style'] = 'filled'  # TODO use user defaults
 
-            # TODO handle exceptions (e.g. due to duplicate name!)
-            add_weave_pattern(pattern, g.user.name)
+            # TODO handle exceptions
+            name = add_weave_pattern(pattern, g.user.name)
 
             return redirect(url_for("main.edit_pattern",
                                     user_name=g.user.name,
@@ -257,8 +264,8 @@ def create_pattern():
             view['selected-color'] = 1
             pattern['view'] = view
 
-            # TODO handle exceptions (e.g. due to duplicate name!)
-            add_bead_pattern(pattern, g.user.name)
+            # TODO handle exceptions
+            name = add_bead_pattern(pattern, g.user.name)
 
             return redirect(url_for("main.edit_pattern",
                                     user_name=g.user.name,
