@@ -41,6 +41,11 @@ class User(db.Model):
         backref=db.backref("users", lazy=True),
     )
 
+    def short_label(self):
+        if len(self.label) > 30:
+            return self.label[0:27] + "..."
+        return self.label
+
 
 class Group(db.Model):
     __tablename__ = "txgroup"

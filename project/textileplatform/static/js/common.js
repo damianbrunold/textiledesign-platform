@@ -91,7 +91,8 @@ async function gotoUser(user) {
 
 
 function closePattern() {
-    window.history.back();
+    const user = document.getElementById("user").value;
+    window.location.href = "/" + user;
 }
 
 

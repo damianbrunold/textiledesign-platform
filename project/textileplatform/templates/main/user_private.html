@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block header %}
-    <h1>{{ user.label }}</h1>
+    <h1>{{ user.short_label() }}</h1>
 {% endblock %}
 
 {% block content %}
