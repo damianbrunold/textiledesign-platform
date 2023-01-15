@@ -155,7 +155,7 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 #current-range {
     width: 5.5rem;
     height: 26px;
-    margin: 0 0.3rem;
+    margin: 0 0 0 0.3rem;
     padding: 0.2rem 0.5rem;
     border: 1px solid #ccc;
     background: #ddd;
@@ -191,7 +191,7 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 #current-color {
     width: 26px;
     height: 26px;
-    margin: 0 0.3rem;
+    margin: 0 0 0 0.3rem;
     padding: 0.2rem 0.5rem;
     border: 1px solid #ccc;
     background: #ddd;
@@ -221,7 +221,7 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 #current-layout {
     width: 2.2rem;
     height: 26px;
-    margin: 0 0.3rem;
+    margin: 0 0 0 0.3rem;
     padding: 0.2rem 0.5rem;
     border: 1px solid #ccc;
     background: #ddd;
@@ -256,7 +256,7 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 }
 #view-options-menu {
     height: 26px;
-    margin: 0 0.3rem;
+    margin: 0 0 0 0.3rem;
     padding: 0.2rem 0.5rem;
     border: 1px solid #ccc;
     background: #ddd;
@@ -282,6 +282,10 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 }
 #view-options div:hover {
     background: #eee;
+}
+
+#public, #save, #close {
+    margin-left: 0.3rem;
 }
 
 #buttons {
