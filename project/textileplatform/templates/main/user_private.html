@@ -76,7 +76,8 @@
                 } else {
                     const name = pattern.getElementsByClassName("pattern_name")[0].innerText;
                     const type = pattern.getElementsByClassName("pattern_type")[0].innerText;
-                    const text = name.toLowerCase() + " " + type.toLowerCase();
+                    const visibility = pattern.getElementsByClassName("pattern_public")[0].innerText;
+                    const text = name.toLowerCase() + " " + type.toLowerCase() + " " + visibility.toLowerCase();
                     let matches = true;
                     for (let term of terms) {
                         if (text.indexOf(term) === -1) {
