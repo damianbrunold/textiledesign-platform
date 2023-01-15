@@ -28,7 +28,7 @@
                     <a class="action" href="{{ url_for('main.edit_pattern',
                                                    user_name=pattern.owner,
                                                    pattern_name=pattern.name) }}">
-                        {{ gettext(pattern.pattern_type) }}
+                        {{ pattern.name }}
                     </a>
                 </div>
             {% endfor %}
