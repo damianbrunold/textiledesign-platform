@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Textile Platform\n"
 "Report-Msgid-Bugs-To: dab@dabsoft.ch\n"
-"POT-Creation-Date: 2022-06-12 19:16+0200\n"
+"POT-Creation-Date: 2023-01-15 15:13+0100\n"
 "PO-Revision-Date: 2022-03-22 15:35+0100\n"
 "Last-Translator: Damian Brunold <dab@dabsoft.ch>\n"
 "Language: de\n"
@@ -31,85 +31,77 @@ msgid "Password is required"
 msgstr "Passwort wird benötigt"
 
 #: auth.py:50
-msgid "Name is reserved and cannot be used"
-msgstr "Name is reserviert und kann nicht verwendet werden"
+msgid "Name is invalid and cannot be used"
+msgstr "Name ist ungültig und kann nicht verwendet werden"
 
-#: auth.py:67
+#: auth.py:69
 msgid "Name or E-Mail is already used"
 msgstr "Name oder E-Mail wird bereits verwendet"
 
-#: auth.py:90 auth.py:92
+#: auth.py:93 auth.py:95
 msgid "Login data are not correct"
 msgstr "Logindaten sind nicht korrekt"
 
-#: auth.py:94
+#: auth.py:97
 msgid "Account verification is pending"
 msgstr "Kontoverifizierung ist ausstehend"
 
-#: auth.py:96
+#: auth.py:99
 msgid "Account is disabled"
 msgstr "Konto ist gesperrt"
 
-#: auth.py:139
+#: auth.py:144
 msgid "E-Mail is required."
 msgstr "E-Mail wird benötigt."
 
-#: auth.py:142
+#: auth.py:147
 msgid "E-Mail is unknown."
 msgstr "E-Mail ist unbekannt."
 
-#: auth.py:154 auth.py:180
+#: auth.py:163 auth.py:193
 msgid "Could not save changes."
 msgstr "Änderungen konnten nicht gespeichert werden."
 
-#: auth.py:173
+#: auth.py:182
 msgid "Password is required."
 msgstr "Passwort wird benötigt."
 
-#: auth.py:220
+#: auth.py:242
 msgid "Please verify your account by clicking or entering the following link:"
 msgstr "Bitte verifizieren Sie Ihr Konto indem Sie auf folgenden Link klicken:"
 
-#: auth.py:230
+#: auth.py:254
 msgid "Texile-Platform account verification"
 msgstr "Textil-Plattform Kontoverifikation"
 
-#: auth.py:241
+#: auth.py:261
 msgid "Reset your password by clicking or entering the following link:"
 msgstr "Setzen Sie Ihr Passwort neu, indem Sie auf folgenden Link klicken:"
 
-#: auth.py:251
+#: auth.py:273
 msgid "Texile-Platform password reset"
 msgstr "Textil-Plattform Passwort zurücksetzen"
 
-#: main.py:128
+#: main.py:123
 msgid "Changes could not be saved."
 msgstr "Änderungen konnten nicht gespeichert werden."
 
-#: main.py:288
+#: main.py:283
 msgid "Pattern could not be deleted."
 msgstr "Muster konnte nicht gelöscht werden."
 
-#: templates/base.html:5 templates/base.html:16
+#: templates/base.html:8 templates/base.html:29
 msgid "Textile Platform"
 msgstr "Textil-Plattform"
 
-#: templates/base.html:20 templates/main/profile.html:4
-msgid "Profile"
-msgstr "Profil"
-
-#: templates/base.html:21
-msgid "Log out"
-msgstr "Abmelden"
-
-#: templates/base.html:23
+#: templates/base.html:37
 msgid "Register"
 msgstr "Registrieren"
 
 #: templates/auth/login.html:4 templates/auth/login.html:13
 #: templates/auth/recover_success.html:10
 #: templates/auth/verification_failed.html:10
-#: templates/auth/verification_successful.html:10 templates/base.html:24
+#: templates/auth/verification_successful.html:10 templates/base.html:38
 msgid "Log in"
 msgstr "Anmelden"
 
@@ -117,7 +109,7 @@ msgstr "Anmelden"
 msgid "Patterns"
 msgstr "Muster"
 
-#: templates/admin/users.html:4 templates/main/user_private.html:56
+#: templates/admin/users.html:4 templates/main/user_private.html:27
 msgid "Users"
 msgstr "Benutzer"
 
@@ -177,7 +169,7 @@ msgid "Please choose a new password for your account."
 msgstr "Bitte wählen Sie ein neues Passwort für Ihr Konto."
 
 #: templates/auth/recover_set_password.html:12
-#: templates/main/edit_dbweave_pattern.html:69
+#: templates/main/edit_dbweave_pattern.html:108
 #: templates/main/edit_jbead_pattern.html:36 templates/main/profile.html:15
 msgid "Save"
 msgstr "Speichern"
@@ -260,7 +252,7 @@ msgstr "Muster löschen"
 msgid "Do you really want to delete this pattern?"
 msgstr "Möchten Sie dieses Muster wirklich löschen?"
 
-#: templates/main/delete_pattern.html:10 templates/main/user_private.html:30
+#: templates/main/delete_pattern.html:10 templates/main/user_private.html:57
 msgid "Delete"
 msgstr "Löschen"
 
@@ -268,42 +260,131 @@ msgstr "Löschen"
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: templates/main/edit_dbweave_pattern.html:31
+#: templates/main/edit_dbweave_pattern.html:25
 msgid "Draft view"
 msgstr "Entwurfsansicht"
 
-#: templates/main/edit_dbweave_pattern.html:37
+#: templates/main/edit_dbweave_pattern.html:31
 msgid "Color view"
 msgstr "Farbansicht"
 
-#: templates/main/edit_dbweave_pattern.html:43
+#: templates/main/edit_dbweave_pattern.html:37
 msgid "Simulation view"
 msgstr "Simulationsansicht"
 
-#: templates/main/edit_dbweave_pattern.html:49
+#: templates/main/edit_dbweave_pattern.html:43
 msgid "Empty view"
 msgstr "Leere Ansicht"
 
+#: templates/main/edit_dbweave_pattern.html:48
+msgid "Active range"
+msgstr "Aktiver Bereich"
+
+#: templates/main/edit_dbweave_pattern.html:48
+#: templates/main/edit_dbweave_pattern.html:50
+msgid "Range 1"
+msgstr "Bereich 1"
+
+#: templates/main/edit_dbweave_pattern.html:51
+msgid "Range 2"
+msgstr "Bereich 2"
+
+#: templates/main/edit_dbweave_pattern.html:52
+msgid "Range 3"
+msgstr "Bereich 3"
+
+#: templates/main/edit_dbweave_pattern.html:53
+msgid "Range 4"
+msgstr "Bereich 4"
+
+#: templates/main/edit_dbweave_pattern.html:54
+msgid "Range 5"
+msgstr "Bereich 5"
+
+#: templates/main/edit_dbweave_pattern.html:55
+msgid "Range 6"
+msgstr "Bereich 6"
+
+#: templates/main/edit_dbweave_pattern.html:56
+msgid "Range 7"
+msgstr "Bereich 7"
+
+#: templates/main/edit_dbweave_pattern.html:57
+msgid "Range 8"
+msgstr "Bereich 8"
+
 #: templates/main/edit_dbweave_pattern.html:58
+msgid "Range 9"
+msgstr "Bereich 9"
+
+#: templates/main/edit_dbweave_pattern.html:59
+msgid "Aushebung"
+msgstr "Aushebung"
+
+#: templates/main/edit_dbweave_pattern.html:60
+msgid "Anbindung"
+msgstr "Anbindung"
+
+#: templates/main/edit_dbweave_pattern.html:61
+msgid "Abbindung"
+msgstr "Abbindung"
+
+#: templates/main/edit_dbweave_pattern.html:66
+msgid "Active color"
+msgstr "Aktuelle Farbe"
+
+#: templates/main/edit_dbweave_pattern.html:72
+msgid "Active layout"
+msgstr "Aktuelles Layout"
+
+#: templates/main/edit_dbweave_pattern.html:82
+msgid "View options"
+msgstr "Ansichtsoptionen"
+
+#: templates/main/edit_dbweave_pattern.html:82
+msgid "View"
+msgstr "Ansicht"
+
+#: templates/main/edit_dbweave_pattern.html:84
+msgid "Entering visible"
+msgstr "Einzug sichtbar"
+
+#: templates/main/edit_dbweave_pattern.html:85
+msgid "Treadling visible"
+msgstr "Trittfolge sichtbar"
+
+#: templates/main/edit_dbweave_pattern.html:86
+msgid "Reed visible"
+msgstr "Kamm sichtbar"
+
+#: templates/main/edit_dbweave_pattern.html:87
+msgid "Colors visible"
+msgstr "Farbbalken sichtbar"
+
+#: templates/main/edit_dbweave_pattern.html:88
+msgid "Support lines visible"
+msgstr "Hilfslinien sichtbar"
+
+#: templates/main/edit_dbweave_pattern.html:97
 msgid "Public - visible to all users"
 msgstr "Öffentlich - sichtbar für alle"
 
-#: templates/main/edit_dbweave_pattern.html:61
+#: templates/main/edit_dbweave_pattern.html:100
 msgid "Private - not visible to other users"
 msgstr "Privat - nicht sichtbar für andere"
 
-#: templates/main/edit_dbweave_pattern.html:67
+#: templates/main/edit_dbweave_pattern.html:106
 #: templates/main/edit_jbead_pattern.html:34
 msgid "Clone"
 msgstr "Klonen"
 
-#: templates/main/edit_dbweave_pattern.html:71
+#: templates/main/edit_dbweave_pattern.html:110
 #: templates/main/edit_jbead_pattern.html:38
 msgid "Close"
 msgstr "Schliessen"
 
 #: templates/main/edit_jbead_pattern.html:29
-#: templates/main/user_private.html:23
+#: templates/main/user_private.html:50
 msgid "Public"
 msgstr "Öffentlich"
 
@@ -315,13 +396,25 @@ msgstr "Einige Beispielmuster"
 msgid "Weave Patterns"
 msgstr "Weberei-Muster"
 
-#: templates/main/index.html:27
+#: templates/main/index.html:25
 msgid "Bead Patterns"
 msgstr "JBead-Muster"
+
+#: templates/main/index.html:40
+msgid "Go to my patterns"
+msgstr "Zu meinen Mustern gehen"
+
+#: templates/main/profile.html:4
+msgid "Profile"
+msgstr "Profil"
 
 #: templates/main/profile.html:13
 msgid "Dark mode"
 msgstr "Dunkelmodus"
+
+#: templates/main/profile.html:17
+msgid "Log out"
+msgstr "Abmelden"
 
 #: templates/main/status.html:4
 msgid "Status"
@@ -343,18 +436,21 @@ msgstr "Musterdatei"
 msgid "Upload"
 msgstr "Hochladen"
 
-#: templates/main/user_private.html:23
-msgid "Private"
-msgstr "Privat"
-
-#: templates/main/user_private.html:42
-msgid "Upload Pattern"
-msgstr "Muster hochladen"
-
-#: templates/main/user_private.html:48
+#: templates/main/user_private.html:11
 msgid "New Pattern"
 msgstr "Neues Muster"
 
-#: templates/main/user_private.html:53
-msgid "Admin"
-msgstr "Administration"
+#: templates/main/user_private.html:16
+msgid "Upload Pattern"
+msgstr "Muster hochladen"
+
+#: templates/main/user_private.html:21
+msgid "Groups"
+msgstr "Gruppen"
+
+#: templates/main/user_private.html:50
+msgid "Private"
+msgstr "Privat"
+
+#~ msgid "Admin"
+#~ msgstr "Administration"

@@ -1,14 +1,14 @@
 # Translations template for PROJECT.
-# Copyright (C) 2022 ORGANIZATION
+# Copyright (C) 2023 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2022-06-12 19:16+0200\n"
+"POT-Creation-Date: 2023-01-15 15:13+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -30,85 +30,77 @@ msgid "Password is required"
 msgstr ""
 
 #: auth.py:50
-msgid "Name is reserved and cannot be used"
+msgid "Name is invalid and cannot be used"
 msgstr ""
 
-#: auth.py:67
+#: auth.py:69
 msgid "Name or E-Mail is already used"
 msgstr ""
 
-#: auth.py:90 auth.py:92
+#: auth.py:93 auth.py:95
 msgid "Login data are not correct"
 msgstr ""
 
-#: auth.py:94
+#: auth.py:97
 msgid "Account verification is pending"
 msgstr ""
 
-#: auth.py:96
+#: auth.py:99
 msgid "Account is disabled"
 msgstr ""
 
-#: auth.py:139
+#: auth.py:144
 msgid "E-Mail is required."
 msgstr ""
 
-#: auth.py:142
+#: auth.py:147
 msgid "E-Mail is unknown."
 msgstr ""
 
-#: auth.py:154 auth.py:180
+#: auth.py:163 auth.py:193
 msgid "Could not save changes."
 msgstr ""
 
-#: auth.py:173
+#: auth.py:182
 msgid "Password is required."
 msgstr ""
 
-#: auth.py:220
+#: auth.py:242
 msgid "Please verify your account by clicking or entering the following link:"
 msgstr ""
 
-#: auth.py:230
+#: auth.py:254
 msgid "Texile-Platform account verification"
 msgstr ""
 
-#: auth.py:241
+#: auth.py:261
 msgid "Reset your password by clicking or entering the following link:"
 msgstr ""
 
-#: auth.py:251
+#: auth.py:273
 msgid "Texile-Platform password reset"
 msgstr ""
 
-#: main.py:128
+#: main.py:123
 msgid "Changes could not be saved."
 msgstr ""
 
-#: main.py:288
+#: main.py:283
 msgid "Pattern could not be deleted."
 msgstr ""
 
-#: templates/base.html:5 templates/base.html:16
+#: templates/base.html:8 templates/base.html:29
 msgid "Textile Platform"
 msgstr ""
 
-#: templates/base.html:20 templates/main/profile.html:4
-msgid "Profile"
-msgstr ""
-
-#: templates/base.html:21
-msgid "Log out"
-msgstr ""
-
-#: templates/base.html:23
+#: templates/base.html:37
 msgid "Register"
 msgstr ""
 
 #: templates/auth/login.html:4 templates/auth/login.html:13
 #: templates/auth/recover_success.html:10
 #: templates/auth/verification_failed.html:10
-#: templates/auth/verification_successful.html:10 templates/base.html:24
+#: templates/auth/verification_successful.html:10 templates/base.html:38
 msgid "Log in"
 msgstr ""
 
@@ -116,7 +108,7 @@ msgstr ""
 msgid "Patterns"
 msgstr ""
 
-#: templates/admin/users.html:4 templates/main/user_private.html:56
+#: templates/admin/users.html:4 templates/main/user_private.html:27
 msgid "Users"
 msgstr ""
 
@@ -174,7 +166,7 @@ msgid "Please choose a new password for your account."
 msgstr ""
 
 #: templates/auth/recover_set_password.html:12
-#: templates/main/edit_dbweave_pattern.html:69
+#: templates/main/edit_dbweave_pattern.html:108
 #: templates/main/edit_jbead_pattern.html:36 templates/main/profile.html:15
 msgid "Save"
 msgstr ""
@@ -257,7 +249,7 @@ msgstr ""
 msgid "Do you really want to delete this pattern?"
 msgstr ""
 
-#: templates/main/delete_pattern.html:10 templates/main/user_private.html:30
+#: templates/main/delete_pattern.html:10 templates/main/user_private.html:57
 msgid "Delete"
 msgstr ""
 
@@ -265,42 +257,131 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:31
+#: templates/main/edit_dbweave_pattern.html:25
 msgid "Draft view"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:37
+#: templates/main/edit_dbweave_pattern.html:31
 msgid "Color view"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:43
+#: templates/main/edit_dbweave_pattern.html:37
 msgid "Simulation view"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:49
+#: templates/main/edit_dbweave_pattern.html:43
 msgid "Empty view"
 msgstr ""
 
+#: templates/main/edit_dbweave_pattern.html:48
+msgid "Active range"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:48
+#: templates/main/edit_dbweave_pattern.html:50
+msgid "Range 1"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:51
+msgid "Range 2"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:52
+msgid "Range 3"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:53
+msgid "Range 4"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:54
+msgid "Range 5"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:55
+msgid "Range 6"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:56
+msgid "Range 7"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:57
+msgid "Range 8"
+msgstr ""
+
 #: templates/main/edit_dbweave_pattern.html:58
-msgid "Public - visible to all users"
+msgid "Range 9"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:59
+msgid "Aushebung"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:60
+msgid "Anbindung"
 msgstr ""
 
 #: templates/main/edit_dbweave_pattern.html:61
+msgid "Abbindung"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:66
+msgid "Active color"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:72
+msgid "Active layout"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:82
+msgid "View options"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:82
+msgid "View"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:84
+msgid "Entering visible"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:85
+msgid "Treadling visible"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:86
+msgid "Reed visible"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:87
+msgid "Colors visible"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:88
+msgid "Support lines visible"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:97
+msgid "Public - visible to all users"
+msgstr ""
+
+#: templates/main/edit_dbweave_pattern.html:100
 msgid "Private - not visible to other users"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:67
+#: templates/main/edit_dbweave_pattern.html:106
 #: templates/main/edit_jbead_pattern.html:34
 msgid "Clone"
 msgstr ""
 
-#: templates/main/edit_dbweave_pattern.html:71
+#: templates/main/edit_dbweave_pattern.html:110
 #: templates/main/edit_jbead_pattern.html:38
 msgid "Close"
 msgstr ""
 
 #: templates/main/edit_jbead_pattern.html:29
-#: templates/main/user_private.html:23
+#: templates/main/user_private.html:50
 msgid "Public"
 msgstr ""
 
@@ -312,12 +393,24 @@ msgstr ""
 msgid "Weave Patterns"
 msgstr ""
 
-#: templates/main/index.html:27
+#: templates/main/index.html:25
 msgid "Bead Patterns"
+msgstr ""
+
+#: templates/main/index.html:40
+msgid "Go to my patterns"
+msgstr ""
+
+#: templates/main/profile.html:4
+msgid "Profile"
 msgstr ""
 
 #: templates/main/profile.html:13
 msgid "Dark mode"
+msgstr ""
+
+#: templates/main/profile.html:17
+msgid "Log out"
 msgstr ""
 
 #: templates/main/status.html:4
@@ -340,18 +433,18 @@ msgstr ""
 msgid "Upload"
 msgstr ""
 
-#: templates/main/user_private.html:23
-msgid "Private"
-msgstr ""
-
-#: templates/main/user_private.html:42
-msgid "Upload Pattern"
-msgstr ""
-
-#: templates/main/user_private.html:48
+#: templates/main/user_private.html:11
 msgid "New Pattern"
 msgstr ""
 
-#: templates/main/user_private.html:53
-msgid "Admin"
+#: templates/main/user_private.html:16
+msgid "Upload Pattern"
+msgstr ""
+
+#: templates/main/user_private.html:21
+msgid "Groups"
+msgstr ""
+
+#: templates/main/user_private.html:50
+msgid "Private"
 msgstr ""
