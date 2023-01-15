@@ -18,7 +18,7 @@
                     <img src="{{ url_for('static', filename='img/icons/icon.png') }}">
                 </a>
                 {% if user %}
-                <a href="{{ url_for('main.user', name=user.name) }}">
+                <a href="{{ url_for('main.user', user_name=user.name) }}">
                     {{ user.label }}
                 </a>
                 {% else %}

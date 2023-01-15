@@ -39,23 +39,32 @@ def index():
                            bead_patterns=bead_patterns)
 
 
-@bp.route('/<string:name>')
-def user(name):
-    user = get_user_by_name(name.lower())
+@bp.route('/<string:user_name>')
+def user(user_name):
+    user = get_user_by_name(user_name.lower())
     if not user:
         return redirect(url_for('main.index'))
     elif g.user and g.user.name == user.name:
         # show private view
         patterns = get_patterns_for_user_name(g.user.name)
-        return render_template('main/user_private.html',
-                               user=user,
-                               patterns=patterns)
+        return render_template(
+            'main/user_private.html',
+            user=user,
+            patterns=patterns,
+        )
     else:
         # show public view
         patterns = get_patterns_for_user_name(user.name, True)
-        return render_template('main/user_public.html',
-                               user=user,
-                               patterns=patterns)
+        return render_template(
+            'main/user_public.html',
+            user=user,
+            patterns=patterns,
+        )
+
+
+@bp.route('/groups')
+def edit_groups():
+    pass
 
 
 @bp.route('/<string:user_name>/<string:pattern_name>')
@@ -155,7 +164,7 @@ def upload_pattern():
 
         return redirect(url_for("main.user", name=g.user.name))
 
-    return render_template('main/upload_pattern.html')
+    return render_template('main/upload_pattern.html', user=g.user)
 
 
 @bp.route('/create', methods=('GET', 'POST'))
@@ -255,7 +264,7 @@ def create_pattern():
                                     user_name=g.user.name,
                                     pattern_name=name))
 
-    return render_template('main/create_pattern.html')
+    return render_template('main/create_pattern.html', user=g.user)
 
 
 @bp.route('/delete/<string:pattern_name>', methods=('GET', 'POST'))

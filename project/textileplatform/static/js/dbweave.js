@@ -1708,8 +1708,10 @@ function update_layout_selector() {
 
 function update_color_selector(settings) {
     const elem = document.getElementById("current-color");
-    elem.style.backgroundColor = colors[settings.current_color];
-    elem.style.color = colors[settings.current_color];
+    if (elem) {
+        elem.style.backgroundColor = colors[settings.current_color];
+        elem.style.color = colors[settings.current_color];
+    }
 }
 
 
@@ -1772,24 +1774,26 @@ window.addEventListener("load", () => {
         view.draw();
     });
 
-    document.getElementById("current-range").addEventListener("click", () => {
-        const popup = document.getElementById("ranges");
-        if (popup.style.display === "") {
-            popup.style.display = "flex";
-        } else {
-            popup.style.display = "";
+    if (document.getElementById("current-range")) {
+        document.getElementById("current-range").addEventListener("click", () => {
+            const popup = document.getElementById("ranges");
+            if (popup.style.display === "") {
+                popup.style.display = "flex";
+            } else {
+                popup.style.display = "";
+            }
+        });
+        const range_handler = function(e) {
+            const range = parseInt(e.target.id.substring(5));
+            document.getElementById(`range${settings.current_range}`).className = "";
+            settings.current_range = range;
+            document.getElementById(`range${range}`).className = "current";
+            document.getElementById("current-range").innerText = e.target.innerText;
+            document.getElementById("ranges").style.display = "";
+        };
+        for (let i = 1; i <= 12; i++) {
+            document.getElementById(`range${i}`).addEventListener("click", range_handler);
         }
-    });
-    const range_handler = function(e) {
-        const range = parseInt(e.target.id.substring(5));
-        document.getElementById(`range${settings.current_range}`).className = "";
-        settings.current_range = range;
-        document.getElementById(`range${range}`).className = "current";
-        document.getElementById("current-range").innerText = e.target.innerText;
-        document.getElementById("ranges").style.display = "";
-    };
-    for (let i = 1; i <= 12; i++) {
-        document.getElementById(`range${i}`).addEventListener("click", range_handler);
     }
 
     document.getElementById("current-layout").addEventListener("click", () => {

@@ -5,35 +5,39 @@
 {% endblock %}
 
 {% block content %}
-    <div id="weave_patterns">
-        <h2>{{ gettext('Weave Patterns') }}</h2>
-        {% for pattern in weave_patterns %}
-            <div class="pattern">
-                <a class="action" href="{{ url_for('main.edit_pattern',
-                                               user_name=pattern.owner,
-                                               pattern_name=pattern.name) }}">
-                    {{ pattern.name }}
-                </a>
-            </div>
-        {% endfor %}
-    </div>
+    {% if weave_patterns %}
+        <div id="weave_patterns">
+            <h2>{{ gettext('Weave Patterns') }}</h2>
+            {% for pattern in weave_patterns %}
+                <div class="pattern">
+                    <a class="action" href="{{ url_for('main.edit_pattern',
+                                                   user_name=pattern.owner,
+                                                   pattern_name=pattern.name) }}">
+                        {{ pattern.name }}
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
-    <div id="bead_patterns">
-        <h2>{{ gettext('Bead Patterns') }}</h2>
-        {% for pattern in bead_patterns %}
-            <div class="pattern">
-                <a class="action" href="{{ url_for('main.edit_pattern',
-                                               user_name=pattern.owner,
-                                               pattern_name=pattern.name) }}">
-                    {{ gettext(pattern.pattern_type) }}
-                </a>
-            </div>
-        {% endfor %}
-    </div>
+    {% if bead_patterns %}
+        <div id="bead_patterns">
+            <h2>{{ gettext('Bead Patterns') }}</h2>
+            {% for pattern in bead_patterns %}
+                <div class="pattern">
+                    <a class="action" href="{{ url_for('main.edit_pattern',
+                                                   user_name=pattern.owner,
+                                                   pattern_name=pattern.name) }}">
+                        {{ gettext(pattern.pattern_type) }}
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     {% if g.user %}
-    <h2 id="mylink">
-        <a href="{{ url_for('main.user', name=g.user.name) }}">{{ gettext('Go to my patterns') }}</a>
-    </h2>
+        <h2 id="mylink">
+            <a href="{{ url_for('main.user', user_name=g.user.name) }}">{{ gettext('Go to my patterns') }}</a>
+        </h2>
     {% endif %}
 {% endblock %}

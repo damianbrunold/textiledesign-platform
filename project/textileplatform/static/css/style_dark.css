@@ -17,6 +17,23 @@ td { color: white; }
 
 .pattern:hover { background: #222; }
 
+#header .button {
+    background: #777;
+    border: 1px solid #666;
+}
+#header .button a {
+    color: #fff;
+}
+
+#filter input[type=text] {
+    border: 1px solid #666;
+    background: #777;
+}
+#filter input[type=submit] {
+    border: 1px solid #666;
+    background: #777;
+}
+
 #clone, #save, #close {
     outline: none;
     border: 1px solid #777;
