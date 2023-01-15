@@ -2,7 +2,11 @@
 <html>
     <head>
         <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">
-        <title>{{ gettext('Textile Platform') }}</title>
+        {% if pattern and pattern.name %}
+            <title>{{ pattern.name }}</title>
+        {% else %}
+            <title>{{ gettext('Textile Platform') }}</title>
+        {% endif %}
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
         {% if g.user and g.user.darkmode %}
             <link rel="stylesheet" href="{{ url_for('static', filename='css/style_dark.css') }}">
