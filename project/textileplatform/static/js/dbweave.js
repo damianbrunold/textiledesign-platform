@@ -1037,15 +1037,34 @@ class ScrollbarHorz {
         this.view = view;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, false);
+        this.delta = 5;
+    }
+
+    contains(x, y) {
+        let range = [
+            Math.min(this.calc_x(0), this.calc_x(this.width)),
+            Math.max(this.calc_x(0), this.calc_x(this.width))
+        ];
+        return range[0] <= x && x <= range[1] &&
+               this.y * settings.dy + this.delta <= y && y <= this.y * settings.dy + this.height;
+    }
+
+    scrollTo(x) {
+        // TODO
+        // find i for x
+        // calc offset_i if i is in the middle
+        // if < 0 correct to 0
+        // if > pattern.width correct to pattern.width - width
+        //
+        // how to account for left-to-right etc.?
     }
 
     draw(ctx, settings) {
-        const delta = 5;
         ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
         strokeRect(
             ctx,
             this.calc_x(0),
-            0.5 + this.y * settings.dy + delta,
+            0.5 + this.y * settings.dy + this.delta,
             this.calc_x(this.width),
             0.5 + this.y * settings.dy + this.height
         );
@@ -1056,7 +1075,7 @@ class ScrollbarHorz {
         fillRect(
             ctx,
             this.calc_x(a / settings.dx),
-            0.5 + this.y * settings.dy + delta,
+            0.5 + this.y * settings.dy + this.delta,
             this.calc_x(b / settings.dx),
             0.5 + this.y * settings.dy + this.height,
             1.0
@@ -1075,14 +1094,27 @@ class ScrollbarVert {
         this.view = view;
         this.calc_x = get_x_calculator(this, settings, false);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
+        this.delta = 5;
+    }
+
+    contains(x, y) {
+        let range = [
+            Math.min(this.calc_y(0), this.calc_y(this.height)),
+            Math.max(this.calc_y(0), this.calc_y(this.height))
+        ];
+        return range[0] <= y && y <= range[1] &&
+               this.x * settings.dx + this.delta <= x && x <= this.x * settings.dx + this.width;
+    }
+
+    scrollTo(y) {
+        // TODO
     }
 
     draw(ctx, settings) {
-        const delta = 5;
         ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
         strokeRect(
             ctx,
-            0.5 + this.x * settings.dx + delta,
+            0.5 + this.x * settings.dx + this.delta,
             this.calc_y(0),
             0.5 + this.x * settings.dx + this.width,
             this.calc_y(this.height)
@@ -1093,7 +1125,7 @@ class ScrollbarVert {
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         fillRect(
             ctx,
-            0.5 + this.x * settings.dx + delta,
+            0.5 + this.x * settings.dx + this.delta,
             this.calc_y(a / settings.dy),
             0.5 + this.x * settings.dx + this.width,
             this.calc_y(b / settings.dy)
@@ -1393,6 +1425,16 @@ function init() {
             const ii = i_to_doc(i, view.reed, settings.direction_righttoleft);
             pattern.reed.toggle(ii, 0);
             view.draw();
+        } else {
+            if (view.scroll_1_hor.contains(x, y)) {
+                view.scroll_1_hor.scroll_to(x);
+            } else if (view.scroll_2_hor.contains(x, y)) {
+                view.scroll_2_hor.scroll_to(x);
+            } else if (view.scroll_1_ver.contains(x, y)) {
+                view.scroll_1_ver.scroll_to(y);
+            } else if (view.scroll_2_ver.contains(x, y)) {
+                view.scroll_2_ver.scroll_to(y);
+            }
         }
     });
 }
