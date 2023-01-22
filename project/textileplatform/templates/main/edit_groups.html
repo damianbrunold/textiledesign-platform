@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{{ gettext('Groups') }}</h1>
+{% endblock %}
+
+{% block content %}
+    <ul>
+    {% for group in groups %}
+        <li>
+            {{ group.name }} -- {{ group.user_label_list() }}
+        </li>
+    {% endfor %}
+    </ul>
+    <p><a href="{{ url_for('main.add_group') }}">{{ gettext('Add Group') }}</a></p>
+{% endblock %}

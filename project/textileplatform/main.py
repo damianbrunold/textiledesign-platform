@@ -14,6 +14,7 @@ from flask import request
 from flask import url_for
 
 from textileplatform.db import db
+from textileplatform.db import Group
 from textileplatform.palette import default_weave_palette
 from textileplatform.palette import default_bead_palette
 from textileplatform.beadpattern import parse_jbb_data
@@ -25,6 +26,7 @@ from textileplatform.persistence import add_bead_pattern
 from textileplatform.persistence import get_patterns_for_user_name
 from textileplatform.persistence import get_pattern_by_name
 from textileplatform.persistence import delete_pattern
+from textileplatform.persistence import clean_name
 
 
 bp = Blueprint('main', __name__)
@@ -64,7 +66,36 @@ def user(user_name):
 
 @bp.route('/groups')
 def edit_groups():
-    pass
+    return render_template(
+        'main/edit_groups.html',
+        user=g.user,
+        groups=g.user.groups,
+    )
+
+
+@bp.route('/add-group', methods=('GET', 'POST'))
+def add_group():
+    if request.method == "POST":
+        label = request.form["name"]
+        name = clean_name(label)
+        description = request.form["description"]
+
+        group = db.session.get(Group, name)
+        if group:
+            flash(gettext("Group already exists"))
+        else:
+            group = Group(
+                name=name,
+                label=label,
+                owner=g.user.name,
+                description=description,
+            )
+            db.session.add(group)
+            g.user.groups.append(group)
+            db.session.commit()
+            # TODO errorhandling
+            return redirect(url_for('main.user', user_name=g.user.name))
+    return render_template('main/add_group.html')
 
 
 @bp.route('/<string:user_name>/<string:pattern_name>')
@@ -90,7 +121,7 @@ def edit_pattern(user_name, pattern_name):
                                pattern=pattern,
                                readonly=readonly)
     else:
-        return redirect(url_for('main.user'), user_name=user_name)
+        return redirect(url_for('main.user', user_name=user_name))
 
 
 @bp.route('/status')

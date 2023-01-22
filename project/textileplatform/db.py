@@ -55,6 +55,9 @@ class Group(db.Model):
     owner = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
 
+    def user_label_list(self):
+        return ", ".join([user.label for user in self.users])
+
 
 class Pattern(db.Model):
     __tablename__ = "txpattern"

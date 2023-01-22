@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{{ gettext('Add Group') }}</h1>
+{% endblock %}
+
+{% block content %}
+    <form method="POST">
+        <label>{{ gettext('Group Name') }}</label>
+        <input type="text" name="name" value="{{ request.form.get('name', '') }}"/>
+        <label>{{ gettext('Group Description') }}</label>
+        <input type="text" name="description" value="{{ request.form.get('description', '') }}"/>
+        <input type="submit" value="{{ gettext('Save') }}"/>
+    </form>
+{% endblock %}
