@@ -1943,6 +1943,23 @@ window.addEventListener("load", () => {
         view.layout();
         view.draw();
     });
+
+    document.getElementById("zoom-in").addEventListener("click", (e) => {
+        settings.dx += 1;
+        settings.dy += 1;
+        if (settings.dx > 30) settings.dx = 30;
+        if (settings.dy > 30) settings.dy = 30;
+        view.layout();
+        view.draw();
+    });
+    document.getElementById("zoom-out").addEventListener("click", (e) => {
+        settings.dx -= 1;
+        settings.dy -= 1;
+        if (settings.dx < 8) settings.dx = 8;
+        if (settings.dy < 8) settings.dy = 8;
+        view.layout();
+        view.draw();
+    });
 });
 
 window.addEventListener("resize", resizeWindow);

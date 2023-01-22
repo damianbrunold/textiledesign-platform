@@ -89,6 +89,21 @@
             </div>
         </div>
 
+        <img
+            id="zoom-in"
+            src="{{url_for('static', filename='img/icons/icon-zoom-in.svg')}}"
+            title="{{ gettext('Zoom in') }}"
+            height="26px"
+            class="icon"
+        />
+        <img
+            id="zoom-out"
+            src="{{url_for('static', filename='img/icons/icon-zoom-out.svg')}}"
+            title="{{ gettext('Zoom out') }}"
+            height="26px"
+            class="icon"
+        />
+
         {% if not readonly %}
             <img
                 id="public"

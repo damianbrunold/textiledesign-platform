@@ -46,6 +46,10 @@ td { color: white; }
     background: #777;
 }
 
+.icon:hover, .icon:hover {
+    background: #777;
+}
+
 #current-range {
     border: 1px solid #777;
     background: #666;
