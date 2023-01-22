@@ -1035,6 +1035,7 @@ class ScrollbarHorz {
         this.height = height;
         this.pattern = pattern;
         this.view = view;
+        this.righttoleft = righttoleft;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, false);
         this.delta = 5;
@@ -1050,13 +1051,21 @@ class ScrollbarHorz {
     }
 
     scrollTo(x) {
-        // TODO
-        // find i for x
-        // calc offset_i if i is in the middle
-        // if < 0 correct to 0
-        // if > pattern.width correct to pattern.width - width
-        //
-        // how to account for left-to-right etc.?
+        let f = undefined;
+        if (this.righttoleft) {
+            f = 1.0 - 1.0 * (x - this.x * settings.dx) / (this.width * settings.dx);
+        } else {
+            f = 1.0 * (x - this.x * settings.dx) / (this.width * settings.dx);
+        }
+        const centre_i = Math.trunc(this.pattern.width * f);
+        let start_i = Math.trunc(centre_i - this.width / 2);
+        if (start_i < 0) {
+            start_i = 0;
+        } else if (start_i + this.width > this.pattern.width) {
+            start_i = this.pattern.width - this.width;
+        }
+        this.view.offset_i = start_i;
+        view.draw();
     }
 
     draw(ctx, settings) {
@@ -1070,7 +1079,7 @@ class ScrollbarHorz {
         );
         const w = this.width * settings.dx - 1;
         const a = Math.min(w / this.pattern.width * this.view.offset_i, w);
-        const b = Math.min(w / this.pattern.width * this.view.width, w);
+        const b = Math.min(w / this.pattern.width * (this.view.offset_i + this.view.width), w);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         fillRect(
             ctx,
@@ -1092,6 +1101,7 @@ class ScrollbarVert {
         this.height = height;
         this.pattern = pattern;
         this.view = view;
+        this.toptobottom = toptobottom;
         this.calc_x = get_x_calculator(this, settings, false);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
         this.delta = 5;
@@ -1107,7 +1117,21 @@ class ScrollbarVert {
     }
 
     scrollTo(y) {
-        // TODO
+        let f = undefined;
+        if (this.toptobottom) {
+            f = 1.0 * (y - this.y * settings.dy) / (this.height * settings.dy);
+        } else {
+            f = 1.0 - 1.0 * (y - this.y * settings.dy) / (this.height * settings.dy);
+        }
+        const centre_j = Math.trunc(this.pattern.height * f);
+        let start_j = Math.trunc(centre_j - this.height / 2);
+        if (start_j < 0) {
+            start_j = 0;
+        } else if (start_j + this.height > this.pattern.height) {
+            start_j = this.pattern.height - this.height;
+        }
+        this.view.offset_j = start_j;
+        view.draw();
     }
 
     draw(ctx, settings) {
@@ -1121,7 +1145,7 @@ class ScrollbarVert {
         );
         const h = this.height * settings.dy - 1;
         const a = Math.min(h / this.pattern.height * this.view.offset_j, h);
-        const b = Math.min(h / this.pattern.height * this.view.height, h);
+        const b = Math.min(h / this.pattern.height * (this.view.offset_j + this.view.height), h);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         fillRect(
             ctx,
@@ -1427,13 +1451,13 @@ function init() {
             view.draw();
         } else {
             if (view.scroll_1_hor.contains(x, y)) {
-                view.scroll_1_hor.scroll_to(x);
+                view.scroll_1_hor.scrollTo(x);
             } else if (view.scroll_2_hor.contains(x, y)) {
-                view.scroll_2_hor.scroll_to(x);
+                view.scroll_2_hor.scrollTo(x);
             } else if (view.scroll_1_ver.contains(x, y)) {
-                view.scroll_1_ver.scroll_to(y);
+                view.scroll_1_ver.scrollTo(y);
             } else if (view.scroll_2_ver.contains(x, y)) {
-                view.scroll_2_ver.scroll_to(y);
+                view.scroll_2_ver.scrollTo(y);
             }
         }
     });
