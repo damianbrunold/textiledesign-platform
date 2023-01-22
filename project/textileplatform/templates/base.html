@@ -23,7 +23,7 @@
                 </a>
                 {% if user %}
                 <a href="{{ url_for('main.user', user_name=user.name) }}">
-                    {{ user.short_label() }}
+                    {{ user.label }}
                 </a>
                 {% else %}
                     {{ gettext('Textile Platform') }}
@@ -32,7 +32,7 @@
             </h1>
             <ul>
             {% if g.user %}
-                <li><a href="{{ url_for('main.profile') }}">{{ g.user.short_label() }}</a>
+                <li><a href="{{ url_for('main.profile') }}">{{ g.user.label }}</a>
             {% else %}
                 <li><a href="{{ url_for('auth.register') }}">{{ gettext('Register') }}</a>
                 <li><a href="{{ url_for('auth.login') }}">{{ gettext('Log in') }}</a>

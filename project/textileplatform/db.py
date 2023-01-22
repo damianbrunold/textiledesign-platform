@@ -8,14 +8,48 @@ user_group_table = db.Table(
     "txusergroup",
     db.Column(
         "user",
-        db.String(100),
-        db.ForeignKey("txuser.name"),
+        db.Integer,
+        db.ForeignKey("txuser.id"),
         primary_key=True,
     ),
     db.Column(
         "group",
-        db.String(100),
-        db.ForeignKey("txgroup.name"),
+        db.Integer,
+        db.ForeignKey("txgroup.id"),
+        primary_key=True,
+    )
+)
+
+
+user_group_invite_table = db.Table(
+    "txusergroupinvite",
+    db.Column(
+        "user",
+        db.Integer,
+        db.ForeignKey("txuser.id"),
+        primary_key=True,
+    ),
+    db.Column(
+        "group",
+        db.Integer,
+        db.ForeignKey("txgroup.id"),
+        primary_key=True,
+    )
+)
+
+
+group_pattern_table = db.Table(
+    "txgrouppattern",
+    db.Column(
+        "group",
+        db.Integer,
+        db.ForeignKey("txgroup.id"),
+        primary_key=True,
+    ),
+    db.Column(
+        "pattern",
+        db.Integer,
+        db.ForeignKey("txpattern.id"),
         primary_key=True,
     )
 )
@@ -24,8 +58,9 @@ user_group_table = db.Table(
 class User(db.Model):
     __tablename__ = "txuser"
 
-    name = db.Column(db.String(100), primary_key=True)
-    label = db.Column(db.String(255), nullable=False, unique=True)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    label = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(255), nullable=False, unique=True)
     password = db.Column(db.String(255), nullable=False)
     darkmode = db.Column(db.Boolean)
@@ -35,37 +70,51 @@ class User(db.Model):
     timezone = db.Column(db.String(20))
     verification_code = db.Column(db.String(100))
 
+    mygroups = db.relationship("Group", back_populates="owner")
+    mypatterns = db.relationship("Pattern", back_populates="owner")
+
     groups = db.relationship(
         "Group",
         secondary=user_group_table,
         backref=db.backref("users", lazy=True),
     )
 
-    def short_label(self):
-        if len(self.label) > 30:
-            return self.label[0:27] + "..."
-        return self.label
+    invited_groups = db.relationship(
+        "Group",
+        secondary=user_group_invite_table,
+        backref=db.backref("invited_users", lazy=True),
+    )
 
 
 class Group(db.Model):
     __tablename__ = "txgroup"
 
-    name = db.Column(db.String(100), primary_key=True)
-    label = db.Column(db.String(255), nullable=False, unique=True)
-    owner = db.Column(db.String(100), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    label = db.Column(db.String(50), nullable=False, unique=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("txuser.id"))
     description = db.Column(db.Text, nullable=False)
 
+    owner = db.relationship("User", back_populates="mygroups")
+
+    patterns = db.relationship(
+        "Pattern",
+        secondary=group_pattern_table,
+        backref=db.backref("groups", lazy=True),
+    )
+
     def user_label_list(self):
-        return ", ".join([user.label for user in self.users])
+        return ", ".join([user.name for user in self.users])
 
 
 class Pattern(db.Model):
     __tablename__ = "txpattern"
 
-    name = db.Column(db.String(100), primary_key=True)
-    owner = db.Column(db.String(100), primary_key=True)
-    label = db.Column(db.String(255), nullable=False)
-    pattern_type = db.Column(db.String(100), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    label = db.Column(db.String(100), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey("txuser.id"))
+    pattern_type_id = db.Column(db.Integer, db.ForeignKey("txpatterntype.id"))
     description = db.Column(db.Text)
     contents = db.Column(db.Text)
     preview_image = db.Column(db.LargeBinary)
@@ -74,25 +123,17 @@ class Pattern(db.Model):
     modified = db.Column(db.DateTime)
     public = db.Column(db.Boolean)
 
-    db.UniqueConstraint(owner, label)
+    db.UniqueConstraint(owner_id, name)
 
-
-class Permission(db.Model):
-    __tablename__ = "txpermission"
-
-    pattern = db.Column(db.String(100), primary_key=True)
-    user = db.Column(db.String(100), primary_key=True)
-    view = db.Column(db.Boolean)
-    edit = db.Column(db.Boolean)
-    delete = db.Column(db.Boolean)
-    share = db.Column(db.Boolean)
-    publish = db.Column(db.Boolean)
+    owner = db.relationship("User", back_populates="mypatterns")
+    pattern_type = db.relationship("PatternType")
 
 
 class PatternType(db.Model):
-    __tablename__ = "txtype"
+    __tablename__ = "txpatterntype"
 
-    pattern_type = db.Column(db.String(100), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    pattern_type = db.Column(db.String(50), nullable=False, unique=True)
 
 
 def ensure_db_contents(app):

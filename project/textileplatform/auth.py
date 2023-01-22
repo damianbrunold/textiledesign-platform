@@ -21,7 +21,7 @@ from textileplatform.db import db
 from textileplatform.db import User
 from textileplatform.persistence import get_user_by_name
 from textileplatform.persistence import get_user_by_email
-from textileplatform.name import from_display
+from textileplatform.name import from_label
 from textileplatform.name import is_valid
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -44,7 +44,7 @@ def register():
             error = gettext('Password is required')
 
         label = name
-        name = from_display(label)
+        name = from_label(label)
 
         if not is_valid(name):
             error = gettext('Name is invalid and cannot be used')

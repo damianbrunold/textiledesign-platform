@@ -23,10 +23,10 @@ from textileplatform.auth import login_required
 from textileplatform.persistence import get_user_by_name
 from textileplatform.persistence import add_weave_pattern
 from textileplatform.persistence import add_bead_pattern
-from textileplatform.persistence import get_patterns_for_user_name
+from textileplatform.persistence import get_patterns_for_user
 from textileplatform.persistence import get_pattern_by_name
 from textileplatform.persistence import delete_pattern
-from textileplatform.persistence import clean_name
+from textileplatform.name import from_label
 
 
 bp = Blueprint('main', __name__)
@@ -34,8 +34,8 @@ bp = Blueprint('main', __name__)
 
 @bp.route('/')
 def index():
-    weave_patterns = get_patterns_for_user_name("weave", True)
-    bead_patterns = get_patterns_for_user_name("bead", True)
+    weave_patterns = get_patterns_for_user(get_user_by_name("weave"), True)
+    bead_patterns = get_patterns_for_user(get_user_by_name("bead"), True)
     return render_template('main/index.html',
                            weave_patterns=weave_patterns,
                            bead_patterns=bead_patterns)
@@ -48,7 +48,7 @@ def user(user_name):
         return redirect(url_for('main.index'))
     elif g.user and g.user.name == user.name:
         # show private view
-        patterns = get_patterns_for_user_name(g.user.name)
+        patterns = get_patterns_for_user(g.user)
         return render_template(
             'main/user_private.html',
             user=user,
@@ -56,7 +56,7 @@ def user(user_name):
         )
     else:
         # show public view
-        patterns = get_patterns_for_user_name(user.name, True)
+        patterns = get_patterns_for_user(user, True)
         return render_template(
             'main/user_public.html',
             user=user,
@@ -77,24 +77,24 @@ def edit_groups():
 def add_group():
     if request.method == "POST":
         label = request.form["name"]
-        name = clean_name(label)
+        name = from_label(label)
         description = request.form["description"]
 
-        group = db.session.get(Group, name)
+        group = Group.query.filter(Group.name == name).first()
         if group:
             flash(gettext("Group already exists"))
         else:
             group = Group(
                 name=name,
                 label=label,
-                owner=g.user.name,
                 description=description,
             )
+            group.owner = g.user
             db.session.add(group)
             g.user.groups.append(group)
             db.session.commit()
             # TODO errorhandling
-            return redirect(url_for('main.user', user_name=g.user.name))
+            return redirect(url_for('main.edit_groups', user_name=g.user.name))
     return render_template('main/add_group.html')
 
 
@@ -103,25 +103,25 @@ def edit_pattern(user_name, pattern_name):
     user = get_user_by_name(user_name.lower())
     if not user:
         return redirect(url_for('main.index'))
-    pattern = get_pattern_by_name(user.name, pattern_name)
+    pattern = get_pattern_by_name(user, pattern_name)
     if not pattern:
         return redirect(url_for('main.user', user_name=user_name))
     if (not g.user or g.user.name != user.name) and not pattern.public:
         return redirect(url_for('main.user', user_name=user_name))
     readonly = not g.user or g.user.name != user.name
     pattern.pattern = json.loads(pattern.contents)
-    if pattern.pattern_type == "DB-WEAVE Pattern":
+    if pattern.pattern_type.pattern_type == "DB-WEAVE Pattern":
         return render_template('main/edit_dbweave_pattern.html',
                                user=user,
                                pattern=pattern,
                                readonly=readonly)
-    elif pattern.pattern_type == "JBead Pattern":
+    elif pattern.pattern_type.pattern_type == "JBead Pattern":
         return render_template('main/edit_jbead_pattern.html',
                                user=user,
                                pattern=pattern,
                                readonly=readonly)
     else:
-        return redirect(url_for('main.user', user_name=user_name))
+        return redirect(url_for('main.user', user_name=user.name))
 
 
 @bp.route('/status')
@@ -187,9 +187,9 @@ def upload_pattern():
                 filetype = "jbb"
 
             if filetype == "dbw":
-                add_weave_pattern(parse_dbw_data(data, name), g.user.name)
+                add_weave_pattern(parse_dbw_data(data, name), g.user)
             elif filetype == "jbb":
-                add_bead_pattern(parse_jbb_data(data, name), g.user.name)
+                add_bead_pattern(parse_jbb_data(data, name), g.user)
             else:
                 pass
 
@@ -261,7 +261,7 @@ def create_pattern():
             pattern['weave_style'] = 'draft'
 
             # TODO handle exceptions
-            name = add_weave_pattern(pattern, g.user.name)
+            name = add_weave_pattern(pattern, g.user)
 
             return redirect(url_for("main.edit_pattern",
                                     user_name=g.user.name,
@@ -296,7 +296,7 @@ def create_pattern():
             pattern['view'] = view
 
             # TODO handle exceptions
-            name = add_bead_pattern(pattern, g.user.name)
+            name = add_bead_pattern(pattern, g.user)
 
             return redirect(url_for("main.edit_pattern",
                                     user_name=g.user.name,
@@ -308,7 +308,7 @@ def create_pattern():
 @bp.route('/delete/<string:pattern_name>', methods=('GET', 'POST'))
 @login_required
 def delete(pattern_name):
-    pattern = get_pattern_by_name(g.user.name, pattern_name)
+    pattern = get_pattern_by_name(g.user, pattern_name)
     if not pattern:
         return redirect(url_for('main.user', user_name=g.user.name))
 
@@ -316,7 +316,7 @@ def delete(pattern_name):
         error = None
 
         try:
-            delete_pattern(g.user.name, pattern)
+            delete_pattern(pattern)
         except Exception:
             error = gettext('Pattern could not be deleted.')
         else:

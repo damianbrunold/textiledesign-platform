@@ -29,7 +29,7 @@ def pattern(user_name, pattern_name):
     if not user:
         return respond("NOK", "User not found")
 
-    pattern = get_pattern_by_name(user.name, pattern_name)
+    pattern = get_pattern_by_name(user, pattern_name)
     if not pattern:
         return respond("NOK", "Pattern not found")
 

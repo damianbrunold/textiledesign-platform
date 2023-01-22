@@ -6,55 +6,46 @@ from sqlalchemy.exc import IntegrityError
 from textileplatform.db import db
 from textileplatform.db import User
 from textileplatform.db import Pattern
+from textileplatform.db import PatternType
+from textileplatform.name import from_label
 
 
-def clean_name(name):
-    return (
-        name.replace("..", "")
-            .replace("/", "")
-            .replace("\\", "")
-            .replace("@", "")
-            .replace(":", "")
-            .replace(";", "")
-            .replace("?", "")
-            .replace("<", "")
-            .replace(">", "")
-            .replace("&", "")
-            .replace(" ", "-")
-            .replace("_", "-")
-            .replace("\t", "-")
-            .replace("\n", "-")
-            .replace("\r", "-")
-            .replace("----", "-")
-            .replace("---", "-")
-            .replace("--", "-")
-    )
+def get_weave_pattern_type():
+    return PatternType.query.filter(
+        PatternType.pattern_type == "DB-WEAVE Pattern"
+    ).first()
 
 
-def add_weave_pattern(pattern, user_name):
+def get_bead_pattern_type():
+    return PatternType.query.filter(
+        PatternType.pattern_type == "JBead Pattern"
+    ).first()
+
+
+def add_weave_pattern(pattern, user):
     suffix = None
     now = datetime.datetime.utcnow()
     while True:
         if suffix and suffix > 10:
             break
         if suffix:
-            name = clean_name(pattern["name"] + " - " + str(suffix))
             label = pattern["name"] + " - " + str(suffix)
         else:
-            name = clean_name(pattern["name"])
             label = pattern["name"]
+        name = from_label(label)
         try:
-            db.session.add(Pattern(
+            p = Pattern(
                 name=name,
                 label=label,
-                owner=user_name,
-                pattern_type="DB-WEAVE Pattern",
                 description=pattern["notes"],
                 contents=json.dumps(pattern),
                 created=now,
                 modified=now,
                 public=False
-            ))
+            )
+            p.owner = user
+            p.pattern_type = get_weave_pattern_type()
+            db.session.add(p)
             db.session.commit()
             return name
         except IntegrityError:
@@ -65,30 +56,30 @@ def add_weave_pattern(pattern, user_name):
                 suffix = 1
 
 
-def add_bead_pattern(pattern, user_name):
+def add_bead_pattern(pattern, user):
     suffix = None
     now = datetime.datetime.utcnow()
     while True:
         if suffix and suffix > 10:
             break
         if suffix:
-            name = clean_name(pattern["name"] + " - " + str(suffix))
             label = pattern["name"] + " - " + str(suffix)
         else:
-            name = clean_name(pattern["name"])
             label = pattern["name"]
+        name = from_label(label)
         try:
-            db.session.add(Pattern(
+            p = Pattern(
                 name=name,
                 label=label,
-                owner=user_name,
-                pattern_type="JBead Pattern",
                 description=pattern["notes"],
                 contents=json.dumps(pattern),
                 created=now,
                 modified=now,
                 public=False,
-            ))
+            )
+            p.owner = user
+            p.pattern_type = get_bead_pattern_type()
+            db.session.add(p)
             db.session.commit()
             return name
         except IntegrityError:
@@ -99,21 +90,19 @@ def add_bead_pattern(pattern, user_name):
                 suffix = 1
 
 
-def get_patterns_for_user_name(user_name, only_public=False):
-    query = Pattern.query.filter(Pattern.owner == user_name)
+def get_patterns_for_user(user, only_public=False):
     if only_public:
-        query = query.filter(Pattern.public)
-    query = query.order_by(Pattern.pattern_type, db.func.lower(Pattern.label))
-    return query.all()
+        return [p for p in user.mypatterns if p.public]
+    return user.mypatterns
 
 
-def get_pattern_by_name(user_name, name):
-    query = Pattern.query.filter(Pattern.owner == user_name)
-    query = query.filter(Pattern.name == name)
-    return query.first()
+def get_pattern_by_name(user, name):
+    for pattern in user.mypatterns:
+        if pattern.name == name:
+            return pattern
 
 
-def clone_pattern(user_name, pattern, contents):
+def clone_pattern(user, pattern, contents):
     suffix = None
     while True:
         if suffix and suffix > 10:
@@ -121,16 +110,13 @@ def clone_pattern(user_name, pattern, contents):
         try:
             now = datetime.datetime.utcnow()
             if suffix:
-                name = clean_name(pattern.name + " - " + str(suffix))
                 label = pattern.label + " - " + str(suffix)
             else:
-                name = clean_name(pattern.name)
                 label = pattern.label
-            db.session.add(Pattern(
+            name = from_label(label)
+            p = Pattern(
                 name=name,
                 label=label,
-                owner=user_name,
-                pattern_type=pattern.pattern_type,
                 description=pattern.description,
                 contents=contents,
                 preview_image=pattern.preview_image,
@@ -138,7 +124,10 @@ def clone_pattern(user_name, pattern, contents):
                 created=now,
                 modified=now,
                 public=False,
-            ))
+            )
+            p.owner = user
+            p.pattern_type = pattern.pattern_type
+            db.session.add(p)
             db.session.commit()
             break
         except IntegrityError:
@@ -149,7 +138,7 @@ def clone_pattern(user_name, pattern, contents):
                 suffix += 1
 
 
-def delete_pattern(user_name, pattern):
+def delete_pattern(pattern):
     db.session.delete(pattern)
     db.session.commit()
 
