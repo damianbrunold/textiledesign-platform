@@ -1,5 +1,12 @@
+from textileplatform.name import from_label
+
+import datetime
+import json
+
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash as gen_pw_hash
+
 
 db = SQLAlchemy()
 
@@ -178,3 +185,125 @@ def ensure_db_contents(app):
                 password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
             ))
             db.session.commit()
+
+
+def get_weave_pattern_type():
+    return PatternType.query.filter(
+        PatternType.pattern_type == "DB-WEAVE Pattern"
+    ).first()
+
+
+def get_bead_pattern_type():
+    return PatternType.query.filter(
+        PatternType.pattern_type == "JBead Pattern"
+    ).first()
+
+
+def add_weave_pattern(pattern, user):
+    suffix = None
+    now = datetime.datetime.utcnow()
+    while True:
+        if suffix and suffix > 10:
+            break
+        if suffix:
+            label = pattern["name"] + " - " + str(suffix)
+        else:
+            label = pattern["name"]
+        name = from_label(label)
+        try:
+            p = Pattern(
+                name=name,
+                label=label,
+                description=pattern["notes"],
+                contents=json.dumps(pattern),
+                created=now,
+                modified=now,
+                public=False
+            )
+            p.owner = user
+            p.pattern_type = get_weave_pattern_type()
+            db.session.add(p)
+            db.session.commit()
+            return name
+        except IntegrityError:
+            db.session.rollback()
+            if suffix:
+                suffix += 1
+            else:
+                suffix = 1
+
+
+def add_bead_pattern(pattern, user):
+    suffix = None
+    now = datetime.datetime.utcnow()
+    while True:
+        if suffix and suffix > 10:
+            break
+        if suffix:
+            label = pattern["name"] + " - " + str(suffix)
+        else:
+            label = pattern["name"]
+        name = from_label(label)
+        try:
+            p = Pattern(
+                name=name,
+                label=label,
+                description=pattern["notes"],
+                contents=json.dumps(pattern),
+                created=now,
+                modified=now,
+                public=False,
+            )
+            p.owner = user
+            p.pattern_type = get_bead_pattern_type()
+            db.session.add(p)
+            db.session.commit()
+            return name
+        except IntegrityError:
+            db.session.rollback()
+            if suffix:
+                suffix += 1
+            else:
+                suffix = 1
+
+
+def get_patterns_for_user(user, only_public=False):
+    if only_public:
+        return [p for p in user.mypatterns if p.public]
+    return user.mypatterns
+
+
+def clone_pattern(user, pattern, contents):
+    suffix = None
+    while True:
+        if suffix and suffix > 10:
+            break
+        try:
+            now = datetime.datetime.utcnow()
+            if suffix:
+                label = pattern.label + " - " + str(suffix)
+            else:
+                label = pattern.label
+            name = from_label(label)
+            p = Pattern(
+                name=name,
+                label=label,
+                description=pattern.description,
+                contents=contents,
+                preview_image=pattern.preview_image,
+                thumbnail_image=pattern.thumbnail_image,
+                created=now,
+                modified=now,
+                public=False,
+            )
+            p.owner = user
+            p.pattern_type = pattern.pattern_type
+            db.session.add(p)
+            db.session.commit()
+            break
+        except IntegrityError:
+            db.session.rollback()
+            if not suffix:
+                suffix = 1
+            else:
+                suffix += 1

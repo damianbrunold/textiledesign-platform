@@ -1,9 +1,10 @@
-from . import auth
-from . import api
-from . import admin
-from . import main
-from textileplatform.db import ensure_db_contents
-from textileplatform.db import db
+from textileplatform import admin
+from textileplatform import api
+from textileplatform import auth
+from textileplatform import main
+from textileplatform.models import db
+from textileplatform.models import ensure_db_contents
+
 import os
 
 import click
@@ -16,13 +17,12 @@ from flask_migrate import Migrate
 
 load_dotenv()
 
-
 app = Flask(__name__)
 
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
-    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SAMESITE="Lax",
     SQLALCHEMY_DATABASE_URI=os.environ["SQLALCHEMY_DATABASE_URI"],
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SECRET_KEY=os.environ["SECRET_KEY"],
@@ -34,15 +34,15 @@ babel = Babel(app)
 
 @babel.localeselector
 def get_locale():
-    user = getattr(g, 'user', None)
+    user = getattr(g, "user", None)
     if user is not None and user.locale:
         return user.locale
-    return request.accept_languages.best_match(['de', 'en'])
+    return request.accept_languages.best_match(["de", "en"])
 
 
 @babel.timezoneselector
 def get_timezone():
-    user = getattr(g, 'user', None)
+    user = getattr(g, "user", None)
     if user is not None:
         return user.timezone
 
@@ -56,10 +56,10 @@ db.init_app(app)
 Migrate(app, db)
 
 
-@click.command('init-db')
+@click.command("init-db")
 def init_db_command():
     ensure_db_contents(app)
-    click.echo('Prepared the database.')
+    click.echo("Prepared the database.")
 
 
 app.cli.add_command(init_db_command)
@@ -69,6 +69,6 @@ app.register_blueprint(api.bp)
 app.register_blueprint(admin.bp)
 app.register_blueprint(main.bp)
 
-app.add_url_rule('/', endpoint='index')
+app.add_url_rule("/", endpoint="index")
 
 application = app
