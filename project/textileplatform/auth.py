@@ -271,7 +271,7 @@ def send_mail(receiver, subject, message):
     msg = email.message.EmailMessage()
     msg.set_content(message)
     msg["Subject"] = subject
-    msg["From"] = "admin@texil-plattform.ch"
+    msg["From"] = "admin@textil-plattform.ch"
     msg["To"] = receiver
     s = smtplib.SMTP("localhost")
     s.send_message(msg)
