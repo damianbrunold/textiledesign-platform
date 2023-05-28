@@ -29,9 +29,10 @@ def is_valid(name, max_len=100):
     if len(name) > max_len:
         return False
     return name not in [
-        "api",
-        "db",
-        "auth",
         "admin",
+        "api",
+        "auth",
+        "db",
         "status",
+        "superuser",
     ]
