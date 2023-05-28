@@ -110,6 +110,12 @@ class ViewDraft {
                this.y <= j && j < this.y + this.height;
     }
 
+    pixelToCoord(x, y) {
+        let i = Math.trunc(x / settings.dx);
+        let j = this.height - 1 - Math.trunc(y / settings.dy);
+        return [i - this.x, j - this.y + this.offset];
+    }
+
     draw(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
@@ -141,8 +147,38 @@ class ViewCorrected {
     }
 
     contains(i, j) {
-        return this.x <= i && i < this.x + this.width &&
+        return this.x - 1 <= i && i < this.x + this.width + 1 &&
                this.y <= j && j < this.y + this.height;
+    }
+
+    pixelToCoord(x, y) {
+        let j = this.height - 1 - Math.trunc(y / settings.dy);
+        j = j - this.y + this.offset;
+        let i;
+        if (j % 2 == 0) {
+            i = Math.trunc(x / settings.dx) - this.x;
+        } else {
+            i = Math.trunc((x + settings.dx/2) / settings.dx) - this.x;
+        }
+        let idx = i;
+        j--;
+        while (j >= 0) {
+            idx += j % 2 == 0 ? this.data.width : this.data.width + 1;
+            j--;
+        }
+        return [idx % this.data.width, Math.trunc(idx / this.data.width)];
+    }
+
+    idxToCoord(idx) {
+        let j = 0;
+        let w = this.data.width;
+        while (idx >= w) {
+            j++;
+            idx -= w;
+            w = j % 2 == 0 ? this.data.width : this.data.width + 1;
+        }
+        let i = idx;
+        return [i, j];
     }
 
     draw(ctx, settings) {
@@ -151,15 +187,8 @@ class ViewCorrected {
 
         for (let jj = 0; jj < this.data.height; jj++) {
             for (let ii = 0; ii < this.data.width; ii++) {
-                let idx = ii + jj * this.data.width;
-                let j = 0;
-                let w = this.data.width;
-                while (idx >= w) {
-                    j++;
-                    idx -= w;
-                    w = j % 2 == 0 ? this.data.width : this.data.width + 1;
-                }
-                let i = idx;
+                const idx = ii + jj * this.data.width;
+                const [i, j] = this.idxToCoord(idx);
 
                 if (j >= this.height) break;
 
@@ -193,6 +222,14 @@ class ViewSimulated {
     contains(i, j) {
         return this.x <= i && i < this.x + this.width &&
                this.y <= j && j < this.y + this.height;
+    }
+
+    pixelToCoord(x, y) {
+        let i = Math.trunc(x / settings.dx);
+        let j = this.height - 1 - Math.trunc(y / settings.dy);
+        // TODO
+        // return [i - this.x, j - this.y + this.offset];
+        return [undefined, undefined];
     }
 
     draw(ctx, settings) {
@@ -408,15 +445,37 @@ function init() {
         const j = view.draft.height - 1 - Math.trunc(y / settings.dy);
         if (j < 0) return;
         if (view.draft.contains(i, j)) {
-            const x = i - view.draft.x;
-            const y = j - view.draft.y + view.draft.offset;
-            const val = pattern.get(x, y);
+            const [i, j] = view.draft.pixelToCoord(x, y);
+            if (i === undefined || j === undefined) return;
+            const val = pattern.get(i, j);
             if (event.ctrlKey) {
-                selected_color = pattern.get(x, y);
+                selected_color = pattern.get(i, j);
             } else if (val !== selected_color) {
-                pattern.set(x, y, selected_color);
+                pattern.set(i, j, selected_color);
             } else {
-                pattern.set(x, y, background_color);
+                pattern.set(i, j, background_color);
+            }
+        } else if (view.corrected.contains(i, j)) {
+            const [i, j] = view.corrected.pixelToCoord(x, y);
+            if (i === undefined || j === undefined) return;
+            const val = pattern.get(i, j);
+            if (event.ctrlKey) {
+                selected_color = pattern.get(i, j);
+            } else if (val !== selected_color) {
+                pattern.set(i, j, selected_color);
+            } else {
+                pattern.set(i, j, background_color);
+            }
+        } else if (view.simulated.contains(i, j)) {
+            const [i, j] = view.simluated.pixelToCoord(x, y);
+            if (i === undefined || j === undefined) return;
+            const val = pattern.get(i, j);
+            if (event.ctrlKey) {
+                selected_color = pattern.get(i, j);
+            } else if (val !== selected_color) {
+                pattern.set(i, j, selected_color);
+            } else {
+                pattern.set(i, j, background_color);
             }
         } else if (view.colors.contains(x, y)) {
             const ii = Math.trunc((x - view.colors.x) / 25);
