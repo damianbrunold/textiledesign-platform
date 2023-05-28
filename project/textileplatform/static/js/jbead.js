@@ -292,10 +292,10 @@ class ViewColors {
             ctx.fillRect(x, y, d, d);
             ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
             ctx.strokeRect(x, y, d, d);
-            i++;
-            if (i == 16) {
-                i = 0;
-                j = 1;
+            j++;
+            if (j == 16) {
+                j = 0;
+                i = 1;
             }
         }
 
@@ -311,10 +311,10 @@ class ViewColors {
                 ctx.lineWidth = 1;
                 break;
             }
-            i++;
-            if (i == 16) {
-                i = 0;
-                j = 1;
+            j++;
+            if (j == 16) {
+                j = 0;
+                i = 1;
             }
         }
     }
@@ -361,7 +361,7 @@ class PatternView {
         this.draft = new ViewDraft(this.pattern, x2, 0, width_draft, availy);
         this.corrected = new ViewCorrected(this.pattern, x3, 0, width_corrected, availy);
         this.simulated = new ViewSimulated(this.pattern, x4, 0, width_simulated, availy);
-        this.colors = new ViewColors(colors, x5 * dx, 0, 16 * 25, 2 * 25);
+        this.colors = new ViewColors(colors, x5 * dx, 0, 2 * 25, 16 * 25);
         // TODO bead-list
     }
 
@@ -419,7 +419,7 @@ function init() {
         } else if (view.colors.contains(x, y)) {
             const ii = Math.trunc((x - view.colors.x) / 25);
             const jj = Math.trunc((y - view.colors.y) / 25);
-            const idx = ii + 16 * jj;
+            const idx = ii * 16 + jj;
             if (idx < colors.length) {
                 selected_color = idx;
             }
