@@ -81,6 +81,7 @@ def register():
                     user=user
                 )
             except IntegrityError:
+                logging.exception(f"Failed to register user '{name}'")
                 error = gettext("Name or E-Mail is already used")
             except HTTPException:
                 raise
