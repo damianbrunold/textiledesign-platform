@@ -411,7 +411,9 @@ function init() {
             const x = i - view.draft.x;
             const y = j - view.draft.y + view.draft.offset;
             const val = pattern.get(x, y);
-            if (val !== selected_color) {
+            if (event.ctrlKey) {
+                selected_color = pattern.get(x, y);
+            } else if (val !== selected_color) {
                 pattern.set(x, y, selected_color);
             } else {
                 pattern.set(x, y, background_color);
