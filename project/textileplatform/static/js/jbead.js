@@ -467,38 +467,11 @@ function init() {
         const j = view.draft.height - 1 - Math.trunc(y / settings.dy);
         if (j < 0) return;
         if (view.draft.contains(i, j)) {
-            const [i, j] = view.draft.pixelToDataCoord(x, y);
-            if (i === undefined || j === undefined) return;
-            const val = pattern.get(i, j);
-            if (event.ctrlKey) {
-                selected_color = pattern.get(i, j);
-            } else if (val !== selected_color) {
-                pattern.set(i, j, selected_color);
-            } else {
-                pattern.set(i, j, background_color);
-            }
+            togglePattern(view.draft.pixelToDataCoord(x, y));
         } else if (view.corrected.contains(i, j)) {
-            const [i, j] = view.corrected.pixelToDataCoord(x, y);
-            if (i === undefined || j === undefined) return;
-            const val = pattern.get(i, j);
-            if (event.ctrlKey) {
-                selected_color = pattern.get(i, j);
-            } else if (val !== selected_color) {
-                pattern.set(i, j, selected_color);
-            } else {
-                pattern.set(i, j, background_color);
-            }
+            togglePattern(view.corrected.pixelToDataCoord(x, y));
         } else if (view.simulated.contains(i, j)) {
-            const [i, j] = view.simluated.pixelToDataCoord(x, y);
-            if (i === undefined || j === undefined) return;
-            const val = pattern.get(i, j);
-            if (event.ctrlKey) {
-                selected_color = pattern.get(i, j);
-            } else if (val !== selected_color) {
-                pattern.set(i, j, selected_color);
-            } else {
-                pattern.set(i, j, background_color);
-            }
+            togglePattern(view.simulated.pixelToDataCoord(x, y));
         } else if (view.colors.contains(x, y)) {
             const ii = Math.trunc((x - view.colors.x) / 25);
             const jj = Math.trunc((y - view.colors.y) / 25);
@@ -509,6 +482,19 @@ function init() {
         }
         view.draw();
     });
+}
+
+function togglePattern(coord) {
+    const [i, j] = coord;
+    if (i === undefined || j === undefined) return;
+    const val = pattern.get(i, j);
+    if (event.ctrlKey) {
+        selected_color = pattern.get(i, j);
+    } else if (val !== selected_color) {
+        pattern.set(i, j, selected_color);
+    } else {
+        pattern.set(i, j, background_color);
+    }
 }
 
 function initPattern(data, pattern) {
