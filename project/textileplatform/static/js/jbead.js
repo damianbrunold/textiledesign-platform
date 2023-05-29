@@ -110,11 +110,18 @@ class ViewDraft {
                this.y <= j && j < this.y + this.height;
     }
 
-    pixelToCoord(x, y) {
+    pixelToDataCoord(x, y) {
         let i = Math.trunc(x / settings.dx);
         let j = this.height - 1 - Math.trunc(y / settings.dy);
         return [i - this.x, j - this.y + this.offset];
     }
+
+    pixelToViewCoord(x, y) {
+        let i = Math.trunc(x / settings.dx);
+        let j = this.height - 1 - Math.trunc(y / settings.dy);
+        return [i - this.x, j - this.y];
+    }
+
 
     draw(ctx, settings) {
         const dx = settings.dx;
@@ -151,7 +158,7 @@ class ViewCorrected {
                this.y <= j && j < this.y + this.height;
     }
 
-    pixelToCoord(x, y) {
+    pixelToDataCoord(x, y) {
         let j = this.height - 1 - Math.trunc(y / settings.dy);
         j = j - this.y + this.offset;
         let i;
@@ -169,7 +176,12 @@ class ViewCorrected {
         return [idx % this.data.width, Math.trunc(idx / this.data.width)];
     }
 
-    idxToCoord(idx) {
+    pixelToViewCoord(x, y) {
+        const [i, j] = this.pixelToDataCoord(x, y);
+        return [i, j - this.offset];
+    }
+
+    idxToDataCoord(idx) {
         let j = 0;
         let w = this.data.width;
         while (idx >= w) {
@@ -181,6 +193,11 @@ class ViewCorrected {
         return [i, j];
     }
 
+    idxToViewCoord(idx) {
+        const [i, j] = this.idxToDataCoord(idx);
+        return [i, j - this.offset];
+    }
+
     draw(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
@@ -188,9 +205,9 @@ class ViewCorrected {
         for (let jj = 0; jj < this.data.height; jj++) {
             for (let ii = 0; ii < this.data.width; ii++) {
                 const idx = ii + jj * this.data.width;
-                const [i, j] = this.idxToCoord(idx);
+                const [i, j] = this.idxToViewCoord(idx);
 
-                if (j >= this.height) break;
+                if (0 > j || j >= this.height) break;
 
                 const xoff = j % 2 == 0 ? 0 : -dx/2;
 
@@ -224,12 +241,17 @@ class ViewSimulated {
                this.y <= j && j < this.y + this.height;
     }
 
-    pixelToCoord(x, y) {
+    pixelToDataCoord(x, y) {
         let i = Math.trunc(x / settings.dx);
         let j = this.height - 1 - Math.trunc(y / settings.dy);
-        // TODO
+        // TODO use equivalent technique with coord->idx as in corrected view
         // return [i - this.x, j - this.y + this.offset];
         return [undefined, undefined];
+    }
+
+    pixelToViewCoord(x, y) {
+        const [i, j] = this.pixelToDataCoord(x, y);
+        return [i, j - this.offset];
     }
 
     draw(ctx, settings) {
@@ -445,7 +467,7 @@ function init() {
         const j = view.draft.height - 1 - Math.trunc(y / settings.dy);
         if (j < 0) return;
         if (view.draft.contains(i, j)) {
-            const [i, j] = view.draft.pixelToCoord(x, y);
+            const [i, j] = view.draft.pixelToDataCoord(x, y);
             if (i === undefined || j === undefined) return;
             const val = pattern.get(i, j);
             if (event.ctrlKey) {
@@ -456,7 +478,7 @@ function init() {
                 pattern.set(i, j, background_color);
             }
         } else if (view.corrected.contains(i, j)) {
-            const [i, j] = view.corrected.pixelToCoord(x, y);
+            const [i, j] = view.corrected.pixelToDataCoord(x, y);
             if (i === undefined || j === undefined) return;
             const val = pattern.get(i, j);
             if (event.ctrlKey) {
@@ -467,7 +489,7 @@ function init() {
                 pattern.set(i, j, background_color);
             }
         } else if (view.simulated.contains(i, j)) {
-            const [i, j] = view.simluated.pixelToCoord(x, y);
+            const [i, j] = view.simluated.pixelToDataCoord(x, y);
             if (i === undefined || j === undefined) return;
             const val = pattern.get(i, j);
             if (event.ctrlKey) {
