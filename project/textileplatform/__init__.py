@@ -29,10 +29,7 @@ app.config.update(
     ADMIN_PASSWORD=os.environ["ADMIN_PASSWORD"],
 )
 
-babel = Babel(app)
 
-
-@babel.localeselector
 def get_locale():
     user = getattr(g, "user", None)
     if user is not None and user.locale:
@@ -40,11 +37,13 @@ def get_locale():
     return request.accept_languages.best_match(["de", "en"])
 
 
-@babel.timezoneselector
 def get_timezone():
     user = getattr(g, "user", None)
     if user is not None:
         return user.timezone
+
+
+babel = Babel(app, locale_selector=get_locale, timezone_selector=get_timezone)
 
 
 try:
