@@ -61,7 +61,7 @@ def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:
-            return redirect(url_for("auth.login"))
+            return redirect(url_for("login"))
         return view(**kwargs)
     return wrapped_view
 
@@ -70,7 +70,7 @@ def superuser_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None or g.user.name != "superuser":
-            return redirect(url_for("main.index"))
+            return redirect(url_for("index"))
         return view(**kwargs)
     return wrapped_view
 
@@ -102,7 +102,7 @@ def index():
 def user(user_name):
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
-        return redirect(url_for("main.index"))
+        return redirect(url_for("index"))
     elif g.user and g.user.name == user.name:
         # show private view
         patterns = get_patterns_for_user(g.user)
@@ -125,7 +125,7 @@ def user(user_name):
 def edit_pattern(user_name, pattern_name):
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
-        return redirect(url_for("main.index"))
+        return redirect(url_for("index"))
     pattern = (
         Pattern.query
         .join(User)
@@ -134,10 +134,10 @@ def edit_pattern(user_name, pattern_name):
         .first()
     )
     if not pattern:
-        return redirect(url_for("main.user", user_name=user_name))
+        return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
     if readonly and not pattern.public:
-        return redirect(url_for("main.user", user_name=user_name))
+        return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
     if pattern.pattern_type.pattern_type == "DB-WEAVE Pattern":
         return render_template(
@@ -154,7 +154,7 @@ def edit_pattern(user_name, pattern_name):
             readonly=readonly,
         )
     else:
-        return redirect(url_for("main.user", user_name=user.name))
+        return redirect(url_for("user", user_name=user.name))
 
 
 @app.route("/status")
@@ -178,7 +178,7 @@ def profile():
         user.darkmode = darkmode
         try:
             db.session.commit()
-            return redirect(url_for("main.user", user_name=user.name))
+            return redirect(url_for("user", user_name=user.name))
         except Exception:
             logging.exception("Profile changes not changed")
             flash(gettext("Changes could not be saved"))
@@ -207,7 +207,7 @@ def upload_pattern():
                 add_bead_pattern(parse_jbb_data(data, name), g.user)
             else:
                 pass  # TODO import generic pattern (e.g. image)
-        return redirect(url_for("main.user", user_name=g.user.name))
+        return redirect(url_for("user", user_name=g.user.name))
     return render_template("main/upload_pattern.html", user=g.user)
 
 
@@ -302,7 +302,7 @@ def create_pattern():
             if not errors:
                 try:
                     name = add_weave_pattern(pattern, g.user)
-                    return redirect(url_for("main.edit_pattern",
+                    return redirect(url_for("edit_pattern",
                                             user_name=g.user.name,
                                             pattern_name=name))
                 except HTTPException:
@@ -366,7 +366,7 @@ def create_pattern():
             if not errors:
                 try:
                     name = add_bead_pattern(pattern, g.user)
-                    return redirect(url_for("main.edit_pattern",
+                    return redirect(url_for("edit_pattern",
                                             user_name=g.user.name,
                                             pattern_name=name))
                 except HTTPException:
@@ -389,7 +389,7 @@ def delete(pattern_name):
         .first()
     )
     if not pattern:
-        return redirect(url_for("main.user", user_name=g.user.name))
+        return redirect(url_for("user", user_name=g.user.name))
 
     if request.method == "POST":
         error = None
@@ -401,7 +401,7 @@ def delete(pattern_name):
             logging.exception("Pattern could not be deleted")
             error = gettext("Pattern could not be deleted.")
         else:
-            return redirect(url_for("main.user", user_name=g.user.name))
+            return redirect(url_for("user", user_name=g.user.name))
 
         flash(error)
 
@@ -438,7 +438,7 @@ def add_group():
             g.user.groups.append(group)
             db.session.commit()
             # TODO errorhandling
-            return redirect(url_for("main.edit_groups", user_name=g.user.name))
+            return redirect(url_for("edit_groups", user_name=g.user.name))
     return render_template("main/add_group.html")
 
 
@@ -566,7 +566,7 @@ def login():
             session.clear()
             session["user_name"] = user.name
             session.permanent = True
-            return redirect(url_for("main.user", user_name=user.name))
+            return redirect(url_for("user", user_name=user.name))
 
         flash(error)
 

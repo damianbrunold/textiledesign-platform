@@ -25,7 +25,7 @@ def send_verification_mail(user):
         "",
         "",
         url_for(
-            "auth.verify",
+            "verify",
             user_name=user.name,
             verification_code=user.verification_code,
             _external=True
@@ -46,7 +46,7 @@ def send_recover_mail(user):
         "",
         "",
         url_for(
-            "auth.reset_password",
+            "reset_password",
             user_name=user.name,
             verification_code=user.verification_code,
             _external=True
