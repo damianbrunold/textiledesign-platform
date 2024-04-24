@@ -1,23 +1,18 @@
-from textileplatform import admin
-from textileplatform import api
-from textileplatform import auth
-from textileplatform import main
-from textileplatform.models import db
+from textileplatform.app import app
+from textileplatform.db import db
 from textileplatform.models import ensure_db_contents
+import textileplatform.controller  # noqa
 
 import os
 
 import click
 from dotenv import load_dotenv
-from flask import Flask
 from flask import g
 from flask import request
 from flask_babel import Babel
 from flask_migrate import Migrate
 
 load_dotenv()
-
-app = Flask(__name__)
 
 app.config.update(
     SESSION_COOKIE_SECURE=True,
@@ -45,12 +40,6 @@ def get_timezone():
 
 babel = Babel(app, locale_selector=get_locale, timezone_selector=get_timezone)
 
-
-try:
-    os.makedirs(app.instance_path)
-except OSError:
-    pass
-
 db.init_app(app)
 Migrate(app, db)
 
@@ -62,12 +51,5 @@ def init_db_command():
 
 
 app.cli.add_command(init_db_command)
-
-app.register_blueprint(auth.bp)
-app.register_blueprint(api.bp)
-app.register_blueprint(admin.bp)
-app.register_blueprint(main.bp)
-
-app.add_url_rule("/", endpoint="index")
 
 application = app

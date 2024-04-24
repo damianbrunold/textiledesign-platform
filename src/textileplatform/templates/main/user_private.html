@@ -7,23 +7,23 @@
 {% block content %}
     <div id="header">
         <div class="button">
-            <a href="{{ url_for('main.create_pattern') }}">
+            <a href="{{ url_for('create_pattern') }}">
                 {{ gettext('New Pattern') }}
             </a>
         </div>
         <div class="button">
-            <a href="{{ url_for('main.upload_pattern') }}">
+            <a href="{{ url_for('upload_pattern') }}">
                 {{ gettext('Upload Pattern') }}
             </a>
         </div>
         <div class="button">
-            <a href="{{ url_for('main.edit_groups') }}">
+            <a href="{{ url_for('edit_groups') }}">
                 {{ gettext('Groups') }}
             </a>
         </div>
         {% if g.user and g.user.name == 'superuser' %}
         <div class="button">
-            <a href="{{ url_for('admin.users') }}">
+            <a href="{{ url_for('users') }}">
                 {{ gettext('Users') }}
             </a>
         </div>
@@ -37,7 +37,7 @@
             <div class="pattern">
                 <div class="pattern_name">
                     <a class="action"
-                       href="{{ url_for('main.edit_pattern',
+                       href="{{ url_for('edit_pattern',
                                         user_name=g.user.name,
                                         pattern_name=pattern.name) }}">
                         {{ pattern.label }}
@@ -52,7 +52,7 @@
                     </div>
                     <div class="pattern_delete">
                         <a class="action"
-                           href="{{ url_for('main.delete',
+                           href="{{ url_for('delete',
                                             pattern_name=pattern.name) }}">
                             {{ gettext('Delete') }}
                         </a>

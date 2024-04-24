@@ -9,5 +9,5 @@
         {{ gettext('Do you really want to delete this pattern?')}}
         <input type="submit" value="{{ gettext('Delete') }}">
     </form>
-    <a class="action" href="{{ url_for('main.user', user_name=g.user.name) }}">{{ gettext('Cancel') }}</a>
+    <a class="action" href="{{ url_for('user', user_name=g.user.name) }}">{{ gettext('Cancel') }}</a>
 {% endblock %}

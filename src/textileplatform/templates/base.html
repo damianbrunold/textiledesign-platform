@@ -18,11 +18,11 @@
     <body>
         <nav>
             <h1>
-                <a href="{{ url_for('main.index') }}">
+                <a href="{{ url_for('index') }}">
                     <img src="{{ url_for('static', filename='img/icons/icon.png') }}">
                 </a>
                 {% if user %}
-                <a href="{{ url_for('main.user', user_name=user.name) }}">
+                <a href="{{ url_for('user', user_name=user.name) }}">
                     {{ user.label }}
                 </a>
                 {% else %}
@@ -32,10 +32,10 @@
             </h1>
             <ul>
             {% if g.user %}
-                <li><a href="{{ url_for('main.profile') }}">{{ g.user.label }}</a>
+                <li><a href="{{ url_for('profile') }}">{{ g.user.label }}</a>
             {% else %}
-                <li><a href="{{ url_for('auth.register') }}">{{ gettext('Register') }}</a>
-                <li><a href="{{ url_for('auth.login') }}">{{ gettext('Log in') }}</a>
+                <li><a href="{{ url_for('register') }}">{{ gettext('Register') }}</a>
+                <li><a href="{{ url_for('login') }}">{{ gettext('Log in') }}</a>
             {% endif %}
             </ul>
         </nav>

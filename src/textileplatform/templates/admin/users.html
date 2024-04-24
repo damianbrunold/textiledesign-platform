@@ -7,7 +7,7 @@
 {% block content %}
     <div id="users">
         {% for user in users %}
-            <a class="action" href="{{ url_for('admin.edit_user',
+            <a class="action" href="{{ url_for('edit_user',
                                                user_name=user.name) }}">
                 <div class="user">
                     <div class="user_name">

@@ -29,10 +29,12 @@ def is_valid(name, max_len=100):
     if len(name) > max_len:
         return False
     return name not in [
-        "admin",
         "api",
+        "admin",
+        "patterns",
         "auth",
-        "db",
-        "status",
-        "superuser",
+        "profile",
+        "superuser",  # reserved name for administrator
+        "weave",      # reserved name for weave examples
+        "bead",       # reserved name for bead examples
     ]

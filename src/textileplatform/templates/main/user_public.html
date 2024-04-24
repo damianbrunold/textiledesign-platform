@@ -7,7 +7,7 @@
 {% block content %}
     <div id="patterns">
         {% for pattern in patterns %}
-            <a class="action" href="{{ url_for('main.edit_pattern',
+            <a class="action" href="{{ url_for('edit_pattern',
                                                user_name=pattern.owner,
                                                pattern_name=pattern.name) }}">
                 <div class="pattern">

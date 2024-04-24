@@ -1,14 +1,11 @@
+from textileplatform.db import db
 from textileplatform.name import from_label
 
 import datetime
 import json
 
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash as gen_pw_hash
-
-
-db = SQLAlchemy()
 
 
 user_group_table = db.Table(
