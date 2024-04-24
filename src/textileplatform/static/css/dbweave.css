@@ -3,8 +3,8 @@
 }
 
 #container {
-    width: calc(100% - 2px);
-    height: calc(100vh - 8rem - 5px);
+    width: calc(100% - 2px - 2rem);
+    height: calc(100vh - 8rem - 5px - 1rem);
 }
 
 #canvas {

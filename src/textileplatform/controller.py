@@ -157,7 +157,7 @@ def edit_pattern(user_name, pattern_name):
         return redirect(url_for("user", user_name=user.name))
 
 
-@app.route("/status")
+@app.route("/admin/status")
 def status():
     try:
         v = version("textileplatform")
