@@ -1,18 +1,14 @@
-project/venv/
 .env
-
 *.pyc
-__pycache__/
+__pycache__
 
-instance/
+/.pytest_cache/
+/.coverage/
+/htmlcov/
+/venv/
+/dist/
+/build/
+/documents/
 
-.pytest_cache/
-.coverage
-htmlcov/
-
-dist/
-build/
 *.egg-info/
 *backup.sql
-
-/documents/

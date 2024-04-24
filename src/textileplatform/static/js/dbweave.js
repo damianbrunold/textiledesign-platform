@@ -57,6 +57,16 @@ let rangecolors = {
 };
 
 
+let cursor = {
+    x1: 0,
+    x2: 0,
+    y1: 0,
+    y2: 0,
+    selected_part: "pattern",  // entering, tieup, treadling
+                               // color_warp, color_weft, reed
+}
+
+
 let readonly = false;
 
 
