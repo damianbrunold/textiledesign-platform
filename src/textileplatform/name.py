@@ -31,10 +31,9 @@ def is_valid(name, max_len=100):
     return name not in [
         "api",
         "admin",
+        "groups",
         "patterns",
         "auth",
         "profile",
         "superuser",  # reserved name for administrator
-        "weave",      # reserved name for weave examples
-        "bead",       # reserved name for bead examples
     ]

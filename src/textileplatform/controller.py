@@ -81,13 +81,22 @@ def respond(status, message, status_code=500):
 
 @app.route("/")
 def index():
+    if g.user:
+        return redirect(url_for("user", user_name=g.user.name))
+    else:
+        return redirect(url_for("group", group_name="examples"))
+
+
+@app.route("/groups/<string:group_name>")
+def group(group_name):
+    # TODO convert to standard group code...
     try:
         weave_user = User.query.filter(User.name == "weave").first()
         weave_patterns = get_patterns_for_user(weave_user, True)
         bead_user = User.query.filter(User.name == "bead").first()
         bead_patterns = get_patterns_for_user(bead_user, True)
         return render_template(
-            "main/index.html",
+            "examples.html",
             weave_patterns=weave_patterns,
             bead_patterns=bead_patterns,
         )
@@ -107,7 +116,7 @@ def user(user_name):
         # show private view
         patterns = get_patterns_for_user(g.user)
         return render_template(
-            "main/user_private.html",
+            "user_private.html",
             user=user,
             patterns=patterns,
         )
@@ -115,7 +124,7 @@ def user(user_name):
         # show public view
         patterns = get_patterns_for_user(user, True)
         return render_template(
-            "main/user_public.html",
+            "user_public.html",
             user=user,
             patterns=patterns,
         )
@@ -141,14 +150,14 @@ def edit_pattern(user_name, pattern_name):
     pattern.pattern = json.loads(pattern.contents)
     if pattern.pattern_type.pattern_type == "DB-WEAVE Pattern":
         return render_template(
-            "main/edit_dbweave_pattern.html",
+            "edit_dbweave_pattern.html",
             user=user,
             pattern=pattern,
             readonly=readonly,
         )
     elif pattern.pattern_type.pattern_type == "JBead Pattern":
         return render_template(
-            "main/edit_jbead_pattern.html",
+            "edit_jbead_pattern.html",
             user=user,
             pattern=pattern,
             readonly=readonly,
@@ -163,7 +172,7 @@ def status():
         v = version("textileplatform")
     except Exception:
         v = "-"
-    return render_template("main/status.html", v=v)
+    return render_template("status.html", v=v)
 
 
 @app.route("/profile", methods=("GET", "POST"))
@@ -183,7 +192,7 @@ def profile():
             logging.exception("Profile changes not changed")
             flash(gettext("Changes could not be saved"))
 
-    return render_template("main/profile.html", user=g.user)
+    return render_template("profile.html", user=g.user)
 
 
 @app.route("/patterns/upload", methods=("GET", "POST"))
@@ -208,7 +217,7 @@ def upload_pattern():
             else:
                 pass  # TODO import generic pattern (e.g. image)
         return redirect(url_for("user", user_name=g.user.name))
-    return render_template("main/upload_pattern.html", user=g.user)
+    return render_template("upload_pattern.html", user=g.user)
 
 
 @app.route("/patterns/create", methods=("GET", "POST"))
@@ -375,7 +384,7 @@ def create_pattern():
                     logging.exception("Failed to create pattern")
                     flash(gettext("Failed to create pattern"))
 
-    return render_template("main/create_pattern.html", user=g.user)
+    return render_template("create_pattern.html", user=g.user)
 
 
 @app.route("/patterns/delete/<string:pattern_name>", methods=("GET", "POST"))
@@ -405,13 +414,13 @@ def delete(pattern_name):
 
         flash(error)
 
-    return render_template("main/delete_pattern.html", pattern=pattern)
+    return render_template("delete_pattern.html", pattern=pattern)
 
 
 @app.route("/admin/groups")
 def edit_groups():
     return render_template(
-        "main/edit_groups.html",
+        "edit_groups.html",
         user=g.user,
         groups=g.user.groups,
     )
@@ -439,7 +448,7 @@ def add_group():
             db.session.commit()
             # TODO errorhandling
             return redirect(url_for("edit_groups", user_name=g.user.name))
-    return render_template("main/add_group.html")
+    return render_template("add_group.html")
 
 
 @app.route("/admin/users")
@@ -448,7 +457,7 @@ def add_group():
 def users():
     try:
         all_users = User.query.order_by(User.name).all()
-        return render_template("admin/users.html", users=all_users)
+        return render_template("users.html", users=all_users)
     except HTTPException:
         raise
     except Exception:
@@ -466,7 +475,7 @@ def edit_user(user_name):
             abort(404, description=f"User {user_name} not found")
         patterns = get_patterns_for_user(user)
         return render_template(
-            "admin/edit_user.html",
+            "edit_user.html",
             user=user,
             patterns=patterns,
         )
@@ -522,7 +531,7 @@ def register():
                 send_admin_notification_mail(user, "User created account")
                 print(f"verify/{user.name}/{user.verification_code}")
                 return render_template(
-                    "auth/verification_pending.html",
+                    "verification_pending.html",
                     user=user
                 )
             except IntegrityError:
@@ -536,7 +545,7 @@ def register():
 
         flash(error)
 
-    return render_template("auth/register.html")
+    return render_template("register.html")
 
 
 @app.route("/auth/login", methods=("GET", "POST"))
@@ -570,7 +579,7 @@ def login():
 
         flash(error)
 
-    return render_template("auth/login.html")
+    return render_template("login.html")
 
 
 @app.route("/auth/logout")
@@ -584,7 +593,7 @@ def verify(user_name, verification_code):
     try:
         user = User.query.filter(User.name == user_name).first()
         if not user:
-            return render_template("auth/verification_failed.html")
+            return render_template("verification_failed.html")
         if not user.verified and user.verification_code == verification_code:
             user.verified = True
             user.verification_code = None
@@ -593,10 +602,10 @@ def verify(user_name, verification_code):
                 send_admin_notification_mail(
                     user, "User completed email account verification step")
             except IntegrityError:
-                return render_template("auth/verification_failed.html")
+                return render_template("verification_failed.html")
             else:
-                return render_template("auth/verification_successful.html")
-        return render_template("auth/verification_failed.html")
+                return render_template("verification_successful.html")
+        return render_template("verification_failed.html")
     except HTTPException:
         raise
     except Exception:
@@ -629,7 +638,7 @@ def recover():
                     "User requested password recovery",
                 )
                 return render_template(
-                    "auth/recover_mail_sent.html",
+                    "recover_mail_sent.html",
                     user=user
                 )
             except IntegrityError:
@@ -642,7 +651,7 @@ def recover():
 
         flash(error)
 
-    return render_template("auth/recover.html")
+    return render_template("recover.html")
 
 
 @app.route(
@@ -653,9 +662,9 @@ def reset_password(user_name, verification_code):
     try:
         user = User.query.filter(User.name == user_name).first()
         if not user:
-            return render_template("auth/recover_failed.html")
+            return render_template("recover_failed.html")
         if user.verification_code != verification_code:
-            return render_template("auth/recover_failed.html")
+            return render_template("recover_failed.html")
 
         if request.method == "POST":
             error = None
@@ -674,11 +683,11 @@ def reset_password(user_name, verification_code):
                 except IntegrityError:
                     error = gettext("Could not save changes.")
                 else:
-                    return render_template("auth/recover_success.html")
+                    return render_template("recover_success.html")
 
             flash(error)
 
-        return render_template("auth/recover_set_password.html")
+        return render_template("recover_set_password.html")
     except HTTPException:
         raise
     except Exception:
