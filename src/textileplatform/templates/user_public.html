@@ -5,10 +5,37 @@
 {% endblock %}
 
 {% block content %}
+<style>
+#patterns {
+    max-width: 60rem;
+}
+#patterns a {
+    display: block;
+}
+.pattern {
+    display: flex;
+}
+.pattern_name {
+    width: 30rem;
+    flex-grow: 0;
+    flex-shrink: 0;
+    overflow-x: hidden;
+    margin-right: 1rem;
+}
+.pattern_info {
+    display: flex;
+    padding: 0 0.3rem 0 0;
+}
+{% if g.user and g.user.darkmode %}
+.pattern:hover { background: #cae6f6; }
+{% else %}
+.pattern:hover { background: #222; }
+{% endif %}
+</style>
     <div id="patterns">
         {% for pattern in patterns %}
             <a class="action" href="{{ url_for('edit_pattern',
-                                               user_name=pattern.owner,
+                                               user_name=pattern.owner.name,
                                                pattern_name=pattern.name) }}">
                 <div class="pattern">
                     <div class="pattern_name">

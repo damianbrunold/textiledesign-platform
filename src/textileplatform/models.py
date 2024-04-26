@@ -1,10 +1,5 @@
 from textileplatform.db import db
-from textileplatform.name import from_label
 
-import datetime
-import json
-
-from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash as gen_pw_hash
 
 
@@ -25,7 +20,11 @@ class User(db.Model):
     verification_code = db.Column(db.String(100))
 
     memberships = db.relationship("Membership", back_populates="user")
-    mypatterns = db.relationship("Pattern", back_populates="owner")
+    mypatterns = db.relationship(
+        "Pattern",
+        back_populates="owner",
+        order_by="Pattern.name",
+    )
 
 
 class Membership(db.Model):
@@ -74,7 +73,7 @@ class Pattern(db.Model):
     name = db.Column(db.String(100), nullable=False)
     label = db.Column(db.String(100), nullable=False)
     owner_id = db.Column(db.Integer, db.ForeignKey("txuser.id"))
-    pattern_type_id = db.Column(db.Integer, db.ForeignKey("txpatterntype.id"))
+    pattern_type = db.Column(db.String(50))  # DB-WEAVE Pattern, JBead Pattern
     description = db.Column(db.Text)
     contents = db.Column(db.Text)
     preview_image = db.Column(db.LargeBinary)
@@ -87,23 +86,10 @@ class Pattern(db.Model):
 
     owner = db.relationship("User", back_populates="mypatterns")
     assignments = db.relationship("Assignment", back_populates="pattern")
-    pattern_type = db.relationship("PatternType")
-
-
-class PatternType(db.Model):
-    __tablename__ = "txpatterntype"
-
-    id = db.Column(db.Integer, primary_key=True)
-    pattern_type = db.Column(db.String(50), nullable=False, unique=True)
 
 
 def ensure_db_contents(app):
     with app.app_context():
-        if PatternType.query.count() == 0:
-            db.session.add(PatternType(pattern_type="DB-WEAVE Pattern"))
-            db.session.add(PatternType(pattern_type="JBead Pattern"))
-            db.session.add(PatternType(pattern_type="Generic Image"))
-            db.session.commit()
         if User.query.count() == 0:
             db.session.add(User(
                 name="superuser",
@@ -116,149 +102,27 @@ def ensure_db_contents(app):
                 timezone="CET",
                 password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
             ))
-            # TODO create examples group, remove weave/bead users
-            db.session.add(User(
-                name="weave",
-                label="Weave",
-                email="weave@textileplatform.ch",
-                darkmode=True,
-                verified=True,
-                disabled=False,
-                locale="en",
-                timezone="CET",
-                password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
-            ))
-            db.session.add(User(
-                name="bead",
-                label="Bead",
-                email="bead@textileplatform.ch",
-                darkmode=True,
-                verified=True,
-                disabled=False,
-                locale="en",
-                timezone="CET",
-                password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
-            ))
             db.session.commit()
-
-
-def get_weave_pattern_type():
-    return PatternType.query.filter(
-        PatternType.pattern_type == "DB-WEAVE Pattern"
-    ).first()
-
-
-def get_bead_pattern_type():
-    return PatternType.query.filter(
-        PatternType.pattern_type == "JBead Pattern"
-    ).first()
-
-
-def add_weave_pattern(pattern, user):
-    suffix = None
-    now = datetime.datetime.utcnow()
-    while True:
-        if suffix and suffix > 10:
-            break
-        if suffix:
-            label = pattern["name"] + " - " + str(suffix)
-        else:
-            label = pattern["name"]
-        name = from_label(label)
-        try:
-            p = Pattern(
-                name=name,
-                label=label,
-                description=pattern["notes"],
-                contents=json.dumps(pattern),
-                created=now,
-                modified=now,
-                public=False
-            )
-            p.owner = user
-            p.pattern_type = get_weave_pattern_type()
-            db.session.add(p)
-            db.session.commit()
-            return name
-        except IntegrityError:
-            db.session.rollback()
-            if suffix:
-                suffix += 1
-            else:
-                suffix = 1
-
-
-def add_bead_pattern(pattern, user):
-    suffix = None
-    now = datetime.datetime.utcnow()
-    while True:
-        if suffix and suffix > 10:
-            break
-        if suffix:
-            label = pattern["name"] + " - " + str(suffix)
-        else:
-            label = pattern["name"]
-        name = from_label(label)
-        try:
-            p = Pattern(
-                name=name,
-                label=label,
-                description=pattern["notes"],
-                contents=json.dumps(pattern),
-                created=now,
-                modified=now,
-                public=False,
-            )
-            p.owner = user
-            p.pattern_type = get_bead_pattern_type()
-            db.session.add(p)
-            db.session.commit()
-            return name
-        except IntegrityError:
-            db.session.rollback()
-            if suffix:
-                suffix += 1
-            else:
-                suffix = 1
-
-
-def get_patterns_for_user(user, only_public=False):
-    if only_public:
-        return [p for p in user.mypatterns if p.public]
-    return user.mypatterns
-
-
-def clone_pattern(user, pattern, contents):
-    suffix = None
-    while True:
-        if suffix and suffix > 10:
-            break
-        try:
-            now = datetime.datetime.utcnow()
-            if suffix:
-                label = pattern.label + " - " + str(suffix)
-            else:
-                label = pattern.label
-            name = from_label(label)
-            p = Pattern(
-                name=name,
-                label=label,
-                description=pattern.description,
-                contents=contents,
-                preview_image=pattern.preview_image,
-                thumbnail_image=pattern.thumbnail_image,
-                created=now,
-                modified=now,
-                public=False,
-            )
-            p.owner = user
-            p.pattern_type = pattern.pattern_type
-            db.session.add(p)
-            db.session.commit()
-            break
-        except IntegrityError:
-            db.session.rollback()
-            if not suffix:
-                suffix = 1
-            else:
-                suffix += 1
+        for user in User.query.all():
+            group = Group.query.filter(Group.name == user.name).one_or_none()
+            if not group:
+                # Create default group for user and assign all owned
+                # patterns to the group
+                group = Group(
+                    name=user.name,
+                    label=user.label,
+                    description="",
+                )
+                db.session.add(group)
+                membership = Membership(
+                    group=group,
+                    user=user,
+                )
+                db.session.add(membership)
+                for pattern in user.mypatterns:
+                    assignment = Assignment(
+                        group=group,
+                        pattern=pattern,
+                    )
+                    db.session.add(assignment)
+                db.session.commit()

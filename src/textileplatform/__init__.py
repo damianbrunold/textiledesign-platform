@@ -1,6 +1,6 @@
 from textileplatform.app import app
 from textileplatform.db import db
-from textileplatform.models import ensure_db_contents
+from textileplatform.ensure import ensure_db_contents
 import textileplatform.controller  # noqa
 
 import os

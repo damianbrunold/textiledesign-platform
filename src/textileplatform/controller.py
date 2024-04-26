@@ -4,10 +4,10 @@ from textileplatform.app import app
 from textileplatform.models import User
 from textileplatform.models import Pattern
 from textileplatform.models import Group
-from textileplatform.models import add_weave_pattern
-from textileplatform.models import add_bead_pattern
-from textileplatform.models import get_patterns_for_user
-from textileplatform.models import clone_pattern
+from textileplatform.patterns import add_weave_pattern
+from textileplatform.patterns import add_bead_pattern
+from textileplatform.patterns import get_patterns_for_user
+from textileplatform.patterns import clone_pattern
 from textileplatform.name import from_label
 from textileplatform.name import is_valid
 from textileplatform.mail import send_verification_mail
@@ -148,14 +148,14 @@ def edit_pattern(user_name, pattern_name):
     if readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
-    if pattern.pattern_type.pattern_type == "DB-WEAVE Pattern":
+    if pattern.pattern_type == "DB-WEAVE Pattern":
         return render_template(
             "edit_dbweave_pattern.html",
             user=user,
             pattern=pattern,
             readonly=readonly,
         )
-    elif pattern.pattern_type.pattern_type == "JBead Pattern":
+    elif pattern.pattern_type == "JBead Pattern":
         return render_template(
             "edit_jbead_pattern.html",
             user=user,
