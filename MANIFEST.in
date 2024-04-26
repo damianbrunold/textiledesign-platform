@@ -1,4 +1,4 @@
-graft textileplatform/static
-graft textileplatform/templates
-graft textileplatform/translations
+graft src/textileplatform/static
+graft src/textileplatform/templates
+graft src/textileplatform/translations
 global-exclude *.pyc
