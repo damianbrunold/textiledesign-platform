@@ -8,23 +8,6 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash as gen_pw_hash
 
 
-group_pattern_table = db.Table(
-    "txgrouppattern",
-    db.Column(
-        "group",
-        db.Integer,
-        db.ForeignKey("txgroup.id"),
-        primary_key=True,
-    ),
-    db.Column(
-        "pattern",
-        db.Integer,
-        db.ForeignKey("txpattern.id"),
-        primary_key=True,
-    )
-)
-
-
 class User(db.Model):
     __tablename__ = "txuser"
 
@@ -36,7 +19,7 @@ class User(db.Model):
     darkmode = db.Column(db.Boolean)
     verified = db.Column(db.Boolean)
     disabled = db.Column(db.Boolean)
-    #  block_invitations = db.Column(db.Boolean)
+    block_invitations = db.Column(db.Boolean)
     locale = db.Column(db.String(20))
     timezone = db.Column(db.String(20))
     verification_code = db.Column(db.String(100))
@@ -67,14 +50,21 @@ class Group(db.Model):
     description = db.Column(db.Text, nullable=False)
 
     memberships = db.relationship("Membership", back_populates="group")
-    patterns = db.relationship(
-        "Pattern",
-        secondary=group_pattern_table,
-        backref=db.backref("groups", lazy=True),
-    )
+    assignments = db.relationship("Assignment", back_populates="group")
 
     def user_label_list(self):
         return ", ".join([user.name for user in self.users])
+
+
+class Assignment(db.Model):
+    __tablename__ = "txassignment"
+
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("txgroup.id"))
+    pattern_id = db.Column(db.Integer, db.ForeignKey("txpattern.id"))
+
+    group = db.relationship("Group", back_populates="assignments")
+    pattern = db.relationship("Pattern", back_populates="assignments")
 
 
 class Pattern(db.Model):
@@ -96,6 +86,7 @@ class Pattern(db.Model):
     db.UniqueConstraint(owner_id, name)
 
     owner = db.relationship("User", back_populates="mypatterns")
+    assignments = db.relationship("Assignment", back_populates="pattern")
     pattern_type = db.relationship("PatternType")
 
 
