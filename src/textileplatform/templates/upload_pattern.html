@@ -5,6 +5,10 @@
 {% endblock %}
 
 {% block content %}
+<style>
+input[type=text] { width: 30rem; }
+input[type=file] { width: 30rem; }
+</style>
     <form enctype="multipart/form-data" method="POST">
         <label for="name">{{ gettext('Name') }}</label>
         <input type="text" name="name" id="name">

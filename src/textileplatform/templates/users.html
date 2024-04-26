@@ -5,6 +5,29 @@
 {% endblock %}
 
 {% block content %}
+<style>
+#users {
+    max-width: 60rem;
+}
+#users a {
+    display: block;
+}
+.user {
+    display: flex;
+}
+.user_name {
+    width: 18rem;
+    margin-right: 1rem;
+}
+.user_label {
+    flex-grow: 2;
+}
+{% if g.user and g.user.darkmode %}
+.user:hover { background: #333; }
+{% else %}
+.user:hover { background: #ccc; }
+{% endif %}
+</style>
     <div id="users">
         {% for user in users %}
             <a class="action" href="{{ url_for('edit_user',

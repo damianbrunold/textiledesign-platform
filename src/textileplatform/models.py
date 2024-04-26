@@ -8,40 +8,6 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash as gen_pw_hash
 
 
-user_group_table = db.Table(
-    "txusergroup",
-    db.Column(
-        "user",
-        db.Integer,
-        db.ForeignKey("txuser.id"),
-        primary_key=True,
-    ),
-    db.Column(
-        "group",
-        db.Integer,
-        db.ForeignKey("txgroup.id"),
-        primary_key=True,
-    )
-)
-
-
-user_group_invite_table = db.Table(
-    "txusergroupinvite",
-    db.Column(
-        "user",
-        db.Integer,
-        db.ForeignKey("txuser.id"),
-        primary_key=True,
-    ),
-    db.Column(
-        "group",
-        db.Integer,
-        db.ForeignKey("txgroup.id"),
-        primary_key=True,
-    )
-)
-
-
 group_pattern_table = db.Table(
     "txgrouppattern",
     db.Column(
@@ -70,24 +36,26 @@ class User(db.Model):
     darkmode = db.Column(db.Boolean)
     verified = db.Column(db.Boolean)
     disabled = db.Column(db.Boolean)
+    #  block_invitations = db.Column(db.Boolean)
     locale = db.Column(db.String(20))
     timezone = db.Column(db.String(20))
     verification_code = db.Column(db.String(100))
 
-    mygroups = db.relationship("Group", back_populates="owner")
+    memberships = db.relationship("Membership", back_populates="user")
     mypatterns = db.relationship("Pattern", back_populates="owner")
 
-    groups = db.relationship(
-        "Group",
-        secondary=user_group_table,
-        backref=db.backref("users", lazy=True),
-    )
 
-    invited_groups = db.relationship(
-        "Group",
-        secondary=user_group_invite_table,
-        backref=db.backref("invited_users", lazy=True),
-    )
+class Membership(db.Model):
+    __tablename__ = "txmembership"
+
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("txgroup.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("txuser.id"))
+    role = db.Column(db.String(10))  # owner, writer, reader
+    state = db.Column(db.String(10))  # invited, accepted, declined
+
+    user = db.relationship("User", back_populates="memberships")
+    group = db.relationship("Group", back_populates="memberships")
 
 
 class Group(db.Model):
@@ -96,11 +64,9 @@ class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
     label = db.Column(db.String(50), nullable=False, unique=True)
-    owner_id = db.Column(db.Integer, db.ForeignKey("txuser.id"))
     description = db.Column(db.Text, nullable=False)
 
-    owner = db.relationship("User", back_populates="mygroups")
-
+    memberships = db.relationship("Membership", back_populates="group")
     patterns = db.relationship(
         "Pattern",
         secondary=group_pattern_table,
@@ -159,6 +125,7 @@ def ensure_db_contents(app):
                 timezone="CET",
                 password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
             ))
+            # TODO create examples group, remove weave/bead users
             db.session.add(User(
                 name="weave",
                 label="Weave",

@@ -15,23 +15,12 @@ input.danger { color: #cc2f2e; }
 th { color: white; }
 td { color: white; }
 
-.pattern:hover { background: #222; }
-
 #header .button {
     background: #777;
     border: 1px solid #666;
 }
 #header .button a {
     color: #fff;
-}
-
-#filter input[type=text] {
-    border: 1px solid #666;
-    background: #777;
-}
-#filter input[type=submit] {
-    border: 1px solid #666;
-    background: #777;
 }
 
 #clone, #save, #close {
@@ -117,5 +106,3 @@ td { color: white; }
 }
 
 img.icon.selected { outline: 2px solid #999; }
-
-.user:hover { background: #333; }

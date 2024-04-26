@@ -5,6 +5,52 @@
 {% endblock %}
 
 {% block content %}
+<style>
+h2 { margin-bottom: 0; }
+#user_info {
+}
+#user_info>div {
+    display: flex;
+    justify-content: flex-start;
+}
+.info_label {
+    width: 10rem;
+    padding: 0.1rem 1rem 0.1rem 0;
+}
+#patterns {
+    max-width: 60rem;
+}
+#patterns a {
+    display: block;
+}
+.pattern {
+    display: flex;
+}
+.pattern_name {
+    width: 30rem;
+    flex-grow: 0;
+    flex-shrink: 0;
+    overflow-x: hidden;
+    margin-right: 1rem;
+}
+.pattern_type {
+    width: 12rem;
+    margin-right: 1rem;
+}
+.created, .modified {
+    width: 10rem;
+    margin-right: 1rem;
+}
+.pattern_public {
+    width: 6rem;
+    margin-right: 1rem;
+}
+{% if g.user and g.user.darkmode %}
+.pattern:hover { background: #cae6f6; }
+{% else %}
+.pattern:hover { background: #222; }
+{% endif %}
+</style>
     <div id="user_info">
         <div><div class="info_label">name:</div><div>{{ user.name }}</div></div>
         <div><div class="info_label">label:</div><div>{{ user.label }}</div></div>
@@ -12,18 +58,23 @@
         <div><div class="info_label">locale:</div><div>{{ user.locale }}</div></div>
     </div>
 
-    <h2 class="with-margin">{{ gettext('Patterns') }}</h2>
+    <h2>{{ gettext('Patterns') }}</h2>
 
     <div id="patterns">
+        <div class="pattern">
+            <div class="pattern_name">Name</div>
+            <div class="pattern_type">Type</div>
+            <div class="created">Created</div>
+            <div class="modified">Modified</div>
+            <div class="pattern_public">Public</div>
+        </div>
         {% for pattern in patterns %}
             <div class="pattern">
-                <div class="pattern_name">
-                    {{ pattern.name }}
-                </div>
-                <div>{{ pattern.pattern_type }}</div>
-                <div>{{ pattern.created }}</div>
-                <div>{{ pattern.modified }}</div>
-                <div>{{ pattern.public }}</div>
+                <div class="pattern_name">{{ pattern.name }}</div>
+                <div class="pattern_type">{{ pattern.pattern_type.pattern_type }}</div>
+                <div class="created">{{ pattern.created.strftime("%Y%m%d-%H%M") }}</div>
+                <div class="modified">{{ pattern.modified.strftime("%Y%m%d-%H%M") }}</div>
+                <div class="pattern_public">{{ pattern.public }}</div>
             </div>
         {% endfor %}
     </div>

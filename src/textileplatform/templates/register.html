@@ -5,11 +5,15 @@
 {% endblock %}
 
 {% block content %}
+<style>
+input[type=text] { width: 20rem; }
+input[type=password] { width: 20rem; }
+</style>
   <form method="post">
     <label for="name">{{ gettext('Name') }}</label>
-    <input name="name" id="name" required value="{{ request.form['name'] }}">
+    <input type="text" name="name" id="name" required value="{{ request.form['name'] }}">
     <label for="email">{{ gettext('E-Mail') }}</label>
-    <input name="email" id="email" required value="{{ request.form['email'] }}">
+    <input type="text" name="email" id="email" required value="{{ request.form['email'] }}">
     <label for="password">{{ gettext('Password') }}</label>
     <input type="password" name="password" id="password" required value="{{ request.form['password'] }}">
     <input type="submit" value="{{ gettext('Create') }}">

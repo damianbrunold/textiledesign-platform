@@ -59,68 +59,6 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 
 .with-margin { margin: 0 1rem; }
 
-#user_info {
-    margin: 0 1rem 1rem 1rem;
-}
-
-#user_info>div {
-    display: flex;
-    justify-content: flex-start;
-}
-
-.info_label {
-    width: 10rem;
-    padding: 0.1rem 1rem 0.1rem 0;
-}
-
-#patterns {
-    margin: 0.5rem 0 0 0;
-    max-width: 60rem;
-}
-
-.pattern {
-    display: flex;
-    justify-content: space-between;
-    font-size: 1.2rem;
-}
-
-.pattern_name {
-    flex-grow: 2;
-    padding: 0 0.3rem 0 0;
-}
-
-#patterns a {
-    display: block;
-}
-
-.pattern_info {
-    display: flex;
-    padding: 0 0.3rem 0 0;
-}
-
-.pattern_public {
-    width: 6rem;
-    padding-left: 1rem;
-    text-align: center;
-}
-
-.pattern_delete {
-    width: 5rem;
-    padding-left: 1rem;
-    text-align: center;
-}
-
-.pattern_type {
-    width: 12rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    text-align: right;
-}
-
-.pattern:hover {
-    background: #cae6f6;
-}
-
 #header {
     display: flex;
     height: 2.5rem;
@@ -143,27 +81,6 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
     padding: 0.2rem 0.5rem;
     text-decoration: none;
     color: #000;
-}
-
-#filter {
-    margin: 0;
-    display: flex;
-    flex-direction: row;
-}
-#filter input[type=text] {
-    outline: 0;
-    border: 1px solid #ccc;
-    background: #ddd;
-    height: 1.5rem;
-    margin: 0;
-    max-width: 35rem;
-    flex-grow: 1;
-    margin-right: 1rem;
-}
-#filter .filtertext {
-    height: 1.5rem;
-    padding-top: 0.3rem;
-    padding-right: 0.5rem;
 }
 
 #clone, #save, #close {
@@ -351,35 +268,6 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 img.icon.selected {
     outline: 2px solid #666;
     margin: 0 2px;
-}
-
-#users {
-    margin: 0 1rem;
-    max-width: 60rem;
-}
-
-.user {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.4rem 0;
-}
-
-.user:hover {
-    background: #ccc;
-}
-
-.user_name {
-    width: 25rem;
-    padding: 0.3rem 0.3rem 0.3rem 0;
-}
-
-.user_label {
-    flex-grow: 2;
-    padding: 0.3rem 0.3rem 0.3rem 0;
-}
-
-#users a {
-    display: block;
 }
 
 .hidden {

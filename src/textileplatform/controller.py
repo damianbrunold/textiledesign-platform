@@ -465,6 +465,20 @@ def users():
         abort(500, description="Failed to get all users")
 
 
+@app.route("/admin/patterns")
+@login_required
+@superuser_required
+def patterns():
+    try:
+        all_users = User.query.order_by(User.name).all()
+        return render_template("patterns.html", users=all_users)
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("failed to get all users")
+        abort(500, description="Failed to get all users")
+
+
 @app.route("/admin/users/<string:user_name>")
 @login_required
 @superuser_required

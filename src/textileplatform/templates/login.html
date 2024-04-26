@@ -5,9 +5,13 @@
 {% endblock %}
 
 {% block content %}
+<style>
+input[type=text] { width: 20rem; }
+input[type=password] { width: 20rem; }
+</style>
   <form method="post">
       <label for="email">{{ gettext('E-Mail') }}</label>
-    <input name="email" id="email" required>
+    <input type="text" name="email" id="email" required>
     <label for="password">{{ gettext('Password') }}</label>
     <input type="password" name="password" id="password" required>
     <input type="submit" value="{{ gettext('Log in') }}">
