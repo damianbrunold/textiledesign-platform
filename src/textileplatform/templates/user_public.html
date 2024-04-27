@@ -12,6 +12,11 @@
 #patterns a {
     display: block;
 }
+.patterns-label {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-top: 0.3rem;
+}
 .pattern {
     display: flex;
 }
@@ -27,25 +32,54 @@
     padding: 0 0.3rem 0 0;
 }
 {% if g.user and g.user.darkmode %}
-.pattern:hover { background: #cae6f6; }
-{% else %}
 .pattern:hover { background: #222; }
+{% else %}
+.pattern:hover { background: #cae6f6; }
 {% endif %}
 </style>
     <div id="patterns">
-        {% for pattern in patterns %}
-            <a class="action" href="{{ url_for('edit_pattern',
-                                               user_name=pattern.owner.name,
-                                               pattern_name=pattern.name) }}">
-                <div class="pattern">
-                    <div class="pattern_name">
-                        {{ pattern.label }}
-                    </div>
-                    <div class="pattern_type">
-                        {{ gettext(pattern.pattern_type) }}
-                    </div>
-                </div>
+    {% for membership in user.memberships %}
+    {% if membership.group.name == user.name %}
+
+    {% set weave_patterns = membership.group.weave_patterns(public=True) %}
+    {% if weave_patterns %}
+    <div class="patterns-label" data-group-name="{{ membership.group.name }}">
+        {{ gettext('DB-WEAVE Patterns') }}
+    </div>
+    {% for pattern in weave_patterns %}
+    <div class="pattern" data-group-name="{{ membership.group.name }}">
+        <div class="pattern_name">
+            <a class="action"
+               href="{{ url_for('edit_pattern',
+                                user_name=pattern.owner.name,
+                                pattern_name=pattern.name) }}">
+                {{ pattern.label }}
             </a>
-        {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% set bead_patterns = membership.group.bead_patterns(public=True) %}
+    {% if bead_patterns %}
+    <div class="patterns-label" data-group-name="{{ membership.group.name }}">
+        {{ gettext('JBead Patterns') }}
+    </div>
+    {% for pattern in bead_patterns %}
+    <div class="pattern" data-group-name="{{ membership.group.name }}">
+        <div class="pattern_name">
+            <a class="action"
+               href="{{ url_for('edit_pattern',
+                                user_name=pattern.owner.name,
+                                pattern_name=pattern.name) }}">
+                {{ pattern.label }}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% endif %}
+    {% endfor %}
     </div>
 {% endblock %}

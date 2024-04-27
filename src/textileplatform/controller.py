@@ -89,16 +89,11 @@ def index():
 
 @app.route("/groups/<string:group_name>")
 def group(group_name):
-    # TODO convert to standard group code...
     try:
-        weave_user = User.query.filter(User.name == "weave").first()
-        weave_patterns = get_patterns_for_user(weave_user, True)
-        bead_user = User.query.filter(User.name == "bead").first()
-        bead_patterns = get_patterns_for_user(bead_user, True)
+        group = Group.query.filter(Group.name == group_name).one_or_none()
         return render_template(
-            "examples.html",
-            weave_patterns=weave_patterns,
-            bead_patterns=bead_patterns,
+            "group.html",
+            group=group,
         )
     except HTTPException:
         raise
@@ -119,6 +114,7 @@ def user(user_name):
             "user_private.html",
             user=user,
             patterns=patterns,
+            active_group=user.name,
         )
     else:
         # show public view
@@ -422,7 +418,7 @@ def edit_groups():
     return render_template(
         "edit_groups.html",
         user=g.user,
-        groups=g.user.groups,
+        groups=[m.group for m in g.user.memberships],
     )
 
 
@@ -449,6 +445,20 @@ def add_group():
             # TODO errorhandling
             return redirect(url_for("edit_groups", user_name=g.user.name))
     return render_template("add_group.html")
+
+
+@app.route("/admin/groups")
+@login_required
+@superuser_required
+def groups():
+    try:
+        all_groups = Group.query.order_by(Group.name).all()
+        return render_template("groups.html", groups=all_groups)
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("failed to get all groups")
+        abort(500, description="Failed to get all groups")
 
 
 @app.route("/admin/users")

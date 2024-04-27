@@ -50,7 +50,47 @@ class Group(db.Model):
     assignments = db.relationship("Assignment", back_populates="group")
 
     def user_label_list(self):
-        return ", ".join([user.name for user in self.users])
+        users = [membership.user.label for membership in self.memberships]
+        return ",".join(sorted(users))
+
+    def weave_patterns(self, public=False):
+        result = [
+            assignment.pattern
+            for assignment in self.assignments
+            if assignment.pattern.pattern_type == "DB-WEAVE Pattern"
+            and (not public or assignment.pattern.public)
+        ]
+        return sorted(
+            result,
+            key=lambda pattern: (pattern.owner.label, pattern.label)
+        )
+
+    def bead_patterns(self, public=False):
+        result = [
+            assignment.pattern
+            for assignment in self.assignments
+            if assignment.pattern.pattern_type == "JBead Pattern"
+            and (not public or assignment.pattern.public)
+        ]
+        return sorted(
+            result,
+            key=lambda pattern: (pattern.owner.label, pattern.label)
+        )
+
+    def other_patterns(self, public=False):
+        result = [
+            assignment.pattern
+            for assignment in self.assignments
+            if assignment.pattern.pattern_type not in [
+                "DB-WEAVE Pattern",
+                "JBead Pattern",
+            ]
+            and (not public or assignment.pattern.public)
+        ]
+        return sorted(
+            result,
+            key=lambda pattern: (pattern.owner.label, pattern.label)
+        )
 
 
 class Assignment(db.Model):

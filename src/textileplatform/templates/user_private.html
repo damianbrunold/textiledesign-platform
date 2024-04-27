@@ -1,7 +1,31 @@
 {% extends 'base.html' %}
 
 {% block header %}
-    <h1>{{ user.label }}</h1>
+<style>
+#groups {
+    margin: 0;
+    display: flex;
+    flex-direction: row;
+}
+.group {
+    margin-right: 1rem;
+    font-size: 1.2rem;
+    padding: 0.1rem 0 0.2rem 0;
+    cursor: pointer;
+}
+.group.active {
+    font-weight: bold;
+}
+</style>
+<div id="groups">
+    {% for membership in user.memberships %}
+    {% if active_group == membership.group.name %}
+    <div class="group active" data-group-name="{{ membership.group.name }}">{{ membership.group.label }}</div>
+    {% else %}
+    <div class="group" data-group-name="{{ membership.group.name }}">{{ membership.group.label }}</div>
+    {% endif %}
+    {% endfor %}
+</div>
 {% endblock %}
 
 {% block content %}
@@ -29,6 +53,11 @@
 }
 #patterns a {
     display: block;
+}
+.patterns-label {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-top: 0.3rem;
 }
 .pattern {
     display: flex;
@@ -62,107 +91,195 @@
     border: 1px solid #666;
     background: #777;
 }
-.pattern:hover { background: #cae6f6; }
+.pattern:hover { background: #222; }
 {% else %}
 #filter input[type=text] {
     border: 1px solid #ccc;
     background: #ddd;
 }
-.pattern:hover { background: #222; }
+.pattern:hover { background: #cae6f6; }
 {% endif %}
 </style>
-    <div id="header">
-        <div class="button">
-            <a href="{{ url_for('create_pattern') }}">
-                {{ gettext('New Pattern') }}
-            </a>
-        </div>
-        <div class="button">
-            <a href="{{ url_for('upload_pattern') }}">
-                {{ gettext('Upload Pattern') }}
-            </a>
-        </div>
-        <div class="button">
-            <a href="{{ url_for('edit_groups') }}">
-                {{ gettext('Groups') }}
-            </a>
-        </div>
-        {% if g.user and g.user.name == 'superuser' %}
-        <div class="button">
-            <a href="{{ url_for('users') }}">
-                {{ gettext('Users') }}
-            </a>
-        </div>
-        <div class="button">
-            <a href="{{ url_for('patterns') }}">
-                {{ gettext('All Patterns') }}
-            </a>
-        </div>
-        {% endif %}
+<div id="header">
+    <div class="button">
+        <a href="{{ url_for('create_pattern') }}">
+            {{ gettext('New Pattern') }}
+        </a>
     </div>
-    <div id="filter">
-        <span class="filtertext">Filter </span><input type="text" id="filter-query" value=""/>
+    <div class="button">
+        <a href="{{ url_for('upload_pattern') }}">
+            {{ gettext('Upload Pattern') }}
+        </a>
     </div>
-    <div id="patterns">
-        {% for pattern in patterns %}
-            <div class="pattern">
-                <div class="pattern_name">
-                    <a class="action"
-                       href="{{ url_for('edit_pattern',
-                                        user_name=g.user.name,
-                                        pattern_name=pattern.name) }}">
-                        {{ pattern.label }}
-                    </a>
-                </div>
-                <div class="pattern_info">
-                    <div class="pattern_public">
-                        <a class="action"
-                           href="">
-                            {{ gettext('Public') if pattern.public else gettext('Private') }}
-                        </a>
-                    </div>
-                    <div class="pattern_delete">
-                        <a class="action"
-                           href="{{ url_for('delete',
-                                            pattern_name=pattern.name) }}">
-                            {{ gettext('Delete') }}
-                        </a>
-                    </div>
-                    <div class="pattern_type">
-                        {{ gettext(pattern.pattern_type) }}
-                    </div>
-                </div>
+    <div class="button">
+        <a href="{{ url_for('edit_groups') }}">
+            {{ gettext('Groups') }}
+        </a>
+    </div>
+</div>
+
+<div id="filter">
+    <span class="filtertext">Filter </span><input type="text" id="filter-query" value=""/>
+</div>
+
+<div id="patterns">
+    {% for membership in user.memberships %}
+    {% set weave_patterns = membership.group.weave_patterns() %}
+    {% if weave_patterns %}
+    <div class="patterns-label" data-group-name="{{ membership.group.name }}">
+        {{ gettext('DB-WEAVE Patterns') }}
+    </div>
+    {% for pattern in weave_patterns %}
+    <div class="pattern" data-group-name="{{ membership.group.name }}">
+        <div class="pattern_name">
+            <a class="action"
+               href="{{ url_for('edit_pattern',
+                                user_name=pattern.owner.name,
+                                pattern_name=pattern.name) }}">
+                {% if membership.group.name == user.name %}
+                {{ pattern.label }}
+                {% else %}
+                {{ pattern.owner.label }} - {{ pattern.label }}
+                {% endif %}
+            </a>
+        </div>
+        <div class="pattern_info">
+            {% if membership.group.name == user.name %}
+            <div class="pattern_public">
+                <a class="action" href="#">
+                    {{
+                        gettext('Public')
+                        if pattern.public
+                        else gettext('Private')
+                    }}
+                </a>
             </div>
-        {% endfor %}
+            <div class="pattern_delete">
+                <a class="action"
+                   href="{{ url_for('delete',
+                                    pattern_name=pattern.name) }}">
+                    {{ gettext('Delete') }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
     </div>
-    <script>
-        document.getElementById("filter-query").addEventListener("change", (e) => {
-            const query = e.target.value;
-            const terms = query.toLowerCase().split(/ +/);
-            const patterns = document.getElementsByClassName("pattern");
-            for (let i = 0; i < patterns.length; i++) {
-                const pattern = patterns[i];
-                if (query === "") {
-                    pattern.style.display = "flex";
+    {% endfor %}
+    {% endif %}
+    {% set bead_patterns = membership.group.bead_patterns() %}
+    {% if bead_patterns %}
+    <div class="patterns-label" data-group-name="{{ membership.group.name }}">
+        {{ gettext('JBead Patterns') }}
+    </div>
+    {% for pattern in bead_patterns %}
+    <div class="pattern" data-group-name="{{ membership.group.name }}">
+        <div class="pattern_name">
+            <a class="action"
+               href="{{ url_for('edit_pattern',
+                                user_name=pattern.owner.name,
+                                pattern_name=pattern.name) }}">
+                {% if membership.group.name == user.name %}
+                {{ pattern.label }}
+                {% else %}
+                {{ pattern.owner.label }} - {{ pattern.label }}
+                {% endif %}
+            </a>
+        </div>
+        <div class="pattern_info">
+            {% if membership.group.name == user.name %}
+            <div class="pattern_public">
+                <a class="action" href="#">
+                    {{
+                        gettext('Public')
+                        if pattern.public
+                        else gettext('Private')
+                    }}
+                </a>
+            </div>
+            <div class="pattern_delete">
+                <a class="action"
+                    href="{{ url_for('delete', pattern_name=pattern.name) }}">
+                    {{ gettext('Delete') }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
+</div>
+<script>
+    const groups = document.getElementById("groups").getElementsByClassName("group");
+    for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        group.addEventListener("click", e => {
+            document.getElementById("groups").getElementsByClassName("group active")[0].classList.remove("active");
+            group.classList.add("active");
+            const labels = document.getElementById("patterns").getElementsByClassName("patterns-label");
+            for (let j = 0; j < labels.length; j++) {
+                const label = labels[j];
+                if (label.dataset.groupName == group.dataset.groupName) {
+                    label.style.display = "";
                 } else {
-                    const name = pattern.getElementsByClassName("pattern_name")[0].innerText;
-                    const type = pattern.getElementsByClassName("pattern_type")[0].innerText;
-                    const visibility = pattern.getElementsByClassName("pattern_public")[0].innerText;
-                    const text = name.toLowerCase() + " " + type.toLowerCase() + " " + visibility.toLowerCase();
-                    let matches = true;
-                    for (let term of terms) {
-                        if (text.indexOf(term) === -1) {
-                            matches = false;
-                            pattern.style.display = "none";
-                            break;
-                        }
-                    }
-                    if (matches) {
-                        pattern.style.display = "flex";
-                    }
+                    label.style.display = "none";
+                }
+            }
+            const patterns = document.getElementById("patterns").getElementsByClassName("pattern");
+            for (let j = 0; j < patterns.length; j++) {
+                const pattern = patterns[j];
+                if (pattern.dataset.groupName == group.dataset.groupName) {
+                    pattern.style.display = "";
+                } else {
+                    pattern.style.display = "none";
                 }
             }
         });
-        document.getElementById("filter-query").focus();
-    </script>
+    }
+    document.getElementById("filter-query").addEventListener("change", (e) => {
+        const query = e.target.value;
+        const terms = query.toLowerCase().split(/ +/);
+        const patterns = document.getElementsByClassName("pattern");
+        for (let i = 0; i < patterns.length; i++) {
+            const pattern = patterns[i];
+            if (query === "") {
+                pattern.style.display = "flex";
+            } else {
+                const name = pattern.getElementsByClassName("pattern_name")[0].innerText;
+                const type = pattern.getElementsByClassName("pattern_type")[0].innerText;
+                const visibility = pattern.getElementsByClassName("pattern_public")[0].innerText;
+                const text = name.toLowerCase() + " " + type.toLowerCase() + " " + visibility.toLowerCase();
+                let matches = true;
+                for (let term of terms) {
+                    if (text.indexOf(term) === -1) {
+                        matches = false;
+                        pattern.style.display = "none";
+                        break;
+                    }
+                }
+                if (matches) {
+                    pattern.style.display = "flex";
+                }
+            }
+        }
+    });
+    document.getElementById("filter-query").focus();
+</script>
+{% if g.user and g.user.name == 'superuser' %}
+<style>
+#admin {
+    display: flex;
+    margin-top: 1rem;
+}
+#admin a {
+    margin-right: 1rem;
+}
+</style>
+<div id="admin">
+    <span>Administration:&nbsp;</a>
+    <a href="{{ url_for('groups') }}">{{ gettext('Groups') }}</a>
+    <a href="{{ url_for('users') }}">{{ gettext('Users') }}</a>
+    <a href="{{ url_for('patterns') }}">{{ gettext('All Patterns') }}</a>
+</div>
+{% endif %}
 {% endblock %}
