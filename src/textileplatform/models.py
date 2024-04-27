@@ -1,7 +1,5 @@
 from textileplatform.db import db
 
-from werkzeug.security import generate_password_hash as gen_pw_hash
-
 
 class User(db.Model):
     __tablename__ = "txuser"
@@ -86,43 +84,3 @@ class Pattern(db.Model):
 
     owner = db.relationship("User", back_populates="mypatterns")
     assignments = db.relationship("Assignment", back_populates="pattern")
-
-
-def ensure_db_contents(app):
-    with app.app_context():
-        if User.query.count() == 0:
-            db.session.add(User(
-                name="superuser",
-                label="Superuser",
-                email="admin@textileplatform.ch",
-                darkmode=True,
-                verified=True,
-                disabled=False,
-                locale="en",
-                timezone="CET",
-                password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
-            ))
-            db.session.commit()
-        for user in User.query.all():
-            group = Group.query.filter(Group.name == user.name).one_or_none()
-            if not group:
-                # Create default group for user and assign all owned
-                # patterns to the group
-                group = Group(
-                    name=user.name,
-                    label=user.label,
-                    description="",
-                )
-                db.session.add(group)
-                membership = Membership(
-                    group=group,
-                    user=user,
-                )
-                db.session.add(membership)
-                for pattern in user.mypatterns:
-                    assignment = Assignment(
-                        group=group,
-                        pattern=pattern,
-                    )
-                    db.session.add(assignment)
-                db.session.commit()
