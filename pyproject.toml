@@ -1,11 +1,11 @@
 [project]
 name = "textileplatform"
-version = "0.0.37"
+version = "0.0.38"
 description = "Textile Plattform Webapp"
 authors = [
     {name="Damian Brunold", email="dab@dabsoft.ch"}
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 dependencies = [
     "flask",
