@@ -400,6 +400,8 @@ def delete(pattern_name):
         error = None
 
         try:
+            for assignment in pattern.assignments:
+                db.session.delete(assignment)
             db.session.delete(pattern)
             db.session.commit()
         except Exception:
