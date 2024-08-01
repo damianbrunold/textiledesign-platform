@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{{ gettext('Group assignments for') }} {{ pattern.label }}</h1>
+{% endblock %}
+
+{% block content %}
+    <form enctype="multipart/form-data" method="POST">
+        {% for membership in g.user.memberships %}
+        {% if g.user.name != membership.group.name %}
+        <div>
+            {% if membership.group.is_assigned(pattern) %}
+            <input type="checkbox" checked="checked" name="assignments" value="{{membership.group.id}}" />
+            {% else %}
+            <input type="checkbox" name="assignments" value="{{membership.group.id}}"/>
+            {% endif %}
+            {{ membership.group.label }}
+        </div>
+        {% endif %}
+        {% endfor %}
+        </ul>
+        <input type="submit" value="{{ gettext('Save') }}">
+    </form>
+    <a class="action" href="{{ url_for('user', user_name=g.user.name) }}">{{ gettext('Cancel') }}</a>
+{% endblock %}

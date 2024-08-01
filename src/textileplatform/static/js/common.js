@@ -91,8 +91,13 @@ async function gotoUser(user) {
 
 
 function closePattern() {
-    const user = document.getElementById("user").value;
-    window.location.href = "/" + user;
+    const origin = document.getElementById("origin").value;
+    if (origin.startsWith("group-")) {
+        window.location.href = "/groups/" + origin.substring(6);
+    } else {
+        const user = document.getElementById("user").value;
+        window.location.href = "/" + user;
+    }
 }
 
 

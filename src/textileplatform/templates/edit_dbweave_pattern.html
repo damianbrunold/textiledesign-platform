@@ -12,6 +12,7 @@
 
 {% block content %}
     <input type="hidden" id="user" value="{{user.name}}"/>
+    <input type="hidden" id="origin" value="{{origin}}"/>
     <input type="hidden" id="pattern" value="{{pattern.name}}"/>
     <input type="hidden" id="viewer" value="{{g.user.name if g.user else ''}}"/>
     <input type="hidden" id="darkmode" value="{{g.user.darkmode if g.user else 'False'}}"/>

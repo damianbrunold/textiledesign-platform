@@ -104,12 +104,14 @@ def get_patterns_for_user(user, only_public=False):
             Pattern.query
             .filter(Pattern.owner_id == user.id)
             .filter(Pattern.public is True)
+            .order_by(Pattern.label)
             .all()
         )
     else:
         return (
             Pattern.query
             .filter(Pattern.owner_id == user.id)
+            .order_by(Pattern.label)
             .all()
         )
 

@@ -5,7 +5,6 @@
 {% endblock %}
 
 {% block content %}
-{% if group.public %}
 <style>
 #filter {
     margin: 0;
@@ -27,6 +26,7 @@
 }
 #patterns {
     max-width: 60rem;
+    margin-top: 0.5rem;
 }
 #patterns a {
     display: block;
@@ -82,43 +82,21 @@
 </div>
 
 <div id="patterns">
-    {% set weave_patterns = group.weave_patterns(public=True) %}
-    {% if weave_patterns %}
-    <div class="patterns-label">
-        {{ gettext('DB-WEAVE Patterns') }}
-    </div>
-    {% for pattern in weave_patterns %}
+    {% for pattern in patterns %}
     <div class="pattern">
         <div class="pattern_name">
             <a class="action"
                href="{{ url_for('edit_pattern',
                                 user_name=pattern.owner.name,
-                                pattern_name=pattern.name) }}">
-                {{ pattern.owner.label }} - {{ pattern.label }}
+                                pattern_name=pattern.name,
+                                origin='group-' + group.name) }}">
+                {{ pattern.label }}
+                - 
+                {{ pattern.owner.label }}
             </a>
         </div>
     </div>
     {% endfor %}
-    {% endif %}
-
-    {% set bead_patterns = group.bead_patterns() %}
-    {% if bead_patterns %}
-    <div class="patterns-label" data-group-name="{{ group.name }}">
-        {{ gettext('JBead Patterns') }}
-    </div>
-    {% for pattern in bead_patterns %}
-    <div class="pattern" data-group-name="{{ group.name }}">
-        <div class="pattern_name">
-            <a class="action"
-               href="{{ url_for('edit_pattern',
-                                user_name=pattern.owner.name,
-                                pattern_name=pattern.name) }}">
-                {{ pattern.owner.label }} - {{ pattern.label }}
-            </a>
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
 </div>
 <script>
     document.getElementById("filter-query").addEventListener("change", (e) => {
@@ -131,9 +109,7 @@
                 pattern.style.display = "flex";
             } else {
                 const name = pattern.getElementsByClassName("pattern_name")[0].innerText;
-                const type = pattern.getElementsByClassName("pattern_type")[0].innerText;
-                const visibility = pattern.getElementsByClassName("pattern_public")[0].innerText;
-                const text = name.toLowerCase() + " " + type.toLowerCase() + " " + visibility.toLowerCase();
+                const text = name.toLowerCase();
                 let matches = true;
                 for (let term of terms) {
                     if (text.indexOf(term) === -1) {
@@ -150,5 +126,4 @@
     });
     document.getElementById("filter-query").focus();
 </script>
-{% endif %}
 {% endblock %}

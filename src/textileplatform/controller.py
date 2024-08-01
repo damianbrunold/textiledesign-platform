@@ -4,6 +4,8 @@ from textileplatform.app import app
 from textileplatform.models import User
 from textileplatform.models import Pattern
 from textileplatform.models import Group
+from textileplatform.models import Membership
+from textileplatform.models import Assignment
 from textileplatform.patterns import add_weave_pattern
 from textileplatform.patterns import add_bead_pattern
 from textileplatform.patterns import get_patterns_for_user
@@ -91,9 +93,25 @@ def index():
 def group(group_name):
     try:
         group = Group.query.filter(Group.name == group_name).one_or_none()
+        if not group:
+            return redirect(url_for("index"))
+        if g.user and g.user.is_in_group(group.id):
+            # show private view
+            patterns = []
+            for a in group.assignments:
+                patterns.append(a.pattern)
+        else:
+            # show public view
+            patterns = []
+            for a in group.assignments:
+                if not a.pattern.public:
+                    continue
+                patterns.append(a.pattern)
+        patterns.sort(key=lambda p: (p.label, p.name, p.owner.name, p.id))
         return render_template(
             "group.html",
             group=group,
+            patterns=patterns,
         )
     except HTTPException:
         raise
@@ -109,25 +127,76 @@ def user(user_name):
         return redirect(url_for("index"))
     elif g.user and g.user.name == user.name:
         # show private view
-        patterns = get_patterns_for_user(g.user)
+        patterns_weave = []
+        patterns_bead = []
+        patterns_other = []
+        group_patterns = {}
+        for m in g.user.memberships:
+            # only collect the users patterns
+            if m.group.name == g.user.name:
+                for a in m.group.assignments:
+                    if a.pattern.pattern_type == "DB-WEAVE Pattern":
+                        patterns_weave.append(a.pattern)
+                    elif a.pattern.pattern_type == "JBead Pattern":
+                        patterns_bead.append(a.pattern)
+                    else:
+                        patterns_other.append(a.pattern)
+            else:
+                if m.group.id not in group_patterns:
+                    group_patterns[m.group.id] = [m.group, []]
+                    patterns = group_patterns[m.group.id][1]
+                    for a in m.group.assignments:
+                        patterns.append(a.pattern)
+        patterns_weave.sort(key=lambda p: (p.label, p.name, p.id))
+        patterns_bead.sort(key=lambda p: (p.label, p.name, p.id))
+        patterns_other.sort(key=lambda p: (p.label, p.name, p.id))
+        for gid in group_patterns:
+            group_patterns[gid][1].sort(key=lambda p: (p.label, p.name, p.id))
         return render_template(
             "user_private.html",
             user=user,
-            patterns=patterns,
+            patterns_weave=patterns_weave,
+            patterns_bead=patterns_bead,
+            patterns_other=patterns_other,
+            group_patterns=group_patterns.values(),
             active_group=user.name,
         )
     else:
         # show public view
-        patterns = get_patterns_for_user(user, True)
+        patterns_weave = []
+        patterns_bead = []
+        patterns_other = []
+        ids = set()
+        for m in user.memberships:
+            for a in m.group.assignments:
+                if not a.pattern.public:
+                    continue
+                if a.pattern.owner.id != user.id:
+                    continue
+                if a.pattern.id in ids:
+                    continue
+                ids.add(a.pattern.id)
+                if a.pattern.pattern_type == "DB-WEAVE Pattern":
+                    patterns_weave.append(a.pattern)
+                elif a.pattern.pattern_type == "JBead Pattern":
+                    patterns_bead.append(a.pattern)
+                else:
+                    patterns_other.append(a.pattern)
+        patterns_weave.sort(key=lambda p: (p.label, p.name, p.id))
+        patterns_bead.sort(key=lambda p: (p.label, p.name, p.id))
+        patterns_other.sort(key=lambda p: (p.label, p.name, p.id))
         return render_template(
             "user_public.html",
             user=user,
-            patterns=patterns,
+            patterns_weave=patterns_weave,
+            patterns_bead=patterns_bead,
+            patterns_other=patterns_other,
         )
 
 
 @app.route("/<string:user_name>/<string:pattern_name>")
 def edit_pattern(user_name, pattern_name):
+    origin = request.args.get("origin", "")
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
         return redirect(url_for("index"))
@@ -150,6 +219,7 @@ def edit_pattern(user_name, pattern_name):
             user=user,
             pattern=pattern,
             readonly=readonly,
+            origin=origin,
         )
     elif pattern.pattern_type == "JBead Pattern":
         return render_template(
@@ -157,6 +227,7 @@ def edit_pattern(user_name, pattern_name):
             user=user,
             pattern=pattern,
             readonly=readonly,
+            origin=origin,
         )
     else:
         return redirect(url_for("user", user_name=user.name))
@@ -415,6 +486,57 @@ def delete(pattern_name):
     return render_template("delete_pattern.html", pattern=pattern)
 
 
+@app.route("/patterns/assignments/<string:pattern_name>", methods=("GET", "POST"))
+@login_required
+def assignments(pattern_name):
+    pattern = (
+        Pattern.query
+        .join(User)
+        .filter(Pattern.name == pattern_name)
+        .filter(User.name == g.user.name)
+        .first()
+    )
+    if not pattern:
+        return redirect(url_for("user", user_name=g.user.name))
+
+    if request.method == "POST":
+        try:
+            fixed = [
+                assignment
+                for assignment in pattern.assignments
+                if assignment.group.name == g.user.name
+            ]
+            new_group_ids = request.form.getlist("assignments")
+            old_group_ids = [a.group.id for a in pattern.assignments]
+            existing = []
+            todelete = []
+            new = []
+            for assignment in pattern.assignments:
+                if assignment.group_id in new_group_ids:
+                    existing.append(assignment)
+                elif assignment.group.name != g.user.name:
+                    todelete.append(assignment)
+            for group_id in new_group_ids:
+                if group_id in old_group_ids:
+                    continue
+                new.append(
+                    Assignment(group_id=group_id, pattern_id=pattern.id)
+                )
+            for a in todelete:
+                db.session.delete(a)
+            for a in new:
+                db.session.add(a)
+            pattern.assignments = fixed + existing + new
+            db.session.commit()
+        except Exception:
+            logging.exception("Assignments could not be saved")
+            flash(gettext("Assignments could not be saved."))
+        else:
+            return redirect(url_for("user", user_name=g.user.name))
+
+    return render_template("assignments_pattern.html", pattern=pattern)
+
+
 @app.route("/admin/groups")
 def edit_groups():
     return render_template(
@@ -440,9 +562,14 @@ def add_group():
                 label=label,
                 description=description,
             )
-            group.owner = g.user
+            membership = Membership(
+                user=g.user,
+                group=group,
+                role="owner",
+                state="accepted",
+            )
             db.session.add(group)
-            g.user.groups.append(group)
+            db.session.add(membership)
             db.session.commit()
             # TODO errorhandling
             return redirect(url_for("edit_groups", user_name=g.user.name))
