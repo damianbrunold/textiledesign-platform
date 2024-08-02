@@ -59,6 +59,12 @@ class Group(db.Model):
         users = [membership.user.label for membership in self.memberships]
         return ",".join(sorted(users))
 
+    def contains_user(self, user_id):
+        for m in self.memberships:
+            if m.user.id == user_id:
+                return True
+        return False
+
     def is_assigned(self, pattern):
         for assignment in self.assignments:
             if assignment.pattern.id == pattern.id:
