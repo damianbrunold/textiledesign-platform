@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{{ group.label }}</h1>
+{% endblock %}
+
+{% block content %}
+<style>
+ul {
+    list-style: none;
+}
+</style>
+<h2>{{ gettext('Members') }}</h2>
+<ul>
+{% for m in group.memberships %}
+<li><a href="{{ url_for('user', user_name=m.user.name) }}">{{ m.user.label }}</a></li>
+{% endfor %}
+</ul>
+
+<h2>{{ gettext('Patterns') }}</h2>
+<ul>
+{% for a in group.assignments %}
+<li><a href="{{ url_for('edit_pattern', user_name=a.pattern.owner.name, pattern_name=a.pattern.name, origin='groups-edit-'+group.name) }}">{{ a.pattern.owner.label }} - {{ a.pattern.label }}</a></li>
+{% endfor %}
+</ul>
+{% endblock %}

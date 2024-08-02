@@ -94,6 +94,8 @@ function closePattern() {
     const origin = document.getElementById("origin").value;
     if (origin.startsWith("group-")) {
         window.location.href = "/groups/" + origin.substring(6);
+    } else if (origin.startsWith("groups-edit-")) {
+        window.location.href = "/groups/edit/" + origin.substring(12);
     } else {
         const user = document.getElementById("user").value;
         window.location.href = "/" + user;

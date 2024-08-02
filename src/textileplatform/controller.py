@@ -537,7 +537,8 @@ def assignments(pattern_name):
     return render_template("assignments_pattern.html", pattern=pattern)
 
 
-@app.route("/admin/groups")
+@app.route("/groups")
+@login_required
 def edit_groups():
     return render_template(
         "edit_groups.html",
@@ -546,7 +547,21 @@ def edit_groups():
     )
 
 
-@app.route("/admin/add-group", methods=("GET", "POST"))
+@app.route("/groups/edit/<group_name>")
+@login_required
+def edit_group(group_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group:
+        return redirect('index')
+    return render_template(
+        "edit_group.html",
+        user=g.user,
+        group=group,
+    )
+
+
+@app.route("/groups/add", methods=("GET", "POST"))
+@login_required
 def add_group():
     if request.method == "POST":
         label = request.form["name"]

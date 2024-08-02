@@ -5,11 +5,28 @@
 {% endblock %}
 
 {% block content %}
+<style>
+ul {
+    list-style: none;
+}
+</style>
     <ul>
     {% for group in groups %}
+    {% if group.name != g.user.name %}
         <li>
-            {{ group.name }} -- {{ group.user_label_list() }}
+            <span class="name"><a href="{{ url_for('edit_group', group_name=group.name) }}">{{ group.label }}</a></span>
+            ({% if group.memberships|length == 1 %}1 {{ gettext('Member') }},
+            {% else %}
+            {{ group.memberships|length }}
+            {{ gettext('Members') }},
+            {% endif %}
+
+            {% if group.assignments|length == 1 %}
+            1 {{ gettext('Pattern') }}{% else %}
+            {{ group.assignments|length }}
+            {{ gettext('Patterns') }}{% endif %})
         </li>
+    {% endif %}
     {% endfor %}
     </ul>
     <p><a href="{{ url_for('add_group') }}">{{ gettext('Add Group') }}</a></p>
