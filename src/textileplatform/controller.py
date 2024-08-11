@@ -250,6 +250,7 @@ def profile():
         darkmode = "darkmode" in request.form
         user = g.user
         user.email = email
+        user.email_lower = email.lower()
         # TODO reset verified?!
         user.darkmode = darkmode
         try:
@@ -684,6 +685,7 @@ def register():
                     name=name,
                     label=label,
                     email=email,
+                    email_lower=email.lower(),
                     password=generate_password_hash(password),
                     darkmode=False,
                     verified=False,
@@ -719,11 +721,11 @@ def register():
 @app.route("/auth/login", methods=("GET", "POST"))
 def login():
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"] or ""
         password = request.form["password"]
         error = None
         try:
-            user = User.query.filter(User.email == email).first()
+            user = User.query.filter(User.email_lower == email.lower()).first()
 
             if user is None:
                 error = gettext("Login data are not correct")
@@ -790,7 +792,7 @@ def recover():
         if not email:
             error = gettext("E-Mail is required.")
         try:
-            user = User.query.filter(User.email == email).first()
+            user = User.query.filter(User.email_lower == email.lower()).first()
             if not user:
                 error = gettext("E-Mail is unknown.")
         except Exception:

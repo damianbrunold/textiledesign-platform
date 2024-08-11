@@ -8,6 +8,7 @@ class User(db.Model):
     name = db.Column(db.String(50), nullable=False, unique=True)
     label = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(255), nullable=False, unique=True)
+    email_lower = db.Column(db.String(255), nullable=True, unique=True)
     password = db.Column(db.String(255), nullable=False)
     darkmode = db.Column(db.Boolean)
     verified = db.Column(db.Boolean)
