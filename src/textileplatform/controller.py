@@ -761,6 +761,13 @@ def logout():
 @app.route("/auth/verify/<string:user_name>/<string:verification_code>")
 def verify(user_name, verification_code):
     try:
+        pos = verification_code.find("&")
+        if pos == -1:
+            pos = verification_code.find("/")
+        if pos == -1:
+            pos = verification_code.find("?")
+        if pos != -1:
+            verification_code = verification_code[0:pos]
         user = User.query.filter(User.name == user_name).first()
         if not user:
             return render_template("verification_failed.html")
@@ -770,8 +777,11 @@ def verify(user_name, verification_code):
             try:
                 db.session.commit()
                 send_admin_notification_mail(
-                    user, "User completed email account verification step")
+                    user, 
+                    "User completed email account verification step",
+                )
             except IntegrityError:
+                db.session.rollback()
                 return render_template("verification_failed.html")
             else:
                 return render_template("verification_successful.html")
