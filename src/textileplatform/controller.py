@@ -670,6 +670,8 @@ def register():
             error = gettext("E-Mail is required")
         elif not password:
             error = gettext("Password is required")
+        elif request.form["x"].strip() != "7":
+            error = gettext("Calculation result required")
 
         label = name
         name = from_label(label)
