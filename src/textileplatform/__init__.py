@@ -6,6 +6,8 @@ from textileplatform.patterns import add_bead_pattern
 from textileplatform.palette import default_weave_palette
 from textileplatform.palette import default_bead_palette
 from textileplatform.models import User
+from textileplatform.models import Group
+from textileplatform.models import Membership
 from textileplatform.models import Pattern
 import textileplatform.controller  # noqa
 
@@ -234,6 +236,33 @@ def reset_password(user_name):
         db.session.commit()
 
 
+@click.command("ensure-primary-groups")
+def ensure_primary_groups():
+    with app.app_context():
+        changed = False
+        for user in User.query.order_by(User.id).all():
+            group = Group.query.filter(Group.name == user.name).one_or_none()
+            if group:
+                continue
+            print(f"create primary group for {user.name}")
+            group = Group(
+                name=user.name,
+                label=user.label,
+                description='',
+            )
+            membership = Membership(
+                user=user,
+                group=group,
+                role="owner",
+                state="accepted",
+            )
+            db.session.add(group)
+            db.session.add(membership)
+            changed = True
+        if changed:
+            db.session.commit()
+
+
 app.cli.add_command(init_db_command)
 app.cli.add_command(list_users)
 app.cli.add_command(user_patterns)
@@ -242,5 +271,6 @@ app.cli.add_command(delete_user_pattern)
 app.cli.add_command(create_weave_pattern)
 app.cli.add_command(create_bead_pattern)
 app.cli.add_command(reset_password)
+app.cli.add_command(ensure_primary_groups)
 
 application = app
