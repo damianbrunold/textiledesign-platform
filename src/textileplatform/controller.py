@@ -426,7 +426,7 @@ def create_pattern():
             pattern["model"] = [[0] * width] * height
 
             # TODO use user default palette?
-            pattern["colors"] = default_bead_palette
+            pattern["colors"] = default_bead_palette[:]
 
             view = dict()
             view["draft-visible"] = True
