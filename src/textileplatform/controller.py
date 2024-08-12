@@ -695,6 +695,19 @@ def register():
                     verification_code=secrets.token_urlsafe(30),
                 )
                 db.session.add(user)
+                group = Group(
+                    name=name,
+                    label=label,
+                    description="",
+                )
+                db.session.add(group)
+                membership = Membership(
+                    group=group,
+                    user=user,
+                    role="owner",
+                    state="accepted",
+                )
+                db.session.add(membership)
                 db.session.commit()
 
                 send_verification_mail(user)
@@ -761,31 +774,30 @@ def logout():
 @app.route("/auth/verify/<string:user_name>/<string:verification_code>")
 def verify(user_name, verification_code):
     try:
-        pos = verification_code.find("&")
-        if pos == -1:
-            pos = verification_code.find("/")
-        if pos == -1:
-            pos = verification_code.find("?")
-        if pos != -1:
-            verification_code = verification_code[0:pos]
         user = User.query.filter(User.name == user_name).first()
         if not user:
             return render_template("verification_failed.html")
-        if not user.verified and user.verification_code == verification_code:
-            user.verified = True
-            user.verification_code = None
-            try:
-                db.session.commit()
-                send_admin_notification_mail(
-                    user, 
-                    "User completed email account verification step",
-                )
-            except IntegrityError:
-                db.session.rollback()
-                return render_template("verification_failed.html")
-            else:
-                return render_template("verification_successful.html")
-        return render_template("verification_failed.html")
+        if user.verified:
+            return render_template("verification_successful.html")
+        if user.verification_code != verification_code:
+            logging.error(
+                f"verification, expected {user.verification_ocde} "
+                f"but got {verification_code}"
+            )
+            return render_template("verification_failed.html")
+        user.verified = True
+        user.verification_code = None
+        logging.error(f"user {user_name} successfully verified")
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return render_template("verification_failed.html")
+        send_admin_notification_mail(
+            user, 
+            "User completed email account verification step",
+        )
+        return render_template("verification_successful.html")
     except HTTPException:
         raise
     except Exception:
