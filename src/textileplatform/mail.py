@@ -28,7 +28,8 @@ def send_verification_mail(user):
             "verify",
             user_name=user.name,
             verification_code=user.verification_code,
-            _external=True
+            _external=True,
+            _scheme="https",
         ),
     ])
     send_mail(
@@ -49,7 +50,8 @@ def send_recover_mail(user):
             "reset_password",
             user_name=user.name,
             verification_code=user.verification_code,
-            _external=True
+            _external=True,
+            _scheme="https",
         ),
     ])
     send_mail(
