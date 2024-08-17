@@ -60,6 +60,22 @@ def init_db_command():
     click.echo("Prepared the database.")
 
 
+@click.command("list-access")
+def list_access():
+    with app.app_context():
+        for user in User.query.order_by(db.desc(User.access_date)).all():
+            if user.access_date:
+                print(
+                    f"{user.id:3} {user.name:<25} "
+                    f"{user.access_date.isoformat()}"
+                )
+        for user in User.query.order_by(db.desc(User.access_date)).all():
+            if not user.access_date:
+                print(
+                    f"{user.id:3} {user.name:<25}"
+                )
+
+
 @click.command("list-users")
 def list_users():
     with app.app_context():
@@ -293,6 +309,7 @@ def ensure_primary_groups():
 
 
 app.cli.add_command(init_db_command)
+app.cli.add_command(list_access)
 app.cli.add_command(list_users)
 app.cli.add_command(user_patterns)
 app.cli.add_command(delete_user)
