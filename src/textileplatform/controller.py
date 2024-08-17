@@ -55,6 +55,30 @@ def load_logged_in_user():
     else:
         try:
             g.user = User.query.filter(User.name == user_name).first()
+            if g.user:
+                # if the user got disabled, we force logout
+                if g.user.disabled:
+                    session.clear()
+                    return redirect(url_for("login"))
+                now = datetime.datetime.now()
+
+                # we force logout after a month of inactivity
+                if (
+                    g.user.access_date
+                    and (now - g.user.access_date).days > 30
+                ):
+                    session.clear()
+                    return redirect(url_for("login"))
+
+                # we update access date every 10 minutes in the database
+                # this gives us reasonably accurrate usage info without
+                # writing to the database with each click.
+                if (
+                    g.user.access_date
+                    and (now - g.user.access_date).total_seconds() > 600
+                ):
+                    g.user.access_date = now
+                    db.session.commit()
         except Exception:
             g.user = None
 
@@ -777,7 +801,7 @@ def login():
 @app.route("/auth/logout")
 def logout():
     session.clear()
-    return redirect(url_for("index"))
+    return redirect(url_for("login"))
 
 
 @app.route("/auth/verify/<string:user_name>/<string:verification_code>")
