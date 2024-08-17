@@ -695,6 +695,9 @@ def register():
                     locale=str(locale),
                     timezone=str(tz),
                     verification_code=secrets.token_urlsafe(30),
+                    create_date=datetime.datetime.now(),
+                    verify_date=None,
+                    access_date=None,
                 )
                 db.session.add(user)
                 group = Group(
@@ -760,6 +763,10 @@ def login():
             session.clear()
             session["user_name"] = user.name
             session.permanent = True
+
+            user.access_date = datetime.datetime.now()
+            db.session.commit()
+
             return redirect(url_for("user", user_name=user.name))
 
         flash(error)

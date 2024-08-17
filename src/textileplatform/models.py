@@ -17,6 +17,9 @@ class User(db.Model):
     locale = db.Column(db.String(20))
     timezone = db.Column(db.String(20))
     verification_code = db.Column(db.String(100))
+    create_date = db.Column(db.DateTime)
+    verify_date = db.Column(db.DateTime)
+    access_date = db.Column(db.DateTime)
 
     memberships = db.relationship("Membership", back_populates="user")
     mypatterns = db.relationship(

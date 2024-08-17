@@ -11,6 +11,7 @@ from textileplatform.models import Membership
 from textileplatform.models import Pattern
 import textileplatform.controller  # noqa
 
+import datetime
 import os
 
 import click
@@ -82,6 +83,34 @@ def user_patterns(user_name):
                 print(
                     f"{m.group.name} {a.pattern.name}"
                 )
+
+
+@click.command("clean-up-non-verified-users")
+def clean_up_non_verified_users():
+    with app.app_context():
+        todelete = []
+        for user in User.query.order_by(User.id).all():
+            # only clean up non-verified
+            if user.verified:
+                continue
+            # never clean up accounts with patterns
+            if user.mypatterns:
+                continue
+            # only clean up 24 hours after account creation
+            if user.verify_date: 
+                delta = datetime.datetime.now() - user.verify_date
+                if delta.days < 1:
+                    continue
+            todelete.append(user)
+        if todelete:
+            ok = input(
+                f"Really delete {', '.join([u.name for u in todelete])}? "
+                "(y/N) "
+            )
+            if ok == "y":
+                for user in todelete:
+                    db.session.delete(user)
+                db.session.commit()
 
 
 @click.command("delete-user")
@@ -272,5 +301,6 @@ app.cli.add_command(create_weave_pattern)
 app.cli.add_command(create_bead_pattern)
 app.cli.add_command(reset_password)
 app.cli.add_command(ensure_primary_groups)
+app.cli.add_command(clean_up_non_verified_users)
 
 application = app

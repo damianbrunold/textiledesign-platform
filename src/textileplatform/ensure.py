@@ -6,9 +6,11 @@ from textileplatform.models import Assignment
 
 from werkzeug.security import generate_password_hash as gen_pw_hash
 
+import datetime
 
 def ensure_db_contents(app):
     with app.app_context():
+        now = datetime.datetime.now()
         if User.query.count() == 0:
             db.session.add(User(
                 name="superuser",
@@ -19,7 +21,10 @@ def ensure_db_contents(app):
                 disabled=False,
                 locale="en",
                 timezone="CET",
-                password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
+                password=gen_pw_hash(app.config["ADMIN_PASSWORD"]),
+                create_date=now,
+                verify_date=now,
+                access_date=None,
             ))
             db.session.commit()
         examples = User.query.filter(User.name == "examples").one_or_none()
@@ -33,7 +38,10 @@ def ensure_db_contents(app):
                 disabled=False,
                 locale="en",
                 timezone="CET",
-                password=gen_pw_hash(app.config["ADMIN_PASSWORD"])
+                password=gen_pw_hash(app.config["ADMIN_PASSWORD"]),
+                create_date=now,
+                verify_date=now,
+                access_date=None,
             )
             db.session.add(examples)
             group = Group(
