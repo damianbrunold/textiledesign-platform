@@ -149,15 +149,15 @@ def user(user_name):
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
         return redirect(url_for("index"))
-    elif g.user and g.user.name == user.name:
+    elif g.user and (g.user.name == user.name or g.user.name == "superuser"):
         # show private view
         patterns_weave = []
         patterns_bead = []
         patterns_other = []
         group_patterns = {}
-        for m in g.user.memberships:
+        for m in user.memberships:
             # only collect the users patterns
-            if m.group.name == g.user.name:
+            if m.group.name == user.name:
                 for a in m.group.assignments:
                     if a.pattern.pattern_type == "DB-WEAVE Pattern":
                         patterns_weave.append(a.pattern)
