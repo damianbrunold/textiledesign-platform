@@ -21,6 +21,7 @@ from textileplatform.weavepattern import parse_dbw_data
 
 from importlib.metadata import version
 import datetime
+import io
 import json
 import logging
 import os
@@ -33,6 +34,7 @@ from flask import g
 from flask import redirect
 from flask import render_template
 from flask import request
+from flask import send_file
 from flask import url_for
 from flask import jsonify
 from werkzeug.exceptions import HTTPException
@@ -239,6 +241,19 @@ def edit_pattern(user_name, pattern_name):
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
     if pattern.pattern_type == "DB-WEAVE Pattern":
+        # fix None in data
+        for idx, value in enumerate(pattern.pattern["data_entering"]):
+            if value is None:
+                pattern.pattern["data_entering"][idx] = 0
+        for idx, value in enumerate(pattern.pattern["data_tieup"]):
+            if value is None:
+                pattern.pattern["data_tieup"][idx] = 0
+        for idx, value in enumerate(pattern.pattern["data_treadling"]):
+            if value is None:
+                pattern.pattern["data_treadling"][idx] = 0
+        for idx, value in enumerate(pattern.pattern["data_reed"]):
+            if value is None:
+                pattern.pattern["data_reed"][idx] = 0
         return render_template(
             "edit_dbweave_pattern.html",
             user=user,
@@ -265,6 +280,68 @@ def status():
     except Exception:
         v = "-"
     return render_template("status.html", v=v)
+
+
+@app.route("/<string:user_name>/<string:pattern_name>/download")
+def download_pattern(user_name, pattern_name):
+    origin = request.args.get("origin", "")
+    user = User.query.filter(User.name == user_name.lower()).first()
+    if not user:
+        return redirect(url_for("index"))
+    pattern = (
+        Pattern.query
+        .join(User)
+        .filter(Pattern.name == pattern_name)
+        .filter(User.name == user_name.lower())
+        .first()
+    )
+    if not pattern:
+        return redirect(url_for("user", user_name=user_name))
+    readonly = not g.user or g.user.name != user.name
+    superuser = g.user and g.user.name == "superuser"
+    if not superuser and readonly and not pattern.public:
+        return redirect(url_for("user", user_name=user_name))
+    pattern.pattern = json.loads(pattern.contents)
+    return send_file(
+        io.BytesIO(
+            json.dumps(
+                pattern.pattern,
+                ensure_ascii=False,
+                indent=2,
+            ).encode("utf8")
+        ),
+        mimetype="application/json",
+        as_attachment=True,
+        download_name=f"{user_name}-{pattern_name}.json",
+    )
+
+
+@app.route("/<string:user_name>/<string:pattern_name>/source")
+def source_pattern(user_name, pattern_name):
+    origin = request.args.get("origin", "")
+    user = User.query.filter(User.name == user_name.lower()).first()
+    if not user:
+        return redirect(url_for("index"))
+    pattern = (
+        Pattern.query
+        .join(User)
+        .filter(Pattern.name == pattern_name)
+        .filter(User.name == user_name.lower())
+        .first()
+    )
+    if not pattern:
+        return redirect(url_for("user", user_name=user_name))
+    readonly = not g.user or g.user.name != user.name
+    superuser = g.user and g.user.name == "superuser"
+    if not superuser and readonly and not pattern.public:
+        return redirect(url_for("user", user_name=user_name))
+    pattern.pattern = json.loads(pattern.contents)
+    return render_template(
+        "source-pattern.html",
+        user=user,
+        pattern=pattern,
+        contents=json.dumps(pattern.pattern, ensure_ascii=False, indent=2),
+    )
 
 
 @app.route("/profile", methods=("GET", "POST"))
@@ -308,7 +385,14 @@ def upload_pattern():
             elif data.startswith("(jbb"):
                 add_bead_pattern(parse_jbb_data(data, name), g.user)
             else:
-                pass  # TODO import generic pattern (e.g. image)
+                try:
+                    jsondata = json.loads(bytedata.decode("utf-8", "ignore"))
+                    if "max_shafts" in jsondata:
+                        add_weave_pattern(jsondata, g.user)
+                    else:
+                        add_bead_pattern(jsondata, g.user)
+                except Exception:
+                    pass  # TODO handle errors
         return redirect(url_for("user", user_name=g.user.name))
     return render_template("upload_pattern.html", user=g.user)
 

@@ -7,7 +7,7 @@
 {% block content %}
 <style>
 #patterns {
-    max-width: 60rem;
+    max-width: 65rem;
 }
 .pattern {
     display: flex;
@@ -20,6 +20,7 @@
     margin-right: 1rem;
 }
 .pattern-name {
+    width: 30rem;
     margin-right: 1rem;
 }
 </style>
@@ -27,9 +28,15 @@
         {% for user in users %}
             {% for pattern in user.mypatterns %}
                 <div class="pattern">
-                    <div class="user-name">{{ user.name }}</div>
+                    <div class="user-name">
+                        {{ user.name }}
+                    </div>
                     <div class="pattern-name">
                         <a href="{{ url_for('edit_pattern', user_name=user.name, pattern_name=pattern.name) }}">{{ pattern.name }}</a>
+                    </div>
+                    <div class="pattern-actions">
+                        <a class="action" href="{{ url_for('source_pattern', user_name=user.name, pattern_name=pattern.name) }}">Source</a>
+                        <a class="action" href="{{ url_for('download_pattern', user_name=user.name, pattern_name=pattern.name) }}">Download</a>
                     </div>
                 </div>
             {% endfor %}

@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ user.name}}-{{ pattern.name }} {{ gettext('Source') }}</h1>
+{% endblock %}
+
+{% block content %}
+<pre>
+{{ contents }}
+</pre>
+{% endblock %}
