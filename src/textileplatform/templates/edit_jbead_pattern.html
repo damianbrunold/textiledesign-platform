@@ -24,20 +24,25 @@
     <input type="hidden" id="readonly" value="{{readonly}}"/>
 
     <div id="header">
-        <div>
-            {% if not readonly %}
-                <input id="public" type="checkbox" {% if pattern.public %}checked{% endif %}>
-                {{ gettext('Public') }}
-            {% endif %}
-        </div>
-        <div id="buttons">
-            {% if readonly and g.user %}
-                <button id="clone">{{ gettext('Clone') }}</button>
-            {% elif g.user %}
-                <button id="save">{{ gettext('Save') }}</button>
-            {% endif %}
-            <button id="close">{{ gettext('Close') }}</button>
-        </div>
+        {% if not readonly %}
+            <img
+                id="public"
+                {% if pattern.public %}
+                    src="{{url_for('static', filename='img/icons/icon-public.svg')}}"
+                    title="{{ gettext('Public - visible to all users') }}"
+                {% else %}
+                    src="{{url_for('static', filename='img/icons/icon-private.svg')}}"
+                    title="{{ gettext('Private - not visible to other users') }}"
+                {% endif %}
+                height="26px"
+                class="icon"/>
+        {% endif %}
+        {% if readonly and g.user %}
+            <div id="clone">{{ gettext('Clone') }}</div>
+        {% elif g.user %}
+            <div id="save">{{ gettext('Save') }}</div>
+        {% endif %}
+        <div id="close">{{ gettext('Close') }}</div>
     </div>
 
     <div id="container">

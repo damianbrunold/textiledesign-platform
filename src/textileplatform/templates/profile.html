@@ -5,14 +5,27 @@
 {% endblock %}
 
 {% block content %}
-  <form method="post">
+<style>
+#email {
+    width: 30rem;   
+}
+#save {
+    width: 6rem;
+}
+</style>
+  <form id="profile-form" method="post">
     <label for="email">{{ gettext('E-Mail') }}</label>
     <input name="email" id="email" required value="{{ user.email }}">
     <div>
         <input type="checkbox" name="darkmode" id="darkmode" {% if user.darkmode %}checked{% endif %}>
         <label for="darkmode" class="inline">{{ gettext('Dark mode') }}</label>
     </div>
-    <input type="submit" value="{{ gettext('Save') }}">
+    <button id="save">{{ gettext('Save') }}</button>
   </form>
-  <p><a href="{{ url_for('logout') }}">{{ gettext('Log out') }}</p>
+  <div><a class="button" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</div>
+  <script>
+      document.getElementById("save").addEventHandler("click", e => {
+        document.getElementById("profile-form").submit();
+      });
+  </script>
 {% endblock %}

@@ -86,6 +86,7 @@ h4 { font-size: 1.2rem; font-variant: small-caps; }
 #clone, #save, #close {
     height: 26px;
     border: 1px solid #ccc;
+    color: #000;
     background: #ddd;
     padding: 0.2rem 0.5rem;
     cursor: pointer;

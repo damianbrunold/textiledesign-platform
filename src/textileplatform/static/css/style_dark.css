@@ -25,6 +25,7 @@ td { color: white; }
 
 #clone, #save, #close {
     outline: none;
+    color: #fff;
     border: 1px solid #777;
     background: #666;
 }
