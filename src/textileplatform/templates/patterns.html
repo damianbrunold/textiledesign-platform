@@ -28,7 +28,9 @@
             {% for pattern in user.mypatterns %}
                 <div class="pattern">
                     <div class="user-name">{{ user.name }}</div>
-                    <div class="patter-name">{{ pattern.name }}</div>
+                    <div class="pattern-name">
+                        <a href="{{ url_for('edit_pattern', user_name=user.name, pattern_name=pattern.name) }}">{{ pattern.name }}</a>
+                    </div>
                 </div>
             {% endfor %}
         {% endfor %}

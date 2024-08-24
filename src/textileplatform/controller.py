@@ -234,7 +234,8 @@ def edit_pattern(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    if readonly and not pattern.public:
+    superuser = g.user and g.user.name == "superuser"
+    if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
     if pattern.pattern_type == "DB-WEAVE Pattern":
@@ -935,7 +936,12 @@ def get_pattern(user_name, pattern_name):
         )
         if not pattern:
             return respond("NOK", "Pattern not found", 404)
-        if not pattern.public and (not g.user or user.name != g.user.name):
+        superuser = g.user and g.user.name == "superuser"
+        if (
+            not superuser
+            and not pattern.public
+            and (not g.user or user.name != g.user.name)
+        ):
             return respond("NOK", "Invalid user", 403)
         contents = json.loads(pattern.contents)
         return jsonify({
@@ -964,7 +970,8 @@ def update_pattern(user_name, pattern_name):
         )
         if not pattern:
             return respond("NOK", "Pattern not found", 404)
-        if not pattern.public and (not g.user or user.name != g.user.name):
+        superuser = g.user and g.user.name == "superuser"
+        if not superuser and not pattern.public and (not g.user or user.name != g.user.name):
             return respond("NOK", "Invalid user", 403)
         data = request.get_json()
         action = data["action"]
@@ -985,7 +992,7 @@ def update_pattern(user_name, pattern_name):
             if not g.user:
                 return respond("NOK", "Invalid user", 403)
             contents = json.dumps(data["contents"])
-            clone_pattern(g.user.name, pattern, contents)
+            clone_pattern(g.user, pattern, contents)
             return jsonify({"status": "OK"}), 200
         else:
             return respond("NOK", "Illegal action", 400)
