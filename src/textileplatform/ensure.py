@@ -71,7 +71,7 @@ def ensure_db_contents(app):
         if not beispiele:
             beispiele = User(
                 name="beispiele",
-                label="beispiele",
+                label="Beispiele",
                 email="beispiele@textileplatform.ch",
                 email_lower="beispiele@textileplatform.ch",
                 darkmode=True,
