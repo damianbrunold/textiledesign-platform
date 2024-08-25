@@ -1396,7 +1396,7 @@ function init() {
     settings = new ViewSettings();
     settings.darcula = darkmode;
 
-    console.log(data);
+    // console.log(data);
     initSettings(data, settings);
     initPatternData(data, pattern);
     update_color_selector(settings);
