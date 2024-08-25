@@ -468,10 +468,13 @@ function init() {
         if (j < 0) return;
         if (view.draft.contains(i, j)) {
             togglePattern(view.draft.pixelToDataCoord(x, y));
+            setModified();
         } else if (view.corrected.contains(i, j)) {
             togglePattern(view.corrected.pixelToDataCoord(x, y));
+            setModified();
         } else if (view.simulated.contains(i, j)) {
             togglePattern(view.simulated.pixelToDataCoord(x, y));
+            setModified();
         } else if (view.colors.contains(x, y)) {
             const ii = Math.trunc((x - view.colors.x) / 25);
             const jj = Math.trunc((y - view.colors.y) / 25);

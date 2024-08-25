@@ -1417,24 +1417,28 @@ function init() {
             } else {
                 pattern.entering.set_shaft(ii, jj + 1);
             }
+            setModified();
             pattern.recalc_weave();
             view.draw();
         } else if (view.treadling.contains(i, j)) {
             const ii = i_to_doc(i, view.treadling, false);
             const jj = j_to_doc(j, view.treadling, false);
             pattern.treadling.toggle(ii, jj);
+            setModified();
             pattern.recalc_weave();
             view.draw();
         } else if (view.tieup.contains(i, j)) {
             const ii = i_to_doc(i, view.tieup, false);
             const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
             pattern.tieup.toggle(ii, jj, settings.current_range);
+            setModified();
             pattern.recalc_weave();
             view.draw();
         } else if (view.weave.contains(i, j) && !settings.weave_locked) {
             const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
             const jj = j_to_doc(j, view.weave, false);
             pattern.weave.toggle(ii, jj, settings.current_range);
+            setModified();
             pattern.recalc_from_weave(settings);
             view.draw();
         } else if (view.color_warp.contains(i, j)) {
@@ -1444,6 +1448,7 @@ function init() {
                 update_color_selector(settings);
             } else {
                 pattern.color_warp.set(ii, 0, settings.current_color);
+                setModified();
                 view.draw();
             }
         } else if (view.color_weft.contains(i, j)) {
@@ -1453,11 +1458,13 @@ function init() {
                 update_color_selector(settings);
             } else {
                 pattern.color_weft.set(0, jj, settings.current_color);
+                setModified();
                 view.draw();
             }
         } else if (view.reed.contains(i, j)) {
             const ii = i_to_doc(i, view.reed, settings.direction_righttoleft);
             pattern.reed.toggle(ii, 0);
+            setModified();
             view.draw();
         } else {
             if (view.scroll_1_hor.contains(x, y)) {

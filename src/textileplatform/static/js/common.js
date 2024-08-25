@@ -1,6 +1,27 @@
 "use strict";
 
 let data = null;
+let modified = false;
+
+
+function setModified() {
+    modified = true;
+    const m = document.getElementById("modified");
+    if (m !== null) {
+        m.className = "changed";
+    }
+    console.log("modified");
+}
+
+
+async function clearModified() {
+    modified = false;
+    const m = document.getElementById("modified");
+    if (m !== null) {
+        m.className = "unchanged";
+    }
+    console.log("not modified");
+}
 
 
 function togglePublic() {
@@ -60,6 +81,7 @@ async function savePattern() {
         referrerPolicy: 'no-referrer',
         body: JSON.stringify(request)
     });
+    await clearModified();
 }
 
 

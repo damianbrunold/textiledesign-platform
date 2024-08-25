@@ -121,6 +121,7 @@
         {% if readonly and g.user %}
             <div id="clone">{{ gettext('Clone') }}</div>
         {% elif g.user %}
+            <div id="modified" class="unchanged">&nbsp;</div>
             <div id="save">{{ gettext('Save') }}</div>
         {% endif %}
         <div id="close">{{ gettext('Close') }}</div>
