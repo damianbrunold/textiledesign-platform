@@ -136,10 +136,22 @@ def group(group_name):
                     continue
                 patterns.append(a.pattern)
         patterns.sort(key=lambda p: (p.label, p.name, p.owner.name, p.id))
+        patterns_weave = []
+        patterns_bead = []
+        patterns_other = []
+        for pattern in patterns:
+            if pattern.pattern_type == "DB-WEAVE Pattern":
+                patterns_weave.append(pattern)
+            elif pattern.pattern_type == "JBead Pattern":
+                patterns_bead.append(pattern)
+            else:
+                patterns_other.append(pattern)
         return render_template(
             "group.html",
             group=group,
-            patterns=patterns,
+            patterns_weave=patterns_weave,
+            patterns_bead=patterns_bead,
+            patterns_other=patterns_other,
         )
     except HTTPException:
         raise

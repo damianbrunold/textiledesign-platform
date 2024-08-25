@@ -16,7 +16,7 @@ input[type=password] { width: 20rem; }
     <input type="text" name="email" id="email" required value="{{ request.form['email'] }}">
     <label for="password">{{ gettext('Password') }}</label>
     <input type="password" name="password" id="password" required value="{{ request.form['password'] }}">
-    <div>Please enter the result of the following calculation 3+4</div>
+    <div>{{ gettext("Please enter the result of the following calculation 3+4") }}</div>
     <input type="text" name="x" value=""/>
     <input type="submit" value="{{ gettext('Create') }}">
   </form>

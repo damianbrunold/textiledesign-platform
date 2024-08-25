@@ -82,7 +82,11 @@
 </div>
 
 <div id="patterns">
-    {% for pattern in patterns %}
+    {% if patterns_weave %}
+    <div class="patterns-label">
+        {{ gettext('DB-WEAVE Patterns') }}
+    </div>
+    {% for pattern in patterns_weave %}
     <div class="pattern">
         <div class="pattern_name">
             <a class="action"
@@ -91,7 +95,9 @@
                                 pattern_name=pattern.name,
                                 origin='group-' + group.name) }}">
                 {{ pattern.label }}
-                {% if group.name != 'examples' or pattern.owner.name != 'examples' %}
+                {% if group.name == 'examples' and pattern.owner.name == 'examples' %}
+                {% elif group.name == 'beispiele' and pattern.owner.name == 'beispiele' %}
+                {% else %}
                 - 
                 {{ pattern.owner.label }}
                 {% endif %}
@@ -99,6 +105,55 @@
         </div>
     </div>
     {% endfor %}
+    {% endif %}
+    {% if patterns_bead %}
+    <div class="patterns-label">
+        {{ gettext('JBead Patterns') }}
+    </div>
+    {% for pattern in patterns_bead %}
+    <div class="pattern">
+        <div class="pattern_name">
+            <a class="action"
+               href="{{ url_for('edit_pattern',
+                                user_name=pattern.owner.name,
+                                pattern_name=pattern.name,
+                                origin='group-' + group.name) }}">
+                {{ pattern.label }}
+                {% if group.name == 'examples' and pattern.owner.name == 'examples' %}
+                {% elif group.name == 'beispiele' and pattern.owner.name == 'beispiele' %}
+                {% else %}
+                - 
+                {{ pattern.owner.label }}
+                {% endif %}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% if patterns_other %}
+    <div class="patterns-label">
+        {{ gettext('Other Patterns') }}
+    </div>
+    {% for pattern in patterns_other %}
+    <div class="pattern">
+        <div class="pattern_name">
+            <a class="action"
+               href="{{ url_for('edit_pattern',
+                                user_name=pattern.owner.name,
+                                pattern_name=pattern.name,
+                                origin='group-' + group.name) }}">
+                {{ pattern.label }}
+                {% if group.name == 'examples' and pattern.owner.name == 'examples' %}
+                {% elif group.name == 'beispiele' and pattern.owner.name == 'beispiele' %}
+                {% else %}
+                - 
+                {{ pattern.owner.label }}
+                {% endif %}
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
 </div>
 <script>
     document.getElementById("filter-query").addEventListener("change", (e) => {
