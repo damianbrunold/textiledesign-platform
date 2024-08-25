@@ -363,6 +363,18 @@ class Grid {
         this.data.fill(0);
     }
 
+    clearRow(j) {
+        for (let i = 0; i < this.width; i++) {
+            this.set(i, j, 0);
+        }
+    }
+
+    clearCol(i) {
+        for (let j = 0; j < this.height; j++) {
+            this.set(i, j, 0);
+        }
+    }
+
     idx(i, j) {
         return i + j * this.width;
     }
@@ -1433,7 +1445,12 @@ function init() {
         } else if (view.treadling.contains(i, j)) {
             const ii = i_to_doc(i, view.treadling, false);
             const jj = j_to_doc(j, view.treadling, false);
-            pattern.treadling.toggle(ii, jj);
+            if (settings.single_treadling && !event.ctrlKey) {
+                pattern.treadling.clearRow(jj);
+                pattern.treadling.set(ii, jj, settings.current_range);
+            } else {
+                pattern.treadling.toggle(ii, jj);
+            }
             setModified();
             pattern.recalc_weave();
             view.draw();
