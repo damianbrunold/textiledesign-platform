@@ -384,14 +384,22 @@ class Grid {
 
     rowsEqual(j1, j2) {
         for (let i = 0; i < this.width; i++) {
-            if (this.get(i, j1) !== this.get(i, j2)) return false;
+            // we only compare values >= 0
+            // everything <= 0 is "empty"
+            const v1 = Math.max(0, this.get(i, j1));
+            const v2 = Math.max(0, this.get(i, j2));
+            if (v1 != v2) return false;
         }
         return true;
     }
 
     colsEqual(i1, i2) {
         for (let j = 0; j < this.height; j++) {
-            if (this.get(i1, j) !== this.get(i2, j)) return false;
+            // we only compare values >= 0
+            // everything <= 0 is "empty"
+            const v1 = Math.max(0, this.get(i1, j));
+            const v2 = Math.max(0, this.get(i2, j));
+            if (v1 != v2) return false;
         }
         return true;
     }
@@ -938,8 +946,10 @@ class Pattern {
     }
 
     recalc_weave_extent() {
-        this.min_x = this.max_x = 0;
-        this.min_y = this.max_y = 0;
+        this.min_x = this.weave.width;
+        this.max_x = 0;
+        this.min_y = this.weave.height;
+        this.max_y = 0;
         for (let i = 0; i < this.weave.width; i++) {
             if (!this.weave.isColEmpty(i)) {
                 this.min_x = Math.min(this.min_x, i);
