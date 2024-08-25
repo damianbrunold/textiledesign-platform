@@ -501,7 +501,6 @@ function togglePattern(coord) {
 }
 
 function initPattern(data, pattern) {
-    console.log(data);
     for (let i = 0; i < data.colors.length; i++) {
         const spec = data.colors[i];
         colors.push(`rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`);
@@ -545,3 +544,13 @@ window.addEventListener("load", () => {
 });
 
 window.addEventListener("resize", resizeWindow);
+
+async function checkAutosave() {
+    if (modified) {
+        saveSettings(data, settings);
+        savePatternData(data, pattern);
+        await savePattern();
+    }
+}
+
+window.setInterval(checkAutosave, 30 * 1000);

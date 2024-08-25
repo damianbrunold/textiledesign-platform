@@ -132,12 +132,3 @@ function resizeWindow() {
     view.layout();
     view.draw();
 }
-
-
-async function checkAutosave() {
-    if (modified) {
-        await savePattern();
-    }
-}
-
-window.setInterval(checkAutosave, 30 * 1000);

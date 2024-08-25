@@ -2007,3 +2007,13 @@ window.addEventListener("load", () => {
 });
 
 window.addEventListener("resize", resizeWindow);
+
+async function checkAutosave() {
+    if (modified) {
+        saveSettings(data, settings);
+        savePatternData(data, pattern);
+        await savePattern();
+    }
+}
+
+window.setInterval(checkAutosave, 30 * 1000);
