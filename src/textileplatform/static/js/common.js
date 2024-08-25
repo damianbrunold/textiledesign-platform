@@ -10,7 +10,6 @@ function setModified() {
     if (m !== null) {
         m.className = "changed";
     }
-    console.log("modified");
 }
 
 
@@ -20,7 +19,6 @@ async function clearModified() {
     if (m !== null) {
         m.className = "unchanged";
     }
-    console.log("not modified");
 }
 
 
@@ -134,3 +132,12 @@ function resizeWindow() {
     view.layout();
     view.draw();
 }
+
+
+async function checkAutosave() {
+    if (modified) {
+        await savePattern();
+    }
+}
+
+window.setInterval(checkAutosave, 30 * 1000);
