@@ -111,6 +111,8 @@ def respond(status, message, status_code=500):
 def index():
     if g.user:
         return redirect(url_for("user", user_name=g.user.name))
+    elif request.accept_languages.best_match(["de", "en"]) == "de":
+        return redirect(url_for("group", group_name="beispiele"))
     else:
         return redirect(url_for("group", group_name="examples"))
 
@@ -855,8 +857,10 @@ def login():
             user = User.query.filter(User.email_lower == email.lower()).first()
 
             if user is None:
+                logging.error(f"user {email.lower()} not found")
                 error = gettext("Login data are not correct")
             elif not check_password_hash(user.password, password):
+                logging.error(f"user {email.lower()} incorrect password")
                 error = gettext("Login data are not correct")
             elif not user.verified:
                 error = gettext("Account verification is pending")

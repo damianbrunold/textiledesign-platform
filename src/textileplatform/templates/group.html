@@ -91,8 +91,10 @@
                                 pattern_name=pattern.name,
                                 origin='group-' + group.name) }}">
                 {{ pattern.label }}
+                {% if group.name != 'examples' or pattern.owner.name != 'examples' %}
                 - 
                 {{ pattern.owner.label }}
+                {% endif %}
             </a>
         </div>
     </div>

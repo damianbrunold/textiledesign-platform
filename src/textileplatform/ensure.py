@@ -16,6 +16,7 @@ def ensure_db_contents(app):
                 name="superuser",
                 label="Superuser",
                 email="admin@textileplatform.ch",
+                email_lower="admin@textileplatform.ch",
                 darkmode=True,
                 verified=True,
                 disabled=False,
@@ -33,6 +34,7 @@ def ensure_db_contents(app):
                 name="examples",
                 label="Examples",
                 email="examples@textileplatform.ch",
+                email_lower="examples@textileplatform.ch",
                 darkmode=True,
                 verified=True,
                 disabled=False,
@@ -53,6 +55,45 @@ def ensure_db_contents(app):
             membership = Membership(
                 group=group,
                 user=examples,
+            )
+            db.session.add(membership)
+            superuser = (
+                User.query.filter(User.name == "superuser").one_or_none()
+            )
+            if superuser:
+                membership = Membership(
+                    group=group,
+                    user=superuser,
+                )
+                db.session.add(membership)
+            db.session.commit()
+        beispiele = User.query.filter(User.name == "beispiele").one_or_none()
+        if not beispiele:
+            beispiele = User(
+                name="beispiele",
+                label="beispiele",
+                email="beispiele@textileplatform.ch",
+                email_lower="beispiele@textileplatform.ch",
+                darkmode=True,
+                verified=True,
+                disabled=False,
+                locale="de",
+                timezone="CET",
+                password=gen_pw_hash(app.config["ADMIN_PASSWORD"]),
+                create_date=now,
+                verify_date=now,
+                access_date=None,
+            )
+            db.session.add(beispiele)
+            group = Group(
+                name=beispiele.name,
+                label=beispiele.label,
+                description="",
+            )
+            db.session.add(group)
+            membership = Membership(
+                group=group,
+                user=beispiele,
             )
             db.session.add(membership)
             superuser = (
