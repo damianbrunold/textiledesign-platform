@@ -897,17 +897,17 @@ class GridViewReed {
             if (value <= 0) {
                 fillRect(
                     ctx,
-                    this.calc_x(i),
+                    this.calc_x(i-this.offset_i),
                     this.calc_y(0.5),
-                    this.calc_x(i+1),
+                    this.calc_x(i-this.offset_i+1),
                     this.calc_y(1)
                 );
             } else {
                 fillRect(
                     ctx,
-                    this.calc_x(i),
+                    this.calc_x(i-this.offset_i),
                     this.calc_y(0),
-                    this.calc_x(i+1),
+                    this.calc_x(i-this.offset_i+1),
                     this.calc_y(0.5)
                 );
             }
@@ -1070,17 +1070,22 @@ class ViewSettings {
 
 
 class ScrollbarHorz {
-    constructor(pattern, view, x, y, width, height, righttoleft) {
+    constructor(pattern, gv, x, y, width, height, righttoleft) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.pattern = pattern;
-        this.view = view;
+        this.gv = gv;
+        this.views = [];
         this.righttoleft = righttoleft;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, false);
         this.delta = 5;
+    }
+
+    registerView(view) {
+        this.views.push(view)
     }
 
     contains(x, y) {
@@ -1106,8 +1111,10 @@ class ScrollbarHorz {
         } else if (start_i + this.width > this.pattern.width) {
             start_i = this.pattern.width - this.width;
         }
-        this.view.offset_i = start_i;
-        view.draw();
+        this.views.forEach((view) => {
+            view.offset_i = start_i;
+        });
+        this.gv.draw();
     }
 
     draw(ctx, settings) {
@@ -1120,8 +1127,8 @@ class ScrollbarHorz {
             0.5 + this.y * settings.dy + this.height
         );
         const w = this.width * settings.dx - 1;
-        const a = Math.min(w / this.pattern.width * this.view.offset_i, w);
-        const b = Math.min(w / this.pattern.width * (this.view.offset_i + this.view.width), w);
+        const a = Math.min(w / this.pattern.width * this.views[0].offset_i, w);
+        const b = Math.min(w / this.pattern.width * (this.views[0].offset_i + this.views[0].width), w);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         fillRect(
             ctx,
@@ -1136,17 +1143,22 @@ class ScrollbarHorz {
 
 
 class ScrollbarVert {
-    constructor(pattern, view, x, y, width, height, toptobottom) {
+    constructor(pattern, gv, x, y, width, height, toptobottom) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.pattern = pattern;
-        this.view = view;
+        this.gv = gv;
+        this.views = [];
         this.toptobottom = toptobottom;
         this.calc_x = get_x_calculator(this, settings, false);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
         this.delta = 5;
+    }
+
+    registerView(view) {
+        this.views.push(view)
     }
 
     contains(x, y) {
@@ -1172,8 +1184,10 @@ class ScrollbarVert {
         } else if (start_j + this.height > this.pattern.height) {
             start_j = this.pattern.height - this.height;
         }
-        this.view.offset_j = start_j;
-        view.draw();
+        this.views.forEach((view) => {
+            view.offset_j = start_j;
+        });
+        this.gv.draw();
     }
 
     draw(ctx, settings) {
@@ -1186,8 +1200,8 @@ class ScrollbarVert {
             this.calc_y(this.height)
         );
         const h = this.height * settings.dy - 1;
-        const a = Math.min(h / this.pattern.height * this.view.offset_j, h);
-        const b = Math.min(h / this.pattern.height * (this.view.offset_j + this.view.height), h);
+        const a = Math.min(h / this.pattern.height * this.views[0].offset_j, h);
+        const b = Math.min(h / this.pattern.height * (this.views[0].offset_j + this.views[0].height), h);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         fillRect(
             ctx,
@@ -1318,17 +1332,23 @@ class PatternView {
 
         this.scroll_1_hor = new ScrollbarHorz(
             p.weave,
-            this.weave,
+            this,
             x1, sby, width1, scroll,
             s.direction_righttoleft
         );
+        this.scroll_1_hor.registerView(this.color_warp);
+        this.scroll_1_hor.registerView(this.entering);
+        this.scroll_1_hor.registerView(this.reed);
+        this.scroll_1_hor.registerView(this.weave);
         if (this.settings.display_treadling) {
             this.scroll_2_hor = new ScrollbarHorz(
                 p.treadling,
-                this.treadling,
+                this,
                 x2, sby, width2, scroll,
                 false
             );
+            this.scroll_2_hor.registerView(this.tieup);
+            this.scroll_2_hor.registerView(this.treadling);
         } else {
             this.scroll_2_hor = new GridViewDummy();
         }
@@ -1342,17 +1362,22 @@ class PatternView {
 
         this.scroll_1_ver = new ScrollbarVert(
             p.weave,
-            this.weave,
+            this,
             sbx, y1, scroll, height1,
             false
         );
+        this.scroll_1_ver.registerView(this.weave);
+        this.scroll_1_ver.registerView(this.treadling);
+        this.scroll_1_ver.registerView(this.color_weft);
         if (this.settings.display_entering) {
             this.scroll_2_ver = new ScrollbarVert(
                 p.entering,
-                this.entering,
+                this,
                 sbx, y3, scroll, height3,
                 s.direction_toptobottom
             );
+            this.scroll_2_ver.registerView(this.entering);
+            this.scroll_2_ver.registerView(this.tieup);
         } else {
             this.scroll_2_ver = new GridViewDummy();
         }
