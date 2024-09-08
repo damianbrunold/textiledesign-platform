@@ -62,9 +62,11 @@ let cursor = {
     x2: 0,
     y1: 0,
     y2: 0,
-    selected_part: "pattern",  // entering, tieup, treadling
-                               // color_warp, color_weft, reed
+    // entering, tieup, treadling, weave, color_warp, color_weft
+    selected_part: "weave",  
 }
+let mousedown = false;
+let had_selection = false;
 
 
 let readonly = false;
@@ -375,6 +377,39 @@ class Grid {
         }
     }
 
+    clearRange(i1, j1, i2, j2) {
+        for (let i = i1; i <= i2; i++) {
+            for (let j = j1; j <= j2; j++) {
+                this.set(i, j, 0);
+            }
+        }
+    }
+
+    mirrorV(i1, j1, i2, j2) {
+        for (let i = i1; i <= i1 + Math.trunc((i2-i1)/2); i++) {
+            for (let j = j1; j <= j2; j++) {
+                const v = this.get(i, j);
+                this.set(i, j, this.get(i2 - (i-i1), j));
+                this.set(i2 - (i-i1), j, v);
+            }
+        }
+    }
+
+    mirrorH(i1, j1, i2, j2) {
+        for (let j = j1; j <= j1 + Math.trunc((j2-j1) / 2); j++) {
+            for (let i = i1; i <= i2; i++) {
+                const v = this.get(i, j);
+                this.set(i, j, this.get(i, j2 - (j-j1)));
+                this.set(i, j2 - (j-j1), v);
+            }
+        }
+    }
+
+    rotateRight(i1, j1, i2, j2) {
+        if ((i2-i1) != (j2-j1)) return;
+        // TODO
+    }
+
     idx(i, j) {
         return i + j * this.width;
     }
@@ -456,6 +491,28 @@ class Entering {
         this.data.fill(0);
     }
 
+    clearRange(i1, j1, i2, j2) {
+        for (let i = i1; i <= i2; i++) {
+            const shaft = this.get_shaft(i) - 1;
+            if (j1 <= shaft && shaft <= j2) {
+                this.set_shaft(i, 0);
+            }
+        };
+    }
+
+    mirrorV(i1, j1, i2, j2) {
+        // TODO
+    }
+
+    mirrorH(i1, j1, i2, j2) {
+        // TODO
+    }
+
+    rotateRight(i1, j1, i2, j2) {
+        if ((i2-i1) != (j2-j1)) return;
+        // TODO
+    }
+
     get_shaft(i) {
         return this.data[i];
     }
@@ -483,6 +540,10 @@ class GridViewDummy {
     draw(ctx, settings) {
         // empty
     }
+
+    drawCursor(ctx, settings, cursor) {
+        // empty
+    }
 }
 
 
@@ -508,6 +569,43 @@ class GridView {
     draw(ctx, settings) {
         this.drawGrid(ctx, settings);
         this.drawData(ctx, settings);
+    }
+
+    drawCursor(ctx, settings, cursor) {
+        const dx = settings.dx;
+        const dy = settings.dy;
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
+
+        let i1 = Math.min(cursor.x1, cursor.x2);
+        let i2 = Math.max(cursor.x1, cursor.x2);
+        let j1 = Math.min(cursor.y1, cursor.y2);
+        let j2 = Math.max(cursor.y1, cursor.y2);
+
+        i1 = Math.min(Math.max(i1, this.offset_i), this.offset_i + this.width);
+        i2 = Math.min(Math.max(i2, this.offset_i), this.offset_i + this.width);
+
+        j1 = Math.min(Math.max(j1, this.offset_j), this.offset_j + this.height);
+        j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height);
+
+        const ic = Math.min(Math.max(cursor.x2, this.offset_i), this.offset_i + this.width);
+        const jc = Math.min(Math.max(cursor.y2, this.offset_j), this.offset_j + this.height);
+
+        const x1 = this.calc_x(i1 - this.offset_i);
+        const x2 = this.calc_x(i2 - this.offset_i + 1);
+        const y1 = this.calc_y(j1 - this.offset_j);
+        const y2 = this.calc_y(j2 - this.offset_j + 1);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x1, y2);
+        ctx.lineTo(x1, y1);
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#f99" : "#500";
+        ctx.lineWidth = 3.0;
+        ctx.stroke();
     }
 
     drawGrid(ctx, settings) {
@@ -602,6 +700,43 @@ class GridViewPattern {
         } else if (settings.style === "invisible") {
             // empty!
         }
+    }
+
+    drawCursor(ctx, settings, cursor) {
+        const dx = settings.dx;
+        const dy = settings.dy;
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
+
+        let i1 = Math.min(cursor.x1, cursor.x2);
+        let i2 = Math.max(cursor.x1, cursor.x2);
+        let j1 = Math.min(cursor.y1, cursor.y2);
+        let j2 = Math.max(cursor.y1, cursor.y2);
+
+        i1 = Math.min(Math.max(i1, this.offset_i), this.offset_i + this.width);
+        i2 = Math.min(Math.max(i2, this.offset_i), this.offset_i + this.width);
+
+        j1 = Math.min(Math.max(j1, this.offset_j), this.offset_j + this.height);
+        j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height);
+
+        const ic = Math.min(Math.max(cursor.x2, this.offset_i), this.offset_i + this.width);
+        const jc = Math.min(Math.max(cursor.y2, this.offset_j), this.offset_j + this.height);
+
+        const x1 = this.calc_x(i1);
+        const x2 = this.calc_x(i2+1);
+        const y1 = this.calc_y(j1);
+        const y2 = this.calc_y(j2+1);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x1, y2);
+        ctx.lineTo(x1, y1);
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#f99" : "#500";
+        ctx.lineWidth = 3.0;
+        ctx.stroke();
     }
 
     drawGrid(ctx, settings) {
@@ -797,6 +932,43 @@ class GridViewColors {
     draw(ctx, settings) {
         this.drawGrid(ctx, settings);
         this.drawDataColor(ctx, settings);
+    }
+
+    drawCursor(ctx, settings, cursor) {
+        const dx = settings.dx;
+        const dy = settings.dy;
+        const width = Math.min(this.width, this.data.width);
+        const height = Math.min(this.height, this.data.height);
+
+        let i1 = Math.min(cursor.x1, cursor.x2);
+        let i2 = Math.max(cursor.x1, cursor.x2);
+        let j1 = Math.min(cursor.y1, cursor.y2);
+        let j2 = Math.max(cursor.y1, cursor.y2);
+
+        i1 = Math.min(Math.max(i1, this.offset_i), this.offset_i + this.width);
+        i2 = Math.min(Math.max(i2, this.offset_i), this.offset_i + this.width);
+
+        j1 = Math.min(Math.max(j1, this.offset_j), this.offset_j + this.height);
+        j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height);
+
+        const ic = Math.min(Math.max(cursor.x2, this.offset_i), this.offset_i + this.width);
+        const jc = Math.min(Math.max(cursor.y2, this.offset_j), this.offset_j + this.height);
+
+        const x1 = this.calc_x(i1);
+        const x2 = this.calc_x(i2+1);
+        const y1 = this.calc_y(j1);
+        const y2 = this.calc_y(j2+1);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x1, y2);
+        ctx.lineTo(x1, y1);
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#f99" : "#500";
+        ctx.lineWidth = 3.0;
+        ctx.stroke();
     }
 
     drawGrid(ctx, settings) {
@@ -1118,14 +1290,6 @@ class ScrollbarHorz {
     }
 
     draw(ctx, settings) {
-        ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
-        strokeRect(
-            ctx,
-            this.calc_x(0),
-            0.5 + this.y * settings.dy + this.delta,
-            this.calc_x(this.width),
-            0.5 + this.y * settings.dy + this.height
-        );
         const w = this.width * settings.dx - 1;
         const a = Math.min(w / this.pattern.width * this.views[0].offset_i, w);
         const b = Math.min(w / this.pattern.width * (this.views[0].offset_i + this.views[0].width), w);
@@ -1137,6 +1301,15 @@ class ScrollbarHorz {
             this.calc_x(b / settings.dx),
             0.5 + this.y * settings.dy + this.height,
             1.0
+        );
+        ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
+        ctx.lineWidth = 1;
+        strokeRect(
+            ctx,
+            this.calc_x(0),
+            0.5 + this.y * settings.dy + this.delta,
+            this.calc_x(this.width),
+            0.5 + this.y * settings.dy + this.height
         );
    }
 }
@@ -1191,14 +1364,6 @@ class ScrollbarVert {
     }
 
     draw(ctx, settings) {
-        ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
-        strokeRect(
-            ctx,
-            0.5 + this.x * settings.dx + this.delta,
-            this.calc_y(0),
-            0.5 + this.x * settings.dx + this.width,
-            this.calc_y(this.height)
-        );
         const h = this.height * settings.dy - 1;
         const a = Math.min(h / this.pattern.height * this.views[0].offset_j, h);
         const b = Math.min(h / this.pattern.height * (this.views[0].offset_j + this.views[0].height), h);
@@ -1209,6 +1374,14 @@ class ScrollbarVert {
             this.calc_y(a / settings.dy),
             0.5 + this.x * settings.dx + this.width,
             this.calc_y(b / settings.dy)
+        );
+        ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
+        strokeRect(
+            ctx,
+            0.5 + this.x * settings.dx + this.delta,
+            this.calc_y(0),
+            0.5 + this.x * settings.dx + this.width,
+            this.calc_y(this.height)
         );
     }
 }
@@ -1405,6 +1578,20 @@ class PatternView {
         this.scroll_1_ver.draw(this.ctx, this.settings);
         this.scroll_2_hor.draw(this.ctx, this.settings);
         this.scroll_2_ver.draw(this.ctx, this.settings);
+
+        if (cursor.selected_part === "color_warp") {
+            this.color_warp.drawCursor(this.ctx, this.settings, cursor);
+        } else if (cursor.selected_part === "entering") {
+            this.entering.drawCursor(this.ctx, this.settings, cursor);
+        } else if (cursor.selected_part === "weave") {
+            this.weave.drawCursor(this.ctx, this.settings, cursor);
+        } else if (cursor.selected_part === "tieup") {
+            this.tieup.drawCursor(this.ctx, this.settings, cursor);
+        } else if (cursor.selected_part === "treadling") {
+            this.treadling.drawCursor(this.ctx, this.settings, cursor);
+        } else if (cursor.selected_part === "color_weft") {
+            this.color_weft.drawCursor(this.ctx, this.settings, cursor);
+        }
     }
 
     clearCanvas() {
@@ -1461,7 +1648,8 @@ function init() {
     view = new PatternView(pattern, settings, ctx, visible_shafts, visible_treadles);
     view.draw();
 
-    canvas.addEventListener('click', function(event) {
+    canvas.addEventListener("mousedown", function(event) {
+        mousedown = true;
         const x = event.offsetX;
         const y = event.offsetY;
         const i = Math.trunc(x / settings.dx);
@@ -1469,60 +1657,216 @@ function init() {
         if (view.entering.contains(i, j)) {
             const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
             const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
-            if (pattern.entering.get_shaft(ii) == jj + 1) {
-                pattern.entering.set_shaft(ii, 0);
-            } else {
-                pattern.entering.set_shaft(ii, jj + 1);
-            }
-            setModified();
-            pattern.recalc_weave();
-            view.draw();
+            cursor.x1 = ii;
+            cursor.y1 = jj;
+            cursor.x2 = cursor.x1;
+            cursor.y2 = cursor.y1;
+            cursor.selected_part = "entering";
         } else if (view.treadling.contains(i, j)) {
             const ii = i_to_doc(i, view.treadling, false);
             const jj = j_to_doc(j, view.treadling, false);
-            if (settings.single_treadling && !event.ctrlKey) {
-                pattern.treadling.clearRow(jj);
-                pattern.treadling.set(ii, jj, settings.current_range);
-            } else {
-                pattern.treadling.toggle(ii, jj);
-            }
-            setModified();
-            pattern.recalc_weave();
-            view.draw();
+            cursor.x1 = ii;
+            cursor.y1 = jj;
+            cursor.x2 = cursor.x1;
+            cursor.y2 = cursor.y1;
+            cursor.selected_part = "treadling";
         } else if (view.tieup.contains(i, j)) {
             const ii = i_to_doc(i, view.tieup, false);
             const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
-            pattern.tieup.toggle(ii, jj, settings.current_range);
-            setModified();
-            pattern.recalc_weave();
-            view.draw();
+            cursor.x1 = ii;
+            cursor.y1 = jj;
+            cursor.x2 = cursor.x1;
+            cursor.y2 = cursor.y1;
+            cursor.selected_part = "tieup";
         } else if (view.weave.contains(i, j) && !settings.weave_locked) {
             const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
             const jj = j_to_doc(j, view.weave, false);
-            pattern.weave.toggle(ii, jj, settings.current_range);
-            setModified();
-            pattern.recalc_from_weave(settings);
-            view.draw();
+            cursor.x1 = ii;
+            cursor.y1 = jj;
+            cursor.x2 = cursor.x1;
+            cursor.y2 = cursor.y1;
+            cursor.selected_part = "weave";
         } else if (view.color_warp.contains(i, j)) {
             const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
-            if (event.ctrlKey) {
-                settings.current_color = pattern.color_warp.get(ii, 0);
-                update_color_selector(settings);
-            } else {
-                pattern.color_warp.set(ii, 0, settings.current_color);
-                setModified();
+            cursor.x1 = ii;
+            cursor.y1 = 0;
+            cursor.x2 = cursor.x1;
+            cursor.y2 = cursor.y1;
+            cursor.selected_part = "color_warp";
+        } else if (view.color_weft.contains(i, j)) {
+            const jj = j_to_doc(j, view.color_weft, false);
+            cursor.x1 = 0;
+            cursor.y1 = jj;
+            cursor.x2 = cursor.x1;
+            cursor.y2 = cursor.y1;
+            cursor.selected_part = "color_weft";
+        }
+    });
+    canvas.addEventListener("mousemove", function(event) {
+        if (!mousedown) return;
+        const x = event.offsetX;
+        const y = event.offsetY;
+        const i = Math.trunc(x / settings.dx);
+        const j = Math.trunc(y / settings.dy);
+        if (view.entering.contains(i, j)) {
+            const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
+            const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
+            if (cursor.selected_part === "entering") {
+                cursor.x2 = ii;
+                cursor.y2 = jj;
+                view.draw();
+            }
+        } else if (view.treadling.contains(i, j)) {
+            const ii = i_to_doc(i, view.treadling, false);
+            const jj = j_to_doc(j, view.treadling, false);
+            if (cursor.selected_part === "treadling") {
+                cursor.x2 = ii;
+                cursor.y2 = jj;
+                view.draw();
+            }
+        } else if (view.tieup.contains(i, j)) {
+            const ii = i_to_doc(i, view.tieup, false);
+            const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
+            if (cursor.selected_part === "tieup") {
+                cursor.x2 = ii;
+                cursor.y2 = jj;
+                view.draw();
+            }
+        } else if (view.weave.contains(i, j) && !settings.weave_locked) {
+            const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
+            const jj = j_to_doc(j, view.weave, false);
+            if (cursor.selected_part === "weave") {
+                cursor.x2 = ii;
+                cursor.y2 = jj;
+                view.draw();
+            }
+        } else if (view.color_warp.contains(i, j)) {
+            const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
+            if (cursor.selected_part === "color_warp") {
+                cursor.x2 = ii;
+                cursor.y2 = 0;
                 view.draw();
             }
         } else if (view.color_weft.contains(i, j)) {
             const jj = j_to_doc(j, view.color_weft, false);
-            if (event.ctrlKey) {
-                settings.current_color = pattern.color_weft.get(0, jj);
-                update_color_selector(settings);
-            } else {
-                pattern.color_weft.set(0, jj, settings.current_color);
-                setModified();
+            if (cursor.selected_part === "color_weft") {
+                cursor.x2 = 0;
+                cursor.y2 = jj;
                 view.draw();
             }
+        }
+    });
+    canvas.addEventListener("mouseup", function(event) {
+        mousedown = false;
+        const x = event.offsetX;
+        const y = event.offsetY;
+        const i = Math.trunc(x / settings.dx);
+        const j = Math.trunc(y / settings.dy);
+        if (view.entering.contains(i, j)) {
+            const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
+            const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
+            cursor.x2 = ii;
+            cursor.y2 = jj;
+            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+            if (no_selection && !had_selection) {
+                if (pattern.entering.get_shaft(ii) == jj + 1) {
+                    pattern.entering.set_shaft(ii, 0);
+                } else {
+                    pattern.entering.set_shaft(ii, jj + 1);
+                }                
+                setModified();
+                pattern.recalc_weave();
+            } else {
+                had_selection = true;
+            }
+            view.draw();
+        } else if (view.treadling.contains(i, j)) {
+            const ii = i_to_doc(i, view.treadling, false);
+            const jj = j_to_doc(j, view.treadling, false);
+            cursor.x2 = ii;
+            cursor.y2 = jj;
+            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+            if (no_selection && !had_selection) {
+                if (settings.single_treadling && !event.ctrlKey) {
+                    if (pattern.treadling.get(ii, jj) > 0) {
+                        pattern.treadling.clearRow(jj);
+                        setModified();
+                        pattern.recalc_weave();
+                    } else {
+                        pattern.treadling.clearRow(jj);
+                        pattern.treadling.set(ii, jj, settings.current_range);
+                        setModified();
+                        pattern.recalc_weave();
+                    }
+                } else {
+                    pattern.treadling.toggle(ii, jj);
+                    setModified();
+                    pattern.recalc_weave();
+                }
+            } else {
+                had_selection = true;
+            }
+            view.draw();
+        } else if (view.tieup.contains(i, j)) {
+            const ii = i_to_doc(i, view.tieup, false);
+            const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
+            cursor.x2 = ii;
+            cursor.y2 = jj;
+            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+            if (no_selection && !had_selection) {
+                pattern.tieup.toggle(ii, jj, settings.current_range);
+                setModified();
+                pattern.recalc_weave();
+            } else {
+                had_selection = true;
+            }
+            view.draw();
+        } else if (view.weave.contains(i, j) && !settings.weave_locked) {
+            const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
+            const jj = j_to_doc(j, view.weave, false);
+            cursor.x2 = ii;
+            cursor.y2 = jj;
+            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+            if (no_selection && !had_selection) {
+                pattern.weave.toggle(ii, jj, settings.current_range);
+                setModified();
+                pattern.recalc_from_weave(settings);
+            } else {
+                had_selection = true;
+            }
+            view.draw();
+        } else if (view.color_warp.contains(i, j)) {
+            const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
+            cursor.x2 = ii;
+            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+            if (no_selection && !had_selection) {
+                if (event.ctrlKey) {
+                    settings.current_color = pattern.color_warp.get(ii, 0);
+                    update_color_selector(settings);
+                } else {
+                    pattern.color_warp.set(ii, 0, settings.current_color);
+                    setModified();
+                }
+            } else {
+                had_selection = true;
+            }
+            view.draw();
+        } else if (view.color_weft.contains(i, j)) {
+            const jj = j_to_doc(j, view.color_weft, false);
+            cursor.y2 = jj;
+            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+            if (no_selection && !had_selection) {
+                if (event.ctrlKey) {
+                    settings.current_color = pattern.color_weft.get(0, jj);
+                    update_color_selector(settings);
+                } else {
+                    pattern.color_weft.set(0, jj, settings.current_color);
+                    setModified();
+                }
+            } else {
+                had_selection = true;
+            }
+            view.draw();
         } else if (view.reed.contains(i, j)) {
             const ii = i_to_doc(i, view.reed, settings.direction_righttoleft);
             pattern.reed.toggle(ii, 0);
@@ -1840,6 +2184,84 @@ function keyDown(e) {
         set_current_layout("US");
         update_layout_selector(settings);
         e.preventDefault();
+    } else if (cursor.x1 != cursor.x2 || cursor.y1 != cursor.y2) {
+        const i1 = Math.min(cursor.x1, cursor.x2);
+        const i2 = Math.max(cursor.x1, cursor.x2);
+        const j1 = Math.min(cursor.y1, cursor.y2);
+        const j2 = Math.max(cursor.y1, cursor.y2);
+        if (e.key === "Delete") {
+            if (cursor.selected_part === "entering") {
+                pattern.entering.clearRange(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "tieup") {
+                pattern.tieup.clearRange(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "treadling") {
+                pattern.treadling.clearRange(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "weave") {
+                pattern.weave.clearRange(i1, j1, i2, j2);
+                pattern.recalc_from_weave(settings);
+                view.draw();
+            }
+        } else if (e.key === "v") {
+            if (cursor.selected_part === "entering") {
+                pattern.entering.mirrorV(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "tieup") {
+                pattern.tieup.mirrorV(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "treadling") {
+                pattern.treadling.mirrorV(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "weave") {
+                pattern.weave.mirrorV(i1, j1, i2, j2);
+                pattern.recalc_from_weave(settings);
+                view.draw();
+            }
+        } else if (e.key === "h") {
+            if (cursor.selected_part === "entering") {
+                pattern.entering.mirrorH(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "tieup") {
+                pattern.tieup.mirrorH(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "treadling") {
+                pattern.treadling.mirrorH(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "weave") {
+                pattern.weave.mirrorH(i1, j1, i2, j2);
+                pattern.recalc_from_weave(settings);
+                view.draw();
+            }
+        } else if (e.key === "r") {
+            if (cursor.selected_part === "entering") {
+                pattern.entering.rotateRight(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "tieup") {
+                pattern.tieup.rotateRight(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "treadling") {
+                pattern.treadling.rotateRight(i1, j1, i2, j2);
+                pattern.recalc_weave();
+                view.draw();
+            } else if (cursor.selected_part === "weave") {
+                pattern.weave.rotateRight(i1, j1, i2, j2);
+                pattern.recalc_from_weave(settings);
+                view.draw();
+            }
+        }
     }
 }
 
