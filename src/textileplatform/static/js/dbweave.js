@@ -919,7 +919,9 @@ class GridViewReed {
 class Pattern {
     constructor(width, height, max_shaft, max_treadle) {
         this.color_warp = new Grid(width, 1);
+        this.empty_warp = new Grid(width, 1);
         this.color_weft = new Grid(1, height);
+        this.empty_weft = new Grid(1, height);
         this.reed = new Grid(width, 1);
         this.entering = new Entering(width, max_shaft);
         this.tieup = new Grid(max_treadle, max_shaft);
@@ -966,12 +968,18 @@ class Pattern {
             if (!this.weave.isColEmpty(i)) {
                 this.min_x = Math.min(this.min_x, i);
                 this.max_x = Math.max(this.max_x, i);
+                this.empty_warp.set(i, 0, 1);
+            } else {
+                this.empty_warp.set(i, 0, 0);
             }
         }
         for (let j = 0; j < this.weave.height; j++) {
             if (!this.weave.isRowEmpty(j)) {
                 this.min_y = Math.min(this.min_y, j);
                 this.max_y = Math.max(this.max_y, j);
+                this.empty_weft.set(0, j, 1);
+            } else {
+                this.empty_weft.set(0, j, 0);
             }
         }
     }
@@ -980,6 +988,7 @@ class Pattern {
         this.entering.clear();
         let next_shaft = 1;
         for (let i = this.min_x; i <= this.max_x; i++) {
+            if (this.empty_warp.get(i, 0) == 0) continue;
             let shaft = null;
             for (let ii = this.min_x; ii < i; ii++) {
                 if (this.weave.colsEqual(i, ii)) {
@@ -1000,6 +1009,7 @@ class Pattern {
             this.treadling.clear();
             let next_treadle = 0;
             for (let j = this.min_y; j <= this.max_y; j++) {
+                if (this.empty_weft.get(0, j) == 0) continue;
                 let found = false;
                 for (let jj = this.min_y; jj < j; jj++) {
                     if (this.weave.rowsEqual(j, jj)) {
