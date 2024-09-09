@@ -385,6 +385,16 @@ class Grid {
         }
     }
 
+    invertRange(i1, j1, i2, j2) {
+        for (let i = i1; i <= i2; i++) {
+            for (let j = j1; j <= j2; j++) {
+                const val = this.get(i, j);
+                if (val === 0) this.set(i, j, settings.current_range);
+                else this.set(i, j, -val);
+            }
+        }
+    }
+
     mirrorV(i1, j1, i2, j2) {
         for (let i = i1; i <= i1 + Math.trunc((i2-i1)/2); i++) {
             for (let j = j1; j <= j2; j++) {
@@ -1648,7 +1658,20 @@ function init() {
     view = new PatternView(pattern, settings, ctx, visible_shafts, visible_treadles);
     view.draw();
 
+    canvas.addEventListener("touchstart", function(event) {
+        // TODO
+        console.log("touch start", event);
+    });
+    canvas.addEventListener("touchmove", function(event) {
+        // TODO
+        console.log("touch start", event);
+    });
+    canvas.addEventListener("touchend", function(event) {
+        // TODO
+        console.log("touch start", event);
+    });
     canvas.addEventListener("mousedown", function(event) {
+        had_selection = cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2;
         mousedown = true;
         const x = event.offsetX;
         const y = event.offsetY;
@@ -1776,8 +1799,6 @@ function init() {
                 }                
                 setModified();
                 pattern.recalc_weave();
-            } else {
-                had_selection = true;
             }
             view.draw();
         } else if (view.treadling.contains(i, j)) {
@@ -1803,8 +1824,6 @@ function init() {
                     setModified();
                     pattern.recalc_weave();
                 }
-            } else {
-                had_selection = true;
             }
             view.draw();
         } else if (view.tieup.contains(i, j)) {
@@ -1817,8 +1836,6 @@ function init() {
                 pattern.tieup.toggle(ii, jj, settings.current_range);
                 setModified();
                 pattern.recalc_weave();
-            } else {
-                had_selection = true;
             }
             view.draw();
         } else if (view.weave.contains(i, j) && !settings.weave_locked) {
@@ -1831,8 +1848,6 @@ function init() {
                 pattern.weave.toggle(ii, jj, settings.current_range);
                 setModified();
                 pattern.recalc_from_weave(settings);
-            } else {
-                had_selection = true;
             }
             view.draw();
         } else if (view.color_warp.contains(i, j)) {
@@ -1847,8 +1862,6 @@ function init() {
                     pattern.color_warp.set(ii, 0, settings.current_color);
                     setModified();
                 }
-            } else {
-                had_selection = true;
             }
             view.draw();
         } else if (view.color_weft.contains(i, j)) {
@@ -1863,8 +1876,6 @@ function init() {
                     pattern.color_weft.set(0, jj, settings.current_color);
                     setModified();
                 }
-            } else {
-                had_selection = true;
             }
             view.draw();
         } else if (view.reed.contains(i, j)) {
@@ -2172,18 +2183,92 @@ function keyDown(e) {
         view.layout();
         view.draw();
         e.preventDefault();
-    } else if (e.key === "i") { // TODO use better key shortcut
-        set_current_layout("DE");
-        update_layout_selector(settings);
+    } else if (e.key == "ArrowUp") {
+        e.stopPropagation();
         e.preventDefault();
-    } else if (e.key === "o") { // TODO use better key shortcut
-        set_current_layout("SK");
-        update_layout_selector(settings);
+        // TODO handle top to bottom
+        if (e.shiftKey) {
+            if (e.ctrlKey) {
+                if (cursor.y1 === cursor.y2) cursor.y2 += settings.unit_height - 1;
+                else cursor.y2 += settings.unit_height;
+            } else {
+                cursor.y2++; // TODO handle limits
+            }
+        } else {
+            cursor.x1 = cursor.x2;
+            if (e.ctrlKey) {
+                cursor.y2 += settings.unit_height;
+            } else {
+                cursor.y2++; // TODO handle limits
+            }
+            cursor.y1 = cursor.y2;
+        }
+        view.draw();
+    } else if (e.key == "ArrowDown") {
+        e.stopPropagation();
         e.preventDefault();
-    } else if (e.key === "p") { // TODO use better key shortcut
-        set_current_layout("US");
-        update_layout_selector(settings);
+        // TODO handle top to bottom
+        if (e.shiftKey) {
+            if (e.ctrlKey) {
+                cursor.y2 -= settings.unit_height;
+            } else {
+                cursor.y2--; // TODO handle limits
+            }
+            if (cursor.y2 < 0) cursor.y2 = 0;
+        } else {
+            cursor.x1 = cursor.x2;
+            if (e.ctrlKey) {
+                cursor.y2 -= settings.unit_height;
+            } else {
+                cursor.y2--; // TODO handle limits
+            }
+            if (cursor.y2 < 0) cursor.y2 = 0;
+            cursor.y1 = cursor.y2;
+        }
+        view.draw();
+    } else if (e.key == "ArrowRight") {
+        e.stopPropagation();
         e.preventDefault();
+        // TODO handle left to right!
+        if (e.shiftKey) {
+            if (e.ctrlKey) {
+                if (cursor.x1 === cursor.x2) cursor.x2 += settings.unit_width - 1;
+                else cursor.x2 += settings.unit_width;
+            } else {
+                cursor.x2++; // TODO handle limits
+            }
+        } else {
+            if (e.ctrlKey) {
+                cursor.x2 += settings.unit_width;
+            } else {
+                cursor.x2++; // TODO handle  limits
+            }
+            cursor.x1 = cursor.x2;
+            cursor.y1 = cursor.y2;
+        }
+        view.draw();
+    } else if (e.key == "ArrowLeft") {
+        e.stopPropagation();
+        e.preventDefault();
+        // TODO handle left to right
+        if (e.shiftKey) {
+            if (e.ctrlKey) {
+                cursor.x2 -= settings.unit_width;
+            } else {
+                cursor.x2--; // TODO handle limits
+            }
+            if (cursor.x2 < 0) cursor.x2 = 0;
+        } else {
+            if (e.ctrlKey) {
+                cursor.x2 -= settings.unit_width;
+            } else {
+                cursor.x2--; // TODO handle  limits
+            }
+            if (cursor.x2 < 0) cursor.x2 = 0;
+            cursor.x1 = cursor.x2;
+            cursor.y1 = cursor.y2;
+        }
+        view.draw();
     } else if (cursor.x1 != cursor.x2 || cursor.y1 != cursor.y2) {
         const i1 = Math.min(cursor.x1, cursor.x2);
         const i2 = Math.max(cursor.x1, cursor.x2);
@@ -2258,6 +2343,12 @@ function keyDown(e) {
                 view.draw();
             } else if (cursor.selected_part === "weave") {
                 pattern.weave.rotateRight(i1, j1, i2, j2);
+                pattern.recalc_from_weave(settings);
+                view.draw();
+            }
+        } else if (e.key === "i") {
+            if (cursor.selected_part === "weave") {
+                pattern.weave.invertRange(i1, j1, i2, j2);
                 pattern.recalc_from_weave(settings);
                 view.draw();
             }
