@@ -2278,68 +2278,83 @@ function keyDown(e) {
             if (cursor.selected_part === "entering") {
                 pattern.entering.clearRange(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "tieup") {
                 pattern.tieup.clearRange(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "treadling") {
                 pattern.treadling.clearRange(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "weave") {
                 pattern.weave.clearRange(i1, j1, i2, j2);
                 pattern.recalc_from_weave(settings);
+                setModified();
                 view.draw();
             }
         } else if (e.key === "v") {
             if (cursor.selected_part === "entering") {
                 pattern.entering.mirrorV(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "tieup") {
                 pattern.tieup.mirrorV(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "treadling") {
                 pattern.treadling.mirrorV(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "weave") {
                 pattern.weave.mirrorV(i1, j1, i2, j2);
                 pattern.recalc_from_weave(settings);
+                setModified();
                 view.draw();
             }
         } else if (e.key === "h") {
             if (cursor.selected_part === "entering") {
                 pattern.entering.mirrorH(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "tieup") {
                 pattern.tieup.mirrorH(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "treadling") {
                 pattern.treadling.mirrorH(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "weave") {
                 pattern.weave.mirrorH(i1, j1, i2, j2);
                 pattern.recalc_from_weave(settings);
+                setModified();
                 view.draw();
             }
         } else if (e.key === "r") {
             if (cursor.selected_part === "entering") {
                 pattern.entering.rotateRight(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "tieup") {
                 pattern.tieup.rotateRight(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "treadling") {
                 pattern.treadling.rotateRight(i1, j1, i2, j2);
                 pattern.recalc_weave();
+                setModified();
                 view.draw();
             } else if (cursor.selected_part === "weave") {
                 pattern.weave.rotateRight(i1, j1, i2, j2);
@@ -2350,6 +2365,7 @@ function keyDown(e) {
             if (cursor.selected_part === "weave") {
                 pattern.weave.invertRange(i1, j1, i2, j2);
                 pattern.recalc_from_weave(settings);
+                setModified();
                 view.draw();
             }
         }
