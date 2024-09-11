@@ -130,6 +130,36 @@
             <div id="save">{{ gettext('Save') }}</div>
         {% endif %}
         <div id="close">{{ gettext('Close') }}</div>
+        <img
+            id="icon-selection-mirrorv"
+            class="icon hidden"
+            height="26px"
+            title="{{ gettext('Mirror vertical') }}"
+            src="{{ url_for('static', filename='img/icons/icon-selection-mirrorv.svg')}}"/>
+        <img
+            id="icon-selection-mirrorh"
+            class="icon hidden"
+            height="26px"
+            title="{{ gettext('Mirror horizontal') }}"
+            src="{{ url_for('static', filename='img/icons/icon-selection-mirrorh.svg')}}"/>
+        <img
+            id="icon-selection-rotate"
+            class="icon hidden"
+            height="26px"
+            title="{{ gettext('Rotate') }}"
+            src="{{ url_for('static', filename='img/icons/icon-selection-rotate.svg')}}"/>
+        <img
+            id="icon-selection-invert"
+            class="icon hidden"
+            height="26px"
+            title="{{ gettext('Invert') }}"
+            src="{{ url_for('static', filename='img/icons/icon-selection-invert.svg')}}"/>
+        <img
+            id="icon-selection-clear"
+            class="icon hidden"
+            height="26px"
+            title="{{ gettext('Clear') }}"
+            src="{{ url_for('static', filename='img/icons/icon-selection-clear.svg')}}"/>
     </div>
 
     <div id="container">
