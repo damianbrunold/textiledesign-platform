@@ -1907,7 +1907,7 @@ function mouseUp(event) {
                     pattern.recalc_weave();
                 } else {
                     pattern.treadling.clearRow(jj);
-                    pattern.treadling.set(ii, jj, settings.current_range);
+                    pattern.treadling.set(ii, jj, 1);  // TODO if pegplan active, use current_range
                     setModified();
                     pattern.recalc_weave();
                 }
