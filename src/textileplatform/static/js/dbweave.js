@@ -63,13 +63,114 @@ let cursor = {
     y1: 0,
     y2: 0,
     // entering, tieup, treadling, weave, color_warp, color_weft
-    selected_part: "weave",  
+    selected_part: "weave",
 }
 let mousedown = false;
 let had_selection = false;
+let saved_x_weave = 0;
+let saved_y_weave = 0;
+let saved_x_tieup = 0;
+let saved_y_tieup = 0;
 
 
 let readonly = false;
+
+
+function goto_next_part() {
+    if (cursor.selected_part === "weave") {
+        select_part("entering", saved_x_weave, saved_y_tieup);
+    } else if (cursor.selected_part === "entering") {
+        select_part("treadling", saved_x_tieup, saved_y_weave);
+    } else if (cursor.selected_part === "treadling") {
+        select_part("tieup", saved_x_tieup, saved_y_tieup);
+    } else if (cursor.selected_part === "tieup") {
+        select_part("color_weft", 0, saved_y_weave);
+    } else if (cursor.selected_part === "color_weft") {
+        select_part("color_warp", saved_x_weave, 0);
+    } else if (cursor.selected_part === "color_warp") {
+        select_part("weave", saved_x_weave, saved_y_weave);
+    }
+}
+
+function goto_prev_part() {
+    if (cursor.selected_part === "weave") {
+        select_part("color_warp", saved_x_weave, 0);
+    } else if (cursor.selected_part === "entering") {
+        select_part("weave", saved_x_weave, saved_y_weave);
+    } else if (cursor.selected_part === "treadling") {
+        select_part("entering", saved_x_weave, saved_y_tieup);
+    } else if (cursor.selected_part === "tieup") {
+        select_part("treadling", saved_x_tieup, saved_y_weave);
+    } else if (cursor.selected_part === "color_weft") {
+        select_part("tieup", cursor.x2, saved_y_tieup);
+    } else if (cursor.selected_part === "color_warp") {
+        select_part("color_weft", 0, saved_y_weave);
+    }
+}
+
+function save_part_position() {
+    if (cursor.selected_part === "weave") {
+        saved_x_weave = cursor.x2;
+        saved_y_weave = cursor.y2;
+    } else if (cursor.selected_part === "entering") {
+        saved_x_weave = cursor.x2;
+        saved_y_tieup = cursor.y2;
+    } else if (cursor.selected_part === "treadling") {
+        saved_x_tieup = cursor.x2;
+        saved_y_weave = cursor.y2;
+    } else if (cursor.selected_part === "tieup") {
+        saved_x_tieup = cursor.x2;
+        saved_y_tieup = cursor.y2;
+    } else if (cursor.selected_part === "color_weft") {
+        saved_y_weave = cursor.y2;
+    } else if (cursor.selected_part === "color_warp") {
+        saved_x_weave = cursor.x2;
+    }
+}
+
+function select_part(part, x1, y1, x2, y2) {
+    if (x1 !== undefined) cursor.x1 = x1;
+    if (y1 !== undefined) cursor.y1 = y1;
+    if (x2 !== undefined) cursor.x2 = x2; else cursor.x2 = x1;
+    if (y2 !== undefined) cursor.y2 = y2; else cursor.y2 = y1;
+    if (part === "entering") {
+        saved_x_weave = cursor.x2;
+        saved_y_tieup = cursor.y2;
+        cursor.selected_part = "entering";
+        cursor.selected_pattern = pattern.entering;
+        cursor.selected_view = view.entering;
+    } else if (part === "tieup") {
+        saved_x_tieup = cursor.x2;
+        saved_y_tieup = cursor.y2;
+        cursor.selected_part = "tieup";
+        cursor.selected_pattern = pattern.tieup;
+        cursor.selected_view = view.tieup;
+    } else if (part === "treadling") {
+        saved_x_tieup = cursor.x2;
+        saved_y_weave = cursor.y2;
+        cursor.selected_part = "treadling";
+        cursor.selected_pattern = pattern.treadling;
+        cursor.selected_view = view.treadling;
+    } else if (part === "weave") {
+        saved_x_weave = cursor.x2;
+        saved_y_weave = cursor.y2;
+        cursor.selected_part = "weave";
+        cursor.selected_pattern = pattern.weave;
+        cursor.selected_view = view.weave;
+    } else if (part === "color_warp") {
+        saved_x_weave = cursor.x2;
+        cursor.selected_part = "color_warp";
+        cursor.selected_pattern = pattern.color_warp;
+        cursor.selected_view = view.color_warp;
+    } else if (part === "color_weft") {
+        saved_y_weave = cursor.y2;
+        cursor.selected_part = "color_weft";
+        cursor.selected_pattern = pattern.color_weft;
+        cursor.selected_view = view.color_weft;
+    } else {
+        console.log("ERR: cannot select part", part);
+    }
+}
 
 
 function get_x_calculator(view, settings, righttoleft) {
@@ -396,6 +497,7 @@ class Grid {
     }
 
     mirrorV(i1, j1, i2, j2) {
+        if (j1 === j2) return;
         for (let i = i1; i <= i1 + Math.trunc((i2-i1)/2); i++) {
             for (let j = j1; j <= j2; j++) {
                 const v = this.get(i, j);
@@ -406,6 +508,7 @@ class Grid {
     }
 
     mirrorH(i1, j1, i2, j2) {
+        if (i1 === i2) return;
         for (let j = j1; j <= j1 + Math.trunc((j2-j1) / 2); j++) {
             for (let i = i1; i <= i2; i++) {
                 const v = this.get(i, j);
@@ -417,7 +520,50 @@ class Grid {
 
     rotateRight(i1, j1, i2, j2) {
         if ((i2-i1) != (j2-j1)) return;
-        // TODO
+        const w = i2 - i1 + 1;
+        const size = w * w;
+        const data = [];
+        data[w - 1] = 0;
+        data.fill(0);
+        const bidx = function(i, j) { return i + j * w; }
+        const bget = function(i, j) { return data[bidx(i, j)]; }
+        const bset = function(i, j, value) { data[bidx(i, j)] = value; }
+        // copy to buffer
+        for (let i = i1; i <= i2; i++) {
+            for (let j = j1; j <= j2; j++) {
+                bset(i - i1, j - j1, this.get(i, j));
+            }
+        }
+        // restore in rotated form
+        for (let i = 0; i < w; i++) {
+            for (let j = 0; j < w; j++) {
+                this.set(i1 + j, j1 + w - 1 - i, bget(i, j));
+            }
+        }
+    }
+
+    rotateLeft(i1, j1, i2, j2) {
+        if ((i2-i1) != (j2-j1)) return;
+        const w = i2 - i1 + 1;
+        const size = w * w;
+        const data = [];
+        data[w - 1] = 0;
+        data.fill(0);
+        const bidx = function(i, j) { return i + j * w; }
+        const bget = function(i, j) { return data[bidx(i, j)]; }
+        const bset = function(i, j, value) { data[bidx(i, j)] = value; }
+        // copy to buffer
+        for (let i = i1; i <= i2; i++) {
+            for (let j = j1; j <= j2; j++) {
+                bset(i - i1, j - j1, this.get(i, j));
+            }
+        }
+        // restore in rotated form
+        for (let i = 0; i < w; i++) {
+            for (let j = 0; j < w; j++) {
+                this.set(i1 + w - 1 - j, j1 + i, bget(i, j));
+            }
+        }
     }
 
     idx(i, j) {
@@ -510,17 +656,37 @@ class Entering {
         };
     }
 
+    invertRange(i1, j1, i2, j2) {
+        // empty
+    }
+
     mirrorV(i1, j1, i2, j2) {
-        // TODO
+        if (j1 === j2) return;
+        for (let i = i1; i <= i1 + Math.trunc((i2-i1)/2); i++) {
+            const shaft1 = this.get_shaft(i);
+            const shaft2 = this.get_shaft(i2 - (i-i1));
+            this.set_shaft(i, shaft2);
+            this.set_shaft(i2 - (i-i1), shaft1);
+        }
     }
 
     mirrorH(i1, j1, i2, j2) {
-        // TODO
+        if (i1 === i2) return;
+        for (let i = i1; i <= i2; i++) {
+            const shaft = this.get_shaft(i) - 1;
+            if (j1 <= shaft && shaft <= j2) {
+                const new_shaft = j2 - (shaft - j1);
+                this.set_shaft(i, new_shaft + 1);
+            }
+        }
     }
 
     rotateRight(i1, j1, i2, j2) {
-        if ((i2-i1) != (j2-j1)) return;
-        // TODO
+        // empty
+    }
+
+    rotateLeft(i1, j1, i2, j2) {
+        // empty
     }
 
     get_shaft(i) {
@@ -538,6 +704,13 @@ class Entering {
     set(i, j, value) {
         if (value > 0) this.set_shaft(i, j + 1);
         else this.set_shaft(i, 0);
+    }
+
+    toggle(i, j) {
+        const shaft = this.get_shaft(i);
+        if (shaft !== j + 1) {
+            this.set_shaft(i, j + 1);
+        }
     }
 }
 
@@ -1589,18 +1762,8 @@ class PatternView {
         this.scroll_2_hor.draw(this.ctx, this.settings);
         this.scroll_2_ver.draw(this.ctx, this.settings);
 
-        if (cursor.selected_part === "color_warp") {
-            this.color_warp.drawCursor(this.ctx, this.settings, cursor);
-        } else if (cursor.selected_part === "entering") {
-            this.entering.drawCursor(this.ctx, this.settings, cursor);
-        } else if (cursor.selected_part === "weave") {
-            this.weave.drawCursor(this.ctx, this.settings, cursor);
-        } else if (cursor.selected_part === "tieup") {
-            this.tieup.drawCursor(this.ctx, this.settings, cursor);
-        } else if (cursor.selected_part === "treadling") {
-            this.treadling.drawCursor(this.ctx, this.settings, cursor);
-        } else if (cursor.selected_part === "color_weft") {
-            this.color_weft.drawCursor(this.ctx, this.settings, cursor);
+        if (cursor.selected_view) {
+            cursor.selected_view.drawCursor(this.ctx, this.settings, cursor);
         }
     }
 
@@ -1623,6 +1786,210 @@ function j_to_doc(j, view, toptobottom) {
         return j - view.y + view.offset_j;
     } else {
         return view.height - 1 - (j - view.y) + view.offset_j;
+    }
+}
+
+function mouseDown(event) {
+    had_selection = cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2;
+    mousedown = true;
+    const x = event.offsetX;
+    const y = event.offsetY;
+    const i = Math.trunc(x / settings.dx);
+    const j = Math.trunc(y / settings.dy);
+    if (view.entering.contains(i, j)) {
+        const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
+        const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
+        select_part("entering", ii, jj, ii, jj);
+    } else if (view.treadling.contains(i, j)) {
+        const ii = i_to_doc(i, view.treadling, false);
+        const jj = j_to_doc(j, view.treadling, false);
+        select_part("treadling", ii, jj, ii, jj);
+    } else if (view.tieup.contains(i, j)) {
+        const ii = i_to_doc(i, view.tieup, false);
+        const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
+        select_part("tieup", ii, jj, ii, jj);
+    } else if (view.weave.contains(i, j) && !settings.weave_locked) {
+        const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
+        const jj = j_to_doc(j, view.weave, false);
+        select_part("weave", ii, jj, ii, jj);
+    } else if (view.color_warp.contains(i, j)) {
+        const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
+        select_part("color_warp", ii, 0, ii, 0);
+    } else if (view.color_weft.contains(i, j)) {
+        const jj = j_to_doc(j, view.color_weft, false);
+        select_part("color_weft", 0, jj, 0, jj);
+    }
+}
+
+function mouseMove(event) {
+    if (!mousedown) return;
+    const x = event.offsetX;
+    const y = event.offsetY;
+    const i = Math.trunc(x / settings.dx);
+    const j = Math.trunc(y / settings.dy);
+    if (view.entering.contains(i, j)) {
+        const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
+        const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
+        cursor.x2 = ii;
+        cursor.y2 = jj;
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.treadling.contains(i, j)) {
+        const ii = i_to_doc(i, view.treadling, false);
+        const jj = j_to_doc(j, view.treadling, false);
+        cursor.x2 = ii;
+        cursor.y2 = jj;
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.tieup.contains(i, j)) {
+        const ii = i_to_doc(i, view.tieup, false);
+        const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
+        cursor.x2 = ii;
+        cursor.y2 = jj;
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.weave.contains(i, j) && !settings.weave_locked) {
+        const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
+        const jj = j_to_doc(j, view.weave, false);
+        cursor.x2 = ii;
+        cursor.y2 = jj;
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.color_warp.contains(i, j)) {
+        const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
+        cursor.x2 = ii;
+        cursor.y2 = 0;
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.color_weft.contains(i, j)) {
+        const jj = j_to_doc(j, view.color_weft, false);
+        cursor.x2 = 0;
+        cursor.y2 = jj;
+        updateSelectionIcons();
+        view.draw();
+    }
+}
+
+function mouseUp(event) {
+    mousedown = false;
+    const x = event.offsetX;
+    const y = event.offsetY;
+    const i = Math.trunc(x / settings.dx);
+    const j = Math.trunc(y / settings.dy);
+    if (view.entering.contains(i, j)) {
+        const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
+        const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
+        cursor.x2 = ii;
+        cursor.y2 = jj;
+        const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+        if (no_selection && !had_selection) {
+            if (pattern.entering.get_shaft(ii) == jj + 1) {
+                pattern.entering.set_shaft(ii, 0);
+            } else {
+                pattern.entering.set_shaft(ii, jj + 1);
+            }                
+            setModified();
+            pattern.recalc_weave();
+        }
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.treadling.contains(i, j)) {
+        const ii = i_to_doc(i, view.treadling, false);
+        const jj = j_to_doc(j, view.treadling, false);
+        cursor.x2 = ii;
+        cursor.y2 = jj;
+        const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+        if (no_selection && !had_selection) {
+            if (settings.single_treadling && !event.ctrlKey) {
+                if (pattern.treadling.get(ii, jj) > 0) {
+                    pattern.treadling.clearRow(jj);
+                    setModified();
+                    pattern.recalc_weave();
+                } else {
+                    pattern.treadling.clearRow(jj);
+                    pattern.treadling.set(ii, jj, settings.current_range);
+                    setModified();
+                    pattern.recalc_weave();
+                }
+            } else {
+                pattern.treadling.toggle(ii, jj);
+                setModified();
+                pattern.recalc_weave();
+            }
+        }
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.tieup.contains(i, j)) {
+        const ii = i_to_doc(i, view.tieup, false);
+        const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
+        cursor.x2 = ii;
+        cursor.y2 = jj;
+        const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+        if (no_selection && !had_selection) {
+            pattern.tieup.toggle(ii, jj, settings.current_range);
+            setModified();
+            pattern.recalc_weave();
+        }
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.weave.contains(i, j) && !settings.weave_locked) {
+        const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
+        const jj = j_to_doc(j, view.weave, false);
+        cursor.x2 = ii;
+        cursor.y2 = jj;
+        const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+        if (no_selection && !had_selection) {
+            pattern.weave.toggle(ii, jj, settings.current_range);
+            setModified();
+            pattern.recalc_from_weave(settings);
+        }
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.color_warp.contains(i, j)) {
+        const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
+        cursor.x2 = ii;
+        const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+        if (no_selection && !had_selection) {
+            if (event.ctrlKey) {
+                settings.current_color = pattern.color_warp.get(ii, 0);
+                update_color_selector(settings);
+            } else {
+                pattern.color_warp.set(ii, 0, settings.current_color);
+                setModified();
+            }
+        }
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.color_weft.contains(i, j)) {
+        const jj = j_to_doc(j, view.color_weft, false);
+        cursor.y2 = jj;
+        const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+        if (no_selection && !had_selection) {
+            if (event.ctrlKey) {
+                settings.current_color = pattern.color_weft.get(0, jj);
+                update_color_selector(settings);
+            } else {
+                pattern.color_weft.set(0, jj, settings.current_color);
+                setModified();
+            }
+        }
+        updateSelectionIcons();
+        view.draw();
+    } else if (view.reed.contains(i, j)) {
+        const ii = i_to_doc(i, view.reed, settings.direction_righttoleft);
+        pattern.reed.toggle(ii, 0);
+        setModified();
+        view.draw();
+    } else {
+        if (view.scroll_1_hor.contains(x, y)) {
+            view.scroll_1_hor.scrollTo(x);
+        } else if (view.scroll_2_hor.contains(x, y)) {
+            view.scroll_2_hor.scrollTo(x);
+        } else if (view.scroll_1_ver.contains(x, y)) {
+            view.scroll_1_ver.scrollTo(y);
+        } else if (view.scroll_2_ver.contains(x, y)) {
+            view.scroll_2_ver.scrollTo(y);
+        }
     }
 }
 
@@ -1655,7 +2022,14 @@ function init() {
     const visible_shafts = data['visible_shafts'];
     const visible_treadles = data['visible_treadles'];
 
-    view = new PatternView(pattern, settings, ctx, visible_shafts, visible_treadles);
+    view = new PatternView(
+        pattern,
+        settings,
+        ctx,
+        visible_shafts,
+        visible_treadles
+    );
+    select_part("weave", 0, 0);  // TODO maybe save/restore last position
     view.draw();
 
     document.getElementById("icon-selection-mirrorv").addEventListener("click", selectionMirrorV);
@@ -1664,255 +2038,12 @@ function init() {
     document.getElementById("icon-selection-rotate").addEventListener("click", selectionRotate);
     document.getElementById("icon-selection-invert").addEventListener("click", selectionInvert);
 
-    canvas.addEventListener("touchstart", function(event) {
-        // TODO
-        console.log("touch start", event);
-    });
-    canvas.addEventListener("touchmove", function(event) {
-        // TODO
-        console.log("touch start", event);
-    });
-    canvas.addEventListener("touchend", function(event) {
-        // TODO
-        console.log("touch start", event);
-    });
-    canvas.addEventListener("mousedown", function(event) {
-        had_selection = cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2;
-        mousedown = true;
-        const x = event.offsetX;
-        const y = event.offsetY;
-        const i = Math.trunc(x / settings.dx);
-        const j = Math.trunc(y / settings.dy);
-        if (view.entering.contains(i, j)) {
-            const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
-            const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
-            cursor.x1 = ii;
-            cursor.y1 = jj;
-            cursor.x2 = cursor.x1;
-            cursor.y2 = cursor.y1;
-            cursor.selected_part = "entering";
-        } else if (view.treadling.contains(i, j)) {
-            const ii = i_to_doc(i, view.treadling, false);
-            const jj = j_to_doc(j, view.treadling, false);
-            cursor.x1 = ii;
-            cursor.y1 = jj;
-            cursor.x2 = cursor.x1;
-            cursor.y2 = cursor.y1;
-            cursor.selected_part = "treadling";
-        } else if (view.tieup.contains(i, j)) {
-            const ii = i_to_doc(i, view.tieup, false);
-            const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
-            cursor.x1 = ii;
-            cursor.y1 = jj;
-            cursor.x2 = cursor.x1;
-            cursor.y2 = cursor.y1;
-            cursor.selected_part = "tieup";
-        } else if (view.weave.contains(i, j) && !settings.weave_locked) {
-            const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
-            const jj = j_to_doc(j, view.weave, false);
-            cursor.x1 = ii;
-            cursor.y1 = jj;
-            cursor.x2 = cursor.x1;
-            cursor.y2 = cursor.y1;
-            cursor.selected_part = "weave";
-        } else if (view.color_warp.contains(i, j)) {
-            const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
-            cursor.x1 = ii;
-            cursor.y1 = 0;
-            cursor.x2 = cursor.x1;
-            cursor.y2 = cursor.y1;
-            cursor.selected_part = "color_warp";
-        } else if (view.color_weft.contains(i, j)) {
-            const jj = j_to_doc(j, view.color_weft, false);
-            cursor.x1 = 0;
-            cursor.y1 = jj;
-            cursor.x2 = cursor.x1;
-            cursor.y2 = cursor.y1;
-            cursor.selected_part = "color_weft";
-        }
-    });
-    canvas.addEventListener("mousemove", function(event) {
-        if (!mousedown) return;
-        const x = event.offsetX;
-        const y = event.offsetY;
-        const i = Math.trunc(x / settings.dx);
-        const j = Math.trunc(y / settings.dy);
-        if (view.entering.contains(i, j)) {
-            const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
-            const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
-            if (cursor.selected_part === "entering") {
-                cursor.x2 = ii;
-                cursor.y2 = jj;
-                updateSelectionIcons();
-                view.draw();
-            }
-        } else if (view.treadling.contains(i, j)) {
-            const ii = i_to_doc(i, view.treadling, false);
-            const jj = j_to_doc(j, view.treadling, false);
-            if (cursor.selected_part === "treadling") {
-                cursor.x2 = ii;
-                cursor.y2 = jj;
-                updateSelectionIcons();
-                view.draw();
-            }
-        } else if (view.tieup.contains(i, j)) {
-            const ii = i_to_doc(i, view.tieup, false);
-            const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
-            if (cursor.selected_part === "tieup") {
-                cursor.x2 = ii;
-                cursor.y2 = jj;
-                updateSelectionIcons();
-                view.draw();
-            }
-        } else if (view.weave.contains(i, j) && !settings.weave_locked) {
-            const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
-            const jj = j_to_doc(j, view.weave, false);
-            if (cursor.selected_part === "weave") {
-                cursor.x2 = ii;
-                cursor.y2 = jj;
-                updateSelectionIcons();
-                view.draw();
-            }
-        } else if (view.color_warp.contains(i, j)) {
-            const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
-            if (cursor.selected_part === "color_warp") {
-                cursor.x2 = ii;
-                cursor.y2 = 0;
-                updateSelectionIcons();
-                view.draw();
-            }
-        } else if (view.color_weft.contains(i, j)) {
-            const jj = j_to_doc(j, view.color_weft, false);
-            if (cursor.selected_part === "color_weft") {
-                cursor.x2 = 0;
-                cursor.y2 = jj;
-                updateSelectionIcons();
-                view.draw();
-            }
-        }
-    });
-    canvas.addEventListener("mouseup", function(event) {
-        mousedown = false;
-        const x = event.offsetX;
-        const y = event.offsetY;
-        const i = Math.trunc(x / settings.dx);
-        const j = Math.trunc(y / settings.dy);
-        if (view.entering.contains(i, j)) {
-            const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
-            const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
-            cursor.x2 = ii;
-            cursor.y2 = jj;
-            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
-            if (no_selection && !had_selection) {
-                if (pattern.entering.get_shaft(ii) == jj + 1) {
-                    pattern.entering.set_shaft(ii, 0);
-                } else {
-                    pattern.entering.set_shaft(ii, jj + 1);
-                }                
-                setModified();
-                pattern.recalc_weave();
-            }
-            updateSelectionIcons();
-            view.draw();
-        } else if (view.treadling.contains(i, j)) {
-            const ii = i_to_doc(i, view.treadling, false);
-            const jj = j_to_doc(j, view.treadling, false);
-            cursor.x2 = ii;
-            cursor.y2 = jj;
-            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
-            if (no_selection && !had_selection) {
-                if (settings.single_treadling && !event.ctrlKey) {
-                    if (pattern.treadling.get(ii, jj) > 0) {
-                        pattern.treadling.clearRow(jj);
-                        setModified();
-                        pattern.recalc_weave();
-                    } else {
-                        pattern.treadling.clearRow(jj);
-                        pattern.treadling.set(ii, jj, settings.current_range);
-                        setModified();
-                        pattern.recalc_weave();
-                    }
-                } else {
-                    pattern.treadling.toggle(ii, jj);
-                    setModified();
-                    pattern.recalc_weave();
-                }
-            }
-            updateSelectionIcons();
-            view.draw();
-        } else if (view.tieup.contains(i, j)) {
-            const ii = i_to_doc(i, view.tieup, false);
-            const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
-            cursor.x2 = ii;
-            cursor.y2 = jj;
-            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
-            if (no_selection && !had_selection) {
-                pattern.tieup.toggle(ii, jj, settings.current_range);
-                setModified();
-                pattern.recalc_weave();
-            }
-            updateSelectionIcons();
-            view.draw();
-        } else if (view.weave.contains(i, j) && !settings.weave_locked) {
-            const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
-            const jj = j_to_doc(j, view.weave, false);
-            cursor.x2 = ii;
-            cursor.y2 = jj;
-            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
-            if (no_selection && !had_selection) {
-                pattern.weave.toggle(ii, jj, settings.current_range);
-                setModified();
-                pattern.recalc_from_weave(settings);
-            }
-            updateSelectionIcons();
-            view.draw();
-        } else if (view.color_warp.contains(i, j)) {
-            const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
-            cursor.x2 = ii;
-            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
-            if (no_selection && !had_selection) {
-                if (event.ctrlKey) {
-                    settings.current_color = pattern.color_warp.get(ii, 0);
-                    update_color_selector(settings);
-                } else {
-                    pattern.color_warp.set(ii, 0, settings.current_color);
-                    setModified();
-                }
-            }
-            updateSelectionIcons();
-            view.draw();
-        } else if (view.color_weft.contains(i, j)) {
-            const jj = j_to_doc(j, view.color_weft, false);
-            cursor.y2 = jj;
-            const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
-            if (no_selection && !had_selection) {
-                if (event.ctrlKey) {
-                    settings.current_color = pattern.color_weft.get(0, jj);
-                    update_color_selector(settings);
-                } else {
-                    pattern.color_weft.set(0, jj, settings.current_color);
-                    setModified();
-                }
-            }
-            updateSelectionIcons();
-            view.draw();
-        } else if (view.reed.contains(i, j)) {
-            const ii = i_to_doc(i, view.reed, settings.direction_righttoleft);
-            pattern.reed.toggle(ii, 0);
-            setModified();
-            view.draw();
-        } else {
-            if (view.scroll_1_hor.contains(x, y)) {
-                view.scroll_1_hor.scrollTo(x);
-            } else if (view.scroll_2_hor.contains(x, y)) {
-                view.scroll_2_hor.scrollTo(x);
-            } else if (view.scroll_1_ver.contains(x, y)) {
-                view.scroll_1_ver.scrollTo(y);
-            } else if (view.scroll_2_ver.contains(x, y)) {
-                view.scroll_2_ver.scrollTo(y);
-            }
-        }
-    });
+    canvas.addEventListener("touchstart", mouseDown);
+    canvas.addEventListener("touchmove", mouseMove);
+    // canvas.addEventListener("touchend", mouseUp);
+    canvas.addEventListener("mousedown", mouseDown);
+    canvas.addEventListener("mousemove", mouseMove);
+    canvas.addEventListener("mouseup", mouseUp);
 }
 
 function updateSelectionIcons() {
@@ -2226,6 +2357,30 @@ function keyDown(e) {
         view.layout();
         view.draw();
         e.preventDefault();
+    } else if (e.key == " ") {
+        if (cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2) {
+            e.stopPropagation();
+            e.preventDefault();
+            cursor.selected_pattern.toggle(cursor.x1, cursor.y1);
+            cursor.y1 += 1; // TODO handle configurable cursor movement
+            cursor.y2 = cursor.y1;
+            if (cursor.selected_part === "weave") {
+                pattern.recalc_from_weave(settings);
+            } else {
+                pattern.recalc_weave();
+            }
+            setModified();
+            view.draw();
+        }
+    } else if (e.key == "Enter" || e.key == "Tab") {
+        e.stopPropagation();
+        e.preventDefault();
+        if (e.shiftKey) {
+            goto_prev_part();
+        } else {
+            goto_next_part();
+        }
+        view.draw();
     } else if (e.key == "ArrowUp") {
         e.stopPropagation();
         e.preventDefault();
@@ -2252,6 +2407,7 @@ function keyDown(e) {
             cursor.y1 = cursor.y2;
         }
         updateSelectionIcons();
+        save_part_position();
         view.draw();
     } else if (e.key == "ArrowDown") {
         e.stopPropagation();
@@ -2281,6 +2437,7 @@ function keyDown(e) {
             cursor.y1 = cursor.y2;
         }
         updateSelectionIcons();
+        save_part_position();
         view.draw();
     } else if (e.key == "ArrowRight") {
         e.stopPropagation();
@@ -2308,6 +2465,7 @@ function keyDown(e) {
             cursor.y1 = cursor.y2;
         }
         updateSelectionIcons();
+        save_part_position();
         view.draw();
     } else if (e.key == "ArrowLeft") {
         e.stopPropagation();
@@ -2337,6 +2495,7 @@ function keyDown(e) {
             cursor.y1 = cursor.y2;
         }
         updateSelectionIcons();
+        save_part_position();
         view.draw();
     } else if (cursor.x1 != cursor.x2 || cursor.y1 != cursor.y2) {
         if (e.key === "Delete") {
@@ -2358,27 +2517,14 @@ function selectionClear() {
     const i2 = Math.max(cursor.x1, cursor.x2);
     const j1 = Math.min(cursor.y1, cursor.y2);
     const j2 = Math.max(cursor.y1, cursor.y2);
-    if (cursor.selected_part === "entering") {
-        pattern.entering.clearRange(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "tieup") {
-        pattern.tieup.clearRange(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "treadling") {
-        pattern.treadling.clearRange(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "weave") {
-        pattern.weave.clearRange(i1, j1, i2, j2);
+    cursor.selected_pattern.clearRange(i1, j1, i2, j2);
+    if (cursor.selected_part === "weave") {
         pattern.recalc_from_weave(settings);
-        setModified();
-        view.draw();
+    } else {
+        pattern.recalc_weave();
     }
+    setModified();
+    view.draw();
 }
 
 function selectionInvert() {
@@ -2391,6 +2537,11 @@ function selectionInvert() {
         pattern.recalc_from_weave(settings);
         setModified();
         view.draw();
+    } else if (cursor.selected_part === "tieup") {
+        pattern.tieup.invertRange(i1, j1, i2, j2);
+        pattern.recalc_weave();
+        setModified();
+        view.draw();
     }
 }
 
@@ -2399,26 +2550,14 @@ function selectionRotate() {
     const i2 = Math.max(cursor.x1, cursor.x2);
     const j1 = Math.min(cursor.y1, cursor.y2);
     const j2 = Math.max(cursor.y1, cursor.y2);
-    if (cursor.selected_part === "entering") {
-        pattern.entering.rotateRight(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "tieup") {
-        pattern.tieup.rotateRight(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "treadling") {
-        pattern.treadling.rotateRight(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "weave") {
-        pattern.weave.rotateRight(i1, j1, i2, j2);
+    cursor.selected_pattern.rotateRight(i1, j1, i2, j2);
+    if (cursor.selected_part === "weave") {
         pattern.recalc_from_weave(settings);
-        view.draw();
+    } else {
+        pattern.recalc_weave();
     }
+    setModified();
+    view.draw();
 }
 
 function selectionMirrorV() {
@@ -2426,27 +2565,14 @@ function selectionMirrorV() {
     const i2 = Math.max(cursor.x1, cursor.x2);
     const j1 = Math.min(cursor.y1, cursor.y2);
     const j2 = Math.max(cursor.y1, cursor.y2);
-    if (cursor.selected_part === "entering") {
-        pattern.entering.mirrorV(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "tieup") {
-        pattern.tieup.mirrorV(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "treadling") {
-        pattern.treadling.mirrorV(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "weave") {
-        pattern.weave.mirrorV(i1, j1, i2, j2);
+    cursor.selected_pattern.mirrorV(i1, j1, i2, j2);
+    if (cursor.selected_part === "weave") {
         pattern.recalc_from_weave(settings);
-        setModified();
-        view.draw();
+    } else {
+        pattern.recalc_weave();
     }
+    setModified();
+    view.draw();
 }
 
 function selectionMirrorH() {
@@ -2454,27 +2580,14 @@ function selectionMirrorH() {
     const i2 = Math.max(cursor.x1, cursor.x2);
     const j1 = Math.min(cursor.y1, cursor.y2);
     const j2 = Math.max(cursor.y1, cursor.y2);
-    if (cursor.selected_part === "entering") {
-        pattern.entering.mirrorH(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "tieup") {
-        pattern.tieup.mirrorH(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "treadling") {
-        pattern.treadling.mirrorH(i1, j1, i2, j2);
-        pattern.recalc_weave();
-        setModified();
-        view.draw();
-    } else if (cursor.selected_part === "weave") {
-        pattern.weave.mirrorH(i1, j1, i2, j2);
+    cursor.selected_pattern.mirrorH(i1, j1, i2, j2);
+    if (cursor.selected_part === "weave") {
         pattern.recalc_from_weave(settings);
-        setModified();
-        view.draw();
+    } else {
+        pattern.recalc_weave();
     }
+    setModified();
+    view.draw();
 }
 
 function update_layout_selector() {
