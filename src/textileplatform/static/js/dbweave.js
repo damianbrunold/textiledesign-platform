@@ -739,6 +739,8 @@ class GridView {
         this.height = height;
         this.offset_i = 0;
         this.offset_j = 0;
+        this.righttoleft = righttoleft;
+        this.toptobottom = toptobottom;
         this.painter_prop = painter_prop;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
@@ -863,6 +865,8 @@ class GridViewPattern {
         this.height = height;
         this.offset_i = 0;
         this.offset_j = 0;
+        this.righttoleft = righttoleft;
+        this.toptobottom = toptobottom;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
     }
@@ -2384,119 +2388,35 @@ function keyDown(e) {
     } else if (e.key == "ArrowUp") {
         e.stopPropagation();
         e.preventDefault();
-        // TODO handle top to bottom
-        if (e.shiftKey) {
-            if (e.ctrlKey) {
-                if (cursor.y1 === cursor.y2) {
-                    cursor.y2 += settings.unit_height - 1;
-                } else if (cursor.y2 + settings.unit_height - 1 === cursor.y1) {
-                    cursor.y2 += settings.unit_height - 1;
-                } else {
-                    cursor.y2 += settings.unit_height;
-                }
-            } else {
-                cursor.y2++; // TODO handle limits
-            }
+        if (cursor.selected_view.toptobottom) {
+            cursorDown(e);
         } else {
-            cursor.x1 = cursor.x2;
-            if (e.ctrlKey) {
-                cursor.y2 += settings.unit_height;
-            } else {
-                cursor.y2++; // TODO handle limits
-            }
-            cursor.y1 = cursor.y2;
+            cursorUp(e);
         }
-        updateSelectionIcons();
-        save_part_position();
-        view.draw();
     } else if (e.key == "ArrowDown") {
         e.stopPropagation();
         e.preventDefault();
-        // TODO handle top to bottom
-        if (e.shiftKey) {
-            if (e.ctrlKey) {
-                if (cursor.y1 === cursor.y2) {
-                    cursor.y2 -= settings.unit_height - 1;
-                } else if (cursor.y1 + settings.unit_height - 1 === cursor.y2) {
-                    cursor.y2 -= settings.unit_height - 1;
-                } else {
-                    cursor.y2 -= settings.unit_height;
-                }
-            } else {
-                cursor.y2--; // TODO handle limits
-            }
-            if (cursor.y2 < 0) cursor.y2 = 0;
+        if (cursor.selected_view.toptobottom) {
+            cursorUp(e);
         } else {
-            cursor.x1 = cursor.x2;
-            if (e.ctrlKey) {
-                cursor.y2 -= settings.unit_height;
-            } else {
-                cursor.y2--; // TODO handle limits
-            }
-            if (cursor.y2 < 0) cursor.y2 = 0;
-            cursor.y1 = cursor.y2;
+            cursorDown(e);
         }
-        updateSelectionIcons();
-        save_part_position();
-        view.draw();
     } else if (e.key == "ArrowRight") {
         e.stopPropagation();
         e.preventDefault();
-        // TODO handle left to right!
-        if (e.shiftKey) {
-            if (e.ctrlKey) {
-                if (cursor.x1 === cursor.x2) {
-                    cursor.x2 += settings.unit_width - 1;
-                } else if (cursor.x2 + settings.unit_width - 1 == cursor.x1) {
-                    cursor.x2 += settings.unit_width - 1;
-                } else {
-                    cursor.x2 += settings.unit_width;
-                }
-            } else {
-                cursor.x2++; // TODO handle limits
-            }
+        if (cursor.selected_view.righttoleft) {
+            cursorLeft(e);
         } else {
-            if (e.ctrlKey) {
-                cursor.x2 += settings.unit_width;
-            } else {
-                cursor.x2++; // TODO handle  limits
-            }
-            cursor.x1 = cursor.x2;
-            cursor.y1 = cursor.y2;
+            cursorRight(e);
         }
-        updateSelectionIcons();
-        save_part_position();
-        view.draw();
     } else if (e.key == "ArrowLeft") {
         e.stopPropagation();
         e.preventDefault();
-        // TODO handle left to right
-        if (e.shiftKey) {
-            if (e.ctrlKey) {
-                if (cursor.x1 + settings.unit_width - 1 === cursor.x2) {
-                    cursor.x2 -= settings.unit_width - 1;
-                } else if (cursor.x1 == cursor.x2) {
-                    cursor.x2 -= settings.unit_width - 1;
-                } else {
-                    cursor.x2 -= settings.unit_width;
-                }
-            } else {
-                cursor.x2--; // TODO handle limits
-            }
-            if (cursor.x2 < 0) cursor.x2 = 0;
+        if (cursor.selected_view.righttoleft) {
+            cursorRight(e);
         } else {
-            if (e.ctrlKey) {
-                cursor.x2 -= settings.unit_width;
-            } else {
-                cursor.x2--; // TODO handle  limits
-            }
-            if (cursor.x2 < 0) cursor.x2 = 0;
-            cursor.x1 = cursor.x2;
-            cursor.y1 = cursor.y2;
+            cursorLeft(e);
         }
-        updateSelectionIcons();
-        save_part_position();
-        view.draw();
     } else if (cursor.x1 != cursor.x2 || cursor.y1 != cursor.y2) {
         if (e.key === "Delete") {
             selectionClear();
@@ -2510,6 +2430,122 @@ function keyDown(e) {
             selectionInvert();
         }
     }
+}
+
+function cursorUp(e) {
+    // TODO handle top to bottom
+    if (e.shiftKey) {
+        if (e.ctrlKey) {
+            if (cursor.y1 === cursor.y2) {
+                cursor.y2 += settings.unit_height - 1;
+            } else if (cursor.y2 + settings.unit_height - 1 === cursor.y1) {
+                cursor.y2 += settings.unit_height - 1;
+            } else {
+                cursor.y2 += settings.unit_height;
+            }
+        } else {
+            cursor.y2++; // TODO handle limits
+        }
+    } else {
+        cursor.x1 = cursor.x2;
+        if (e.ctrlKey) {
+            cursor.y2 += settings.unit_height;
+        } else {
+            cursor.y2++; // TODO handle limits
+        }
+        cursor.y1 = cursor.y2;
+    }
+    updateSelectionIcons();
+    save_part_position();
+    view.draw();
+}
+
+function cursorDown(e) {
+    // TODO handle top to bottom
+    if (e.shiftKey) {
+        if (e.ctrlKey) {
+            if (cursor.y1 === cursor.y2) {
+                cursor.y2 -= settings.unit_height - 1;
+            } else if (cursor.y1 + settings.unit_height - 1 === cursor.y2) {
+                cursor.y2 -= settings.unit_height - 1;
+            } else {
+                cursor.y2 -= settings.unit_height;
+            }
+        } else {
+            cursor.y2--; // TODO handle limits
+        }
+        if (cursor.y2 < 0) cursor.y2 = 0;
+    } else {
+        cursor.x1 = cursor.x2;
+        if (e.ctrlKey) {
+            cursor.y2 -= settings.unit_height;
+        } else {
+            cursor.y2--; // TODO handle limits
+        }
+        if (cursor.y2 < 0) cursor.y2 = 0;
+        cursor.y1 = cursor.y2;
+    }
+    updateSelectionIcons();
+    save_part_position();
+    view.draw();
+}
+
+function cursorLeft(e) {
+    // TODO handle left to right
+    if (e.shiftKey) {
+        if (e.ctrlKey) {
+            if (cursor.x1 + settings.unit_width - 1 === cursor.x2) {
+                cursor.x2 -= settings.unit_width - 1;
+            } else if (cursor.x1 == cursor.x2) {
+                cursor.x2 -= settings.unit_width - 1;
+            } else {
+                cursor.x2 -= settings.unit_width;
+            }
+        } else {
+            cursor.x2--; // TODO handle limits
+        }
+        if (cursor.x2 < 0) cursor.x2 = 0;
+    } else {
+        if (e.ctrlKey) {
+            cursor.x2 -= settings.unit_width;
+        } else {
+            cursor.x2--; // TODO handle  limits
+        }
+        if (cursor.x2 < 0) cursor.x2 = 0;
+        cursor.x1 = cursor.x2;
+        cursor.y1 = cursor.y2;
+    }
+    updateSelectionIcons();
+    save_part_position();
+    view.draw();
+}
+
+function cursorRight(e) {
+    // TODO handle left to right!
+    if (e.shiftKey) {
+        if (e.ctrlKey) {
+            if (cursor.x1 === cursor.x2) {
+                cursor.x2 += settings.unit_width - 1;
+            } else if (cursor.x2 + settings.unit_width - 1 == cursor.x1) {
+                cursor.x2 += settings.unit_width - 1;
+            } else {
+                cursor.x2 += settings.unit_width;
+            }
+        } else {
+            cursor.x2++; // TODO handle limits
+        }
+    } else {
+        if (e.ctrlKey) {
+            cursor.x2 += settings.unit_width;
+        } else {
+            cursor.x2++; // TODO handle  limits
+        }
+        cursor.x1 = cursor.x2;
+        cursor.y1 = cursor.y2;
+    }
+    updateSelectionIcons();
+    save_part_position();
+    view.draw();
 }
 
 function selectionClear() {

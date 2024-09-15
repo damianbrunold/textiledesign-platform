@@ -1,6 +1,6 @@
 [project]
 name = "textileplatform"
-version = "0.0.67"
+version = "0.0.68"
 description = "Textile Plattform Webapp"
 authors = [
     {name="Damian Brunold", email="dab@dabsoft.ch"}
