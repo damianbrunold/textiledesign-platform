@@ -729,6 +729,14 @@ class GridViewDummy {
     drawCursor(ctx, settings, cursor) {
         // empty
     }
+
+    registerScrollbars(sb_horz, sb_vert) {
+        // empty
+    }
+
+    scroll(direction, increment) {
+        // empty
+    }
 }
 
 
@@ -746,6 +754,29 @@ class GridView {
         this.painter_prop = painter_prop;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
+        this.sb_horz = null;
+        this.sb_vert = null;
+    }
+
+    registerScrollbars(sb_horz, sb_vert) {
+        if (sb_horz !== null && sb_horz instanceof GridViewDummy) sb_horz = null;
+        if (sb_vert !== null && sb_vert instanceof GridViewDummy) sb_vert = null;
+        this.sb_horz = sb_horz;
+        this.sb_vert = sb_vert;
+    }
+
+    scroll(direction, increment) {
+        if (direction === "h") {
+            if (this.sb_horz === null) return;
+            this.sb_horz.views.forEach((v) => {
+                v.offset_i += increment;
+            });
+        } else if (direction === "v") {
+            if (this.sb_vert === null) return;
+            this.sb_vert.views.forEach((v) => {
+                v.offset_j += increment;
+            });
+        }
     }
 
     contains(i, j) {
@@ -770,10 +801,10 @@ class GridView {
         let j2 = Math.max(cursor.y1, cursor.y2);
 
         i1 = Math.min(Math.max(i1, this.offset_i), this.offset_i + this.width);
-        i2 = Math.min(Math.max(i2, this.offset_i), this.offset_i + this.width);
+        i2 = Math.min(Math.max(i2, this.offset_i), this.offset_i + this.width - 1);
 
         j1 = Math.min(Math.max(j1, this.offset_j), this.offset_j + this.height);
-        j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height);
+        j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height - 1);
 
         const ic = Math.min(Math.max(cursor.x2, this.offset_i), this.offset_i + this.width);
         const jc = Math.min(Math.max(cursor.y2, this.offset_j), this.offset_j + this.height);
@@ -871,6 +902,29 @@ class GridViewPattern {
         this.toptobottom = toptobottom;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
+        this.sb_horz = null;
+        this.sb_vert = null;
+    }
+
+    registerScrollbars(sb_horz, sb_vert) {
+        if (sb_horz !== null && sb_horz instanceof GridViewDummy) sb_horz = null;
+        if (sb_vert !== null && sb_vert instanceof GridViewDummy) sb_vert = null;
+        this.sb_horz = sb_horz;
+        this.sb_vert = sb_vert;
+    }
+
+    scroll(direction, increment) {
+        if (direction === "h") {
+            if (this.sb_horz === null) return;
+            this.sb_horz.views.forEach((v) => {
+                v.offset_i += increment;
+            });
+        } else if (direction === "v") {
+            if (this.sb_vert === null) return;
+            this.sb_vert.views.forEach((v) => {
+                v.offset_j += increment;
+            });
+        }
     }
 
     contains(i, j) {
@@ -903,18 +957,18 @@ class GridViewPattern {
         let j2 = Math.max(cursor.y1, cursor.y2);
 
         i1 = Math.min(Math.max(i1, this.offset_i), this.offset_i + this.width);
-        i2 = Math.min(Math.max(i2, this.offset_i), this.offset_i + this.width);
+        i2 = Math.min(Math.max(i2, this.offset_i), this.offset_i + this.width - 1);
 
         j1 = Math.min(Math.max(j1, this.offset_j), this.offset_j + this.height);
-        j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height);
+        j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height - 1);
 
         const ic = Math.min(Math.max(cursor.x2, this.offset_i), this.offset_i + this.width);
         const jc = Math.min(Math.max(cursor.y2, this.offset_j), this.offset_j + this.height);
 
-        const x1 = this.calc_x(i1);
-        const x2 = this.calc_x(i2+1);
-        const y1 = this.calc_y(j1);
-        const y2 = this.calc_y(j2+1);
+        const x1 = this.calc_x(i1 - this.offset_i);
+        const x2 = this.calc_x(i2+1 - this.offset_i);
+        const y1 = this.calc_y(j1 - this.offset_j);
+        const y2 = this.calc_y(j2+1 - this.offset_j);
 
         ctx.beginPath();
         ctx.moveTo(x1, y1);
@@ -1111,6 +1165,29 @@ class GridViewColors {
         this.offset_j = 0;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
+        this.sb_horz = null;
+        this.sb_vert = null;
+    }
+
+    registerScrollbars(sb_horz, sb_vert) {
+        if (sb_horz !== null && sb_horz instanceof GridViewDummy) sb_horz = null;
+        if (sb_vert !== null && sb_vert instanceof GridViewDummy) sb_vert = null;
+        this.sb_horz = sb_horz;
+        this.sb_vert = sb_vert;
+    }
+
+    scroll(direction, increment) {
+        if (direction === "h") {
+            if (this.sb_horz === null) return;
+            this.sb_horz.views.forEach((v) => {
+                v.offset_i += increment;
+            });
+        } else if (direction === "v") {
+            if (this.sb_vert === null) return;
+            this.sb_vert.views.forEach((v) => {
+                v.offset_j += increment;
+            });
+        }
     }
 
     contains(i, j) {
@@ -1216,6 +1293,29 @@ class GridViewReed {
         this.offset_j = 0;
         this.calc_x = get_x_calculator(this, settings, righttoleft);
         this.calc_y = get_y_calculator(this, settings, toptobottom);
+        this.sb_horz = null;
+        this.sb_vert = null;
+    }
+
+    registerScrollbars(sb_horz, sb_vert) {
+        if (sb_horz !== null && sb_horz instanceof GridViewDummy) sb_horz = null;
+        if (sb_vert !== null && sb_vert instanceof GridViewDummy) sb_vert = null;
+        this.sb_horz = sb_horz;
+        this.sb_vert = sb_vert;
+    }
+
+    scroll(direction, increment) {
+        if (direction === "h") {
+            if (this.sb_horz === null) return;
+            this.sb_horz.views.forEach((v) => {
+                v.offset_i += increment;
+            });
+        } else if (direction === "v") {
+            if (this.sb_vert === null) return;
+            this.sb_vert.views.forEach((v) => {
+                v.offset_j += increment;
+            });
+        }
     }
 
     contains(i, j) {
@@ -1702,6 +1802,7 @@ class PatternView {
         this.scroll_1_hor.registerView(this.entering);
         this.scroll_1_hor.registerView(this.reed);
         this.scroll_1_hor.registerView(this.weave);
+
         if (this.settings.display_treadling) {
             this.scroll_2_hor = new ScrollbarHorz(
                 p.treadling,
@@ -1731,6 +1832,7 @@ class PatternView {
         this.scroll_1_ver.registerView(this.weave);
         this.scroll_1_ver.registerView(this.treadling);
         this.scroll_1_ver.registerView(this.color_weft);
+
         if (this.settings.display_entering) {
             this.scroll_2_ver = new ScrollbarVert(
                 p.entering,
@@ -1743,6 +1845,14 @@ class PatternView {
         } else {
             this.scroll_2_ver = new GridViewDummy();
         }
+
+        this.weave.registerScrollbars(this.scroll_1_hor, this.scroll_1_ver);
+        this.entering.registerScrollbars(this.scroll_1_hor, this.scroll_2_ver);
+        this.treadling.registerScrollbars(this.scroll_2_hor, this.scroll_1_ver);
+        this.tieup.registerScrollbars(this.scroll_2_hor, this.scroll_2_ver);
+        this.color_warp.registerScrollbars(this.scroll_1_hor, null);
+        this.color_weft.registerScrollbars(null, this.scroll_1_ver);
+        this.reed.registerScrollbars(this.scroll_1_hor, null);
     }
 
     make(visible, viewclass, data, x, y, w, h, style, righttoleft, toptobottom) {
@@ -2445,16 +2555,27 @@ function cursorUp(e) {
                 cursor.y2 += settings.unit_height;
             }
         } else {
-            cursor.y2++; // TODO handle limits
+            cursor.y2++;
+        }
+        if (cursor.y2 >= cursor.selected_pattern.height) {
+            cursor.y2 = cursor.selected_pattern.height;
         }
     } else {
         cursor.x1 = cursor.x2;
         if (e.ctrlKey) {
             cursor.y2 += settings.unit_height;
         } else {
-            cursor.y2++; // TODO handle limits
+            cursor.y2++;
+        }
+        if (cursor.y2 >= cursor.selected_pattern.height) {
+            cursor.y2 = cursor.selected_pattern.height;
         }
         cursor.y1 = cursor.y2;
+    }
+    const max_y = cursor.selected_view.offset_j + cursor.selected_view.height;
+    if (cursor.y2 >= max_y) {
+        const scroll_delta = cursor.y2 - max_y + 1;
+        cursor.selected_view.scroll("v", scroll_delta);
     }
     updateSelectionIcons();
     save_part_position();
@@ -2472,47 +2593,27 @@ function cursorDown(e) {
                 cursor.y2 -= settings.unit_height;
             }
         } else {
-            cursor.y2--; // TODO handle limits
+            cursor.y2--;
         }
-        if (cursor.y2 < 0) cursor.y2 = 0;
+        if (cursor.y2 < 0) {
+            cursor.y2 = 0;
+        }
     } else {
         cursor.x1 = cursor.x2;
         if (e.ctrlKey) {
             cursor.y2 -= settings.unit_height;
         } else {
-            cursor.y2--; // TODO handle limits
+            cursor.y2--;
         }
-        if (cursor.y2 < 0) cursor.y2 = 0;
+        if (cursor.y2 < 0) {
+            cursor.y2 = 0;
+        }
         cursor.y1 = cursor.y2;
     }
-    updateSelectionIcons();
-    save_part_position();
-    view.draw();
-}
-
-function cursorLeft(e) {
-    if (e.shiftKey) {
-        if (e.ctrlKey) {
-            if (cursor.x1 + settings.unit_width - 1 === cursor.x2) {
-                cursor.x2 -= settings.unit_width - 1;
-            } else if (cursor.x1 == cursor.x2) {
-                cursor.x2 -= settings.unit_width - 1;
-            } else {
-                cursor.x2 -= settings.unit_width;
-            }
-        } else {
-            cursor.x2--; // TODO handle limits
-        }
-        if (cursor.x2 < 0) cursor.x2 = 0;
-    } else {
-        if (e.ctrlKey) {
-            cursor.x2 -= settings.unit_width;
-        } else {
-            cursor.x2--; // TODO handle  limits
-        }
-        if (cursor.x2 < 0) cursor.x2 = 0;
-        cursor.x1 = cursor.x2;
-        cursor.y1 = cursor.y2;
+    const min_y = cursor.selected_view.offset_j;
+    if (cursor.y2 < min_y) {
+        const scroll_delta = cursor.y2 - min_y;
+        cursor.selected_view.scroll("v", scroll_delta);
     }
     updateSelectionIcons();
     save_part_position();
@@ -2530,16 +2631,65 @@ function cursorRight(e) {
                 cursor.x2 += settings.unit_width;
             }
         } else {
-            cursor.x2++; // TODO handle limits
+            cursor.x2++;
+        }
+        if (cursor.x2 >= cursor.selected_pattern.width) {
+            cursor.x2 = cursor.selected_pattern.width - 1;
         }
     } else {
         if (e.ctrlKey) {
             cursor.x2 += settings.unit_width;
         } else {
-            cursor.x2++; // TODO handle  limits
+            cursor.x2++;
+        }
+        if (cursor.x2 >= cursor.selected_pattern.width) {
+            cursor.x2 = cursor.selected_pattern.width - 1;
         }
         cursor.x1 = cursor.x2;
         cursor.y1 = cursor.y2;
+    }
+    const max_x = cursor.selected_view.offset_i + cursor.selected_view.width;
+    if (cursor.x2 >= max_x) {
+        const scroll_delta = cursor.x2 - max_x + 1;
+        cursor.selected_view.scroll("h", scroll_delta);
+    }
+    updateSelectionIcons();
+    save_part_position();
+    view.draw();
+}
+
+function cursorLeft(e) {
+    if (e.shiftKey) {
+        if (e.ctrlKey) {
+            if (cursor.x1 + settings.unit_width - 1 === cursor.x2) {
+                cursor.x2 -= settings.unit_width - 1;
+            } else if (cursor.x1 == cursor.x2) {
+                cursor.x2 -= settings.unit_width - 1;
+            } else {
+                cursor.x2 -= settings.unit_width;
+            }
+        } else {
+            cursor.x2--;
+        }
+        if (cursor.x2 < 0) {
+            cursor.x2 = 0;
+        }
+    } else {
+        if (e.ctrlKey) {
+            cursor.x2 -= settings.unit_width;
+        } else {
+            cursor.x2--;
+        }
+        if (cursor.x2 < 0) {
+            cursor.x2 = 0;
+        }
+        cursor.x1 = cursor.x2;
+        cursor.y1 = cursor.y2;
+    }
+    const min_x = cursor.selected_view.offset_i;
+    if (cursor.x2 < min_x) {
+        const scroll_delta = cursor.x2 - min_x;
+        cursor.selected_view.scroll("h", scroll_delta);
     }
     updateSelectionIcons();
     save_part_position();
