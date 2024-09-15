@@ -2435,7 +2435,6 @@ function keyDown(e) {
 }
 
 function cursorUp(e) {
-    // TODO handle top to bottom
     if (e.shiftKey) {
         if (e.ctrlKey) {
             if (cursor.y1 === cursor.y2) {
@@ -2463,7 +2462,6 @@ function cursorUp(e) {
 }
 
 function cursorDown(e) {
-    // TODO handle top to bottom
     if (e.shiftKey) {
         if (e.ctrlKey) {
             if (cursor.y1 === cursor.y2) {
@@ -2493,7 +2491,6 @@ function cursorDown(e) {
 }
 
 function cursorLeft(e) {
-    // TODO handle left to right
     if (e.shiftKey) {
         if (e.ctrlKey) {
             if (cursor.x1 + settings.unit_width - 1 === cursor.x2) {
@@ -2523,7 +2520,6 @@ function cursorLeft(e) {
 }
 
 function cursorRight(e) {
-    // TODO handle left to right!
     if (e.shiftKey) {
         if (e.ctrlKey) {
             if (cursor.x1 === cursor.x2) {
