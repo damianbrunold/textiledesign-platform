@@ -107,7 +107,7 @@ function goto_prev_part() {
     } else if (cursor.selected_part === "color_warp") {
         select_part("color_weft", 0, saved_y_weave);
     }
-    if (cursor.selected_view instanceof GridViewDummy) goto_next_prev();
+    if (cursor.selected_view instanceof GridViewDummy) goto_prev_part();
 }
 
 function save_part_position() {
