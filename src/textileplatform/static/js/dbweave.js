@@ -499,23 +499,23 @@ class Grid {
     }
 
     mirrorV(i1, j1, i2, j2) {
-        if (j1 === j2) return;
-        for (let i = i1; i <= i1 + Math.trunc((i2-i1)/2); i++) {
-            for (let j = j1; j <= j2; j++) {
-                const v = this.get(i, j);
-                this.set(i, j, this.get(i2 - (i-i1), j));
-                this.set(i2 - (i-i1), j, v);
-            }
-        }
-    }
-
-    mirrorH(i1, j1, i2, j2) {
         if (i1 === i2) return;
         for (let j = j1; j <= j1 + Math.trunc((j2-j1) / 2); j++) {
             for (let i = i1; i <= i2; i++) {
                 const v = this.get(i, j);
                 this.set(i, j, this.get(i, j2 - (j-j1)));
                 this.set(i, j2 - (j-j1), v);
+            }
+        }
+    }
+
+    mirrorH(i1, j1, i2, j2) {
+        if (j1 === j2) return;
+        for (let i = i1; i <= i1 + Math.trunc((i2-i1)/2); i++) {
+            for (let j = j1; j <= j2; j++) {
+                const v = this.get(i, j);
+                this.set(i, j, this.get(i2 - (i-i1), j));
+                this.set(i2 - (i-i1), j, v);
             }
         }
     }
