@@ -1853,6 +1853,20 @@ class PatternView {
         this.color_warp.registerScrollbars(this.scroll_1_hor, null);
         this.color_weft.registerScrollbars(null, this.scroll_1_ver);
         this.reed.registerScrollbars(this.scroll_1_hor, null);
+
+        if (cursor.selected_part === "weave") {
+            cursor.selected_view = this.weave;
+        } else if (cursor.selected_part === "entering") {
+            cursor.selected_view = this.entering;
+        } else if (cursor.selected_part === "treadling") {
+            cursor.selected_view = this.treadling;
+        } else if (cursor.selected_part === "tieup") {
+            cursor.selected_view = this.tieup;
+        } else if (cursor.selected_part === "color_warp") {
+            cursor.selected_view = this.color_warp;
+        } else if (cursor.selected_part === "color_weft") {
+            cursor.selected_view = this.color_weft;
+        }
     }
 
     make(visible, viewclass, data, x, y, w, h, style, righttoleft, toptobottom) {
