@@ -1,13 +1,13 @@
-import email.message
+from email import message
 import smtplib
 
 from flask import url_for
 from flask_babel import gettext
 
 
-def send_mail(receiver, subject, message):
-    msg = email.message.EmailMessage()
-    msg.set_content(message)
+def send_mail(receiver, subject, content):
+    msg = message.EmailMessage()
+    msg.set_content(content)
     msg["Subject"] = subject
     msg["From"] = "admin@textil-plattform.ch"
     msg["To"] = receiver
