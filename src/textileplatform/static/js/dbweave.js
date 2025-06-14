@@ -2178,7 +2178,7 @@ function init() {
 
 function updateSelectionIcons() {
     const has_selection = cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2;
-    const is_square = has_selection && (cursor.x2 - cursor.x1) === (cursor.y2 - cursor.y1);
+    const is_square = has_selection && Math.abs(cursor.x2 - cursor.x1) === Math.abs(cursor.y2 - cursor.y1);
     if (has_selection) {
         document.getElementById("icon-selection-mirrorv").classList.remove("hidden");
         document.getElementById("icon-selection-mirrorh").classList.remove("hidden");
