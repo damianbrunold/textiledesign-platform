@@ -5,8 +5,8 @@
    viewBox="0 0 48.0 48.0"
    version="1.1"
    id="SVGRoot"
-   sodipodi:docname="icon-vorlage.svg"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="icon-selection-mirrorh.svg"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -21,143 +21,156 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="px"
      showgrid="true"
-     inkscape:zoom="24.3125"
-     inkscape:cx="18.879177"
-     inkscape:cy="24"
-     inkscape:window-width="2560"
-     inkscape:window-height="1376"
-     inkscape:window-x="1920"
-     inkscape:window-y="27"
-     inkscape:window-maximized="1"
+     inkscape:zoom="17.191534"
+     inkscape:cx="24.808723"
+     inkscape:cy="25.535825"
+     inkscape:window-width="1916"
+     inkscape:window-height="2041"
+     inkscape:window-x="3831"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0"
      inkscape:current-layer="layer3"
      showguides="true"
-     inkscape:guide-bbox="true">
+     inkscape:guide-bbox="true"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1">
     <inkscape:grid
        type="xygrid"
-       id="grid2247" />
+       id="grid2247"
+       originx="0"
+       originy="0"
+       spacingy="1"
+       spacingx="1"
+       units="px" />
     <sodipodi:guide
        position="0,43"
        orientation="1,0"
-       id="guide2272" />
+       id="guide2272"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="8,43"
        orientation="1,0"
-       id="guide2274" />
+       id="guide2274"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="16,42"
        orientation="1,0"
-       id="guide2276" />
+       id="guide2276"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="24,42"
        orientation="1,0"
-       id="guide2278" />
+       id="guide2278"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="32,42"
        orientation="1,0"
-       id="guide2280" />
+       id="guide2280"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="40,41"
        orientation="1,0"
-       id="guide2282" />
+       id="guide2282"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="48,41"
        orientation="1,0"
-       id="guide2284" />
+       id="guide2284"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="-17,48"
        orientation="0,-1"
-       id="guide2286" />
+       id="guide2286"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="-17,40"
        orientation="0,-1"
-       id="guide2288" />
+       id="guide2288"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="-12,32"
        orientation="0,-1"
-       id="guide2290" />
+       id="guide2290"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="-14,24"
        orientation="0,-1"
-       id="guide2292" />
+       id="guide2292"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="-14,16"
        orientation="0,-1"
-       id="guide2294" />
+       id="guide2294"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="-6,8"
        orientation="0,-1"
-       id="guide2296" />
+       id="guide2296"
+       inkscape:locked="false" />
     <sodipodi:guide
        position="-6,0"
        orientation="0,-1"
-       id="guide2298" />
+       id="guide2298"
+       inkscape:locked="false" />
   </sodipodi:namedview>
   <defs
-     id="defs2236" />
+     id="defs2236">
+    <marker
+       style="overflow:visible"
+       id="marker4"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Concave triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="M -2,-4 9,0 -2,4 c 2,-2.33 2,-5.66 0,-8 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path4" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="ConcaveTriangle"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Concave triangle arrow"
+       markerWidth="1"
+       markerHeight="1"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="M -2,-4 9,0 -2,4 c 2,-2.33 2,-5.66 0,-8 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path7" />
+    </marker>
+  </defs>
   <g
      inkscape:groupmode="layer"
      id="layer3"
-     inkscape:label="Pattern" />
-  <g
-     inkscape:label="Grid"
-     inkscape:groupmode="layer"
-     id="layer1"
-     sodipodi:insensitive="true">
+     inkscape:label="Pattern">
     <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 0,0 H 48"
-       id="path2399" />
+       style="display:inline;fill:#7c916f;stroke:#000000;stroke-width:2.21744;stroke-dasharray:none"
+       d="m 21.682688,33.687942 c 0.05368,-31.0721802 0,-29.6774193 0,-29.6774193 l -10.718753,0.077487 -7.155528,7.8846173 0.05368,21.40537 z"
+       id="path1"
+       sodipodi:nodetypes="cccccc" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 0,8 H 48"
-       id="path2401" />
+       style="display:inline;fill:#9dac93;stroke:#333333;stroke-width:2.21979;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 26.115646,33.725295 c -0.05369,-31.1375632 0,-29.7398669 0,-29.7398669 l 11.065092,0.07765 6.809533,7.7557909 -0.05368,21.595829 z"
+       id="path1-2"
+       sodipodi:nodetypes="cccccc" />
     <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 0,16 H 48"
-       id="path2403" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 0,24 h 48 v 0 0"
-       id="path2405" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 0,32 c 48,0 48,0 48,0"
-       id="path2407" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 0,40 H 48"
-       id="path2409" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 0,48 H 48"
-       id="path2411" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 0,0 V 48"
-       id="path2413" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 8,0 V 48"
-       id="path2415" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 16,0 V 48"
-       id="path2417" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 24,0 V 48"
-       id="path2419" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 32,0 V 48"
-       id="path2421" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 40,0 V 48"
-       id="path2423" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 48,0 V 48"
-       id="path2425" />
+       style="display:inline;fill:none;stroke:#000000;stroke-width:1.22431;stroke-dasharray:none;stroke-dashoffset:0;marker-start:url(#marker4);marker-end:url(#ConcaveTriangle)"
+       d="M 15.469901,41.187972 H 32.414047"
+       id="path2" />
   </g>
 </svg>
