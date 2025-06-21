@@ -31,9 +31,6 @@ Todo
 - dbweave
   - ui: better public/private icon for dark mode
   - implement zoom (or use browser zoom?)
-  - implement basic keyboard focus/movement
-  - implement selection
-  - selection operations (mirror v/h, rotate, invert, ...)
   - calculate repeat
   - display color palette
   - support scrolling
@@ -43,6 +40,12 @@ Todo
   - rotate simulated view
   - draw info and bead list
   - add tools/menus
+
+jbead: when height is smaller than screen height, then we need to
+correctly limit the display and the interaction. For the draft, this
+should work now. But for the other views, the limit may be within a
+row, thus we only draw part of the last row. And also, the interaction
+(i.e. contains-method) needs to check for this...
 
 The webapp obviously needs to be usable with a mouse. But
 I also want it to be as usable as possible with the keyboard

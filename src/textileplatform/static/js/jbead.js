@@ -17,6 +17,11 @@ let view = null;
 let settings = null;
 
 
+// The beadlist is an instance of the BeadList class and provides information
+// about the current repeat, i.e. the sequence of bead colors and counts.
+let beadlist = null;
+
+
 // The colors variable represents the color palette
 let colors = [];
 
@@ -48,6 +53,65 @@ class Pattern {
     }
 }
 
+class BeadList {
+    constructor(data) {
+	this.data = data;
+	this.usedHeight = null;
+	this.repeat = null;
+	this.list = [];
+    }
+
+    updateUsedHeight() {
+	this.usedHeight = 0;
+	for (let idx = 0; idx < this.data.height * this.data.width; idx++) {
+	    if (this.data.data[idx] > 0) {
+		this.usedHeight = Math.trunc(idx / this.data.width) + 1;
+	    }
+	}
+    }
+    
+    updateRepeat() {
+	this.repeat = this.usedHeight * this.data.width;
+	for (let i = 1; i < this.usedHeight * this.data.width; i++) {
+	    if (this.data.data[i] == this.data.data[0]) {
+		let ok = true;
+		for (let k = i + 1; k < this.usedHeight * this.data.width; k++) {
+		    if (this.data.data[(k - i) % i] != this.data.data[k]) {
+			ok = false;
+			break;
+		    }
+		}
+		if (ok) {
+		    this.repeat = i;
+		    break;
+		}
+	    }
+	}
+    }
+
+    updateBeadList() {
+	this.list = []
+	let color = this.data.data[this.repeat - 1];
+	let count = 1;
+	for (let i = this.repeat - 2; i >= 0; i--) {
+	    if (this.data.data[i] == color) {
+		count++;
+	    } else {
+		this.list.push([color, count]);
+		color = this.data.data[i];
+		count = 1;
+	    }
+	}
+	this.list.push([color, count]);
+    }
+    
+    update() {
+	this.updateUsedHeight();
+	this.updateRepeat();
+	this.updateBeadList();
+    }
+}
+
 
 class ViewRuler {
     constructor(x, y, width, height) {
@@ -60,7 +124,7 @@ class ViewRuler {
 
     contains(i, j) {
         return this.x <= i && i < this.x + this.width &&
-               this.y <= j && j < this.y + this.height;
+               this.y <= j && j < this.y + Math.min(pattern.height, this.height);
     }
 
     draw(ctx, settings) {
@@ -71,7 +135,7 @@ class ViewRuler {
         ctx.fillStyle = settings.darcula ? "#aaa" : "#222";
         ctx.font = `${settings.dy}px sans-serif`;
         ctx.textAlign = 'end';
-        for (let j = 0; j <= this.height; j++) {
+        for (let j = 0; j <= Math.min(pattern.height, this.height); j++) {
             const jj = j + this.offset + 1;
             if (jj % 10 == 0) {
                 ctx.moveTo(
@@ -107,7 +171,7 @@ class ViewDraft {
 
     contains(i, j) {
         return this.x <= i && i < this.x + this.width &&
-               this.y <= j && j < this.y + this.height;
+               this.y <= j && j < this.y + Math.min(pattern.height, this.height);
     }
 
     pixelToDataCoord(x, y) {
@@ -127,7 +191,7 @@ class ViewDraft {
         const dx = settings.dx;
         const dy = settings.dy;
 
-        for (let j = 0; j < this.height; j++) {
+        for (let j = 0; j < Math.min(pattern.height, this.height); j++) {
             for (let i = 0; i < this.width; i++) {
                 const state = this.data.get(i, j);
                 const x = 0.5 + (this.x + i) * dx;
@@ -381,6 +445,66 @@ class ViewColors {
 
 
 
+class ViewBeadList {
+    constructor(x, y, width, height) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.offset = 0;
+    }
+
+    contains(i, j) {
+        return this.x <= i && i < this.x + this.width &&
+               this.y <= j && j < this.y + this.height;
+    }
+
+    draw(ctx, settings) {
+	const dx = 50; // TODO make scalable?
+	const dy = 25;
+	const b = 5;
+
+        ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+	ctx.beginPath();
+	ctx.moveTo(this.x + b, this.y);
+	ctx.lineTo(this.x + b, this.y + 60);
+	ctx.lineTo(this.x + 1, this.y + 60 - b*2);
+	ctx.moveTo(this.x + b, this.y + 60);
+	ctx.lineTo(this.x + b*2 - 1, this.y + 60 - b*2);
+	ctx.stroke();
+        ctx.font = "16px sans-serif";
+	ctx.textAlign = "center";
+	let x = this.x + 2*b;
+	let y = this.y;
+	for (let [color, count] of beadlist.list) {
+	    ctx.fillStyle = colors[color];
+	    ctx.beginPath();
+            ctx.roundRect(x, y, dx, dy, dx / 3);
+            ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+	    ctx.fill();
+	    ctx.stroke();
+	    ctx.fillStyle = contrastingColor(colors[color]);
+	    ctx.fillText(`${count}`, x + dx / 2, y + dy / 2 + 5);
+	    y += dy + b;
+	    if (y + dy > this.y + this.height * settings.dy) {
+		x += dx + b;
+		y = this.y;
+	    }
+	}
+    }
+}
+
+
+function contrastingColor(color) {
+    const parts = color.slice(4, color.length - 1).split(",");
+    const r = parseInt(parts[0].trim(), 16);
+    const g = parseInt(parts[1].trim(), 16);
+    const b = parseInt(parts[2].trim(), 16);
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luminance > 128 ? "#000" : "#fff";
+}
+
+
 class ViewSettings {
     constructor(dx=12, dy=null) {
         this.dx = dx;
@@ -391,8 +515,9 @@ class ViewSettings {
 
 
 class PatternView {
-    constructor(pattern, settings, ctx) {
+    constructor(pattern, beadlist, settings, ctx) {
         this.settings = settings;
+	this.beadlist = beadlist;
         this.pattern = pattern;
         this.ctx = ctx;
         this.layout();
@@ -402,8 +527,8 @@ class PatternView {
         const dx = this.settings.dx;
         const dy = this.settings.dy;
 
-        const availx = Math.trunc(this.ctx.canvas.width / dx);
-        const availy = Math.trunc(this.ctx.canvas.height / dy);
+        const availx = Math.trunc((this.ctx.canvas.width - 2) / dx);
+        const availy = Math.trunc((this.ctx.canvas.height - 2) / dy);
 
         const width_ruler = 3;
         const width_draft = this.pattern.width;
@@ -414,14 +539,14 @@ class PatternView {
         const x2 = width_ruler + 1;
         const x3 = x2 + width_draft + 2;
         const x4 = x3 + width_corrected + 2;
-        const x5 = x4 + width_simulated + 2;
+        const x5 = x4 + width_simulated + 1;
 
         this.ruler = new ViewRuler(x1, 0, width_ruler, availy);
         this.draft = new ViewDraft(this.pattern, x2, 0, width_draft, availy);
         this.corrected = new ViewCorrected(this.pattern, x3, 0, width_corrected, availy);
         this.simulated = new ViewSimulated(this.pattern, x4, 0, width_simulated, availy);
         this.colors = new ViewColors(colors, x5 * dx, 0, 2 * 25, 16 * 25);
-        // TODO bead-list
+	this.beads = new ViewBeadList(x5 * dx + 2 * 25 + dx, 0, 5 * 25, availy); // TODO fix width
     }
 
     draw() {
@@ -431,6 +556,7 @@ class PatternView {
         this.simulated.draw(this.ctx, this.settings);
         this.colors.draw(this.ctx, this.settings);
         this.ruler.draw(this.ctx, this.settings);
+	this.beads.draw(this.ctx, this.settings);
     }
 
     clearCanvas() {
@@ -444,19 +570,21 @@ function init() {
     pattern = new Pattern(data.model[0].length, data.model.length);
     settings = new ViewSettings();
     settings.darcula = darkmode;
+    beadlist = new BeadList(pattern);
 
     const container = document.getElementById("container");
-    const canvas = document.getElementById('canvas');
+    const canvas = document.getElementById("canvas");
     canvas.style.backgroundColor = settings.darcula ? "#444" : "#fff";
     canvas.style.border = "none";
     const ctx = canvas.getContext('2d');
     ctx.canvas.width = container.clientWidth - 2;
     ctx.canvas.height = container.clientHeight - 2;
 
-    view = new PatternView(pattern, settings, ctx);
+    view = new PatternView(pattern, beadlist, settings, ctx);
 
     initPattern(data, pattern);
     selected_color = data['view']['selected-color']
+    beadlist.update();
 
     view.draw();
 
@@ -495,8 +623,10 @@ function togglePattern(coord) {
         selected_color = pattern.get(i, j);
     } else if (val !== selected_color) {
         pattern.set(i, j, selected_color);
+	beadlist.update();
     } else {
         pattern.set(i, j, background_color);
+	beadlist.update();
     }
 }
 
@@ -553,4 +683,4 @@ async function checkAutosave() {
     }
 }
 
-window.setInterval(checkAutosave, 30 * 1000);
+window.setInterval(checkAutosave, 5 * 1000);
