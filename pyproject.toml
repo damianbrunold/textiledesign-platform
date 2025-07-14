@@ -13,7 +13,7 @@ dependencies = [
     "flask-migrate",
     "flask-sqlalchemy",
     "python-dotenv",
-    "psycopg",
+    "postgres",
     "reportlab",
     "Pillow",
     "pre-commit",
