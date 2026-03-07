@@ -450,8 +450,12 @@ msgstr ""
 msgid "Profile"
 msgstr ""
 
-#: src/textileplatform/templates/profile.html:21
-msgid "Dark mode"
+#: src/textileplatform/templates/profile.html
+msgid "Light"
+msgstr ""
+
+#: src/textileplatform/templates/profile.html
+msgid "Dark"
 msgstr ""
 
 #: src/textileplatform/templates/profile.html:25
