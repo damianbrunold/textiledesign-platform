@@ -274,3 +274,30 @@ img.icon.selected {
 .hidden {
     display: none;
 }
+
+.mode-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1em;
+}
+.mode-btn {
+    padding: 0.2rem 1rem;
+    border: 1px solid #ccc;
+    background: #ddd;
+    cursor: pointer;
+    color: #000;
+}
+.mode-btn:first-child {
+    border-radius: 3px 0 0 3px;
+}
+.mode-btn:last-of-type {
+    border-radius: 0 3px 3px 0;
+}
+.mode-btn.active {
+    background: #999;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    border-color: #aaa;
+}
+.mode-btn:hover:not(.active) {
+    background: #eee;
+}

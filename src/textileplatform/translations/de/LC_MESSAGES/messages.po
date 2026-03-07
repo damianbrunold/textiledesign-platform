@@ -451,9 +451,13 @@ msgstr "Alle Muster"
 msgid "Profile"
 msgstr "Profil"
 
-#: src/textileplatform/templates/profile.html:21
-msgid "Dark mode"
-msgstr "Dunkelansicht"
+#: src/textileplatform/templates/profile.html
+msgid "Light"
+msgstr "Hell"
+
+#: src/textileplatform/templates/profile.html
+msgid "Dark"
+msgstr "Dunkel"
 
 #: src/textileplatform/templates/profile.html:25
 msgid "Log out"

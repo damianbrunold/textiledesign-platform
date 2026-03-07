@@ -363,7 +363,7 @@ def source_pattern(user_name, pattern_name):
 def profile():
     if request.method == "POST":
         email = request.form["email"]
-        darkmode = "darkmode" in request.form
+        darkmode = request.form.get("darkmode") == "1"
         user = g.user
         user.email = email
         user.email_lower = email.lower()

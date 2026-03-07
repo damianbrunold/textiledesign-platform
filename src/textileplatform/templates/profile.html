@@ -16,16 +16,35 @@
   <form id="profile-form" method="post">
     <label for="email">{{ gettext('E-Mail') }}</label>
     <input name="email" id="email" required value="{{ user.email }}">
-    <div>
-        <input type="checkbox" name="darkmode" id="darkmode" {% if user.darkmode %}checked{% endif %}>
-        <label for="darkmode" class="inline">{{ gettext('Dark mode') }}</label>
+    <div class="mode-toggle">
+        <button type="button" id="btn-light" class="mode-btn {% if not user.darkmode %}active{% endif %}">{{ gettext('Light') }}</button>
+        <button type="button" id="btn-dark" class="mode-btn {% if user.darkmode %}active{% endif %}">{{ gettext('Dark') }}</button>
+        <input type="hidden" name="darkmode" id="darkmode-value" value="{{ '1' if user.darkmode else '' }}">
     </div>
     <button id="save">{{ gettext('Save') }}</button>
   </form>
-  <div><a class="button" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</div>
+  <div><a class="button" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a></div>
   <script>
-      document.getElementById("save").addEventHandler("click", e => {
+      document.getElementById("save").addEventListener("click", e => {
         document.getElementById("profile-form").submit();
       });
+      const darkStyleUrl = "{{ url_for('static', filename='css/style_dark.css') }}";
+      function setDarkMode(enabled) {
+          let link = document.getElementById('dark-stylesheet');
+          if (enabled && !link) {
+              link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.id = 'dark-stylesheet';
+              link.href = darkStyleUrl;
+              document.head.appendChild(link);
+          } else if (!enabled && link) {
+              link.remove();
+          }
+          document.getElementById('darkmode-value').value = enabled ? '1' : '';
+          document.getElementById('btn-light').classList.toggle('active', !enabled);
+          document.getElementById('btn-dark').classList.toggle('active', enabled);
+      }
+      document.getElementById('btn-light').addEventListener('click', () => setDarkMode(false));
+      document.getElementById('btn-dark').addEventListener('click', () => setDarkMode(true));
   </script>
 {% endblock %}
