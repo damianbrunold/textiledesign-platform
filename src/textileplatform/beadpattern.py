@@ -12,9 +12,46 @@ def parse_jbb_data(jbbdata, name=''):
 
 
 def render_jbb_data(pattern):
-    # TODO fill contents as required by jbb format
-    # TODO serialize contents
-    pass
+    lines = ['(jbb']
+    lines.append('    (version 1)')
+    lines.append(f'    (author {_render_value(pattern["author"])})')
+    lines.append(f'    (notes {_render_value(pattern["notes"])})')
+
+    colors = pattern['colors']
+    lines.append('    (colors')
+    for i, color in enumerate(colors):
+        r, g, b = color[0], color[1], color[2]
+        close = '))' if i == len(colors) - 1 else ')'
+        lines.append(f'        (rgb {r} {g} {b}{close}')
+
+    view = pattern['view']
+    view_keys = [
+        'draft-visible', 'corrected-visible', 'simulation-visible',
+        'report-visible', 'selected-tool', 'selected-color',
+        'zoom', 'scroll', 'shift',
+    ]
+    lines.append('    (view')
+    for i, key in enumerate(view_keys):
+        close = '))' if i == len(view_keys) - 1 else ')'
+        lines.append(f'        ({key} {_render_value(view[key])}{close}')
+
+    model = pattern['model']
+    lines.append('    (model')
+    for i, row in enumerate(model):
+        row_str = ' '.join(str(v) for v in row)
+        close = ')))' if i == len(model) - 1 else ')'
+        lines.append(f'        (row {row_str}{close}')
+
+    return '\n'.join(lines) + '\n'
+
+
+def _render_value(value):
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    elif isinstance(value, str):
+        return f'"{value}"'
+    else:
+        return str(value)
 
 
 def _parse_jbb_into_struct(data):

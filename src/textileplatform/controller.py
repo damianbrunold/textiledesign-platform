@@ -1,4 +1,4 @@
-from textileplatform.beadpattern import parse_jbb_data
+from textileplatform.beadpattern import parse_jbb_data, render_jbb_data
 from textileplatform.db import db
 from textileplatform.app import app
 from textileplatform.models import User
@@ -17,7 +17,7 @@ from textileplatform.mail import send_admin_notification_mail
 from textileplatform.mail import send_recover_mail
 from textileplatform.palette import default_weave_palette
 from textileplatform.palette import default_bead_palette
-from textileplatform.weavepattern import parse_dbw_data
+from textileplatform.weavepattern import parse_dbw_data, render_dbw_data
 
 from importlib.metadata import version
 import datetime
@@ -328,6 +328,43 @@ def download_pattern(user_name, pattern_name):
         as_attachment=True,
         download_name=f"{user_name}-{pattern_name}.json",
     )
+
+
+@app.route("/<string:user_name>/<string:pattern_name>/download/legacy")
+def download_pattern_legacy(user_name, pattern_name):
+    user = User.query.filter(User.name == user_name.lower()).first()
+    if not user:
+        return redirect(url_for("index"))
+    pattern = (
+        Pattern.query
+        .join(User)
+        .filter(Pattern.name == pattern_name)
+        .filter(User.name == user_name.lower())
+        .first()
+    )
+    if not pattern:
+        return redirect(url_for("user", user_name=user_name))
+    readonly = not g.user or g.user.name != user.name
+    superuser = g.user and g.user.name == "superuser"
+    if not superuser and readonly and not pattern.public:
+        return redirect(url_for("user", user_name=user_name))
+    pattern.pattern = json.loads(pattern.contents)
+    if pattern.pattern_type == "DB-WEAVE Pattern":
+        return send_file(
+            io.BytesIO(render_dbw_data(pattern.pattern).encode("utf8")),
+            mimetype="application/octet-stream",
+            as_attachment=True,
+            download_name=f"{user_name}-{pattern_name}.dbw",
+        )
+    elif pattern.pattern_type == "JBead Pattern":
+        return send_file(
+            io.BytesIO(render_jbb_data(pattern.pattern).encode("utf8")),
+            mimetype="application/octet-stream",
+            as_attachment=True,
+            download_name=f"{user_name}-{pattern_name}.jbb",
+        )
+    else:
+        return redirect(url_for("user", user_name=user_name))
 
 
 @app.route("/<string:user_name>/<string:pattern_name>/source")

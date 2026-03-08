@@ -80,9 +80,155 @@ def parse_dbw_data(dbwdata, name=''):
 
 
 def render_dbw_data(pattern):
-    # TODO fill contents as required by dbw format
-    # TODO serialize contents
-    pass
+    lines = ['@dbw3:file']
+
+    lines.append('\\properties{')
+    lines.append(f'author=={pattern.get("author", "")}')
+    lines.append(f'organization=={pattern.get("organization", "")}')
+    lines.append(f'remarks=={pattern.get("notes", "")}')
+    lines.append('}')
+
+    lines.append('\\data{')
+
+    lines.append('\\size{')
+    lines.append(f'maxx1=={pattern["width"]}')
+    lines.append(f'maxy2=={pattern["height"]}')
+    lines.append(f'maxx2=={pattern["max_shafts"]}')
+    lines.append(f'maxy1=={pattern["max_treadles"]}')
+    lines.append('}')
+
+    lines.append('\\fields{')
+    lines.append('\\einzug{')
+    lines.append(f'data=={_enhex_short(pattern["data_entering"])}')
+    lines.append('}')
+    lines.append('\\aufknuepfung{')
+    lines.append(f'data=={_enhex_byte(pattern["data_tieup"])}')
+    lines.append('}')
+    lines.append('\\trittfolge{')
+    lines.append('\\trittfolge{')
+    lines.append(f'data=={_enhex_byte(pattern["data_treadling"])}')
+    lines.append('}')
+    lines.append('}')
+    lines.append('\\blatteinzug{')
+    lines.append(f'data=={_enhex_byte(pattern["data_reed"])}')
+    lines.append('}')
+    lines.append('\\kettfarben{')
+    lines.append(f'data=={_enhex_ubyte(pattern["colors_warp"])}')
+    lines.append('}')
+    lines.append('\\schussfarben{')
+    lines.append(f'data=={_enhex_ubyte(pattern["colors_weft"])}')
+    lines.append('}')
+    lines.append('}')  # fields
+
+    lines.append('\\palette{')
+    lines.append(f'data2=={_enhex_colors(pattern["palette"])}')
+    lines.append('}')
+
+    lines.append('}')  # data
+
+    hebung = '0' if pattern.get('warp_lifting', True) else '1'
+    lines.append('\\view{')
+    lines.append('\\general{')
+    lines.append(f'hebung=={hebung}')
+    lines.append(f'zoom=={pattern.get("zoom", 1)}')
+    lines.append(f'color=={pattern.get("current_color", 0)}')
+    lines.append(f'faktor_kette=={pattern.get("warp_factor", 1.0)}')
+    lines.append(f'faktor_schuss=={pattern.get("weft_factor", 1.0)}')
+    lines.append(f'righttoleft=={"1" if pattern.get("direction_righttoleft") else "0"}')
+    lines.append(f'toptobottom=={"1" if pattern.get("direction_toptobottom") else "0"}')
+    lines.append(f'viewhlines=={"1" if pattern.get("display_hlines") else "0"}')
+    lines.append(f'viewrapport=={"1" if pattern.get("display_repeat") else "0"}')
+    lines.append(f'viewpalette=={"1" if pattern.get("display_palette") else "0"}')
+    lines.append(f'viewpegplan=={"1" if pattern.get("display_pegplan") else "0"}')
+    lines.append('}')  # general
+
+    lines.append('\\einzug{')
+    lines.append(f'hvisible=={pattern.get("visible_shafts", 0)}')
+    lines.append(f'visible=={"1" if pattern.get("display_entering") else "0"}')
+    lines.append(f'down=={"1" if pattern.get("entering_at_bottom") else "0"}')
+    lines.append(f'viewtype=={_encode_viewtype(pattern.get("entering_style", "filled"))}')
+    lines.append('}')
+
+    lines.append('\\trittfolge{')
+    lines.append(f'wvisible=={pattern.get("visible_treadles", 0)}')
+    lines.append(f'visible=={"1" if pattern.get("display_treadling") else "0"}')
+    lines.append(f'single=={"1" if pattern.get("single_treadling") else "0"}')
+    lines.append(f'viewtype=={_encode_viewtype(pattern.get("treadling_style", "filled"))}')
+    lines.append('}')
+
+    lines.append('\\aufknuepfung{')
+    lines.append(f'viewtype=={_encode_viewtype(pattern.get("tieup_style", "filled"))}')
+    lines.append('}')
+
+    weave_style_map = {
+        'draft': '0', 'color': '1', 'simulation': '2', 'invisible': '3'
+    }
+    state = weave_style_map.get(pattern.get('weave_style', 'draft'), '0')
+    lines.append('\\gewebe{')
+    lines.append(f'withgrid=={"1" if pattern.get("color_effect_with_grid") else "0"}')
+    lines.append(f'locked=={"1" if pattern.get("weave_locked") else "0"}')
+    lines.append(f'stronglinex=={pattern.get("unit_width", 0)}')
+    lines.append(f'strongliney=={pattern.get("unit_height", 0)}')
+    lines.append(f'state=={state}')
+    lines.append('}')
+
+    lines.append('\\blatteinzug{')
+    lines.append(f'visible=={"1" if pattern.get("display_reed") else "0"}')
+    lines.append('}')
+
+    lines.append('\\kettfarben{')
+    lines.append(f'visible=={"1" if pattern.get("display_colors_warp") else "0"}')
+    lines.append('}')
+
+    lines.append('\\schussfarben{')
+    lines.append(f'visible=={"1" if pattern.get("display_colors_weft") else "0"}')
+    lines.append('}')
+
+    lines.append('}')  # view
+
+    return '\n'.join(lines) + '\n'
+
+
+def _enhex_short(values):
+    parts = []
+    for v in values:
+        if v is None: v = 0
+        if v < 0:
+            v += 65536
+        lo = v & 0xff
+        hi = (v >> 8) & 0xff
+        parts.append(f'{lo:02x}{hi:02x}')
+    return ''.join(parts)
+
+
+def _enhex_byte(values):
+    parts = []
+    for v in values:
+        if v is None: v = 0
+        if v < 0:
+            v += 256
+        parts.append(f'{v:02x}')
+    return ''.join(parts)
+
+
+def _enhex_ubyte(values):
+    return ''.join(f'{v:02x}' if v is not None else '00' for v in values)
+
+
+def _enhex_colors(colors):
+    parts = []
+    for c in colors:
+        parts.append(f'{c[0]:02x}{c[1]:02x}{c[2]:02x}{c[3]:02x}')
+    return ''.join(parts)
+
+
+def _encode_viewtype(style):
+    styles = {
+        'filled': '0', 'dash': '1', 'cross': '2', 'dot': '3',
+        'circle': '4', 'rising': '5', 'falling': '6',
+        'smallcross': '7', 'smallcircle': '8', 'number': '9',
+    }
+    return styles.get(style, '0')
 
 
 def _unsplit_lines(lines):
