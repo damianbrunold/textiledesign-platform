@@ -2,14 +2,70 @@
     height: 2rem;
 }
 
+/* Use flexbox so #container auto-fills the remaining vertical space below
+   the menubar + icon toolbar, instead of a hand-tuned calc() that has to be
+   updated each time a chrome element is added. */
+.content:has(#container) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.content:has(#container) > header { flex: 0 0 auto; }
+.content:has(#container) > #tx-menubar { flex: 0 0 auto; }
+.content:has(#container) > #header { flex: 0 0 auto; }
+
 #container {
-    width: calc(100% - 2px - 2rem);
-    height: calc(100vh - 8rem - 5px - 1rem);
+    width: calc(100% - 2px);
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
 }
 
 #canvas {
     background: #aaa;
     border: 1px solid #555;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#palette-panel {
+    --tx-pal-cell: 18px;
+    flex: 0 0 auto;
+    margin-left: 4px;
+    padding: 2px;
+    border: 1px solid #555;
+    background: #f4f4f4;
+    color: #222;
+    overflow: hidden;
+}
+#palette-panel.hidden { display: none; }
+.palette-panel-title {
+    font-weight: bold;
+    font-size: 0.65rem;
+    text-align: center;
+    margin-bottom: 2px;
+}
+#palette-panel-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--tx-pal-cell);
+    gap: 0;
+}
+.palette-cell {
+    width: var(--tx-pal-cell);
+    height: var(--tx-pal-cell);
+    border: 1px solid #555;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.palette-cell.selected {
+    outline: 1px solid #ff5;
+    outline-offset: -2px;
+    border-color: #000;
+    box-shadow: 0 0 0 1px #000, 0 0 0 2px #ff5;
+    z-index: 1;
+    position: relative;
 }
 
 #modified {
@@ -23,3 +79,21 @@
 
 .changed { background: #900; }
 .unchanged { background: #090; }
+
+/* Tab strip for the tabbed Optionen dialog. */
+.tx-tabs .tx-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: inherit;
+}
+.tx-tabs .tx-tab.active {
+    background: #fff;
+    border-color: #888;
+    border-bottom: 1px solid transparent;
+    margin-bottom: -1px;
+}
+/* Pane visibility is driven by inline style toggled in JS. */

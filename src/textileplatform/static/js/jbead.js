@@ -660,6 +660,10 @@ window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
     getPattern().then(init);
     if (!readonly) {
+        installBeforeUnloadGuard(() => {
+            saveSettings(data, settings);
+            savePatternData(data, pattern);
+        });
         document.getElementById("public").addEventListener("click", togglePublic);
         document.getElementById("save").addEventListener("click", () => {
             saveSettings(data, settings);

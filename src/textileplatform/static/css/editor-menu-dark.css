@@ -1,0 +1,65 @@
+/* Dark-mode overrides for the editor menubar + modal. */
+
+#tx-menubar {
+    background: #3a3a3a;
+    border-bottom-color: #222;
+    color: #ddd;
+}
+.tx-menubar .tx-menu-top:hover,
+.tx-menubar .tx-menu-top.open {
+    background: #4a4a4a;
+}
+.tx-menubar .tx-menu-dropdown {
+    background: #2e2e2e;
+    border-color: #111;
+    color: #ddd;
+}
+.tx-menubar .tx-menu-item:hover:not(.tx-disabled) {
+    background: #355a8a;
+    color: #fff;
+}
+.tx-menubar .tx-menu-item.tx-disabled { color: #666; }
+.tx-menubar .tx-menu-item.tx-checked::before { color: #ddd; }
+.tx-menubar .tx-menu-shortcut { color: #aaa; }
+.tx-menubar .tx-menu-separator { background: #444; }
+
+.tx-modal {
+    background: #2e2e2e;
+    color: #ddd;
+    border-color: #111;
+}
+.tx-modal-header {
+    background: #3a3a3a;
+    border-bottom-color: #222;
+    color: #ddd;
+}
+.tx-modal-footer {
+    background: #272727;
+    border-top-color: #222;
+}
+.tx-modal-btn {
+    background: #555;
+    color: #eee;
+    border: 1px solid #333;
+}
+
+/* Palette toolbox panel — dark variant. */
+#palette-panel {
+    background: #2e2e2e;
+    color: #ddd;
+    border-color: #111;
+}
+.palette-cell {
+    border-color: #111;
+}
+.palette-cell.selected {
+    outline-color: #ff5;
+    border-color: #fff;
+    box-shadow: 0 0 0 1px #fff, 0 0 0 2px #ff5;
+}
+
+/* Tabbed dialog — dark variant. */
+.tx-tabs .tx-tab.active {
+    background: #2e2e2e;
+    border-color: #555;
+}

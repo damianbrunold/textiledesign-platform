@@ -83,6 +83,47 @@ async function savePattern() {
 }
 
 
+// Best-effort save during page-unload. Uses fetch with keepalive: true,
+// which is specifically designed to keep requests alive across document
+// unload. (navigator.sendBeacon can't be used here because it only sends
+// POST, but our save endpoint is PUT.)
+function sendBeaconSave() {
+    const user = document.getElementById("user").value;
+    const pattern = document.getElementById("pattern").value;
+    const body = JSON.stringify({ action: "save-pattern", contents: data });
+    const url = `/api/pattern/${user}/${pattern}`;
+    try {
+        fetch(url, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body,
+            keepalive: true,
+            credentials: "same-origin",
+        });
+        return true;
+    } catch (e) { return false; }
+}
+
+
+// Wire up F5/close protection. `preSave` should serialize in-memory editor
+// state into the `data` global (e.g. saveSettings + savePatternData). The
+// handler:
+//   1. If modified, flushes a beacon save (best-effort, no await).
+//   2. Sets the standard beforeunload prompt so the browser warns the user.
+function installBeforeUnloadGuard(preSave) {
+    window.addEventListener("beforeunload", (e) => {
+        if (!modified) return;
+        try { if (preSave) preSave(); } catch (err) { console.error(err); }
+        sendBeaconSave();
+        // Standard mechanism to trigger the browser's "leave site?" prompt.
+        // The actual message text is not customizable in modern browsers.
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+    });
+}
+
+
 async function clonePattern() {
     const user = document.getElementById("user").value;
     const viewer = document.getElementById("viewer").value;

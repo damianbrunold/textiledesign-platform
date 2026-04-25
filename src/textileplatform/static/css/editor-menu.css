@@ -1,0 +1,167 @@
+/* DOM menu bar + modal dialog styles for the weave/bead editor. */
+
+#tx-menubar {
+    display: flex;
+    align-items: stretch;
+    background: #e8e8e8;
+    border-bottom: 1px solid #bbb;
+    font-size: 13px;
+    height: 2rem;
+    width: 100%;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    position: relative;
+    z-index: 100;
+}
+
+.tx-menubar .tx-menu-top {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 0.7rem;
+    cursor: default;
+    border-right: 1px solid transparent;
+    line-height: 1;
+}
+
+.tx-menubar .tx-menu-top:hover,
+.tx-menubar .tx-menu-top.open {
+    background: #d4d4d4;
+}
+
+.tx-menubar .tx-menu-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 220px;
+    background: #fff;
+    border: 1px solid #bbb;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.15);
+    padding: 0.25rem 0;
+    z-index: 200;
+    color: #222;
+}
+
+.tx-menubar .tx-menu-top.open > .tx-menu-dropdown {
+    display: block;
+}
+
+.tx-menubar .tx-menu-submenu {
+    top: -0.25rem;
+    left: 100%;
+}
+
+.tx-menubar .tx-menu-has-sub.open > .tx-menu-submenu {
+    display: block;
+}
+
+.tx-menubar .tx-menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 1rem;
+    cursor: default;
+    white-space: nowrap;
+    position: relative;
+}
+
+.tx-menubar .tx-menu-item:hover:not(.tx-disabled) {
+    background: #d0e4ff;
+}
+
+.tx-menubar .tx-menu-item.tx-disabled {
+    color: #999;
+    cursor: default;
+    pointer-events: none;
+}
+
+.tx-menubar .tx-menu-item.tx-checked::before {
+    content: "✓";
+    position: absolute;
+    left: 0.35rem;
+    color: #333;
+}
+
+.tx-menubar .tx-menu-label {
+    flex: 1;
+    margin-right: 2rem;
+}
+
+.tx-menubar .tx-menu-shortcut {
+    color: #888;
+    font-size: 12px;
+    font-family: monospace;
+}
+
+.tx-menubar .tx-menu-arrow {
+    margin-left: 0.5rem;
+    font-size: 10px;
+    color: #666;
+}
+
+.tx-menubar .tx-menu-separator {
+    height: 1px;
+    background: #ddd;
+    margin: 0.25rem 0.3rem;
+}
+
+/* ---- Modal ---- */
+.tx-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.tx-modal {
+    background: #fff;
+    color: #222;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    min-width: 320px;
+    max-width: 80vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.tx-modal-header {
+    padding: 0.6rem 1rem;
+    font-weight: bold;
+    background: #eee;
+    border-bottom: 1px solid #ddd;
+}
+.tx-modal-body {
+    padding: 1rem;
+    overflow: auto;
+    flex: 1;
+}
+.tx-modal-footer {
+    padding: 0.6rem 1rem;
+    text-align: right;
+    border-top: 1px solid #ddd;
+    background: #fafafa;
+}
+.tx-modal-btn {
+    margin-left: 0.5rem;
+    padding: 0.3rem 1rem;
+    cursor: pointer;
+}
+.tx-modal-btn-primary { font-weight: bold; }
+
+/* Fill-mode: dialog takes most of the viewport (used by the pattern overview). */
+.tx-modal.tx-modal-fill {
+    width: 95vw;
+    height: 95vh;
+    max-width: 95vw;
+    max-height: 95vh;
+}
+.tx-modal.tx-modal-fill .tx-modal-body {
+    padding: 0;
+    display: flex;
+}
