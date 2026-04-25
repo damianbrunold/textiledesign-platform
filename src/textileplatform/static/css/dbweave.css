@@ -12,7 +12,101 @@
 }
 .content:has(#container) > header { flex: 0 0 auto; }
 .content:has(#container) > #tx-menubar { flex: 0 0 auto; }
+.content:has(#container) > #tx-toolbar { flex: 0 0 auto; }
+.content:has(#container) > #tx-statusbar { flex: 0 0 auto; }
 .content:has(#container) > #header { flex: 0 0 auto; }
+
+/* Desktop-style icon toolbar. */
+#tx-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px 4px;
+    border-bottom: 1px solid #888;
+    background: #ececec;
+    font-size: 13px;
+    min-height: 26px;
+}
+.tx-tb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 1px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    cursor: pointer;
+}
+.tx-tb-btn:hover:not(:disabled) {
+    background: #d8e2f2;
+    border-color: #93b1d8;
+}
+.tx-tb-btn:active:not(:disabled) {
+    background: #b8c9e6;
+}
+.tx-tb-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.tx-tb-btn img {
+    width: 16px;
+    height: 16px;
+    display: block;
+    image-rendering: pixelated;
+}
+.tx-tb-btn.checked {
+    background: #c4d4ec;
+    border-color: #6b8db8;
+}
+.tx-tb-sep {
+    display: inline-block;
+    width: 1px;
+    height: 16px;
+    background: #aaa;
+    margin: 0 4px;
+}
+.tx-tb-spacer { flex: 1 1 auto; }
+
+#tx-toolbar #modified {
+    margin: 0 4px 0 0;
+    height: 12px;
+    width: 12px;
+    border: 1px solid #999;
+    border-radius: 6px;
+}
+#tx-toolbar #close,
+#tx-toolbar #clone {
+    margin-left: 6px;
+    padding: 2px 8px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: #f4f4f4;
+    cursor: pointer;
+    font-size: 12px;
+}
+#tx-toolbar #close:hover,
+#tx-toolbar #clone:hover { background: #e4e4e4; }
+
+/* Status bar at the bottom. Fixed line-height so the bar height stays
+   stable regardless of content — otherwise filling in the field labels
+   the first time would shrink #container by a few pixels and the
+   canvas's bitmap-vs-CSS-box would disagree, causing mouse clicks in
+   the lower panes (gewebe / trittfolge) to land one cell too high. */
+#tx-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 2px 8px;
+    border-top: 1px solid #888;
+    background: #ececec;
+    font-size: 12px;
+    line-height: 16px;
+    min-height: 16px;
+    color: #222;
+}
+#tx-statusbar > span:empty { display: none; }
 
 #container {
     width: calc(100% - 2px);

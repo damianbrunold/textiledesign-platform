@@ -147,6 +147,24 @@
             "file.export-svg":    {"label": {{ gettext('SVG file…') | tojson }}},
             "file.export-pdf":    {"label": {{ gettext('PDF file…') | tojson }}},
             "file.print":         {"label": {{ gettext('Print…') | tojson }}},
+            "statusbar.field-pattern":   {"label": {{ gettext('Pattern') | tojson }}},
+            "statusbar.field-threading": {"label": {{ gettext('Threading') | tojson }}},
+            "statusbar.field-tieup":     {"label": {{ gettext('Tie-up') | tojson }}},
+            "statusbar.field-treadling": {"label": {{ gettext('Treadling') | tojson }}},
+            "statusbar.field-pegplan":   {"label": {{ gettext('Pegplan') | tojson }}},
+            "statusbar.field-reed":      {"label": {{ gettext('Reed threading') | tojson }}},
+            "statusbar.field-cw":        {"label": {{ gettext('Warp colors') | tojson }}},
+            "statusbar.field-cf":        {"label": {{ gettext('Weft colors') | tojson }}},
+            "statusbar.col":             {"label": {{ gettext('Col') | tojson }}},
+            "statusbar.row":             {"label": {{ gettext('Row') | tojson }}},
+            "statusbar.selection":       {"label": {{ gettext('Selection') | tojson }}},
+            "statusbar.range":           {"label": {{ gettext('Range') | tojson }}},
+            "statusbar.aushebung":       {"label": {{ gettext('Lift out') | tojson }}},
+            "statusbar.anbindung":       {"label": {{ gettext('Binding') | tojson }}},
+            "statusbar.abbindung":       {"label": {{ gettext('Unbinding') | tojson }}},
+            "statusbar.size":            {"label": {{ gettext('Size') | tojson }}},
+            "statusbar.rapport":         {"label": {{ gettext('Rapport') | tojson }}},
+            "statusbar.zoom":            {"label": {{ gettext('Zoom') | tojson }}},
             "file.print-part":    {"label": {{ gettext('Print part…') | tojson }}},
             "print.part-title":   {"label": {{ gettext('Print part') | tojson }}},
             "print.warp-range":   {"label": {{ gettext('Warp range') | tojson }}},
@@ -363,143 +381,68 @@
 
     <div id="tx-menubar"></div>
 
-    <div id="header">
-        <img
-            id="icon-weave-draft"
-            {% if pattern.pattern['weave_style'] == 'draft' %}class="icon selected"{% else %}class="icon"{% endif %}
-            height="26px"
-            title="{{ gettext('Draft view') }}"
-            src="{{ url_for('static', filename='img/icons/icon-weave-draft.svg')}}"/>
-        <img
-            id="icon-weave-color"
-            {% if pattern.pattern['weave_style'] == 'color' %}class="icon selected"{% else %}class="icon"{% endif %}
-            height="26px"
-            title="{{ gettext('Color view') }}"
-            src="{{ url_for('static', filename='img/icons/icon-weave-color.svg')}}"/>
-        <img
-            id="icon-weave-simulation"
-            {% if pattern.pattern['weave_style'] == 'simulation' %}class="icon selected"{% else %}class="icon"{% endif %}
-            height="26px"
-            title="{{ gettext('Simulation view') }}"
-            src="{{ url_for('static', filename='img/icons/icon-weave-simulation.svg')}}"/>
-        <img
-            id="icon-weave-empty"
-            {% if pattern.pattern['weave_style'] == 'empty' %}class="icon selected"{% else %}class="icon"{% endif %}
-            height="26px"
-            title="{{ gettext('Empty view') }}"
-            src="{{ url_for('static', filename='img/icons/icon-weave-empty.svg')}}"/>
-
+    {% set ICON16 = url_for('static', filename='img/icons16/') %}
+    <div id="tx-toolbar">
         {% if not readonly %}
-            <div id="range-selector">
-                <div id="current-range" title="{{ gettext('Active range') }}">{{ gettext('Range 1') }}</div>
-                <div id="ranges">
-                    <div id="range1" class="current">{{ gettext('Range 1') }}</div>
-                    <div id="range2">{{ gettext('Range 2') }}</div>
-                    <div id="range3">{{ gettext('Range 3') }}</div>
-                    <div id="range4">{{ gettext('Range 4') }}</div>
-                    <div id="range5">{{ gettext('Range 5') }}</div>
-                    <div id="range6">{{ gettext('Range 6') }}</div>
-                    <div id="range7">{{ gettext('Range 7') }}</div>
-                    <div id="range8">{{ gettext('Range 8') }}</div>
-                    <div id="range9">{{ gettext('Range 9') }}</div>
-                    <div id="range10">{{ gettext('Aushebung') }}</div>
-                    <div id="range11">{{ gettext('Anbindung') }}</div>
-                    <div id="range12">{{ gettext('Abbindung') }}</div>
-                </div>
-            </div>
-
-            <div id="color-selector">
-                <div id="current-color" title="{{ gettext('Active color') }}">1</div>
-                <div id="colors"></div>
-            </div>
+        <button class="tx-tb-btn" data-action="file.save"   title="{{ gettext('Save') }} (Ctrl+S)"><img src="{{ICON16}}sb_save.png"></button>
+        <button class="tx-tb-btn" data-action="file.print"  title="{{ gettext('Print…') }} (Ctrl+P)"><img src="{{ICON16}}sb_print.png"></button>
+        <span class="tx-tb-sep"></span>
+        <button class="tx-tb-btn" data-action="edit.undo"   title="{{ gettext('Undo') }} (Ctrl+Z)"><img src="{{ICON16}}sb_undo.png"></button>
+        <button class="tx-tb-btn" data-action="edit.redo"   title="{{ gettext('Redo') }} (Ctrl+Y)"><img src="{{ICON16}}sb_redo.png"></button>
+        <span class="tx-tb-sep"></span>
+        <button class="tx-tb-btn" data-action="edit.cut"    title="{{ gettext('Cut') }} (Ctrl+X)"><img src="{{ICON16}}sb_cut.png"></button>
+        <button class="tx-tb-btn" data-action="edit.copy"   title="{{ gettext('Copy') }} (Ctrl+C)"><img src="{{ICON16}}sb_copy.png"></button>
+        <button class="tx-tb-btn" data-action="edit.paste"  title="{{ gettext('Paste') }} (Ctrl+V)"><img src="{{ICON16}}sb_paste.png"></button>
+        <span class="tx-tb-sep"></span>
         {% endif %}
+        <button class="tx-tb-btn" data-action="view.zoom-in"  title="{{ gettext('Zoom in') }} (Ctrl+I)"><img src="{{ICON16}}sb_zoomin.png"></button>
+        <button class="tx-tb-btn" data-action="view.zoom-out" title="{{ gettext('Zoom out') }} (Ctrl+U)"><img src="{{ICON16}}sb_zoomout.png"></button>
+        {% if not readonly %}
+        <span class="tx-tb-sep"></span>
+        <button class="tx-tb-btn" data-action="pattern.move-shaft-up"     title="{{ gettext('Shaft up') }}"><img src="{{ICON16}}sb_schaftup.png"></button>
+        <button class="tx-tb-btn" data-action="pattern.move-shaft-down"   title="{{ gettext('Shaft down') }}"><img src="{{ICON16}}sb_schaftdown.png"></button>
+        <button class="tx-tb-btn" data-action="pattern.move-treadle-left" title="{{ gettext('Treadle left') }}"><img src="{{ICON16}}sb_trittleft.png"></button>
+        <button class="tx-tb-btn" data-action="pattern.move-treadle-right" title="{{ gettext('Treadle right') }}"><img src="{{ICON16}}sb_trittright.png"></button>
+        <span class="tx-tb-sep"></span>
+        <button class="tx-tb-btn" data-action="edit.invert"           title="{{ gettext('Invert') }} (I)"><img src="{{ICON16}}sb_invert.png"></button>
+        <button class="tx-tb-btn" data-action="edit.mirror-h"         title="{{ gettext('Mirror horizontal') }} (H)"><img src="{{ICON16}}sb_mirrorh.png"></button>
+        <button class="tx-tb-btn" data-action="edit.mirror-v"         title="{{ gettext('Mirror vertical') }} (V)"><img src="{{ICON16}}sb_mirrorv.png"></button>
+        <button class="tx-tb-btn" data-action="edit.rotate"           title="{{ gettext('Rotate') }} (R)"><img src="{{ICON16}}sb_rotate.png"></button>
+        <button class="tx-tb-btn" data-action="edit.central-symmetry" title="{{ gettext('Central symmetry') }} (Z)"><img src="{{ICON16}}sb_centralsym.png"></button>
+        {% endif %}
+        <span class="tx-tb-sep"></span>
+        <button class="tx-tb-btn" data-action="view.highlight" title="{{ gettext('Highlight') }} (F12)"><img src="{{ICON16}}sb_highlight.png"></button>
 
-        <div id="layout-selector">
-            <div id="current-layout" title="{{ gettext('Active layout') }}">DE</div>
-            <div id="layouts">
-                <div id="layout-DE">DE</div>
-                <div id="layout-SK">SK</div>
-                <div id="layout-US">US</div>
-                <div id="layout---">--</div>
-            </div>
-        </div>
-
-        <div id="view-options-selector">
-            <div id="view-options-menu" title="{{ gettext('View options') }}">{{ gettext('View') }}</div>
-            <div id="view-options">
-                <div id="entering-visible">{{ gettext('Entering visible') }}</div>
-                <div id="treadling-visible">{{ gettext('Treadling visible') }}</div>
-                <div id="reed-visible">{{ gettext('Reed visible') }}</div>
-                <div id="colors-visible">{{ gettext('Colors visible') }}</div>
-                <div id="hlines-visible">{{ gettext('Support lines visible') }}</div>
-            </div>
-        </div>
-
-        <img
-            id="zoom-in"
-            src="{{url_for('static', filename='img/icons/icon-zoom-in.svg')}}"
-            title="{{ gettext('Zoom in') }}"
-            height="26px"
-            class="icon"
-        />
-        <img
-            id="zoom-out"
-            src="{{url_for('static', filename='img/icons/icon-zoom-out.svg')}}"
-            title="{{ gettext('Zoom out') }}"
-            height="26px"
-            class="icon"
-        />
+        <span class="tx-tb-spacer"></span>
 
         {% if not readonly %}
-            <img
-                id="public"
-                {% if pattern.public %}
-                    src="{{url_for('static', filename='img/icons/icon-public.svg')}}"
-                    title="{{ gettext('Public - visible to all users') }}"
-                {% else %}
-                    src="{{url_for('static', filename='img/icons/icon-private.svg')}}"
-                    title="{{ gettext('Private - not visible to other users') }}"
-                {% endif %}
-                height="26px"
-                class="icon"/>
+            <div id="modified" class="unchanged">&nbsp;</div>
+            <img id="public"
+                 {% if pattern.public %}
+                     src="{{url_for('static', filename='img/icons/icon-public.svg')}}"
+                     title="{{ gettext('Public - visible to all users') }}"
+                 {% else %}
+                     src="{{url_for('static', filename='img/icons/icon-private.svg')}}"
+                     title="{{ gettext('Private - not visible to other users') }}"
+                 {% endif %}
+                 height="20px" class="icon"/>
         {% endif %}
         {% if readonly and g.user %}
             <div id="clone">{{ gettext('Clone') }}</div>
-        {% elif g.user %}
-            <div id="modified" class="unchanged">&nbsp;</div>
-            <div id="save">{{ gettext('Save') }}</div>
         {% endif %}
         <div id="close">{{ gettext('Close') }}</div>
-        <img
-            id="icon-selection-mirrorv"
-            class="icon hidden"
-            height="26px"
-            title="{{ gettext('Mirror vertical') }}"
-            src="{{ url_for('static', filename='img/icons/icon-selection-mirrorv.svg')}}"/>
-        <img
-            id="icon-selection-mirrorh"
-            class="icon hidden"
-            height="26px"
-            title="{{ gettext('Mirror horizontal') }}"
-            src="{{ url_for('static', filename='img/icons/icon-selection-mirrorh.svg')}}"/>
-        <img
-            id="icon-selection-rotate"
-            class="icon hidden"
-            height="26px"
-            title="{{ gettext('Rotate') }}"
-            src="{{ url_for('static', filename='img/icons/icon-selection-rotate.svg')}}"/>
-        <img
-            id="icon-selection-invert"
-            class="icon hidden"
-            height="26px"
-            title="{{ gettext('Invert') }}"
-            src="{{ url_for('static', filename='img/icons/icon-selection-invert.svg')}}"/>
-        <img
-            id="icon-selection-clear"
-            class="icon hidden"
-            height="26px"
-            title="{{ gettext('Clear') }}"
-            src="{{ url_for('static', filename='img/icons/icon-selection-clear.svg')}}"/>
+    </div>
+
+    <!-- Hidden selection icons used by the existing selectionMirror*/etc.
+         icons-update logic. They're mirrored by data-action in the toolbar
+         above; the IDs are kept so the JS that toggles their hidden class
+         doesn't need to grow guards everywhere. -->
+    <div id="legacy-selection-icons" style="display:none">
+        <span id="icon-selection-mirrorv" class="hidden"></span>
+        <span id="icon-selection-mirrorh" class="hidden"></span>
+        <span id="icon-selection-rotate"  class="hidden"></span>
+        <span id="icon-selection-invert"  class="hidden"></span>
+        <span id="icon-selection-clear"   class="hidden"></span>
     </div>
 
     <div id="container">
@@ -507,6 +450,14 @@
         <div id="palette-panel" class="hidden">
             <div id="palette-panel-grid"></div>
         </div>
+    </div>
+
+    <div id="tx-statusbar">
+        <span id="sb-field"></span>
+        <span id="sb-select"></span>
+        <span class="tx-tb-spacer"></span>
+        <span id="sb-range"></span>
+        <span id="sb-rapport"></span>
     </div>
 
 {% endblock %}

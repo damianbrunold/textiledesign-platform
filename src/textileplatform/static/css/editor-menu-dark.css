@@ -63,3 +63,33 @@
     background: #2e2e2e;
     border-color: #555;
 }
+
+/* Toolbar + statusbar — dark variant. */
+#tx-toolbar {
+    background: #3a3a3a;
+    border-bottom-color: #222;
+    color: #ddd;
+}
+.tx-tb-btn:hover:not(:disabled) {
+    background: #2c4570;
+    border-color: #4a6fa5;
+}
+.tx-tb-btn:active:not(:disabled) { background: #213855; }
+.tx-tb-btn.checked {
+    background: #2c4570;
+    border-color: #4a6fa5;
+}
+.tx-tb-sep { background: #555; }
+#tx-toolbar #close,
+#tx-toolbar #clone {
+    background: #555;
+    color: #eee;
+    border-color: #333;
+}
+#tx-toolbar #close:hover,
+#tx-toolbar #clone:hover { background: #666; }
+#tx-statusbar {
+    background: #3a3a3a;
+    border-top-color: #222;
+    color: #ddd;
+}

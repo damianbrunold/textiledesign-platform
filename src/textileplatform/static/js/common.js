@@ -166,10 +166,16 @@ function closePattern() {
 
 function resizeWindow() {
     const canvas = document.getElementById('canvas');
-    const container = document.getElementById("container");
-    canvas.width = container.clientWidth - 2;
-    canvas.height = container.clientHeight - 2;
-    // relayout and redraw the specialized view instance
-    view.layout();
-    view.draw();
+    if (!canvas) return;
+    // Use canvas.clientWidth/Height directly so we account for sibling
+    // flex children (e.g. the palette panel inside #container) and any
+    // CSS-added borders. Setting bitmap = client size keeps mouse-event
+    // offsetX/Y in 1:1 correspondence with bitmap pixels — otherwise
+    // the lower panes' clicks land one row off after a chrome reflow.
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    if (typeof view !== "undefined" && view) {
+        view.layout();
+        view.draw();
+    }
 }

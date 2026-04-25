@@ -181,6 +181,7 @@ function select_part(part, x1, y1, x2, y2) {
     } else {
         console.log("ERR: cannot select part", part);
     }
+    if (typeof ActionRegistry !== "undefined") ActionRegistry.notify();
 }
 
 
@@ -2567,6 +2568,7 @@ class PatternView {
         if (cursor.selected_view) {
             cursor.selected_view.drawCursor(this.ctx, this.settings, cursor);
         }
+        if (typeof updateStatusBar === "function") updateStatusBar();
     }
 
     clearCanvas() {
@@ -4354,9 +4356,8 @@ function selectionPaste() { _paste(false); }
 function selectionPasteTransparent() { _paste(true); }
 
 function update_layout_selector() {
-    const layout = get_current_layout(settings);
-    document.getElementById("current-layout").innerText = layout;
-    document.getElementById(`layout-${layout}`).className = "current";
+    // Layout selector chip removed in the toolbar revamp. Layout
+    // changes go through Extras ▸ Grundeinstellung now.
 }
 
 
@@ -4385,11 +4386,9 @@ function update_range_selector(settings) {
 
 
 function update_view_options(settings) {
-    document.getElementById("entering-visible").className = settings.display_entering ? "checked" : "";
-    document.getElementById("treadling-visible").className = settings.display_treadling ? "checked" : "";
-    document.getElementById("reed-visible").className = settings.display_reed ? "checked" : "";
-    document.getElementById("colors-visible").className = settings.display_colors_warp || settings.display_colors_weft ? "checked" : "";
-    document.getElementById("hlines-visible").className = settings.display_hlines ? "checked" : "";
+    // Old DOM elements were removed in favour of the action-bound
+    // toolbar; the legacy handler is kept as a no-op so callers don't
+    // have to grow guards.
 }
 
 
@@ -10266,176 +10265,125 @@ function setupEditorActions() {
 
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    getPattern().then(init).then(update_layout_selector).then(setupEditorActions);
+    getPattern().then(init).then(setupEditorActions).then(setupToolbarAndStatusbar);
     if (!readonly) {
         installBeforeUnloadGuard(() => {
             saveSettings(data, settings);
             savePatternData(data, pattern);
         });
     }
-    if (!readonly) {
-        document.getElementById("public").addEventListener("click", togglePublic);
-        document.getElementById("save").addEventListener("click", () => {
-            saveSettings(data, settings);
-            savePatternData(data, pattern);
-            savePattern();
-        });
-    } else {
-        const clone = document.getElementById("clone");
-        if (clone) clone.addEventListener("click", clonePattern);
-    }
+    const publicEl = document.getElementById("public");
+    if (!readonly && publicEl) publicEl.addEventListener("click", togglePublic);
+    const cloneEl = document.getElementById("clone");
+    if (cloneEl) cloneEl.addEventListener("click", clonePattern);
     document.getElementById("close").addEventListener("click", _closePatternGuarded);
     window.addEventListener("keydown", keyDown);
+});
 
-    document.getElementById("icon-weave-draft").addEventListener("click", () => {
-        document.getElementById("icon-weave-draft").className = "icon selected";
-        document.getElementById("icon-weave-color").className = "icon";
-        document.getElementById("icon-weave-simulation").className = "icon";
-        document.getElementById("icon-weave-empty").className = "icon";
-        settings.style = "draft";
-        view.draw();
-    });
-    document.getElementById("icon-weave-color").addEventListener("click", () => {
-        document.getElementById("icon-weave-draft").className = "icon";
-        document.getElementById("icon-weave-color").className = "icon selected";
-        document.getElementById("icon-weave-simulation").className = "icon";
-        document.getElementById("icon-weave-empty").className = "icon";
-        settings.style = "color";
-        view.draw();
-    });
-    document.getElementById("icon-weave-simulation").addEventListener("click", () => {
-        document.getElementById("icon-weave-draft").className = "icon";
-        document.getElementById("icon-weave-color").className = "icon";
-        document.getElementById("icon-weave-simulation").className = "icon selected";
-        document.getElementById("icon-weave-empty").className = "icon";
-        settings.style = "simulation";
-        view.draw();
-    });
-    document.getElementById("icon-weave-empty").addEventListener("click", () => {
-        document.getElementById("icon-weave-draft").className = "icon";
-        document.getElementById("icon-weave-color").className = "icon";
-        document.getElementById("icon-weave-simulation").className = "icon";
-        document.getElementById("icon-weave-empty").className = "icon selected";
-        settings.style = "empty";
-        view.draw();
-    });
-
-    if (document.getElementById("current-range")) {
-        document.getElementById("current-range").addEventListener("click", () => {
-            const popup = document.getElementById("ranges");
-            if (popup.style.display === "") {
-                popup.style.display = "flex";
-            } else {
-                popup.style.display = "";
-            }
+// Wire every <button data-action="..."> in the toolbar to the matching
+// ActionRegistry entry. Registry's notify hook keeps the disabled and
+// checked states in sync, so the buttons mirror the menu / shortcut
+// behaviour automatically.
+function setupToolbarAndStatusbar() {
+    const buttons = document.querySelectorAll("#tx-toolbar .tx-tb-btn[data-action]");
+    buttons.forEach(btn => {
+        const id = btn.dataset.action;
+        btn.addEventListener("click", (ev) => {
+            const a = ActionRegistry.get(id);
+            if (!a) return;
+            if (a.enabledWhen && !a.enabledWhen()) return;
+            ActionRegistry.invoke(id, ev);
+            ActionRegistry.notify();
         });
-        const range_handler = function(e) {
-            const range = parseInt(e.target.id.substring(5));
-            document.getElementById(`range${settings.current_range}`).className = "";
-            settings.current_range = range;
-            document.getElementById(`range${range}`).className = "current";
-            document.getElementById("current-range").innerText = e.target.innerText;
-            document.getElementById("ranges").style.display = "";
-        };
-        for (let i = 1; i <= 12; i++) {
-            document.getElementById(`range${i}`).addEventListener("click", range_handler);
+    });
+    const refresh = () => {
+        buttons.forEach(btn => {
+            const id = btn.dataset.action;
+            btn.disabled = !ActionRegistry.isEnabled(id);
+            btn.classList.toggle("checked", !!ActionRegistry.isChecked(id));
+        });
+        updateStatusBar();
+    };
+    ActionRegistry.subscribe(refresh);
+    refresh();
+    return Promise.resolve();
+}
+
+// Direct port of statusbar.cpp::UpdateStatusBar. Five fields:
+//   sb-field   — current field name + cursor row/col
+//   sb-select  — "Selection WxH" while a >1×1 selection is active
+//   sb-range   — "Range N" / "Aushebung" / "Anbindung" / "Abbindung"
+//   sb-rapport — "Size KxS  Rapport KxS"
+//   sb-zoom    — "Zoom: <px>" (web equivalent of legacy lock indicator)
+function updateStatusBar() {
+    if (typeof settings === "undefined" || settings === null) return;
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    const FIELD_NAME = {
+        weave:       L("statusbar.field-pattern",   "Pattern"),
+        entering:    L("statusbar.field-threading", "Threading"),
+        tieup:       L("statusbar.field-tieup",     "Tie-up"),
+        treadling:   L("statusbar.field-treadling", "Treadling"),
+        pegplan:     L("statusbar.field-pegplan",   "Pegplan"),
+        reed:        L("statusbar.field-reed",      "Reed threading"),
+        color_warp:  L("statusbar.field-cw",        "Warp colors"),
+        color_weft:  L("statusbar.field-cf",        "Weft colors"),
+    };
+    const part = (cursor && cursor.selected_part) || "weave";
+    let field = FIELD_NAME[part] || "";
+    let pos = "";
+    if (cursor) {
+        // Reed/color_warp are 1-D along x; color_weft along y; everything
+        // else is 2-D. Show whichever axes apply, 1-based.
+        const x = cursor.x1, y = cursor.y1;
+        if (part === "color_weft" || part === "treadling" || part === "pegplan") {
+            pos = "  " + L("statusbar.col", "Col") + " " + (x + 1)
+                + "  " + L("statusbar.row", "Row") + " " + (y + 1);
+        } else if (part === "reed" || part === "color_warp") {
+            pos = "  " + L("statusbar.col", "Col") + " " + (x + 1);
+        } else if (part === "entering" || part === "tieup" || part === "weave") {
+            pos = "  " + L("statusbar.col", "Col") + " " + (x + 1)
+                + "  " + L("statusbar.row", "Row") + " " + (y + 1);
         }
     }
+    _setText("sb-field", field + pos);
 
-    document.getElementById("current-layout").addEventListener("click", () => {
-        const popup = document.getElementById("layouts");
-        if (popup.style.display === "") {
-            popup.style.display = "flex";
-        } else {
-            popup.style.display = "";
-        }
-    });
-    const layout_handler = function(e) {
-        const layout = e.target.id.substring(7);
-        const current_layout = get_current_layout(settings);
-        document.getElementById(`layout-${current_layout}`).className = "";
-        set_current_layout(layout);
-        document.getElementById(`layout-${layout}`).className = "current";
-        document.getElementById("current-layout").innerText = layout;
-        document.getElementById("layouts").style.display = "";
-    };
-    document.getElementById("layout-DE").addEventListener("click", layout_handler);
-    document.getElementById("layout-SK").addEventListener("click", layout_handler);
-    document.getElementById("layout-US").addEventListener("click", layout_handler);
-    document.getElementById("layout---").addEventListener("click", layout_handler);
+    let selText = "";
+    if (cursor && (cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2)) {
+        const dx = Math.abs(cursor.x2 - cursor.x1) + 1;
+        const dy = Math.abs(cursor.y2 - cursor.y1) + 1;
+        selText = L("statusbar.selection", "Selection") + " " + dx + "×" + dy;
+    }
+    _setText("sb-select", selText);
 
-    document.getElementById("view-options-menu").addEventListener("click", () => {
-        const popup = document.getElementById("view-options");
-        if (popup.style.display === "") {
-            popup.style.display = "flex";
-        } else {
-            popup.style.display = "";
-        }
-    });
-    document.getElementById("entering-visible").addEventListener("click", (e) => {
-        if (e.target.className === "checked") {
-            e.target.className = "";
-        } else {
-            e.target.className = "checked";
-        }
-        settings.display_entering = e.target.className == "checked";
-        view.layout();
-        view.draw();
-    });
-    document.getElementById("treadling-visible").addEventListener("click", (e) => {
-        if (e.target.className === "checked") {
-            e.target.className = "";
-        } else {
-            e.target.className = "checked";
-        }
-        settings.display_treadling = e.target.className == "checked";
-        view.layout();
-        view.draw();
-    });
-    document.getElementById("reed-visible").addEventListener("click", (e) => {
-        if (e.target.className === "checked") {
-            e.target.className = "";
-        } else {
-            e.target.className = "checked";
-        }
-        settings.display_reed = e.target.className == "checked";
-        view.layout();
-        view.draw();
-    });
-    document.getElementById("colors-visible").addEventListener("click", (e) => {
-        if (e.target.className === "checked") {
-            e.target.className = "";
-        } else {
-            e.target.className = "checked";
-        }
-        settings.display_colors_warp = e.target.className == "checked";
-        settings.display_colors_weft = e.target.className == "checked";
-        view.layout();
-        view.draw();
-    });
-    document.getElementById("hlines-visible").addEventListener("click", (e) => {
-        if (e.target.className === "checked") {
-            e.target.className = "";
-        } else {
-            e.target.className = "checked";
-        }
-        settings.display_hlines = e.target.className == "checked";
-        view.layout();
-        view.draw();
-    });
+    const r = settings.current_range | 0;
+    let rangeText = "";
+    if (r >= 1 && r <= 9) rangeText = L("statusbar.range", "Range") + " " + r;
+    else if (r === 10)    rangeText = L("statusbar.aushebung", "Lift out");
+    else if (r === 11)    rangeText = L("statusbar.anbindung", "Binding");
+    else if (r === 12)    rangeText = L("statusbar.abbindung", "Unbinding");
+    _setText("sb-range", rangeText);
 
-    document.getElementById("zoom-in").addEventListener("click", (e) => {
-        settings.base_dx = Math.min(30, (settings.base_dx | 0) + 1);
-        _applyAspectRatio(settings);
-        view.layout();
-        view.draw();
-    });
-    document.getElementById("zoom-out").addEventListener("click", (e) => {
-        settings.base_dx = Math.max(8, (settings.base_dx | 0) - 1);
-        _applyAspectRatio(settings);
-        view.layout();
-        view.draw();
-    });
-});
+    let rap = "";
+    if (typeof pattern !== "undefined" && pattern) {
+        const kw = (pattern.max_x - pattern.min_x + 1) || 0;
+        const sw = (pattern.max_y - pattern.min_y + 1) || 0;
+        if (kw > 0 || sw > 0) {
+            rap = L("statusbar.size", "Size") + " " + kw + "×" + sw;
+        }
+        const rkw = (pattern.rapport_k_b - pattern.rapport_k_a + 1);
+        const rsw = (pattern.rapport_s_b - pattern.rapport_s_a + 1);
+        if (rkw > 0 && rsw > 0 && (rkw !== kw || rsw !== sw)) {
+            if (rap) rap += "  ";
+            rap += L("statusbar.rapport", "Rapport") + " " + rkw + "×" + rsw;
+        }
+    }
+    _setText("sb-rapport", rap);
+}
+
+function _setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text || "";
+}
 
 window.addEventListener("resize", resizeWindow);
