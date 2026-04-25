@@ -3313,6 +3313,169 @@ function val(data, prop, defval) {
     return result;
 }
 
+// Trigger a server-side export. POSTs a snapshot of the in-memory
+// pattern (without persisting it) so the export reflects unsaved
+// edits — display settings included — without auto-saving the
+// modified state. The server renders the document and returns the
+// file; we wrap it in a Blob and trigger a download via an anchor.
+async function _exportDownload(fmt) {
+    const userEl = document.getElementById("user");
+    const patEl  = document.getElementById("pattern");
+    if (!userEl || !patEl) return;
+    // Mutate `data` *in memory only* so it reflects the latest
+    // settings + pattern grids; the request body uses this snapshot.
+    saveSettings(data, settings);
+    savePatternData(data, pattern);
+    const url = `/${encodeURIComponent(userEl.value)}/`
+              + `${encodeURIComponent(patEl.value)}/export/${fmt}`;
+    let blob, filename;
+    try {
+        const resp = await fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: data }),
+        });
+        if (!resp.ok) {
+            const txt = await resp.text();
+            alert("Export failed: " + (txt || resp.status));
+            return;
+        }
+        // Pull the suggested filename out of Content-Disposition; fall
+        // back to a reasonable default.
+        const cd = resp.headers.get("Content-Disposition") || "";
+        const m = /filename="?([^";]+)"?/i.exec(cd);
+        filename = (m && m[1])
+            || `${userEl.value}-${patEl.value}.${fmt === "jpeg" ? "jpg" : fmt}`;
+        blob = await resp.blob();
+    } catch (e) {
+        alert("Export failed: " + e);
+        return;
+    }
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objUrl;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(objUrl);
+    }, 0);
+}
+
+// Multi-page PDF print — full pattern (no ranges) or a sub-range.
+// Mirrors desktop "Drucken" / "Teil drucken". The PDF is rendered
+// server-side; in-memory state is POSTed so unsaved edits are
+// reflected without auto-saving.
+async function _printDownload(opts) {
+    const userEl = document.getElementById("user");
+    const patEl  = document.getElementById("pattern");
+    if (!userEl || !patEl) return;
+    saveSettings(data, settings);
+    savePatternData(data, pattern);
+    const url = `/${encodeURIComponent(userEl.value)}/`
+              + `${encodeURIComponent(patEl.value)}/print`;
+    let blob, filename;
+    try {
+        const resp = await fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(Object.assign({ contents: data }, opts || {})),
+        });
+        if (!resp.ok) {
+            const txt = await resp.text();
+            alert("Print failed: " + (txt || resp.status));
+            return;
+        }
+        const cd = resp.headers.get("Content-Disposition") || "";
+        const m = /filename="?([^";]+)"?/i.exec(cd);
+        filename = (m && m[1]) || `${userEl.value}-${patEl.value}.pdf`;
+        blob = await resp.blob();
+    } catch (e) {
+        alert("Print failed: " + e);
+        return;
+    }
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objUrl;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        if (a.parentNode) a.parentNode.removeChild(a);
+        URL.revokeObjectURL(objUrl);
+    }, 0);
+}
+
+// Print part — range dialog (warp + weft) → multi-page PDF. Direct
+// port of printrangedialog.cpp's two range groups.
+function showPrintPartDialog() {
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    const w = pattern.weave.width;
+    const h = pattern.weave.height;
+    const wa = (pattern.min_x | 0) + 1;
+    const wb = (pattern.max_x | 0) + 1;
+    const sa = (pattern.min_y | 0) + 1;
+    const sb = (pattern.max_y | 0) + 1;
+    const body = document.createElement("div");
+    body.style.minWidth = "360px";
+    body.innerHTML = `
+        <fieldset style="border:1px solid #888;padding:0.4rem 0.6rem;margin-bottom:0.6rem">
+            <legend>${L("print.warp-range", "Warp range")}</legend>
+            <div style="display:grid;grid-template-columns:auto 6rem;gap:0.4rem 1rem;align-items:center">
+                <label>${L("print.from", "From")}</label>
+                <input id="tx-pp-wa" type="number" min="1" step="1">
+                <label>${L("print.to",   "To")}</label>
+                <input id="tx-pp-wb" type="number" min="1" step="1">
+            </div>
+        </fieldset>
+        <fieldset style="border:1px solid #888;padding:0.4rem 0.6rem">
+            <legend>${L("print.weft-range", "Weft range")}</legend>
+            <div style="display:grid;grid-template-columns:auto 6rem;gap:0.4rem 1rem;align-items:center">
+                <label>${L("print.from", "From")}</label>
+                <input id="tx-pp-sa" type="number" min="1" step="1">
+                <label>${L("print.to",   "To")}</label>
+                <input id="tx-pp-sb" type="number" min="1" step="1">
+            </div>
+        </fieldset>`;
+    const $ = (sel) => body.querySelector(sel);
+    $("#tx-pp-wa").max = String(w); $("#tx-pp-wa").value = wa;
+    $("#tx-pp-wb").max = String(w); $("#tx-pp-wb").value = wb;
+    $("#tx-pp-sa").max = String(h); $("#tx-pp-sa").value = sa;
+    $("#tx-pp-sb").max = String(h); $("#tx-pp-sb").value = sb;
+    setTimeout(() => { $("#tx-pp-wa").focus(); $("#tx-pp-wa").select(); }, 0);
+
+    let modal;
+    const accept = () => {
+        let wa2 = parseInt($("#tx-pp-wa").value, 10) || 1;
+        let wb2 = parseInt($("#tx-pp-wb").value, 10) || w;
+        let sa2 = parseInt($("#tx-pp-sa").value, 10) || 1;
+        let sb2 = parseInt($("#tx-pp-sb").value, 10) || h;
+        if (wb2 < wa2) [wa2, wb2] = [wb2, wa2];
+        if (sb2 < sa2) [sa2, sb2] = [sb2, sa2];
+        modal.close();
+        _printDownload({
+            warp_from: wa2, warp_to: wb2,
+            weft_from: sa2, weft_to: sb2,
+        });
+    };
+    modal = Modal.open({
+        title: L("print.part-title", "Print part"),
+        body,
+        buttons: [
+            { label: L("btn.cancel", "Cancel"), role: "cancel" },
+            { label: L("btn.ok",     "OK"),     role: "primary", onClick: accept },
+        ],
+    });
+}
+
 // Discard in-memory edits and reload the pattern from the server —
 // port of desktop "Änderungen verwerfen" (filehandling.cpp). Asks the
 // user to confirm because the operation is destructive.
@@ -9402,6 +9565,12 @@ function setupEditorActions() {
     }, { enabledWhen: () => !readonly });
     R("file.revert", null, _revertChanges,
         { enabledWhen: () => !readonly && modified });
+    R("file.export-png",  null, () => _exportDownload("png"));
+    R("file.export-jpeg", null, () => _exportDownload("jpeg"));
+    R("file.export-svg",  null, () => _exportDownload("svg"));
+    R("file.export-pdf",  null, () => _exportDownload("pdf"));
+    R("file.print",       "Ctrl+P", () => _printDownload());
+    R("file.print-part",  "Ctrl+L", () => showPrintPartDialog());
     R("file.close", null, _closePatternGuarded);
 
     // Edit
@@ -9846,6 +10015,16 @@ function setupEditorActions() {
             fileItems.push({ action: "file.revert" });
             fileItems.push({ separator: true });
         }
+        fileItems.push({ label: i18n.menus.export || "Export", items: [
+            { action: "file.export-png" },
+            { action: "file.export-jpeg" },
+            { action: "file.export-svg" },
+            { action: "file.export-pdf" },
+        ]});
+        fileItems.push({ separator: true });
+        fileItems.push({ action: "file.print" });
+        fileItems.push({ action: "file.print-part" });
+        fileItems.push({ separator: true });
         fileItems.push({ action: "file.close" });
         const tree = [
             { label: i18n.menus.file || "File", items: fileItems },

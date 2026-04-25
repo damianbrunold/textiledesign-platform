@@ -18,6 +18,7 @@ from textileplatform.mail import send_recover_mail
 from textileplatform.palette import default_weave_palette
 from textileplatform.palette import default_bead_palette
 from textileplatform.weavepattern import parse_dbw_data, render_dbw_data
+from textileplatform import export as exporter
 
 from importlib.metadata import version
 import datetime
@@ -365,6 +366,149 @@ def download_pattern_legacy(user_name, pattern_name):
         )
     else:
         return redirect(url_for("user", user_name=user_name))
+
+
+_EXPORT_FORMATS = {
+    "png":  ("image/png",                "png",  exporter.export_png),
+    "jpeg": ("image/jpeg",               "jpg",  exporter.export_jpeg),
+    "jpg":  ("image/jpeg",               "jpg",  exporter.export_jpeg),
+    "svg":  ("image/svg+xml",            "svg",  exporter.export_svg),
+    "pdf":  ("application/pdf",          "pdf",  exporter.export_pdf),
+}
+
+
+@app.route(
+    "/<string:user_name>/<string:pattern_name>/export/<string:fmt>",
+    methods=("GET", "POST"),
+)
+def export_pattern(user_name, pattern_name, fmt):
+    """Export a pattern in PNG / JPEG / SVG / PDF.
+
+    GET renders the on-disk pattern (works for read-only viewers and
+    public patterns). POST renders a pattern document supplied by the
+    client in the request body — used by the editor's Export menu so
+    unsaved in-memory edits can be exported without first being
+    committed to the database.
+    """
+    fmt = fmt.lower()
+    if fmt not in _EXPORT_FORMATS:
+        return "Unsupported format", 400
+    user = User.query.filter(User.name == user_name.lower()).first()
+    if not user:
+        return redirect(url_for("index"))
+    pattern = (
+        Pattern.query
+        .join(User)
+        .filter(Pattern.name == pattern_name)
+        .filter(User.name == user_name.lower())
+        .first()
+    )
+    if not pattern:
+        return redirect(url_for("user", user_name=user_name))
+    readonly = not g.user or g.user.name != user.name
+    superuser = g.user and g.user.name == "superuser"
+    if not superuser and readonly and not pattern.public:
+        return redirect(url_for("user", user_name=user_name))
+    if pattern.pattern_type != "DB-WEAVE Pattern":
+        # Bead-pattern export is out of scope for the first cut.
+        return "Export not available for this pattern type", 400
+    if request.method == "POST":
+        # Owners can render in-memory state. Read-only viewers stay on
+        # the persisted version even if they POST.
+        if readonly and not superuser:
+            pattern_data = json.loads(pattern.contents)
+        else:
+            payload = request.get_json(silent=True) or {}
+            pattern_data = payload.get("contents")
+            if not isinstance(pattern_data, dict):
+                return "Missing 'contents' object in body", 400
+    else:
+        pattern_data = json.loads(pattern.contents)
+    mime, ext, render = _EXPORT_FORMATS[fmt]
+    kwargs = {}
+    if fmt == "pdf":
+        kwargs["title"] = pattern.label or pattern_name
+    try:
+        body = render(pattern_data, **kwargs)
+    except Exception as e:  # pragma: no cover — surface as 500
+        logging.exception("Export %s for %s/%s failed", fmt, user_name, pattern_name)
+        return f"Export failed: {e}", 500
+    return send_file(
+        io.BytesIO(body),
+        mimetype=mime,
+        as_attachment=True,
+        download_name=f"{user_name}-{pattern_name}.{ext}",
+    )
+
+
+@app.route(
+    "/<string:user_name>/<string:pattern_name>/print",
+    methods=("GET", "POST"),
+)
+def print_pattern(user_name, pattern_name):
+    """Multi-page PDF print of a pattern.
+
+    Optional query / JSON parameters:
+        warp_from, warp_to, weft_from, weft_to (1-based, inclusive).
+    Without ranges → full pattern (Drucken). With ranges → Teil drucken.
+    Like ``/export``, POST allows the editor to send unsaved in-memory
+    state in ``contents`` so the user doesn't have to save first.
+    """
+    user = User.query.filter(User.name == user_name.lower()).first()
+    if not user:
+        return redirect(url_for("index"))
+    pattern = (
+        Pattern.query
+        .join(User)
+        .filter(Pattern.name == pattern_name)
+        .filter(User.name == user_name.lower())
+        .first()
+    )
+    if not pattern:
+        return redirect(url_for("user", user_name=user_name))
+    readonly = not g.user or g.user.name != user.name
+    superuser = g.user and g.user.name == "superuser"
+    if not superuser and readonly and not pattern.public:
+        return redirect(url_for("user", user_name=user_name))
+    if pattern.pattern_type != "DB-WEAVE Pattern":
+        return "Print not available for this pattern type", 400
+
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or {}
+        if readonly and not superuser:
+            pattern_data = json.loads(pattern.contents)
+        else:
+            pattern_data = payload.get("contents")
+            if not isinstance(pattern_data, dict):
+                return "Missing 'contents' object in body", 400
+        warp_from = payload.get("warp_from")
+        warp_to   = payload.get("warp_to")
+        weft_from = payload.get("weft_from")
+        weft_to   = payload.get("weft_to")
+    else:
+        pattern_data = json.loads(pattern.contents)
+        warp_from = request.args.get("warp_from", type=int)
+        warp_to   = request.args.get("warp_to",   type=int)
+        weft_from = request.args.get("weft_from", type=int)
+        weft_to   = request.args.get("weft_to",   type=int)
+
+    try:
+        body = exporter.print_pdf(
+            pattern_data,
+            title=pattern.label or pattern_name,
+            warp_from=warp_from, warp_to=warp_to,
+            weft_from=weft_from, weft_to=weft_to,
+        )
+    except Exception as e:  # pragma: no cover
+        logging.exception("Print for %s/%s failed", user_name, pattern_name)
+        return f"Print failed: {e}", 500
+    suffix = "-part" if any(v is not None for v in (warp_from, warp_to, weft_from, weft_to)) else ""
+    return send_file(
+        io.BytesIO(body),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"{user_name}-{pattern_name}{suffix}.pdf",
+    )
 
 
 @app.route("/<string:user_name>/<string:pattern_name>/source")
