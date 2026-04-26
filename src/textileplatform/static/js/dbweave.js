@@ -185,14 +185,19 @@ function select_part(part, x1, y1, x2, y2) {
 }
 
 
+// Pixel position calculators. Each pane stores its top-left corner in
+// absolute canvas pixels (view.x, view.y). width/height stay in cells.
+// calc_x(i) / calc_y(j) take a *local* cell index (0..width-1 from the
+// pane's left/top edge, regardless of RTL/TTB) and return the pixel
+// position of that gridline.
 function get_x_calculator(view, settings, righttoleft) {
     if (righttoleft) {
         return function(i) {
-            return 0.5 + (view.x + view.width - i) * settings.dx;
+            return 0.5 + view.x + (view.width - i) * (view.dx || settings.dx);
         }
     } else {
         return function(i) {
-            return 0.5 + (view.x + i) * settings.dx;
+            return 0.5 + view.x + i * (view.dx || settings.dx);
         }
     }
 }
@@ -201,13 +206,33 @@ function get_x_calculator(view, settings, righttoleft) {
 function get_y_calculator(view, settings, toptobottom) {
     if (toptobottom) {
         return function(j) {
-            return 0.5 + (view.y + j) * settings.dy;
+            return 0.5 + view.y + j * (view.dy || settings.dy);
         }
     } else {
         return function(j) {
-            return 0.5 + (view.y + view.height - j) * settings.dy;
+            return 0.5 + view.y + (view.height - j) * (view.dy || settings.dy);
         }
     }
+}
+
+// Pixel-space hit testing for a pane. Returns local cell {i, j} the
+// pixel maps to (0..width-1, 0..height-1 from the pane's top-left,
+// pre-flip) or null when the pixel isn't inside the pane. Doc-coord
+// conversion via i_to_doc / j_to_doc handles the RTL/TTB flip.
+function _paneHit(view, px, py, settings) {
+    if (!view) return null;
+    if (typeof view.x !== "number" || typeof view.y !== "number") return null;
+    if (!(view.width > 0) || !(view.height > 0)) return null;
+    const dx = view.dx || settings.dx;
+    const dy = view.dy || settings.dy;
+    const right  = view.x + view.width  * dx;
+    const bottom = view.y + view.height * dy;
+    if (px < view.x || px >= right)  return null;
+    if (py < view.y || py >= bottom) return null;
+    return {
+        i: Math.floor((px - view.x) / dx),
+        j: Math.floor((py - view.y) / dy),
+    };
 }
 
 
@@ -309,8 +334,8 @@ function abbindungPainter(ctx, settings, view, i, j, withBackground) {
     ctx.ellipse(
         view.calc_x(i + 0.5),
         view.calc_y(j + 0.5),
-        (settings.dx - 2 * settings.bx) / 3,
-        (settings.dy - 2 * settings.by) / 3,
+        (view.dx - 2 * view.bx) / 3,
+        (view.dy - 2 * view.by) / 3,
         0,
         0,
         2*Math.PI
@@ -343,8 +368,8 @@ function cellPainterDot(ctx, settings, view, i, j, value) {
         ctx.ellipse(
             view.calc_x(i + 0.5),
             view.calc_y(j + 0.5),
-            (settings.dx - 2 * settings.bx) / 4,
-            (settings.dy - 2 * settings.by) / 4,
+            (view.dx - 2 * view.bx) / 4,
+            (view.dy - 2 * view.by) / 4,
             0,
             0,
             2*Math.PI
@@ -387,8 +412,8 @@ function cellPainterCircle(ctx, settings, view, i, j, value) {
         ctx.ellipse(
             view.calc_x(i + 0.5),
             view.calc_y(j + 0.5),
-            (settings.dx - 2 * settings.bx) / 2.5,
-            (settings.dy - 2 * settings.by) / 2.5,
+            (view.dx - 2 * view.bx) / 2.5,
+            (view.dy - 2 * view.by) / 2.5,
             0, 0, 2 * Math.PI
         );
         ctx.strokeStyle = getRangeColor(settings, value);
@@ -492,8 +517,8 @@ function cellPainterSmallcircle(ctx, settings, view, i, j, value) {
         ctx.ellipse(
             view.calc_x(i + 0.5),
             view.calc_y(j + 0.5),
-            (settings.dx - 2 * settings.bx) / 5,
-            (settings.dy - 2 * settings.by) / 5,
+            (view.dx - 2 * view.bx) / 5,
+            (view.dy - 2 * view.by) / 5,
             0, 0, 2 * Math.PI
         );
         ctx.strokeStyle = getRangeColor(settings, value);
@@ -508,8 +533,8 @@ function cellPainterSmallcross(ctx, settings, view, i, j, value) {
         const cx = view.calc_x(i + 0.5);
         const cy = view.calc_y(j + 0.5);
         const r = Math.min(
-            (settings.dx - 2 * settings.bx) / 5,
-            (settings.dy - 2 * settings.by) / 5
+            (view.dx - 2 * view.bx) / 5,
+            (view.dy - 2 * view.by) / 5
         );
         ctx.beginPath();
         ctx.moveTo(cx - r, cy - r);
@@ -527,7 +552,7 @@ function cellPainterNumber(ctx, settings, view, i, j, value) {
     if (value > 0) {
         const fontSize = Math.max(
             8,
-            Math.min(settings.dx, settings.dy) - 2 * Math.max(settings.bx, settings.by) - 2
+            Math.min(view.dx, view.dy) - 2 * Math.max(view.bx, view.by) - 2
         );
         ctx.font = `${fontSize}px sans-serif`;
         ctx.textAlign = "center";
@@ -1096,19 +1121,14 @@ class GridView {
         }
     }
 
-    contains(i, j) {
-        return this.x <= i && i < this.x + this.width &&
-               this.y <= j && j < this.y + this.height;
-    }
-
     draw(ctx, settings) {
         this.drawGrid(ctx, settings);
         this.drawData(ctx, settings);
     }
 
     drawCursor(ctx, settings, cursor) {
-        const dx = settings.dx;
-        const dy = settings.dy;
+        const dx = this.dx || settings.dx;
+        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -1144,8 +1164,8 @@ class GridView {
     }
 
     drawGrid(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
+        const dx = this.dx || settings.dx;
+        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -1267,11 +1287,6 @@ class GridViewPattern {
         }
     }
 
-    contains(i, j) {
-        return this.x <= i && i < this.x + this.width &&
-               this.y <= j && j < this.y + this.height;
-    }
-
     draw(ctx, settings) {
         this.drawGrid(ctx, settings);
         if (settings.style === "draft") {
@@ -1286,8 +1301,8 @@ class GridViewPattern {
     }
 
     drawCursor(ctx, settings, cursor) {
-        const dx = settings.dx;
-        const dy = settings.dy;
+        const dx = this.dx || settings.dx;
+        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -1323,8 +1338,8 @@ class GridViewPattern {
     }
 
     drawGrid(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
+        const dx = this.dx || settings.dx;
+        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -1426,8 +1441,8 @@ class GridViewPattern {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
-        const dx = settings.dx;
-        const dy = settings.dy;
+        const dx = this.dx || settings.dx;
+        const dy = this.dy || settings.dy;
 
         for (let i = this.offset_i; i < this.offset_i + width; i++) {
             if (i < pattern.min_x || pattern.max_x < i) continue;
@@ -1530,19 +1545,14 @@ class GridViewColors {
         }
     }
 
-    contains(i, j) {
-        return this.x <= i && i < this.x + this.width &&
-               this.y <= j && j < this.y + this.height;
-    }
-
     draw(ctx, settings) {
         this.drawGrid(ctx, settings);
         this.drawDataColor(ctx, settings);
     }
 
     drawCursor(ctx, settings, cursor) {
-        const dx = settings.dx;
-        const dy = settings.dy;
+        const dx = this.dx || settings.dx;
+        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -1578,8 +1588,8 @@ class GridViewColors {
     }
 
     drawGrid(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
+        const dx = this.dx || settings.dx;
+        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -1658,25 +1668,21 @@ class GridViewReed {
         }
     }
 
-    contains(i, j) {
-        return this.x <= i && i < this.x + this.width && this.y == j;
-    }
-
     draw(ctx, settings) {
         this.drawGrid(ctx, settings);
         this.drawData(ctx, settings);
     }
 
     drawGrid(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
+        const dx = this.dx || settings.dx;
+        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
 
         ctx.beginPath();
         for (let i = 0; i <= width; i++) {
             const x = this.calc_x(i);
             ctx.moveTo(x, this.calc_y(0));
-            ctx.lineTo(x, this.calc_y(0));
+            ctx.lineTo(x, this.calc_y(1));
         }
         for (let j = 0; j <= 1; j++) {
             const y = this.calc_y(j);
@@ -1807,6 +1813,12 @@ class Pattern {
         // _paletteSetEntry / _paletteRefreshColors. 236 slots in the
         // desktop (palette.h MAX_PAL_ENTRY); web sizes follow data.palette.
         this.palette = [];
+        // Hilfslinien (guide lines): array of { typ: "horz"|"vert", feld:
+        // 0|1, pos: int }. typ indicates orientation, feld which axis (0
+        // = top/left half of the editor, 1 = bottom/right half), pos is
+        // the 0-based pattern index. Direct port of Hilfslinien class
+        // (hilfslinien.cpp / .h).
+        this.hlines = [];
     }
 
     recalc_weave() {
@@ -2123,23 +2135,17 @@ class ViewSettings {
     }
 }
 
-// Stretch dx/dy from settings.base_dx according to the current
-// warp_factor / weft_factor. Direct port of patterncanvas.cpp::
-// recomputeLayout (lines 150-164): the smaller-factor axis stays at
-// base_dx; the larger-factor axis is stretched by the ratio of the
-// two factors. Called whenever the factors change AND on zoom.
+// Keep settings.dx / settings.dy = base_dx (the equal-axis baseline).
+// The actual per-axis cell sizes implied by warp_factor / weft_factor
+// are applied PER PANE during PatternView.layout — this lets only the
+// warp-axis panes (gewebe, einzug, color_warp, reed) widen when
+// warp_factor > weft_factor, and only the weft-axis panes (gewebe,
+// trittfolge, color_weft) stretch when weft_factor > warp_factor.
 function _applyAspectRatio(s) {
     if (!s) return;
     const base = Math.max(2, s.base_dx | 0 || s.dx | 0 || 12);
-    const wf = +s.warp_factor || 1.0;
-    const sf = +s.weft_factor || 1.0;
-    let dx = base, dy = base;
-    if (wf > 0 && sf > 0) {
-        if (sf > wf)      dy = Math.round(base * sf / wf);
-        else if (wf > sf) dx = Math.round(base * wf / sf);
-    }
-    s.dx = dx;
-    s.dy = dy;
+    s.dx = base;
+    s.dy = base;
     s.bx = s.dx * s.bxf;
     s.by = s.dy * s.byf;
 }
@@ -2169,16 +2175,18 @@ class ScrollbarHorz {
             Math.min(this.calc_x(0), this.calc_x(this.width)),
             Math.max(this.calc_x(0), this.calc_x(this.width))
         ];
-        return range[0] <= x && x <= range[1] &&
-               this.y * settings.dy + this.delta <= y && y <= this.y * settings.dy + this.height;
+        return range[0] <= x && x <= range[1]
+            && this.y + this.delta <= y
+            && y <= this.y + this.height;
     }
 
     scrollTo(x) {
+        const dx = this.dx || settings.dx;
         let f = undefined;
         if (this.righttoleft) {
-            f = 1.0 - 1.0 * (x - this.x * settings.dx) / (this.width * settings.dx);
+            f = 1.0 - 1.0 * (x - this.x) / (this.width * dx);
         } else {
-            f = 1.0 * (x - this.x * settings.dx) / (this.width * settings.dx);
+            f = 1.0 * (x - this.x) / (this.width * dx);
         }
         const centre_i = Math.trunc(this.pattern.width * f);
         let start_i = Math.trunc(centre_i - this.width / 2);
@@ -2194,16 +2202,17 @@ class ScrollbarHorz {
     }
 
     draw(ctx, settings) {
-        const w = this.width * settings.dx - 1;
+        const dx = this.dx || settings.dx;
+        const w = this.width * dx - 1;
         const a = Math.min(w / this.pattern.width * this.views[0].offset_i, w);
         const b = Math.min(w / this.pattern.width * (this.views[0].offset_i + this.views[0].width), w);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         fillRect(
             ctx,
-            this.calc_x(a / settings.dx),
-            0.5 + this.y * settings.dy + this.delta,
-            this.calc_x(b / settings.dx),
-            0.5 + this.y * settings.dy + this.height,
+            this.calc_x(a / dx),
+            0.5 + this.y + this.delta,
+            this.calc_x(b / dx),
+            0.5 + this.y + this.height,
             1.0
         );
         ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
@@ -2211,9 +2220,9 @@ class ScrollbarHorz {
         strokeRect(
             ctx,
             this.calc_x(0),
-            0.5 + this.y * settings.dy + this.delta,
+            0.5 + this.y + this.delta,
             this.calc_x(this.width),
-            0.5 + this.y * settings.dy + this.height
+            0.5 + this.y + this.height
         );
    }
 }
@@ -2243,16 +2252,18 @@ class ScrollbarVert {
             Math.min(this.calc_y(0), this.calc_y(this.height)),
             Math.max(this.calc_y(0), this.calc_y(this.height))
         ];
-        return range[0] <= y && y <= range[1] &&
-               this.x * settings.dx + this.delta <= x && x <= this.x * settings.dx + this.width;
+        return range[0] <= y && y <= range[1]
+            && this.x + this.delta <= x
+            && x <= this.x + this.width;
     }
 
     scrollTo(y) {
+        const dy = this.dy || settings.dy;
         let f = undefined;
         if (this.toptobottom) {
-            f = 1.0 * (y - this.y * settings.dy) / (this.height * settings.dy);
+            f = 1.0 * (y - this.y) / (this.height * dy);
         } else {
-            f = 1.0 - 1.0 * (y - this.y * settings.dy) / (this.height * settings.dy);
+            f = 1.0 - 1.0 * (y - this.y) / (this.height * dy);
         }
         const centre_j = Math.trunc(this.pattern.height * f);
         let start_j = Math.trunc(centre_j - this.height / 2);
@@ -2268,23 +2279,24 @@ class ScrollbarVert {
     }
 
     draw(ctx, settings) {
-        const h = this.height * settings.dy - 1;
+        const dy = this.dy || settings.dy;
+        const h = this.height * dy - 1;
         const a = Math.min(h / this.pattern.height * this.views[0].offset_j, h);
         const b = Math.min(h / this.pattern.height * (this.views[0].offset_j + this.views[0].height), h);
         ctx.fillStyle = settings.darcula ? "#666" : "#999";
         fillRect(
             ctx,
-            0.5 + this.x * settings.dx + this.delta,
-            this.calc_y(a / settings.dy),
-            0.5 + this.x * settings.dx + this.width,
-            this.calc_y(b / settings.dy)
+            0.5 + this.x + this.delta,
+            this.calc_y(a / dy),
+            0.5 + this.x + this.width,
+            this.calc_y(b / dy)
         );
         ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
         strokeRect(
             ctx,
-            0.5 + this.x * settings.dx + this.delta,
+            0.5 + this.x + this.delta,
             this.calc_y(0),
-            0.5 + this.x * settings.dx + this.width,
+            0.5 + this.x + this.width,
             this.calc_y(this.height)
         );
     }
@@ -2306,40 +2318,74 @@ class PatternView {
     }
 
     layout() {
-        const dx = this.settings.dx;
-        const dy = this.settings.dy;
+        const base_dx = this.settings.dx;
+        const base_dy = this.settings.dy;
+        // Per-axis cell sizes from warp_factor / weft_factor: only the
+        // *larger-factor* axis stretches; everything else stays at base.
+        const wf = +this.settings.warp_factor || 1.0;
+        const sf = +this.settings.weft_factor || 1.0;
+        const warp_dx = wf > sf ? base_dx * wf / sf : base_dx;
+        const weft_dy = sf > wf ? base_dy * sf / wf : base_dy;
         const scroll = 15;
 
-        const availx = Math.trunc((this.ctx.canvas.width - scroll) / dx);
-        const availy = Math.trunc((this.ctx.canvas.height - scroll) / dy);
-
-        // In pegplan mode the treadling / tie-up panes are replaced by a
-        // single pegplan pane, sized to `visible_shafts` wide (pegplan
-        // columns are shafts, not treadles).
+        const PANE_GAP = 6;
+        const hlBar = !!this.settings.display_hlines ? 1 : 0;
         const pegplanMode = !!this.settings.display_pegplan;
         const width3 = this.settings.display_colors_weft ? 1 : 0;
         const sidePaneWidth = pegplanMode ? this.visible_shafts : this.visible_treadles;
         const width2 = (pegplanMode ? true : this.settings.display_treadling)
             ? sidePaneWidth : 0;
-        const width1 = availx - this.withBorder(width3) - this.withBorder(width2);
-
         const height4 = this.settings.display_colors_warp ? 1 : 0;
         const height3 = this.settings.display_entering ? this.visible_shafts : 0;
         const height2 = this.settings.display_reed ? 1 : 0;
-        const height1 = availy - this.withBorder(height4) - this.withBorder(height3) - this.withBorder(height2);
 
+        // Pixel-aware sizing: weave width × warp_dx + side-pane × base_dx
+        // + colour_weft × base_dx + (bar × base_dx) + gaps + scroll
+        // ≤ canvas.width. Same idea on the weft axis.
+        const xVisibleBands = 1
+            + (width2 > 0 ? 1 : 0)
+            + (width3 > 0 ? 1 : 0)
+            + (hlBar ? 1 : 0);
+        const xGaps = Math.max(0, xVisibleBands - 1);
+        const xUsedFixed = width2 * base_dx
+                         + width3 * base_dx
+                         + (hlBar ? base_dx : 0);
+        const xAvailWarp = this.ctx.canvas.width - scroll - xUsedFixed
+                         - xGaps * PANE_GAP;
+        const width1 = Math.max(0, Math.floor(xAvailWarp / warp_dx));
+
+        const yVisibleBands = (hlBar ? 1 : 0)
+            + (height4 > 0 ? 1 : 0)
+            + (height3 > 0 ? 1 : 0)
+            + (height2 > 0 ? 1 : 0)
+            + 1;
+        const yGaps = Math.max(0, yVisibleBands - 1);
+        const yUsedFixed = (hlBar ? base_dy : 0)
+                         + height4 * base_dy
+                         + height3 * base_dy
+                         + height2 * base_dy;
+        const yAvailWeft = this.ctx.canvas.height - scroll - yUsedFixed
+                         - yGaps * PANE_GAP;
+        const height1 = Math.max(0, Math.floor(yAvailWeft / weft_dy));
+
+        // Cell-coord bookkeeping kept for the bar definitions below.
+        const dx = base_dx;
+        const dy = base_dy;
+
+        // Y/X origins of the actual pane content. When hlBar=1 we shift
+        // everything by 1 cell to leave room for the bar at top/left.
         let y4; // warp color bar
         let y3; // entering
         let y2; // reed
         let y1; // weave
 
         if (this.settings.entering_at_bottom) {
-            y1 = 0;
+            y1 = hlBar;
             y2 = y1 + this.withBorder(height1);
             y3 = y2 + this.withBorder(height2);
             y4 = y3 + this.withBorder(height3);
         } else {
-            y4 = 0;
+            y4 = hlBar;
             y3 = y4 + this.withBorder(height4);
             y2 = y3 + this.withBorder(height3);
             y1 = y2 + this.withBorder(height2);
@@ -2348,6 +2394,30 @@ class PatternView {
         const x1 = 0;
         const x2 = x1 + this.withBorder(width1);
         const x3 = x2 + this.withBorder(width2);
+        // Vertical bar sits immediately after color_weft (when visible)
+        // or at x3 (= treadling's trailing border, giving a 1-cell gap)
+        // when colour_weft is hidden. A small visual pixel gap on the
+        // bar's left edge is added at draw-time. This keeps the
+        // scrollbar inside the canvas.
+        const xVBar = x3 + width3;
+
+        // Hilfslinien bar geometry (cell-coord rectangles). hbar_warp /
+        // hbar_treadle sit on the top reserved row; vbar_shaft /
+        // vbar_weft on the right column with a 1-cell gap from the
+        // colour panes. Built only when active.
+        if (hlBar) {
+            this.hbar_warp = { x: x1, y: 0, width: width1, height: 1 };
+            this.hbar_treadle = (width2 > 0)
+                ? { x: x2, y: 0, width: width2, height: 1 }
+                : null;
+            this.vbar_shaft = (height3 > 0)
+                ? { x: xVBar, y: y3, width: 1, height: height3 }
+                : null;
+            this.vbar_weft = { x: xVBar, y: y1, width: 1, height: height1 };
+        } else {
+            this.hbar_warp = this.hbar_treadle = null;
+            this.vbar_shaft = this.vbar_weft = null;
+        }
 
         const p = this.data;
         const s = this.settings;
@@ -2465,6 +2535,8 @@ class PatternView {
         } else if (this.settings.display_treadling) {
             sbx = x2 + width2;
         }
+        // Vertical hilfslinien bar pushes the scrollbar further right.
+        if (hlBar) sbx = xVBar + 1;
 
         this.scroll_1_ver = new ScrollbarVert(
             p.weave,
@@ -2514,6 +2586,86 @@ class PatternView {
         } else if (cursor.selected_part === "color_weft") {
             cursor.selected_view = this.color_weft;
         }
+
+        // -----------------------------------------------------------
+        // Convert each pane's cell-coord origin into an ABSOLUTE
+        // CANVAS PIXEL position. The pixel walk uses PER-BAND cell
+        // sizes (warp_dx / weft_dy / base) so warp_factor and
+        // weft_factor only stretch the panes that span those axes —
+        // gewebe + einzug + reed + colour_warp on the warp axis,
+        // gewebe + treadling + colour_weft on the weft axis.
+        let cx = 0;
+        const pxX1 = cx; cx += width1 * warp_dx;
+        if (width2 > 0) cx += PANE_GAP;
+        const pxX2 = cx; cx += width2 * base_dx;
+        if (width3 > 0) cx += PANE_GAP;
+        const pxX3 = cx; cx += width3 * base_dx;
+        let pxXVBar = cx;
+        if (hlBar) {
+            cx += PANE_GAP;
+            pxXVBar = cx;
+            cx += base_dx;
+        }
+        const pxSbx = cx;
+
+        let cy = 0;
+        let pxYBar = cy;
+        if (hlBar) cy += base_dy + PANE_GAP;
+        let pxY1, pxY2, pxY3, pxY4;
+        if (this.settings.entering_at_bottom) {
+            pxY1 = cy; cy += height1 * weft_dy;
+            if (height2 > 0) cy += PANE_GAP;
+            pxY2 = cy; cy += height2 * base_dy;
+            if (height3 > 0) cy += PANE_GAP;
+            pxY3 = cy; cy += height3 * base_dy;
+            if (height4 > 0) cy += PANE_GAP;
+            pxY4 = cy; cy += height4 * base_dy;
+        } else {
+            pxY4 = cy; cy += height4 * base_dy;
+            if (height4 > 0 && (height3 > 0 || height2 > 0 || height1 > 0)) cy += PANE_GAP;
+            pxY3 = cy; cy += height3 * base_dy;
+            if (height3 > 0 && (height2 > 0 || height1 > 0)) cy += PANE_GAP;
+            pxY2 = cy; cy += height2 * base_dy;
+            if ((height4 > 0 || height3 > 0 || height2 > 0) && height1 > 0) cy += PANE_GAP;
+            pxY1 = cy; cy += height1 * weft_dy;
+        }
+        const pxSby = cy;
+
+        const bxf = this.settings.bxf;
+        const byf = this.settings.byf;
+        const setPane = (pane, px, py, paneDx, paneDy) => {
+            if (!pane) return;
+            pane.x = px;
+            pane.y = py;
+            pane.dx = paneDx;
+            pane.dy = paneDy;
+            pane.bx = paneDx * bxf;
+            pane.by = paneDy * byf;
+        };
+        setPane(this.color_warp, pxX1, pxY4, warp_dx, base_dy);
+        setPane(this.entering,   pxX1, pxY3, warp_dx, base_dy);
+        setPane(this.tieup,      pxX2, pxY3, base_dx, base_dy);
+        setPane(this.reed,       pxX1, pxY2, warp_dx, base_dy);
+        setPane(this.weave,      pxX1, pxY1, warp_dx, weft_dy);
+        setPane(this.pegplan,    pxX2, pxY1, base_dx, weft_dy);
+        setPane(this.treadling,  pxX2, pxY1, base_dx, weft_dy);
+        setPane(this.color_weft, pxX3, pxY1, base_dx, weft_dy);
+        // Hilfslinien bars (width / height stay in cells; bar dx/dy
+        // matches the axis they span so tick spacing is correct).
+        if (this.hbar_warp)
+            setPane(this.hbar_warp,    pxX1,    pxYBar, warp_dx, base_dy);
+        if (this.hbar_treadle)
+            setPane(this.hbar_treadle, pxX2,    pxYBar, base_dx, base_dy);
+        if (this.vbar_shaft)
+            setPane(this.vbar_shaft,   pxXVBar, pxY3,   base_dx, base_dy);
+        if (this.vbar_weft)
+            setPane(this.vbar_weft,    pxXVBar, pxY1,   base_dx, weft_dy);
+        // Scrollbars: dx/dy = the axis they scroll. scroll_1_hor scrolls
+        // the warp axis (under weave / colour_warp / etc), so dx=warp_dx.
+        setPane(this.scroll_1_hor, pxX1,  pxSby, warp_dx, base_dy);
+        setPane(this.scroll_2_hor, pxX2,  pxSby, base_dx, base_dy);
+        setPane(this.scroll_1_ver, pxSbx, pxY1,  base_dx, weft_dy);
+        setPane(this.scroll_2_ver, pxSbx, pxY3,  base_dx, base_dy);
     }
 
     make(visible, viewclass, data, x, y, w, h, style, righttoleft, toptobottom) {
@@ -2565,6 +2717,9 @@ class PatternView {
         this.scroll_2_hor.draw(this.ctx, this.settings);
         this.scroll_2_ver.draw(this.ctx, this.settings);
 
+        if (this.settings.display_hlines) {
+            _drawHilfslinien(this);
+        }
         if (cursor.selected_view) {
             cursor.selected_view.drawCursor(this.ctx, this.settings, cursor);
         }
@@ -2833,52 +2988,311 @@ class PatternView {
 }
 
 
+// ---- Hilfslinien (guide lines) — port of hilfslinien.cpp -----------
+//
+// Stored as pattern.hlines: array of { typ:"horz"|"vert", feld:0|1, pos:int }
+// where feld = 0 means top/left half (entering, gewebe-warp axis),
+// feld = 1 means bottom/right half (treadling, weft axis).
+//
+// Click-targets: four narrow bar regions (one cell row at the very top
+// for vertical-line toggles, one cell column on the left for
+// horizontal-line toggles). Built by PatternView.layout when
+// settings.display_hlines is on.
+
+const HLINE_COLOR = "#1d6fff";
+const HLINE_BAR_COLOR_LIGHT = "#dcdcdc";
+const HLINE_BAR_COLOR_DARK  = "#4a4a4a";
+
+function _hlineFind(typ, feld, pos) {
+    if (!pattern || !pattern.hlines) return -1;
+    for (let i = 0; i < pattern.hlines.length; i++) {
+        const h = pattern.hlines[i];
+        if (h.typ === typ && h.feld === feld && h.pos === pos) return i;
+    }
+    return -1;
+}
+
+function _hlineToggle(typ, feld, pos) {
+    if (readonly) return;
+    const idx = _hlineFind(typ, feld, pos);
+    const wasPresent = idx >= 0;
+    const entry = { typ, feld, pos };
+    const finalize = () => { setModified(); if (view) view.draw(); };
+    const cmd = {
+        label: wasPresent ? "remove guide line" : "add guide line",
+        apply() {
+            const i = _hlineFind(typ, feld, pos);
+            if (wasPresent) { if (i >= 0) pattern.hlines.splice(i, 1); }
+            else            { if (i < 0) pattern.hlines.push(entry); }
+            finalize();
+        },
+        revert() {
+            const i = _hlineFind(typ, feld, pos);
+            if (wasPresent) { if (i < 0) pattern.hlines.push(entry); }
+            else            { if (i >= 0) pattern.hlines.splice(i, 1); }
+            finalize();
+        },
+    };
+    if (typeof commandBus !== "undefined" && commandBus) commandBus.execute(cmd);
+    else cmd.apply();
+}
+
+function _drawHilfslinien(v) {
+    const ctx = v.ctx;
+    const s = v.settings;
+    const barFill = s.darcula ? HLINE_BAR_COLOR_DARK : HLINE_BAR_COLOR_LIGHT;
+    const tickColor = s.darcula ? "#888" : "#444";
+    const outlineColor = s.darcula ? "#222" : "#999";
+    // Ruler-style bar: solid fill + outline, plus half-depth tick marks
+    // at every cell boundary along the bar's main axis. Each bar's own
+    // dx/dy determine its tick spacing, so warp / weft ratio cells map
+    // 1:1 to bar ticks.
+    const drawHBar = (b) => {
+        if (!b) return;
+        const dx = b.dx, dy = b.dy;
+        const x = b.x, y = b.y;
+        const w = b.width * dx, h = b.height * dy;
+        ctx.fillStyle = barFill;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = tickColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        // One tick per cell at its left edge — no trailing tick at the
+        // pane's right edge.
+        for (let i = 0; i < b.width; i++) {
+            const tx = x + i * dx + 0.5;
+            ctx.moveTo(tx, y + h);          // bottom edge
+            ctx.lineTo(tx, y + h / 2);      // half height up
+        }
+        ctx.stroke();
+        ctx.strokeStyle = outlineColor;
+        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    };
+    const drawVBar = (b) => {
+        if (!b) return;
+        const dx = b.dx, dy = b.dy;
+        const x = b.x, y = b.y;
+        const w = b.width * dx, h = b.height * dy;
+        ctx.fillStyle = barFill;
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = tickColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        // One tick per cell at its top edge — no trailing tick at the
+        // pane's bottom edge.
+        for (let j = 0; j < b.height; j++) {
+            const ty = y + j * dy + 0.5;
+            ctx.moveTo(x,         ty);      // left edge
+            ctx.lineTo(x + w / 2, ty);      // half width right
+        }
+        ctx.stroke();
+        ctx.strokeStyle = outlineColor;
+        ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    };
+    drawHBar(v.hbar_warp);
+    drawHBar(v.hbar_treadle);
+    drawVBar(v.vbar_shaft);
+    drawVBar(v.vbar_weft);
+
+    // The actual guide lines — one per pattern.hlines entry, plus a
+    // small filled marker inside the corresponding bar so the user can
+    // see at a glance where guide lines are anchored.
+    const lines = pattern.hlines || [];
+    for (const h of lines) _drawOneHilfslinie(v, h);
+}
+
+function _drawOneHilfslinie(v, h) {
+    const ctx = v.ctx;
+    const s = v.settings;
+    const pegplan = !!s.display_pegplan;
+    const MARK = 5;
+
+    const strokeLine = (segments) => {
+        ctx.strokeStyle = HLINE_COLOR;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (const [x1, y1, x2, y2] of segments) {
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+        }
+        ctx.stroke();
+    };
+    const horzMarker = (bar, y) => {
+        if (!bar) return;
+        ctx.fillStyle = HLINE_COLOR;
+        ctx.fillRect(bar.x + 1, y - Math.floor(MARK / 2),
+                     bar.width * bar.dx - 2, MARK);
+    };
+    const vertMarker = (bar, x) => {
+        if (!bar) return;
+        ctx.fillStyle = HLINE_COLOR;
+        ctx.fillRect(x - Math.floor(MARK / 2), bar.y + 1,
+                     MARK, bar.height * bar.dy - 2);
+    };
+
+    // Guide lines land ON grid lines (between cells), not in cell
+    // centres — direct port of desktop _DrawHilfslinie which uses
+    // pos*gh / pos*gw without a half-cell offset.
+    if (h.typ === "horz" && h.feld === 0) {
+        const ez = v.entering;
+        if (!ez || ez.height <= 0) return;
+        const local = h.pos - ez.offset_j;
+        if (local < 0 || local > ez.height) return;
+        const y = s.direction_toptobottom
+            ? ez.y + local * ez.dy
+            : ez.y + (ez.height - local) * ez.dy;
+        const segs = [[ez.x, y, ez.x + ez.width * ez.dx, y]];
+        if (v.tieup && (pegplan || s.display_treadling)) {
+            segs.push([v.tieup.x, y, v.tieup.x + v.tieup.width * v.tieup.dx, y]);
+        }
+        strokeLine(segs);
+        horzMarker(v.vbar_shaft, y);
+
+    } else if (h.typ === "horz" && h.feld === 1) {
+        const w = v.weave;
+        if (!w || w.height <= 0) return;
+        const local = h.pos - w.offset_j;
+        if (local < 0 || local > w.height) return;
+        const y = w.y + (w.height - local) * w.dy;
+        const segs = [[w.x, y, w.x + w.width * w.dx, y]];
+        const side = pegplan ? v.pegplan : v.treadling;
+        if (side && (pegplan || s.display_treadling)) {
+            segs.push([side.x, y, side.x + side.width * side.dx, y]);
+        }
+        strokeLine(segs);
+        horzMarker(v.vbar_weft, y);
+
+    } else if (h.typ === "vert" && h.feld === 0) {
+        const w = v.weave;
+        if (!w || w.width <= 0) return;
+        const local = h.pos - w.offset_i;
+        if (local < 0 || local > w.width) return;
+        const x = s.direction_righttoleft
+            ? w.x + (w.width - local) * w.dx
+            : w.x + local * w.dx;
+        const segs = [[x, w.y, x, w.y + w.height * w.dy]];
+        if (v.entering && s.display_entering) {
+            segs.push([x, v.entering.y, x, v.entering.y + v.entering.height * v.entering.dy]);
+        }
+        strokeLine(segs);
+        vertMarker(v.hbar_warp, x);
+
+    } else if (h.typ === "vert" && h.feld === 1) {
+        const tf = pegplan ? v.pegplan : v.treadling;
+        if (!tf || tf.width <= 0) return;
+        const local = h.pos - tf.offset_i;
+        if (local < 0 || local > tf.width) return;
+        const x = tf.x + local * tf.dx;
+        const segs = [[x, tf.y, x, tf.y + tf.height * tf.dy]];
+        if (v.tieup && s.display_entering && !pegplan) {
+            segs.push([x, v.tieup.y, x, v.tieup.y + v.tieup.height * v.tieup.dy]);
+        }
+        strokeLine(segs);
+        vertMarker(v.hbar_treadle, x);
+    }
+}
+
+// Hit-test a click in pixel coords against the hline bars. Returns
+// {typ, feld, pos} for the toggled line, or null when not on a bar.
+// Snaps the click to the NEAREST tick along the bar's main axis (so a
+// click anywhere in the right half of a cell selects the next gridline,
+// not the cell's own left edge — matches the visual tick spacing).
+function _hlineHitPx(px, py) {
+    if (!view || !settings.display_hlines) return null;
+    // Nearest-tick snap on a bar's primary axis. Ticks live on grid
+    // lines, so there are count+1 of them (0..count inclusive,
+    // representing both pane edges plus the count-1 internal lines).
+    const snapH = (bar) =>
+        Math.max(0, Math.min(bar.width,  Math.round((px - bar.x) / bar.dx)));
+    const snapV = (bar) =>
+        Math.max(0, Math.min(bar.height, Math.round((py - bar.y) / bar.dy)));
+    if (_paneHit(view.hbar_warp, px, py, settings)) {
+        const w = view.weave;
+        let local = snapH(view.hbar_warp);
+        if (settings.direction_righttoleft) local = w.width - local;
+        const pos = local + (w ? w.offset_i : 0);
+        return { typ: "vert", feld: 0, pos };
+    }
+    if (_paneHit(view.hbar_treadle, px, py, settings)) {
+        const tf = settings.display_pegplan ? view.pegplan : view.treadling;
+        const local = snapH(view.hbar_treadle);
+        const pos = local + (tf ? tf.offset_i : 0);
+        return { typ: "vert", feld: 1, pos };
+    }
+    if (_paneHit(view.vbar_shaft, px, py, settings)) {
+        const ez = view.entering;
+        let local = snapV(view.vbar_shaft);
+        if (!settings.direction_toptobottom) local = ez.height - local;
+        const pos = local + (ez ? ez.offset_j : 0);
+        return { typ: "horz", feld: 0, pos };
+    }
+    if (_paneHit(view.vbar_weft, px, py, settings)) {
+        const w = view.weave;
+        const local = w.height - snapV(view.vbar_weft);
+        const pos = local + (w ? w.offset_j : 0);
+        return { typ: "horz", feld: 1, pos };
+    }
+    return null;
+}
+
+
+// `i` / `j` are LOCAL cell indices within the pane (0..width-1 from
+// the pane's top-left, pre-flip), exactly as returned by _paneHit.
 function i_to_doc(i, view, righttoleft) {
     if (righttoleft) {
-        return view.width - 1 - (i - view.x) + view.offset_i;
+        return view.width - 1 - i + view.offset_i;
     } else {
-        return i - view.x + view.offset_i;
+        return i + view.offset_i;
     }
 }
 
 function j_to_doc(j, view, toptobottom) {
     if (toptobottom) {
-        return j - view.y + view.offset_j;
+        return j + view.offset_j;
     } else {
-        return view.height - 1 - (j - view.y) + view.offset_j;
+        return view.height - 1 - j + view.offset_j;
     }
 }
 
-// _paintablePaneAt — returns metadata for a paintable 2D pane under the given
-// screen-grid cell, or null. Drawing tools (line/rect/ellipse) operate only
-// on these panes: weave, tieup, treadling.
-function _paintablePaneAt(i, j) {
-    if (view.weave.contains(i, j) && !settings.weave_locked) {
+// _paintablePaneAtPx — returns metadata for a paintable 2D pane under
+// pixel (px, py), or null. Drawing tools (line/rect/ellipse) operate
+// only on these panes: weave, tieup, treadling, pegplan. Returned
+// object includes the canvas-cell-coord {i, j} of the hit so callers
+// can compute doc indices via i_to_doc / j_to_doc.
+function _paintablePaneAtPx(px, py) {
+    let hit;
+    if (!settings.weave_locked
+        && (hit = _paneHit(view.weave, px, py, settings))) {
         return {
             part: "weave", pane: view.weave, grid: pattern.weave,
             rtl: settings.direction_righttoleft, ttb: false,
             recalc: "from_weave",
+            i: hit.i, j: hit.j,
         };
     }
-    if (view.tieup.contains(i, j) && !settings.display_pegplan) {
+    if (!settings.display_pegplan
+        && (hit = _paneHit(view.tieup, px, py, settings))) {
         return {
             part: "tieup", pane: view.tieup, grid: pattern.tieup,
             rtl: false, ttb: settings.direction_toptobottom,
             recalc: "weave_recalc",
+            i: hit.i, j: hit.j,
         };
     }
-    if (view.treadling.contains(i, j)) {
+    if ((hit = _paneHit(view.treadling, px, py, settings))) {
         return {
             part: "treadling", pane: view.treadling, grid: pattern.treadling,
             rtl: false, ttb: false,
             recalc: "weave_recalc",
+            i: hit.i, j: hit.j,
         };
     }
-    if (view.pegplan.contains(i, j)) {
+    if ((hit = _paneHit(view.pegplan, px, py, settings))) {
         return {
             part: "pegplan", pane: view.pegplan, grid: pattern.pegplan,
             rtl: false, ttb: false,
             recalc: "weave_recalc",
+            i: hit.i, j: hit.j,
         };
     }
     return null;
@@ -2954,16 +3368,14 @@ function mouseDown(event) {
     mousedown = true;
     const x = event.offsetX;
     const y = event.offsetY;
-    const i = Math.trunc(x / settings.dx);
-    const j = Math.trunc(y / settings.dy);
 
     // Drawing tool drag — short-circuits the usual selection logic on
     // paintable 2D panes.
     if (settings.tool && settings.tool !== "point") {
-        const p = _paintablePaneAt(i, j);
+        const p = _paintablePaneAtPx(x, y);
         if (p) {
-            const ii = i_to_doc(i, p.pane, p.rtl);
-            const jj = j_to_doc(j, p.pane, p.ttb);
+            const ii = i_to_doc(p.i, p.pane, p.rtl);
+            const jj = j_to_doc(p.j, p.pane, p.ttb);
             toolDrag = {
                 tool: settings.tool, pane_info: p,
                 i1: ii, j1: jj, i2: ii, j2: jj, active: true,
@@ -2975,31 +3387,34 @@ function mouseDown(event) {
         }
     }
 
-    if (view.entering.contains(i, j)) {
-        const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
-        const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
+    let hit;
+    if ((hit = _paneHit(view.entering, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.entering, settings.direction_righttoleft);
+        const jj = j_to_doc(hit.j, view.entering, settings.direction_toptobottom);
         select_part("entering", ii, jj, ii, jj);
-    } else if (view.pegplan.contains(i, j)) {
-        const ii = i_to_doc(i, view.pegplan, false);
-        const jj = j_to_doc(j, view.pegplan, false);
+    } else if ((hit = _paneHit(view.pegplan, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.pegplan, false);
+        const jj = j_to_doc(hit.j, view.pegplan, false);
         select_part("pegplan", ii, jj, ii, jj);
-    } else if (view.treadling.contains(i, j)) {
-        const ii = i_to_doc(i, view.treadling, false);
-        const jj = j_to_doc(j, view.treadling, false);
+    } else if ((hit = _paneHit(view.treadling, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.treadling, false);
+        const jj = j_to_doc(hit.j, view.treadling, false);
         select_part("treadling", ii, jj, ii, jj);
-    } else if (view.tieup.contains(i, j) && !settings.display_pegplan) {
-        const ii = i_to_doc(i, view.tieup, false);
-        const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
+    } else if (!settings.display_pegplan
+               && (hit = _paneHit(view.tieup, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.tieup, false);
+        const jj = j_to_doc(hit.j, view.tieup, settings.direction_toptobottom);
         select_part("tieup", ii, jj, ii, jj);
-    } else if (view.weave.contains(i, j) && !settings.weave_locked) {
-        const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
-        const jj = j_to_doc(j, view.weave, false);
+    } else if (!settings.weave_locked
+               && (hit = _paneHit(view.weave, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.weave, settings.direction_righttoleft);
+        const jj = j_to_doc(hit.j, view.weave, false);
         select_part("weave", ii, jj, ii, jj);
-    } else if (view.color_warp.contains(i, j)) {
-        const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
+    } else if ((hit = _paneHit(view.color_warp, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.color_warp, settings.direction_righttoleft);
         select_part("color_warp", ii, 0, ii, 0);
-    } else if (view.color_weft.contains(i, j)) {
-        const jj = j_to_doc(j, view.color_weft, false);
+    } else if ((hit = _paneHit(view.color_weft, x, y, settings))) {
+        const jj = j_to_doc(hit.j, view.color_weft, false);
         select_part("color_weft", 0, jj, 0, jj);
     }
 }
@@ -3008,66 +3423,56 @@ function mouseMove(event) {
     if (!mousedown) return;
     const x = event.offsetX;
     const y = event.offsetY;
-    const i = Math.trunc(x / settings.dx);
-    const j = Math.trunc(y / settings.dy);
 
     // Update tool drag preview.
     if (toolDrag && toolDrag.active) {
         const p = toolDrag.pane_info;
-        if (p.pane.contains(i, j)) {
-            toolDrag.i2 = i_to_doc(i, p.pane, p.rtl);
-            toolDrag.j2 = j_to_doc(j, p.pane, p.ttb);
+        const phit = _paneHit(p.pane, x, y, settings);
+        if (phit) {
+            toolDrag.i2 = i_to_doc(phit.i, p.pane, p.rtl);
+            toolDrag.j2 = j_to_doc(phit.j, p.pane, p.ttb);
         }
         view.draw();
         drawToolPreview();
         return;
     }
 
-    if (view.entering.contains(i, j)) {
-        const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
-        const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
-        cursor.x2 = ii;
-        cursor.y2 = jj;
+    let hit;
+    if ((hit = _paneHit(view.entering, x, y, settings))) {
+        cursor.x2 = i_to_doc(hit.i, view.entering, settings.direction_righttoleft);
+        cursor.y2 = j_to_doc(hit.j, view.entering, settings.direction_toptobottom);
         updateSelectionIcons();
         view.draw();
-    } else if (view.pegplan.contains(i, j)) {
-        const ii = i_to_doc(i, view.pegplan, false);
-        const jj = j_to_doc(j, view.pegplan, false);
-        cursor.x2 = ii;
-        cursor.y2 = jj;
+    } else if ((hit = _paneHit(view.pegplan, x, y, settings))) {
+        cursor.x2 = i_to_doc(hit.i, view.pegplan, false);
+        cursor.y2 = j_to_doc(hit.j, view.pegplan, false);
         updateSelectionIcons();
         view.draw();
-    } else if (view.treadling.contains(i, j)) {
-        const ii = i_to_doc(i, view.treadling, false);
-        const jj = j_to_doc(j, view.treadling, false);
-        cursor.x2 = ii;
-        cursor.y2 = jj;
+    } else if ((hit = _paneHit(view.treadling, x, y, settings))) {
+        cursor.x2 = i_to_doc(hit.i, view.treadling, false);
+        cursor.y2 = j_to_doc(hit.j, view.treadling, false);
         updateSelectionIcons();
         view.draw();
-    } else if (view.tieup.contains(i, j) && !settings.display_pegplan) {
-        const ii = i_to_doc(i, view.tieup, false);
-        const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
-        cursor.x2 = ii;
-        cursor.y2 = jj;
+    } else if (!settings.display_pegplan
+               && (hit = _paneHit(view.tieup, x, y, settings))) {
+        cursor.x2 = i_to_doc(hit.i, view.tieup, false);
+        cursor.y2 = j_to_doc(hit.j, view.tieup, settings.direction_toptobottom);
         updateSelectionIcons();
         view.draw();
-    } else if (view.weave.contains(i, j) && !settings.weave_locked) {
-        const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
-        const jj = j_to_doc(j, view.weave, false);
-        cursor.x2 = ii;
-        cursor.y2 = jj;
+    } else if (!settings.weave_locked
+               && (hit = _paneHit(view.weave, x, y, settings))) {
+        cursor.x2 = i_to_doc(hit.i, view.weave, settings.direction_righttoleft);
+        cursor.y2 = j_to_doc(hit.j, view.weave, false);
         updateSelectionIcons();
         view.draw();
-    } else if (view.color_warp.contains(i, j)) {
-        const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
-        cursor.x2 = ii;
+    } else if ((hit = _paneHit(view.color_warp, x, y, settings))) {
+        cursor.x2 = i_to_doc(hit.i, view.color_warp, settings.direction_righttoleft);
         cursor.y2 = 0;
         updateSelectionIcons();
         view.draw();
-    } else if (view.color_weft.contains(i, j)) {
-        const jj = j_to_doc(j, view.color_weft, false);
+    } else if ((hit = _paneHit(view.color_weft, x, y, settings))) {
         cursor.x2 = 0;
-        cursor.y2 = jj;
+        cursor.y2 = j_to_doc(hit.j, view.color_weft, false);
         updateSelectionIcons();
         view.draw();
     }
@@ -3077,23 +3482,32 @@ function mouseUp(event) {
     mousedown = false;
     const x = event.offsetX;
     const y = event.offsetY;
-    const i = Math.trunc(x / settings.dx);
-    const j = Math.trunc(y / settings.dy);
+
+    // Hilfslinien bar click → toggle a guide line.
+    if (!readonly && settings.display_hlines) {
+        const bhit = _hlineHitPx(x, y);
+        if (bhit) {
+            _hlineToggle(bhit.typ, bhit.feld, bhit.pos);
+            return;
+        }
+    }
 
     // Finish tool drag: commit shape as one undoable command.
     if (toolDrag && toolDrag.active) {
         const p = toolDrag.pane_info;
-        if (p.pane.contains(i, j)) {
-            toolDrag.i2 = i_to_doc(i, p.pane, p.rtl);
-            toolDrag.j2 = j_to_doc(j, p.pane, p.ttb);
+        const phit = _paneHit(p.pane, x, y, settings);
+        if (phit) {
+            toolDrag.i2 = i_to_doc(phit.i, p.pane, p.rtl);
+            toolDrag.j2 = j_to_doc(phit.j, p.pane, p.ttb);
         }
         _finishToolDrag();
         return;
     }
 
-    if (view.entering.contains(i, j)) {
-        const ii = i_to_doc(i, view.entering, settings.direction_righttoleft);
-        const jj = j_to_doc(j, view.entering, settings.direction_toptobottom);
+    let hit;
+    if ((hit = _paneHit(view.entering, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.entering, settings.direction_righttoleft);
+        const jj = j_to_doc(hit.j, view.entering, settings.direction_toptobottom);
         cursor.x2 = ii;
         cursor.y2 = jj;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
@@ -3104,9 +3518,9 @@ function mouseUp(event) {
         }
         updateSelectionIcons();
         view.draw();
-    } else if (view.pegplan.contains(i, j)) {
-        const ii = i_to_doc(i, view.pegplan, false);
-        const jj = j_to_doc(j, view.pegplan, false);
+    } else if ((hit = _paneHit(view.pegplan, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.pegplan, false);
+        const jj = j_to_doc(hit.j, view.pegplan, false);
         cursor.x2 = ii;
         cursor.y2 = jj;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
@@ -3115,9 +3529,9 @@ function mouseUp(event) {
         }
         updateSelectionIcons();
         view.draw();
-    } else if (view.treadling.contains(i, j)) {
-        const ii = i_to_doc(i, view.treadling, false);
-        const jj = j_to_doc(j, view.treadling, false);
+    } else if ((hit = _paneHit(view.treadling, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.treadling, false);
+        const jj = j_to_doc(hit.j, view.treadling, false);
         cursor.x2 = ii;
         cursor.y2 = jj;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
@@ -3130,9 +3544,10 @@ function mouseUp(event) {
         }
         updateSelectionIcons();
         view.draw();
-    } else if (view.tieup.contains(i, j) && !settings.display_pegplan) {
-        const ii = i_to_doc(i, view.tieup, false);
-        const jj = j_to_doc(j, view.tieup, settings.direction_toptobottom);
+    } else if (!settings.display_pegplan
+               && (hit = _paneHit(view.tieup, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.tieup, false);
+        const jj = j_to_doc(hit.j, view.tieup, settings.direction_toptobottom);
         cursor.x2 = ii;
         cursor.y2 = jj;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
@@ -3141,9 +3556,10 @@ function mouseUp(event) {
         }
         updateSelectionIcons();
         view.draw();
-    } else if (view.weave.contains(i, j) && !settings.weave_locked) {
-        const ii = i_to_doc(i, view.weave, settings.direction_righttoleft);
-        const jj = j_to_doc(j, view.weave, false);
+    } else if (!settings.weave_locked
+               && (hit = _paneHit(view.weave, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.weave, settings.direction_righttoleft);
+        const jj = j_to_doc(hit.j, view.weave, false);
         cursor.x2 = ii;
         cursor.y2 = jj;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
@@ -3152,8 +3568,8 @@ function mouseUp(event) {
         }
         updateSelectionIcons();
         view.draw();
-    } else if (view.color_warp.contains(i, j)) {
-        const ii = i_to_doc(i, view.color_warp, settings.direction_righttoleft);
+    } else if ((hit = _paneHit(view.color_warp, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.color_warp, settings.direction_righttoleft);
         cursor.x2 = ii;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
         if (no_selection && !had_selection) {
@@ -3169,8 +3585,8 @@ function mouseUp(event) {
         }
         updateSelectionIcons();
         view.draw();
-    } else if (view.color_weft.contains(i, j)) {
-        const jj = j_to_doc(j, view.color_weft, false);
+    } else if ((hit = _paneHit(view.color_weft, x, y, settings))) {
+        const jj = j_to_doc(hit.j, view.color_weft, false);
         cursor.y2 = jj;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
         if (no_selection && !had_selection) {
@@ -3183,8 +3599,8 @@ function mouseUp(event) {
         }
         updateSelectionIcons();
         view.draw();
-    } else if (view.reed.contains(i, j)) {
-        const ii = i_to_doc(i, view.reed, settings.direction_righttoleft);
+    } else if ((hit = _paneHit(view.reed, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.reed, settings.direction_righttoleft);
         _applyGridToggle(pattern.reed, ii, 0, 1, null);
         view.draw();
     } else {
@@ -3216,6 +3632,16 @@ function init() {
 
     if (typeof CommandBus !== "undefined") {
         commandBus = new CommandBus();
+        // Track which command represents the last saved state so that
+        // undo/redo back to that point can clear the modified flag.
+        // null = empty stack is the saved baseline (initial pristine
+        // load, or freshly reverted).
+        commandBus.savedMark = null;
+        commandBus.subscribe((bus) => {
+            const top = bus.undoStack[bus.undoStack.length - 1] || null;
+            if (top === bus.savedMark) clearModified();
+            else                       setModified();
+        });
     }
 
     // console.log(data);
@@ -3368,6 +3794,437 @@ async function _exportDownload(fmt) {
     }, 0);
 }
 
+// ---- Phase 10: properties + pattern info -------------------------
+//
+// Properties dialog (port of propertiesdialog.cpp) edits author /
+// organization / notes that round-trip through the pattern JSON.
+//
+// Pattern Information dialog (port of entwurfsinfodialog.cpp) builds
+// a four-section computed report (General / Colors / Floats / Heddles)
+// over the in-memory pattern, with a plain-text save-as-report button.
+
+function _patternProperties() {
+    return {
+        author:       (data && data.author)       || "",
+        organization: (data && data.organization) || "",
+        notes:        (data && data.notes)        || "",
+    };
+}
+
+function showPropertiesDialog() {
+    if (readonly) return;
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    const cur = _patternProperties();
+    const body = document.createElement("div");
+    body.style.minWidth = "420px";
+    body.innerHTML = `
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:0.4rem 1rem;align-items:start">
+            <label>${L("props.author", "Author:")}</label>
+            <input id="tx-pp-author" type="text" style="width:100%">
+            <label>${L("props.organization", "Organization:")}</label>
+            <input id="tx-pp-org" type="text" style="width:100%">
+            <label>${L("props.notes", "Notes:")}</label>
+            <textarea id="tx-pp-notes" rows="6" style="width:100%;resize:vertical"></textarea>
+        </div>`;
+    const $ = (sel) => body.querySelector(sel);
+    $("#tx-pp-author").value = cur.author;
+    $("#tx-pp-org").value    = cur.organization;
+    $("#tx-pp-notes").value  = cur.notes;
+    setTimeout(() => { $("#tx-pp-author").focus(); $("#tx-pp-author").select(); }, 0);
+
+    let modal;
+    const accept = () => {
+        const newProps = {
+            author:       $("#tx-pp-author").value,
+            organization: $("#tx-pp-org").value,
+            notes:        $("#tx-pp-notes").value,
+        };
+        if (newProps.author !== cur.author
+            || newProps.organization !== cur.organization
+            || newProps.notes !== cur.notes) {
+            _snapshotCommand("edit properties",
+                () => ({
+                    author:       data.author,
+                    organization: data.organization,
+                    notes:        data.notes,
+                }),
+                (s) => {
+                    data.author       = s.author;
+                    data.organization = s.organization;
+                    data.notes        = s.notes;
+                },
+                () => {
+                    data.author       = newProps.author;
+                    data.organization = newProps.organization;
+                    data.notes        = newProps.notes;
+                },
+            );
+        }
+        modal.close();
+    };
+    modal = Modal.open({
+        title: L("props.title", "Properties"),
+        body,
+        buttons: [
+            { label: L("btn.cancel", "Cancel"), role: "cancel" },
+            { label: L("btn.ok",     "OK"),     role: "primary", onClick: accept },
+        ],
+    });
+}
+
+
+// Pattern info — direct port of EntwurfsinfoDialog. Builds 4 sections
+// of computed report text from the in-memory pattern.
+
+const _INFO_RANGE_AUSHEBUNG = 10;
+const _INFO_RANGE_ANBINDUNG = 11;
+const _INFO_RANGE_ABBINDUNG = 12;
+
+function _info_fmt3g(v) {
+    if (!isFinite(v)) return "0";
+    // Match the desktop's "%1.3g" output: at most 3 significant digits.
+    return Number(v).toPrecision(3).replace(/\.?0+($|e)/, "$1");
+}
+
+function _info_weave(i, j) {
+    // Re-derive weave value from in-memory pattern.weave.
+    if (i < 0 || j < 0) return 0;
+    if (i >= pattern.weave.width || j >= pattern.weave.height) return 0;
+    return pattern.weave.get(i, j);
+}
+
+// === Allgemein ===
+function _info_general() {
+    const lines = [];
+    const a = pattern.min_x, b = pattern.max_x;
+    const sa = pattern.min_y, sb = pattern.max_y;
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+
+    if (b < a || sb < sa) return lines;
+
+    const props = _patternProperties();
+    if (props.author)       lines.push(L("info.author", "Author:") + " " + props.author);
+    if (props.organization) lines.push(L("info.org",    "Organization:") + " " + props.organization);
+
+    const w = b - a + 1, h = sb - sa + 1;
+    lines.push(L("info.size", "Pattern size:") + " " + w + " x " + h);
+
+    if (pattern.rapport_k_b >= pattern.rapport_k_a
+        && pattern.rapport_s_b >= pattern.rapport_s_a) {
+        const rw = pattern.rapport_k_b - pattern.rapport_k_a + 1;
+        const rh = pattern.rapport_s_b - pattern.rapport_s_a + 1;
+        lines.push(L("info.repeat", "Pattern repeat:") + " " + rw + " x " + rh);
+    }
+
+    let nshafts = 0;
+    for (let s = 0; s < pattern.tieup.height; s++) {
+        if (!_isFreeSchaft(s)) nshafts++;
+    }
+    lines.push(L("info.shafts", "Number of shafts:") + " " + nshafts);
+
+    let ntreadles = 0;
+    for (let t = 0; t < pattern.treadling.width; t++) {
+        if (!_isFreeTritt(t)) ntreadles++;
+    }
+    lines.push(L("info.treadles", "Number of treadles:") + " " + ntreadles);
+
+    const total = w * h;
+    let up = 0, down = 0;
+    for (let i = a; i <= b; i++) {
+        for (let j = sa; j <= sb; j++) {
+            if (_info_weave(i, j) > 0) up++;
+            else down++;
+        }
+    }
+    if (up < down) {
+        lines.push(L("info.weft-sided", "The pattern is weft sided") + " ("
+            + _info_fmt3g(100 * down / total) + "% "
+            + L("info.sinking", "sinking binding points)"));
+    } else if (up > down) {
+        lines.push(L("info.warp-sided", "The pattern is warp sided") + " ("
+            + _info_fmt3g(100 * up / total) + "% "
+            + L("info.rising", "rising binding points)"));
+    } else {
+        lines.push(L("info.balanced", "The pattern is balanced"));
+    }
+
+    if (props.notes) {
+        lines.push("");
+        lines.push(L("info.notes", "Notes:"));
+        for (const ln of props.notes.split(/\r?\n/)) lines.push(ln);
+    }
+    return lines;
+}
+
+// === Farben ===
+function _info_colors() {
+    const lines = [];
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    const a = pattern.min_x, b = pattern.max_x;
+    const sa = pattern.min_y, sb = pattern.max_y;
+    if (b < a || sb < sa) return lines;
+
+    const palLen = pattern.palette ? pattern.palette.length : 0;
+    const ktable = new Array(palLen + 1).fill(0);
+    const stable = new Array(palLen + 1).fill(0);
+    const seen = new Set(), seenK = new Set(), seenF = new Set();
+    for (let i = a; i <= b; i++) {
+        const c = pattern.color_warp.get(i, 0);
+        seen.add(c); seenK.add(c);
+        ktable[c] = (ktable[c] | 0) + 1;
+    }
+    for (let j = sa; j <= sb; j++) {
+        const c = pattern.color_weft.get(0, j);
+        seen.add(c); seenF.add(c);
+        stable[c] = (stable[c] | 0) + 1;
+    }
+    lines.push(L("info.colors-count", "Number of colors:"));
+    lines.push(L("info.total", "Total:") + " " + seen.size);
+    lines.push(L("info.in-warp", "In warp:") + " " + seenK.size);
+    lines.push(L("info.in-weft", "In weft:") + " " + seenF.size);
+    lines.push("");
+
+    const emit = (label, table, total, fadenLabel) => {
+        lines.push(label);
+        let n = 1;
+        for (let i = 0; i < palLen; i++) {
+            if (!table[i]) continue;
+            const [r, g, b2] = pattern.palette[i] || [0, 0, 0];
+            const [h, s, v] = _rgbToHsv(r, g, b2);
+            const pct = _info_fmt3g(100 * table[i] / total);
+            lines.push("  "
+                + L("info.color", "Color") + " " + n + ": "
+                + "HSV=(" + _info_fmt3g(h) + "," + _info_fmt3g(s) + "," + _info_fmt3g(v) + "), "
+                + "RGB=(" + r + "," + g + "," + b2 + "), "
+                + table[i] + " " + fadenLabel + "  (" + pct + "%)");
+            n++;
+        }
+        lines.push("");
+    };
+    emit(L("info.warp-colors", "Warp colors:"), ktable, b - a + 1,
+        L("info.warp-ends", "warp ends"));
+    emit(L("info.weft-colors", "Weft colors:"), stable, sb - sa + 1,
+        L("info.weft-picks", "weft picks"));
+    return lines;
+}
+
+// === Flottierungen ===
+function _info_floats_axis(weft) {
+    const lines = [];
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    const a = pattern.min_x, b = pattern.max_x;
+    const sa = pattern.min_y, sb = pattern.max_y;
+    if (b < a || sb < sa) return lines;
+
+    // For weft floats, walk each weft row left→right; runs of <=0
+    // (warp goes "down") bounded by a >0 cell are floats. Warp floats
+    // mirror the algorithm with axes swapped — runs of >0 inside a
+    // warp column. Direct port of buildFlottierungen() in the desktop.
+    const maxflot = (weft ? (b - a + 2) : (sb - sa + 2));
+    const table = new Array(maxflot).fill(0);
+    let biggest = 0, count = 0;
+    if (weft) {
+        for (let j = sa; j <= sb; j++) {
+            let inflot = _info_weave(a, j) <= 0;
+            let start = inflot ? a : -1;
+            for (let i = a; i <= b; i++) {
+                if (inflot) {
+                    if (_info_weave(i, j) > 0) {
+                        const len = i - start;
+                        table[len]++; count++;
+                        if (len > biggest) biggest = len;
+                        inflot = false; start = -1;
+                    }
+                } else if (_info_weave(i, j) <= 0) {
+                    inflot = true; start = i;
+                }
+            }
+            if (inflot) {
+                const len = b + 1 - start;
+                table[len]++; count++;
+                if (len > biggest) biggest = len;
+            }
+        }
+    } else {
+        for (let i = a; i <= b; i++) {
+            let inflot = _info_weave(i, sa) > 0;
+            let start = inflot ? sa : -1;
+            for (let j = sa; j <= sb; j++) {
+                if (inflot) {
+                    if (_info_weave(i, j) <= 0) {
+                        const len = j - start;
+                        table[len]++; count++;
+                        if (len > biggest) biggest = len;
+                        inflot = false; start = -1;
+                    }
+                } else if (_info_weave(i, j) > 0) {
+                    inflot = true; start = j;
+                }
+            }
+            if (inflot) {
+                const len = sb + 1 - start;
+                table[len]++; count++;
+                if (len > biggest) biggest = len;
+            }
+        }
+    }
+    lines.push(weft ? L("info.weft-floats", "Weft floats:")
+                    : L("info.warp-floats", "Warp floats:"));
+    lines.push(L("info.longest-float", "Longest float:") + " " + biggest);
+    let mean = 0;
+    if (count > 0) {
+        for (let k = 1; k < maxflot; k++) {
+            if (table[k]) mean += table[k] * k / count;
+        }
+    }
+    lines.push(L("info.average-float", "Average float:") + " " + _info_fmt3g(mean));
+    lines.push(L("info.distribution", "Distribution:"));
+    for (let k = 1; k < maxflot; k++) {
+        if (!table[k]) continue;
+        lines.push("  " + L("info.float", "Float") + " " + k + ":  "
+            + table[k] + " " + L("info.floats", "floats")
+            + "  (" + _info_fmt3g(100 * table[k] / count) + "%)");
+    }
+    lines.push("");
+    return lines;
+}
+
+function _info_floats() {
+    return _info_floats_axis(true).concat(_info_floats_axis(false));
+}
+
+// === Litzen ===
+function _info_heddles() {
+    const lines = [];
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    let total = 0;
+    for (let i = 0; i < pattern.entering.width; i++) {
+        if (pattern.entering.get_shaft(i) !== 0) total++;
+    }
+    lines.push(L("info.heddles-count", "Number of heddles:") + " " + total);
+    lines.push(L("info.distribution-shafts", "Distribution across the shafts:"));
+    let shaft = 0;
+    for (let s = 0; s < pattern.tieup.height; s++) {
+        if (_isFreeSchaft(s)) continue;
+        shaft++;
+        let count = 0;
+        for (let i = 0; i < pattern.entering.width; i++) {
+            if (pattern.entering.get_shaft(i) === s + 1) count++;
+        }
+        const pct = total > 0 ? _info_fmt3g(100 * count / total) : "0";
+        lines.push("  " + L("info.shaft", "Shaft") + " " + shaft + ":  "
+            + count + " " + L("info.heddles", "heddles") + "  (" + pct + "%)");
+    }
+    lines.push("");
+    return lines;
+}
+
+function _info_full_report() {
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    const out = [];
+    out.push("DB-WEAVE — " + L("info.title", "Pattern information"));
+    const userEl = document.getElementById("user");
+    const patEl  = document.getElementById("pattern");
+    if (userEl && patEl) out.push(userEl.value + "/" + patEl.value);
+    out.push("");
+    const heading = (h) => { out.push("=== " + h + " ==="); };
+    heading(L("info.tab-general",  "General"));   for (const l of _info_general()) out.push(l);
+    heading(L("info.tab-colors",   "Colors"));    for (const l of _info_colors())  out.push(l);
+    heading(L("info.tab-floats",   "Floats"));    for (const l of _info_floats())  out.push(l);
+    heading(L("info.tab-heddles",  "Heddles"));   for (const l of _info_heddles()) out.push(l);
+    return out.join("\n");
+}
+
+function showPatternInfoDialog() {
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+
+    const TABS = [
+        { id: "general",  label: L("info.tab-general",  "General"),  build: _info_general },
+        { id: "colors",   label: L("info.tab-colors",   "Colors"),   build: _info_colors  },
+        { id: "floats",   label: L("info.tab-floats",   "Floats"),   build: _info_floats  },
+        { id: "heddles",  label: L("info.tab-heddles",  "Heddles"),  build: _info_heddles },
+    ];
+    // Build all sections lazily — Floats / Heddles are slow on large
+    // patterns, so only run the cost when the user opens the tab.
+    const cache = {};
+
+    const body = document.createElement("div");
+    body.style.minWidth = "640px";
+    const tabRow = document.createElement("div");
+    tabRow.className = "tx-tabs";
+    tabRow.style.borderBottom = "1px solid #888";
+    tabRow.style.display = "flex";
+    tabRow.style.gap = "0.2rem";
+    body.appendChild(tabRow);
+
+    const out = document.createElement("pre");
+    out.style.minHeight = "320px";
+    out.style.maxHeight = "60vh";
+    out.style.overflow = "auto";
+    out.style.margin = "0.4rem 0";
+    out.style.fontFamily = "monospace";
+    out.style.fontSize = "0.85rem";
+    out.style.background = "transparent";
+    body.appendChild(out);
+
+    const showTab = (id) => {
+        const t = TABS.find(x => x.id === id);
+        if (!t) return;
+        if (!cache[id]) cache[id] = t.build();
+        out.textContent = cache[id].join("\n");
+        tabRow.querySelectorAll(".tx-tab").forEach(b =>
+            b.classList.toggle("active", b.dataset.tab === id));
+    };
+
+    TABS.forEach(t => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tx-tab";
+        b.dataset.tab = t.id;
+        b.textContent = t.label;
+        b.addEventListener("click", () => showTab(t.id));
+        tabRow.appendChild(b);
+    });
+
+    let modal;
+    const onSave = () => {
+        const text = _info_full_report();
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const userEl = document.getElementById("user");
+        const patEl  = document.getElementById("pattern");
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = (userEl ? userEl.value : "pattern") + "-"
+                   + (patEl ? patEl.value : "info") + "-info.txt";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            if (a.parentNode) a.parentNode.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 0);
+    };
+
+    modal = Modal.open({
+        title: L("info.title", "Pattern information"),
+        body,
+        buttons: [
+            { label: L("info.save", "Save…"),  onClick: onSave },
+            { label: L("btn.ok",    "OK"),     role: "primary" },
+        ],
+    });
+    showTab("general");
+}
+
+
 // Multi-page PDF print — full pattern (no ranges) or a sub-range.
 // Mirrors desktop "Drucken" / "Teil drucken". The PDF is rendered
 // server-side; in-memory state is POSTed so unsaved edits are
@@ -3493,6 +4350,7 @@ async function _revertChanges() {
     if (commandBus) {
         commandBus.undoStack.length = 0;
         commandBus.redoStack.length = 0;
+        commandBus.savedMark = null;
     }
     pattern.recalc_weave();
     if (view) {
@@ -3528,6 +4386,7 @@ function _closePatternGuarded() {
         saveSettings(data, settings);
         savePatternData(data, pattern);
         await savePattern();
+        _markSaved();
         modal.close();
         closePattern();
     };
@@ -3799,6 +4658,18 @@ function initPatternData(data, pattern) {
     pattern.fixsize  = val(data, "fixsize", 0);
     pattern.firstfree = val(data, "firstfree", 0);
 
+    // Hilfslinien — array of {typ, feld, pos}. Older patterns may lack it.
+    pattern.hlines = [];
+    if (Array.isArray(data.hlines)) {
+        for (const h of data.hlines) {
+            if (!h || typeof h !== "object") continue;
+            const typ  = (h.typ === "vert") ? "vert" : "horz";
+            const feld = h.feld ? 1 : 0;
+            const pos  = h.pos | 0;
+            if (pos >= 0) pattern.hlines.push({ typ, feld, pos });
+        }
+    }
+
     pattern.recalc_weave();
 }
 
@@ -3857,6 +4728,11 @@ function savePatternData(data, pattern) {
     data.data_fixeinzug = pattern.fixeinzug.slice();
     data.fixsize        = pattern.fixsize;
     data.firstfree      = pattern.firstfree;
+
+    // Hilfslinien — round-trip the user's guide-line list.
+    data.hlines = (pattern.hlines || []).map(h => ({
+        typ: h.typ, feld: h.feld | 0, pos: h.pos | 0,
+    }));
 
     // Palette — write back as [r,g,b,0] triples to match the storage
     // format (the 4th slot mirrors the legacy alpha/marker channel).
@@ -4888,6 +5764,38 @@ function _isEmptyTrittfolge(j) {
         if (grid.get(i, j) > 0) return false;
     }
     return true;
+}
+
+// Mark the current top of the undo stack as the saved baseline. Undo /
+// redo back to this exact point will then clear the modified flag; any
+// further command (or returning to a different stack position) sets it.
+function _markSaved() {
+    if (!commandBus) { clearModified(); return; }
+    const top = commandBus.undoStack[commandBus.undoStack.length - 1] || null;
+    commandBus.savedMark = top;
+    clearModified();
+}
+
+// Generic snapshot-command helper for non-grid mutations (settings,
+// metadata). `capture` returns a plain-object snapshot of the touched
+// fields; `restore` writes one back. `mutate` performs the change in
+// place; `finalize` (optional) runs after every apply/revert (e.g. to
+// relayout, redraw, refresh dialogs). Used by the properties dialog,
+// the Optionen dialog, the Grundeinstellung presets and the
+// Schuss-/Kettverhältnis dialog so all of those become undoable.
+function _snapshotCommand(label, capture, restore, mutate, finalize) {
+    if (readonly) return;
+    const before = capture();
+    mutate();
+    const after = capture();
+    restore(before);
+    const cmd = {
+        label,
+        apply()  { restore(after);  if (finalize) finalize(); setModified(); },
+        revert() { restore(before); if (finalize) finalize(); setModified(); },
+    };
+    if (commandBus) commandBus.execute(cmd);
+    else cmd.apply();
 }
 
 // Snapshot+command helper for full-pattern multi-grid mutations. The
@@ -8784,31 +9692,50 @@ function _prefsSave(prefs) {
 // styles, direction flags, single-treadle and the unit-grid sliders
 // take effect immediately; the rest are stored on `settings` (or
 // remembered in prefs) but currently no-ops.
+const _OPTIONS_KEYS = [
+    "entering_style", "tieup_style", "treadling_style",
+    "pegplan_style", "aushebung_style", "anbindung_style", "abbindung_style",
+    "direction_righttoleft", "direction_toptobottom",
+    "entering_at_bottom", "color_effect_with_grid",
+    "alt_palette", "alt_pegplan", "single_treadling", "sinking_shed",
+    "unit_width", "unit_height",
+];
 function _optionsApplyToSettings(opts) {
-    settings.entering_style  = opts.entering_style;
-    settings.tieup_style     = opts.tieup_style;
-    settings.treadling_style = opts.treadling_style;
-    // Pegplan / Aushebung / Anbindung / Abbindung styles aren't yet
-    // wired through to per-cell painters; remember them anyway.
-    settings.pegplan_style   = opts.pegplan_style;
-    settings.aushebung_style = opts.aushebung_style;
-    settings.anbindung_style = opts.anbindung_style;
-    settings.abbindung_style = opts.abbindung_style;
-    settings.direction_righttoleft  = !!opts.direction_righttoleft;
-    settings.direction_toptobottom  = !!opts.direction_toptobottom;
-    settings.entering_at_bottom     = !!opts.entering_at_bottom;
-    settings.color_effect_with_grid = !!opts.color_effect_with_grid;
-    settings.alt_palette = !!opts.alt_palette;   // no-op
-    settings.alt_pegplan = !!opts.alt_pegplan;   // no-op
-    settings.single_treadling = !!opts.single_treadling;
-    settings.sinking_shed = !!opts.sinking_shed; // no-op
-    settings.unit_width  = opts.unit_width  | 0;
-    settings.unit_height = opts.unit_height | 0;
-    if (typeof view !== "undefined" && view) {
-        view.layout();
-        view.draw();
-    }
-    setModified();
+    _snapshotCommand("change options",
+        () => {
+            const s = {};
+            for (const k of _OPTIONS_KEYS) s[k] = settings[k];
+            return s;
+        },
+        (s) => {
+            for (const k of _OPTIONS_KEYS) settings[k] = s[k];
+        },
+        () => {
+            settings.entering_style  = opts.entering_style;
+            settings.tieup_style     = opts.tieup_style;
+            settings.treadling_style = opts.treadling_style;
+            settings.pegplan_style   = opts.pegplan_style;
+            settings.aushebung_style = opts.aushebung_style;
+            settings.anbindung_style = opts.anbindung_style;
+            settings.abbindung_style = opts.abbindung_style;
+            settings.direction_righttoleft  = !!opts.direction_righttoleft;
+            settings.direction_toptobottom  = !!opts.direction_toptobottom;
+            settings.entering_at_bottom     = !!opts.entering_at_bottom;
+            settings.color_effect_with_grid = !!opts.color_effect_with_grid;
+            settings.alt_palette      = !!opts.alt_palette;
+            settings.alt_pegplan      = !!opts.alt_pegplan;
+            settings.single_treadling = !!opts.single_treadling;
+            settings.sinking_shed     = !!opts.sinking_shed;
+            settings.unit_width  = opts.unit_width  | 0;
+            settings.unit_height = opts.unit_height | 0;
+        },
+        () => {
+            if (typeof view !== "undefined" && view) {
+                view.layout();
+                view.draw();
+            }
+        },
+    );
 }
 
 // Grundeinstellung presets — direct ports of OptAmericanClick /
@@ -8840,18 +9767,34 @@ const _BASE_STYLES = {
 function _applyBaseStyle(name) {
     const base = _BASE_STYLES[name];
     if (!base) return;
-    // Persist globally first.
+    // Persist the preset to global prefs unconditionally — that's a
+    // user-level choice independent of the current pattern, so undo
+    // shouldn't roll it back.
     const prefs = _prefsLoad();
     Object.assign(prefs, base);
     _prefsSave(prefs);
-    // Then apply to the live document (matches desktop, which does both).
-    Object.keys(base).forEach(k => { settings[k] = base[k]; });
-    if (typeof view !== "undefined" && view) {
-        view.layout();
-        view.draw();
-    }
-    setModified();
-    ActionRegistry.notify();
+    // The in-document effect IS undoable.
+    const keys = Object.keys(base);
+    _snapshotCommand("apply base style: " + name,
+        () => {
+            const s = {};
+            for (const k of keys) s[k] = settings[k];
+            return s;
+        },
+        (s) => {
+            for (const k of keys) settings[k] = s[k];
+        },
+        () => {
+            for (const k of keys) settings[k] = base[k];
+        },
+        () => {
+            if (typeof view !== "undefined" && view) {
+                view.layout();
+                view.draw();
+            }
+            ActionRegistry.notify();
+        },
+    );
 }
 
 // Style options for the Symbols tab. Web painter keys on the left,
@@ -9121,11 +10064,23 @@ function showWarpWeftRatioDialog() {
         if (!isFinite(wf) || wf <= 0) wf = 1.0;
         if (!isFinite(sf) || sf <= 0) sf = 1.0;
         if (wf !== settings.warp_factor || sf !== settings.weft_factor) {
-            settings.warp_factor = wf;
-            settings.weft_factor = sf;
-            _applyAspectRatio(settings);
-            if (view) { view.layout(); view.draw(); }
-            setModified();
+            _snapshotCommand("change warp/weft ratio",
+                () => ({
+                    wf: settings.warp_factor,
+                    sf: settings.weft_factor,
+                }),
+                (s) => {
+                    settings.warp_factor = s.wf;
+                    settings.weft_factor = s.sf;
+                    _applyAspectRatio(settings);
+                },
+                () => {
+                    settings.warp_factor = wf;
+                    settings.weft_factor = sf;
+                    _applyAspectRatio(settings);
+                },
+                () => { if (view) { view.layout(); view.draw(); } },
+            );
         }
         modal.close();
     };
@@ -9556,11 +10511,12 @@ function setupEditorActions() {
     };
 
     // File
-    R("file.save", "Ctrl+S", () => {
+    R("file.save", "Ctrl+S", async () => {
         if (readonly) return;
         saveSettings(data, settings);
         savePatternData(data, pattern);
-        savePattern();
+        await savePattern();
+        _markSaved();
     }, { enabledWhen: () => !readonly });
     R("file.revert", null, _revertChanges,
         { enabledWhen: () => !readonly && modified });
@@ -9570,6 +10526,9 @@ function setupEditorActions() {
     R("file.export-pdf",  null, () => _exportDownload("pdf"));
     R("file.print",       "Ctrl+P", () => _printDownload());
     R("file.print-part",  "Ctrl+L", () => showPrintPartDialog());
+    R("file.properties",  null, () => showPropertiesDialog(),
+        { enabledWhen: () => !readonly });
+    R("file.info",        null, () => showPatternInfoDialog());
     R("file.close", null, _closePatternGuarded);
 
     // Edit
@@ -10023,6 +10982,9 @@ function setupEditorActions() {
         fileItems.push({ separator: true });
         fileItems.push({ action: "file.print" });
         fileItems.push({ action: "file.print-part" });
+        fileItems.push({ separator: true });
+        if (!readonly) fileItems.push({ action: "file.properties" });
+        fileItems.push({ action: "file.info" });
         fileItems.push({ separator: true });
         fileItems.push({ action: "file.close" });
         const tree = [
