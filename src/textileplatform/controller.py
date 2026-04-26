@@ -32,6 +32,7 @@ from textileplatform.palette import default_weave_palette
 from textileplatform.palette import default_bead_palette
 from textileplatform.weavepattern import parse_dbw_data, render_dbw_data
 from textileplatform import export as exporter
+from textileplatform import beadexport as bead_exporter
 
 from importlib.metadata import version
 import datetime
@@ -436,13 +437,29 @@ def download_pattern_legacy(user_name, pattern_name):
         return redirect(url_for("user", user_name=user_name))
 
 
-_EXPORT_FORMATS = {
-    "png":  ("image/png",                "png",  exporter.export_png),
-    "jpeg": ("image/jpeg",               "jpg",  exporter.export_jpeg),
-    "jpg":  ("image/jpeg",               "jpg",  exporter.export_jpeg),
-    "svg":  ("image/svg+xml",            "svg",  exporter.export_svg),
-    "pdf":  ("application/pdf",          "pdf",  exporter.export_pdf),
+_WEAVE_EXPORT = {
+    "png":  ("image/png",       "png", exporter.export_png),
+    "jpeg": ("image/jpeg",      "jpg", exporter.export_jpeg),
+    "jpg":  ("image/jpeg",      "jpg", exporter.export_jpeg),
+    "svg":  ("image/svg+xml",   "svg", exporter.export_svg),
+    "pdf":  ("application/pdf", "pdf", exporter.export_pdf),
 }
+
+_BEAD_EXPORT = {
+    "png":  ("image/png",       "png", bead_exporter.export_png),
+    "jpeg": ("image/jpeg",      "jpg", bead_exporter.export_jpeg),
+    "jpg":  ("image/jpeg",      "jpg", bead_exporter.export_jpeg),
+    "svg":  ("image/svg+xml",   "svg", bead_exporter.export_svg),
+    "pdf":  ("application/pdf", "pdf", bead_exporter.export_pdf),
+}
+
+
+def _export_table_for(pattern):
+    if pattern.pattern_type == "DB-WEAVE Pattern":
+        return _WEAVE_EXPORT
+    if pattern.pattern_type == "JBead Pattern":
+        return _BEAD_EXPORT
+    return None
 
 
 @app.route(
@@ -459,8 +476,6 @@ def export_pattern(user_name, pattern_name, fmt):
     committed to the database.
     """
     fmt = fmt.lower()
-    if fmt not in _EXPORT_FORMATS:
-        return "Unsupported format", 400
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
         return redirect(url_for("index"))
@@ -477,9 +492,11 @@ def export_pattern(user_name, pattern_name, fmt):
     superuser = g.user and g.user.name == "superuser"
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
-    if pattern.pattern_type != "DB-WEAVE Pattern":
-        # Bead-pattern export is out of scope for the first cut.
+    table = _export_table_for(pattern)
+    if table is None:
         return "Export not available for this pattern type", 400
+    if fmt not in table:
+        return "Unsupported format", 400
     if request.method == "POST":
         # Owners can render in-memory state. Read-only viewers stay on
         # the persisted version even if they POST.
@@ -492,7 +509,7 @@ def export_pattern(user_name, pattern_name, fmt):
                 return "Missing 'contents' object in body", 400
     else:
         pattern_data = json.loads(pattern.contents)
-    mime, ext, render = _EXPORT_FORMATS[fmt]
+    mime, ext, render = table[fmt]
     kwargs = {}
     if fmt == "pdf":
         kwargs["title"] = pattern.label or pattern_name
@@ -538,7 +555,7 @@ def print_pattern(user_name, pattern_name):
     superuser = g.user and g.user.name == "superuser"
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
-    if pattern.pattern_type != "DB-WEAVE Pattern":
+    if pattern.pattern_type not in ("DB-WEAVE Pattern", "JBead Pattern"):
         return "Print not available for this pattern type", 400
 
     if request.method == "POST":
@@ -553,20 +570,29 @@ def print_pattern(user_name, pattern_name):
         warp_to   = payload.get("warp_to")
         weft_from = payload.get("weft_from")
         weft_to   = payload.get("weft_to")
+        full_pattern = payload.get("full_pattern", True)
     else:
         pattern_data = json.loads(pattern.contents)
         warp_from = request.args.get("warp_from", type=int)
         warp_to   = request.args.get("warp_to",   type=int)
         weft_from = request.args.get("weft_from", type=int)
         weft_to   = request.args.get("weft_to",   type=int)
+        full_pattern = request.args.get("full_pattern", "1") != "0"
 
     try:
-        body = exporter.print_pdf(
-            pattern_data,
-            title=pattern.label or pattern_name,
-            warp_from=warp_from, warp_to=warp_to,
-            weft_from=weft_from, weft_to=weft_to,
-        )
+        if pattern.pattern_type == "DB-WEAVE Pattern":
+            body = exporter.print_pdf(
+                pattern_data,
+                title=pattern.label or pattern_name,
+                warp_from=warp_from, warp_to=warp_to,
+                weft_from=weft_from, weft_to=weft_to,
+            )
+        else:
+            body = bead_exporter.print_pdf(
+                pattern_data,
+                title=pattern.label or pattern_name,
+                full_pattern=bool(full_pattern),
+            )
     except Exception as e:  # pragma: no cover
         logging.exception("Print for %s/%s failed", user_name, pattern_name)
         return f"Print failed: {e}", 500
@@ -815,21 +841,40 @@ def create_pattern():
             pattern["organization"] = ""
             pattern["notes"] = ""
 
-            pattern["model"] = [[0] * width] * height
+            # Each row must be a fresh list — `[[0]*width]*height`
+            # produces `height` references to the *same* inner list,
+            # so editing one row would mutate every row when the
+            # editor serializes the pattern back to JSON.
+            pattern["model"] = [[0] * width for _ in range(height)]
 
             # TODO use user default palette?
-            pattern["colors"] = default_bead_palette[:]
+            pattern["colors"] = [list(c) for c in default_bead_palette]
 
             view = dict()
             view["draft-visible"] = True
             view["corrected-visible"] = True
             view["simulation-visible"] = True
             view["report-visible"] = True
-            view["zoom"] = 2
+            view["draw-colors"] = True
+            view["draw-symbols"] = False
+            # Zoom is the cell size in pixels — must be in [4, 48] or
+            # the editor falls back to its default. 12 matches the
+            # editor's ViewSettings() default (dx=12).
+            view["zoom"] = 12
             view["shift"] = 0
             view["scroll"] = 0
-            view["selected-tool"] = "select"
+            # Open new patterns in the pencil tool so the user can
+            # immediately click-and-paint. Saving "select" would put
+            # the editor into rectangular-selection mode on load,
+            # which makes clicks just create a 1×1 selection rather
+            # than draw.
+            view["selected-tool"] = "pencil"
             view["selected-color"] = 1
+            # Default per-colour symbol glyphs (matches the desktop's
+            # BeadSymbols.DEFAULT_SYMBOLS). Slot 0 is the background
+            # and never drawn; the rest cycle through middle-dot +
+            # a..z + a few punctuation marks.
+            view["symbols"] = "·abcdefghijklmnopqrstuvwxyz+-/\\*"
             pattern["view"] = view
 
             if not errors:

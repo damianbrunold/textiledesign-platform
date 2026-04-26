@@ -76,6 +76,24 @@
     border: 1px solid #999;
     border-radius: 6px;
 }
+/* Public/private toggle button — same emoji-button style as the
+   user_private.html row actions so the editor and the listing
+   show the same icons (🌐 public / 🔒 private). */
+.tx-publish-toggle {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    padding: 0 4px;
+    margin: 0 4px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+.tx-publish-toggle:hover {
+    background: #d8e2f2;
+    border-color: #93b1d8;
+}
+
 #tx-toolbar #close,
 #tx-toolbar #clone {
     margin-left: 6px;

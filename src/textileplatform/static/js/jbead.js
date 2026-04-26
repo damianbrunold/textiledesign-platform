@@ -33,11 +33,79 @@ let selected_color = 1;
 let background_color = 0;
 
 
+// View visibility flags — toggled from the View menu. Mirror desktop's
+// View → Draft / Corrected / Simulation / Report items.
+let show_draft = true;
+let show_corrected = true;
+let show_simulation = true;
+let show_report = true;
+let draw_colors = true;
+let draw_symbols = false;
+
+
+// Per-colour symbol glyphs. Stored as a single string indexed by
+// palette position — same encoding as desktop's
+// BeadSymbols.SAVED_SYMBOLS ("·abcdefg…"). Persisted in
+// data.view.symbols.
+const _DEFAULT_SYMBOLS = "·abcdefghijklmnopqrstuvwxyz+-/\\*";
+let pattern_symbols = _DEFAULT_SYMBOLS;
+
+function _symbolFor(colorIdx) {
+    if (colorIdx <= 0) return "";
+    const s = pattern_symbols || _DEFAULT_SYMBOLS;
+    if (colorIdx < s.length) return s.charAt(colorIdx);
+    return "";
+}
+
+
+// Active drawing tool. "pencil" / "select" / "fill" / "pipette".
+let current_tool = "pencil";
+
+
+// Pencil drag accumulator — populated during a single mousedown→mouseup
+// stroke so we can commit one CommandBus entry per stroke instead of
+// one per cell.
+let _pencil_stroke = null;
+
+
+// Mouse drag state for the rectangular select tool. While dragging,
+// `_drag` holds the anchor (data coords); on every mousemove we update
+// `pattern.selection`.
+let _drag = null;
+
+
+// i18n table loaded from #tx-i18n. Action ids contain dots, so we keep
+// them as a single key under `_i18n.actions` rather than nesting.
+let _i18n = { actions: {}, menus: {} };
+function _actionLabel(id, fallback) {
+    const a = _i18n.actions && _i18n.actions[id];
+    if (a && a.label) return a.label;
+    return fallback != null ? fallback : id;
+}
+function _menuLabel(id, fallback) {
+    const m = _i18n.menus && _i18n.menus[id];
+    return m != null ? m : (fallback != null ? fallback : id);
+}
+
+
 class Pattern {
     constructor(width, height) {
         this.width = width;
         this.height = height;
         this.data = new Array(this.width * this.height);
+        // Active rectangular selection (or null). Stored as inclusive
+        // [i1, i2] × [j1, j2] in data coordinates so transforms can
+        // iterate it uniformly.
+        this.selection = null;
+        // Vertical scroll offset: number of rows skipped at the bottom
+        // before the visible window begins. Mirrors desktop's
+        // Model.scroll. Driven by the scrollbar / wheel.
+        this.scroll = 0;
+        // Horizontal "rotation" of the simulation view. Like desktop's
+        // Model.shift it is a *view-only* offset — the bead-list,
+        // repeat detection, draft and corrected views are unaffected;
+        // only the simulated tube is rotated by `shift` cells.
+        this.shift = 0;
     }
 
     idx(i, j) {
@@ -50,6 +118,12 @@ class Pattern {
 
     set(i, j, value) {
         this.data[this.idx(i, j)] = value;
+    }
+
+    inSelection(i, j) {
+        const s = this.selection;
+        return s != null && i >= s.i1 && i <= s.i2
+                         && j >= s.j1 && j <= s.j2;
     }
 }
 
@@ -91,6 +165,9 @@ class BeadList {
 
     updateBeadList() {
 	this.list = []
+	// Empty pattern → repeat=0 and data[-1] would be undefined; skip
+	// so the list stays empty and ViewBeadList renders nothing.
+	if (!(this.repeat > 0)) return;
 	let color = this.data.data[this.repeat - 1];
 	let count = 1;
 	for (let i = this.repeat - 2; i >= 0; i--) {
@@ -175,14 +252,19 @@ class ViewDraft {
     }
 
     pixelToDataCoord(x, y) {
-        let i = Math.trunc(x / settings.dx);
-        let j = this.height - 1 - Math.trunc(y / settings.dy);
+        // Cells are drawn at i*dx + 0.5 / j*dy + 0.5 so the 1-px grid
+        // strokes land crisp on integer pixels. So visible cell N
+        // occupies x in [N*dx + 0.5, N*dx + dx + 0.5). Use
+        // Math.floor((x - 0.5) / dx) so a click at the right-hand
+        // half of cell N maps back to N and not to N+1.
+        let i = Math.floor((x - 0.5) / settings.dx);
+        let j = this.height - 1 - Math.floor((y - 0.5) / settings.dy);
         return [i - this.x, j - this.y + this.offset];
     }
 
     pixelToViewCoord(x, y) {
-        let i = Math.trunc(x / settings.dx);
-        let j = this.height - 1 - Math.trunc(y / settings.dy);
+        let i = Math.floor((x - 0.5) / settings.dx);
+        let j = this.height - 1 - Math.floor((y - 0.5) / settings.dy);
         return [i - this.x, j - this.y];
     }
 
@@ -190,16 +272,60 @@ class ViewDraft {
     draw(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
+        const drawSymbol = draw_symbols && dx >= 8;
+        if (drawSymbol) {
+            ctx.font = `${Math.round(dx * 0.8)}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+        }
 
-        for (let j = 0; j < Math.min(pattern.height, this.height); j++) {
+        const visible = Math.min(pattern.height - this.offset, this.height);
+        for (let j = 0; j < visible; j++) {
+            const j_data = j + this.offset;
             for (let i = 0; i < this.width; i++) {
-                const state = this.data.get(i, j);
+                const state = this.data.get(i, j_data);
                 const x = 0.5 + (this.x + i) * dx;
                 const y = 0.5 + (this.y + this.height - j - 1) * dy;
-                ctx.fillStyle = colors[state];
-                ctx.fillRect(x, y, dx, dy);
+                if (draw_colors) {
+                    ctx.fillStyle = colors[state];
+                    ctx.fillRect(x, y, dx, dy);
+                } else {
+                    ctx.fillStyle = settings.darcula ? "#444" : "#fff";
+                    ctx.fillRect(x, y, dx, dy);
+                }
                 ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
                 ctx.strokeRect(x, y, dx, dy);
+                if (drawSymbol && state > 0) {
+                    const sym = _symbolFor(state);
+                    if (sym) {
+                        ctx.fillStyle = draw_colors
+                            ? contrastingColor(colors[state])
+                            : (settings.darcula ? "#eee" : "#222");
+                        ctx.fillText(sym, x + dx / 2, y + dy / 2);
+                    }
+                }
+            }
+        }
+
+        // Selection highlight — yellow rectangle drawn on top of the
+        // grid lines. Selection is in data coords; subtract offset to
+        // get view coords, and clip to the visible window.
+        const sel = this.data.selection;
+        if (sel != null) {
+            const j1v = sel.j1 - this.offset;
+            const j2v = sel.j2 - this.offset;
+            if (j2v >= 0 && j1v < this.height) {
+                const cj1 = Math.max(0, j1v);
+                const cj2 = Math.min(this.height - 1, j2v);
+                const x1 = (this.x + sel.i1) * dx;
+                const x2 = (this.x + sel.i2 + 1) * dx;
+                const y2 = (this.y + this.height - cj1) * dy;
+                const y1 = (this.y + this.height - cj2 - 1) * dy;
+                ctx.save();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "#ff5";
+                ctx.strokeRect(x1 + 0.5, y1 + 0.5, x2 - x1, y2 - y1);
+                ctx.restore();
             }
         }
     }
@@ -223,13 +349,13 @@ class ViewCorrected {
     }
 
     pixelToDataCoord(x, y) {
-        let j = this.height - 1 - Math.trunc(y / settings.dy);
+        let j = this.height - 1 - Math.floor((y - 0.5) / settings.dy);
         j = j - this.y + this.offset;
         let i;
         if (j % 2 == 0) {
-            i = Math.trunc(x / settings.dx) - this.x;
+            i = Math.floor((x - 0.5) / settings.dx) - this.x;
         } else {
-            i = Math.trunc((x + settings.dx/2) / settings.dx) - this.x;
+            i = Math.floor((x - 0.5 + settings.dx / 2) / settings.dx) - this.x;
         }
         let idx = i;
         j--;
@@ -271,7 +397,13 @@ class ViewCorrected {
                 const idx = ii + jj * this.data.width;
                 const [i, j] = this.idxToViewCoord(idx);
 
-                if (0 > j || j >= this.height) break;
+                // j only increases monotonically with idx, so we can
+                // short-circuit once we leave the visible window
+                // downward; on the way to it we must `continue`, not
+                // `break`, or we'd skip everything past the first
+                // hidden row when scrolled.
+                if (j < 0) continue;
+                if (j >= this.height) break;
 
                 const xoff = j % 2 == 0 ? 0 : -dx/2;
 
@@ -306,8 +438,8 @@ class ViewSimulated {
     }
 
     pixelToDataCoord(x, y) {
-        let i = Math.trunc(x / settings.dx);
-        let j = this.height - 1 - Math.trunc(y / settings.dy);
+        let i = Math.floor((x - 0.5) / settings.dx);
+        let j = this.height - 1 - Math.floor((y - 0.5) / settings.dy);
         // TODO use equivalent technique with coord->idx as in corrected view
         // return [i - this.x, j - this.y + this.offset];
         return [undefined, undefined];
@@ -344,13 +476,19 @@ class ViewSimulated {
                 }
                 let i = idx;
 
+                j -= this.offset;
+                if (j < 0) continue;
                 if (j >= this.height) break;
                 if (j % 2 == 0 && i >= this.width) continue;
                 if (j % 2 == 1 && i > this.width) continue;
 
                 const xoff = j % 2 == 0 ? 0 : -dx/2;
 
-                const state = this.data.get(ii, jj);
+                // Apply pattern.shift to rotate the simulated tube.
+                // Desktop reads `model.getShift()` only here.
+                const W = this.data.width;
+                const sii = ((ii - (this.data.shift | 0)) % W + W) % W;
+                const state = this.data.get(sii, jj);
 
                 let x = 0;
                 let d = dx;
@@ -496,10 +634,14 @@ class ViewBeadList {
 
 
 function contrastingColor(color) {
+    // Defensive: callers occasionally pass undefined when a palette
+    // slot is missing (e.g. cell value past the end of the palette).
+    // Default to black-on-white in that case.
+    if (typeof color !== "string") return "#000";
     const parts = color.slice(4, color.length - 1).split(",");
-    const r = parseInt(parts[0].trim(), 16);
-    const g = parseInt(parts[1].trim(), 16);
-    const b = parseInt(parts[2].trim(), 16);
+    const r = parseInt(parts[0].trim(), 10);
+    const g = parseInt(parts[1].trim(), 10);
+    const b = parseInt(parts[2].trim(), 10);
     const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
     return luminance > 128 ? "#000" : "#fff";
 }
@@ -527,36 +669,61 @@ class PatternView {
         const dx = this.settings.dx;
         const dy = this.settings.dy;
 
-        const availx = Math.trunc((this.ctx.canvas.width - 2) / dx);
         const availy = Math.trunc((this.ctx.canvas.height - 2) / dy);
 
         const width_ruler = 3;
-        const width_draft = this.pattern.width;
-        const width_corrected = this.pattern.width + 1;
-        const width_simulated = Math.trunc((this.pattern.width + 1) / 2);
+        const width_draft = show_draft ? this.pattern.width : 0;
+        const gap_draft = show_draft ? 2 : 0;
+        const width_corrected = show_corrected ? this.pattern.width + 1 : 0;
+        const gap_corrected = show_corrected ? 2 : 0;
+        const width_simulated = show_simulation
+            ? Math.trunc((this.pattern.width + 1) / 2) : 0;
+        const gap_simulated = show_simulation ? 1 : 0;
 
         const x1 = 0;
         const x2 = width_ruler + 1;
-        const x3 = x2 + width_draft + 2;
-        const x4 = x3 + width_corrected + 2;
-        const x5 = x4 + width_simulated + 1;
+        const x3 = x2 + width_draft + gap_draft;
+        const x4 = x3 + width_corrected + gap_corrected;
+        const x5 = x4 + width_simulated + gap_simulated;
 
         this.ruler = new ViewRuler(x1, 0, width_ruler, availy);
-        this.draft = new ViewDraft(this.pattern, x2, 0, width_draft, availy);
-        this.corrected = new ViewCorrected(this.pattern, x3, 0, width_corrected, availy);
-        this.simulated = new ViewSimulated(this.pattern, x4, 0, width_simulated, availy);
+        this.draft = show_draft
+            ? new ViewDraft(this.pattern, x2, 0, width_draft, availy) : null;
+        this.corrected = show_corrected
+            ? new ViewCorrected(this.pattern, x3, 0, width_corrected, availy)
+            : null;
+        this.simulated = show_simulation
+            ? new ViewSimulated(this.pattern, x4, 0, width_simulated, availy)
+            : null;
         this.colors = new ViewColors(colors, x5 * dx, 0, 2 * 25, 16 * 25);
-	this.beads = new ViewBeadList(x5 * dx + 2 * 25 + dx, 0, 5 * 25, availy); // TODO fix width
+        this.beads = show_report
+            ? new ViewBeadList(x5 * dx + 2 * 25 + dx, 0, 5 * 25, availy)
+            : null;
     }
 
     draw() {
+        // Sync each view's per-instance offset with the pattern's
+        // shared scroll value before painting. Views were originally
+        // designed to scroll independently, but the desktop has a
+        // single shared scrollbar — match that.
+        const s = this.pattern.scroll | 0;
+        if (this.ruler) this.ruler.offset = s;
+        if (this.draft) this.draft.offset = s;
+        if (this.corrected) this.corrected.offset = s;
+        if (this.simulated) this.simulated.offset = s;
         this.clearCanvas();
-        this.draft.draw(this.ctx, this.settings);
-        this.corrected.draw(this.ctx, this.settings);
-        this.simulated.draw(this.ctx, this.settings);
+        if (this.draft) this.draft.draw(this.ctx, this.settings);
+        if (this.corrected) this.corrected.draw(this.ctx, this.settings);
+        if (this.simulated) this.simulated.draw(this.ctx, this.settings);
         this.colors.draw(this.ctx, this.settings);
         this.ruler.draw(this.ctx, this.settings);
-	this.beads.draw(this.ctx, this.settings);
+        if (this.beads) this.beads.draw(this.ctx, this.settings);
+    }
+
+    // Number of data rows visible at once in the rectangular views.
+    visibleRows() {
+        return (this.draft || this.corrected || this.simulated || this.ruler)
+            .height;
     }
 
     clearCanvas() {
@@ -572,62 +739,1117 @@ function init() {
     settings.darcula = darkmode;
     beadlist = new BeadList(pattern);
 
-    const container = document.getElementById("container");
     const canvas = document.getElementById("canvas");
     canvas.style.backgroundColor = settings.darcula ? "#444" : "#fff";
     canvas.style.border = "none";
     const ctx = canvas.getContext('2d');
-    ctx.canvas.width = container.clientWidth - 2;
-    ctx.canvas.height = container.clientHeight - 2;
+    // Size the bitmap to the canvas's *own* CSS box (same approach
+    // resizeWindow() in common.js uses). Using container.client* as
+    // a fallback is wrong — it includes the scrollbar (~18 px) and
+    // any padding/borders, producing a bitmap that doesn't match the
+    // CSS box. The browser then scales offsetX/offsetY by a factor
+    // ≠ 1 when mapping CSS-pixel mouse events to bitmap coords,
+    // visibly shifting clicks one cell up/right. Force layout via
+    // getBoundingClientRect so the values are populated even on the
+    // very first paint.
+    const rect = canvas.getBoundingClientRect();
+    ctx.canvas.width  = Math.max(1, Math.round(rect.width));
+    ctx.canvas.height = Math.max(1, Math.round(rect.height));
 
     view = new PatternView(pattern, beadlist, settings, ctx);
 
     initPattern(data, pattern);
-    selected_color = data['view']['selected-color']
+    const v = data['view'] || {};
+    if (v['selected-color'] != null) selected_color = v['selected-color'] | 0;
+    if (v['shift']  != null) pattern.shift  = v['shift']  | 0;
+    if (v['scroll'] != null) pattern.scroll = v['scroll'] | 0;
+    if (v['zoom']   != null) {
+        const z = v['zoom'] | 0;
+        if (z >= 4 && z <= 48) { settings.dx = z; settings.dy = z; }
+    }
+    if (v['draft-visible']      != null) show_draft      = !!v['draft-visible'];
+    if (v['corrected-visible']  != null) show_corrected  = !!v['corrected-visible'];
+    if (v['simulation-visible'] != null) show_simulation = !!v['simulation-visible'];
+    if (v['report-visible']     != null) show_report     = !!v['report-visible'];
+    if (typeof v['selected-tool'] === "string"
+        && ["pencil", "select", "fill", "pipette"]
+            .indexOf(v['selected-tool']) >= 0) {
+        current_tool = v['selected-tool'];
+    }
+    if (typeof v['symbols'] === "string" && v['symbols'].length > 0) {
+        pattern_symbols = v['symbols'];
+    }
+    if (v['draw-colors']  != null) draw_colors  = !!v['draw-colors'];
+    if (v['draw-symbols'] != null) draw_symbols = !!v['draw-symbols'];
+    view.layout();
     beadlist.update();
+
+    commandBus = new CommandBus();
+    commandBus.subscribe(() => {
+        if (typeof ActionRegistry !== "undefined") ActionRegistry.notify();
+    });
 
     view.draw();
 
-    canvas.addEventListener('click', function(event) {
-        const x = event.offsetX;
-        const y = event.offsetY;
-        const i = Math.trunc(x / settings.dx);
-        const j = view.draft.height - 1 - Math.trunc(y / settings.dy);
-        if (j < 0) return;
-        if (view.draft.contains(i, j)) {
-            togglePattern(view.draft.pixelToDataCoord(x, y));
-            setModified();
-        } else if (view.corrected.contains(i, j)) {
-            togglePattern(view.corrected.pixelToDataCoord(x, y));
-            setModified();
-        } else if (view.simulated.contains(i, j)) {
-            togglePattern(view.simulated.pixelToDataCoord(x, y));
-            setModified();
-        } else if (view.colors.contains(x, y)) {
-            const ii = Math.trunc((x - view.colors.x) / 25);
-            const jj = Math.trunc((y - view.colors.y) / 25);
-            const idx = ii * 16 + jj;
-            if (idx < colors.length) {
-                selected_color = idx;
+    canvas.addEventListener('mousedown', _onMouseDown);
+    canvas.addEventListener('mousemove', _onMouseMove);
+    window.addEventListener('mouseup', _onMouseUp);
+    canvas.addEventListener('dblclick', _onDoubleClick);
+    canvas.addEventListener('mouseleave', () => {
+        const sb = document.getElementById("sb-cursor");
+        if (sb) sb.textContent = "";
+    });
+
+    // Mouse wheel = pattern scroll. One notch ≈ 3 rows.
+    canvas.addEventListener('wheel', (e) => {
+        const step = Math.sign(e.deltaY) * 3;
+        if (step === 0) return;
+        if (_setScroll(pattern.scroll + step)) e.preventDefault();
+    }, { passive: false });
+
+    const range = document.getElementById('scrollbar');
+    if (range) {
+        range.addEventListener('input', () => {
+            _setScroll(parseInt(range.value, 10) || 0);
+        });
+    }
+    _refreshScrollbar();
+}
+
+
+// ---- Scroll handling --------------------------------------------
+
+function _maxScroll() {
+    if (!view) return 0;
+    return Math.max(0, pattern.height - view.visibleRows());
+}
+
+function _refreshScrollbar() {
+    const range = document.getElementById('scrollbar');
+    if (!range) return;
+    const max = _maxScroll();
+    range.max = String(max);
+    range.value = String(pattern.scroll);
+    if (max <= 0) range.setAttribute('data-disabled', '1');
+    else range.removeAttribute('data-disabled');
+}
+
+function _setScroll(value) {
+    const max = _maxScroll();
+    const clamped = Math.max(0, Math.min(max, value | 0));
+    if (clamped === pattern.scroll) return false;
+    pattern.scroll = clamped;
+    const range = document.getElementById('scrollbar');
+    if (range) range.value = String(clamped);
+    if (view) view.draw();
+    return true;
+}
+
+
+// ---- Mouse / pointer dispatch -----------------------------------
+
+function _eventCoords(event) {
+    // Convert event.offsetX/Y (CSS pixels) into canvas bitmap coords.
+    // When the canvas's bitmap is sized to its CSS box exactly the
+    // ratio is 1, but sub-pixel rounding (or a stale bitmap from a
+    // resize that hasn't propagated) can leave the bitmap a hair
+    // shorter or taller than the CSS box — and the browser then
+    // scales mouse events by that ratio. Using the live rect each
+    // time we read a click guarantees the click lands on the bitmap
+    // pixel under the user's cursor, regardless of any drift.
+    const c = event.currentTarget || event.target;
+    if (!c || c.nodeName !== "CANVAS") {
+        return [event.offsetX, event.offsetY];
+    }
+    const rect = c.getBoundingClientRect();
+    const sx = rect.width  > 0 ? c.width  / rect.width  : 1;
+    const sy = rect.height > 0 ? c.height / rect.height : 1;
+    return [event.offsetX * sx, event.offsetY * sy];
+}
+
+function _hitGridView(x, y) {
+    // Match the half-pixel offset the views use when drawing.
+    const i = Math.floor((x - 0.5) / settings.dx);
+    const refHeight = (view.draft || view.corrected || view.simulated
+                       || view.ruler).height;
+    const j = refHeight - 1 - Math.floor((y - 0.5) / settings.dy);
+    if (j < 0) return null;
+    if (view.draft && view.draft.contains(i, j)) {
+        return { v: view.draft, coord: view.draft.pixelToDataCoord(x, y) };
+    }
+    if (view.corrected && view.corrected.contains(i, j)) {
+        return {
+            v: view.corrected,
+            coord: view.corrected.pixelToDataCoord(x, y),
+        };
+    }
+    if (view.simulated && view.simulated.contains(i, j)) {
+        return {
+            v: view.simulated,
+            coord: view.simulated.pixelToDataCoord(x, y),
+        };
+    }
+    return null;
+}
+
+function _paletteIndexAt(x, y) {
+    if (!view || !view.colors || !view.colors.contains(x, y)) return -1;
+    // ViewColors paints swatches at +0.5 too — same half-pixel
+    // adjustment as the grid views.
+    const ii = Math.floor((x - view.colors.x - 0.5) / 25);
+    const jj = Math.floor((y - view.colors.y - 0.5) / 25);
+    if (ii < 0 || jj < 0) return -1;
+    const idx = ii * 16 + jj;
+    if (idx < 0 || idx >= colors.length) return -1;
+    return idx;
+}
+
+function _onDoubleClick(event) {
+    if (readonly) return;
+    const [ex, ey] = _eventCoords(event);
+    const idx = _paletteIndexAt(ex, ey);
+    if (idx < 0) return;
+    event.preventDefault();
+    selected_color = idx;
+    view.draw();
+    // Open the picker on this single colour. Commit through the
+    // bus so it's undoable.
+    const before = colors.map(_rgbFromString);
+    const initial = before[idx].slice();
+    ColorPicker.pickHSV(initial, (rgb) => {
+        const after = before.map(c => c.slice());
+        after[idx] = [rgb[0] | 0, rgb[1] | 0, rgb[2] | 0];
+        let firstApply = true;
+        commandBus.execute({
+            label: "palette.entry",
+            apply: () => {
+                _applyPalette(after);
+                view.draw();
+                if (!firstApply) setModified();
+                firstApply = false;
+            },
+            revert: () => {
+                _applyPalette(before);
+                view.draw();
+                setModified();
+            },
+        });
+        // Live update for the first apply too.
+        _applyPalette(after);
+        view.draw();
+        setModified();
+    }, _actionLabel);
+}
+
+function _onMouseDown(event) {
+    if (readonly) return;
+    const [x, y] = _eventCoords(event);
+    const palIdx = _paletteIndexAt(x, y);
+    if (palIdx >= 0) {
+        selected_color = palIdx;
+        view.draw();
+        return;
+    }
+    const hit = _hitGridView(x, y);
+    if (!hit) return;
+    const [i, j] = hit.coord;
+    if (i === undefined || j === undefined) return;
+
+    if (event.ctrlKey) {
+        // Ctrl-click is the universal pipette gesture, regardless of tool.
+        selected_color = pattern.get(i, j);
+        view.draw();
+        return;
+    }
+
+    switch (current_tool) {
+    case "pipette":
+        selected_color = pattern.get(i, j);
+        view.draw();
+        return;
+    case "fill":
+        _bucketFill(i, j);
+        return;
+    case "select":
+        _drag = { i0: i, j0: j };
+        pattern.selection = { i1: i, j1: j, i2: i, j2: j };
+        view.draw();
+        return;
+    case "pencil":
+    default:
+        // Pencil is line-mode (matches the desktop's "stift draws
+        // a line"): mousedown records the start cell, mousemove
+        // updates a translucent tracer, and the actual cells are
+        // committed on mouseup. A single click without movement
+        // toggles the start cell.
+        _pencil_stroke = {
+            mode: "click",
+            startI: i, startJ: j,
+            endI: i,   endJ: j,
+            previewCells: [],
+            changes: [],
+            visited: new Set(),
+        };
+        return;
+    }
+}
+
+function _onMouseMove(event) {
+    if (!view) return;
+    const [x, y] = _eventCoords(event);
+    const hit = _hitGridView(x, y);
+    const sb = document.getElementById("sb-cursor");
+    if (sb) {
+        if (hit) {
+            const [ci, cj] = hit.coord;
+            sb.textContent = (ci != null && cj != null)
+                ? `(${ci + 1}, ${cj + 1})` : "";
+        } else {
+            sb.textContent = "";
+        }
+    }
+    if (readonly || !hit) return;
+    const [i, j] = hit.coord;
+    if (i === undefined || j === undefined) return;
+    if (_drag) {
+        // Drag rectangle for the select tool — recompute on every move.
+        const i1 = Math.min(_drag.i0, i);
+        const i2 = Math.max(_drag.i0, i);
+        const j1 = Math.min(_drag.j0, j);
+        const j2 = Math.max(_drag.j0, j);
+        pattern.selection = { i1, j1, i2, j2 };
+        view.draw();
+        _updateStatusbar();
+        return;
+    }
+    if (_pencil_stroke && current_tool === "pencil") {
+        let endI = i, endJ = j;
+        if (event.ctrlKey) {
+            [endI, endJ] = _constrainTo8Dir(
+                _pencil_stroke.startI, _pencil_stroke.startJ, endI, endJ);
+        }
+        if (endI !== _pencil_stroke.endI || endJ !== _pencil_stroke.endJ
+            || (_pencil_stroke.mode === "click"
+                && (endI !== _pencil_stroke.startI
+                    || endJ !== _pencil_stroke.startJ))) {
+            _pencil_stroke.endI = endI;
+            _pencil_stroke.endJ = endJ;
+            if (endI !== _pencil_stroke.startI
+                || endJ !== _pencil_stroke.startJ) {
+                _pencil_stroke.mode = "drag";
+            }
+            _pencil_stroke.previewCells = _bresenhamCells(
+                _pencil_stroke.startI, _pencil_stroke.startJ,
+                endI, endJ);
+            view.draw();
+            _drawPencilPreview();
+        }
+    }
+}
+
+function _onMouseUp(event) {
+    if (_drag) {
+        _drag = null;
+        view.draw();
+        _updateStatusbar();
+    }
+    if (_pencil_stroke) {
+        if (_pencil_stroke.mode === "click") {
+            // No drag — apply the desktop's "click toggles"
+            // behaviour: a cell already in the active colour clears,
+            // anything else gets painted.
+            _pencilSetCell(_pencil_stroke.startI,
+                           _pencil_stroke.startJ, "toggle");
+        } else {
+            // Drag — commit the previewed line by painting every
+            // cell along it with the active colour.
+            for (const [pi, pj] of _pencil_stroke.previewCells) {
+                _pencilSetCell(pi, pj, "paint");
             }
         }
+        beadlist.update();
         view.draw();
+        setModified();
+        _commitPencilStroke();
+    }
+}
+
+
+// ---- Pencil tool -------------------------------------------------
+
+// Apply a change to a single cell within the in-progress stroke.
+// `mode` is either "toggle" (single click — selected_color → bg, else
+// → selected_color) or "paint" (drag — always set to selected_color).
+function _pencilSetCell(i, j, mode) {
+    if (!_pencil_stroke) return;
+    if (i < 0 || j < 0 || i >= pattern.width || j >= pattern.height) return;
+    const key = i + "," + j;
+    if (_pencil_stroke.visited.has(key)) return;
+    _pencil_stroke.visited.add(key);
+    const oldVal = pattern.get(i, j);
+    const newVal = (mode === "toggle" && oldVal === selected_color)
+        ? background_color
+        : selected_color;
+    if (oldVal === newVal) return;
+    _pencil_stroke.changes.push({ i, j, oldVal, newVal });
+    pattern.set(i, j, newVal);
+}
+
+// Bresenham cell list between two grid points (inclusive).
+function _bresenhamCells(x0, y0, x1, y1) {
+    const cells = [];
+    let x = x0, y = y0;
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    while (true) {
+        cells.push([x, y]);
+        if (x === x1 && y === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x += sx; }
+        if (e2 <  dx) { err += dx; y += sy; }
+    }
+    return cells;
+}
+
+// Snap (i, j) so the line from (startI, startJ) becomes one of the
+// 8 cardinal/diagonal directions. Used when Ctrl is held during a
+// pencil drag.
+function _constrainTo8Dir(startI, startJ, i, j) {
+    const dx = i - startI, dy = j - startJ;
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    if (adx === 0 && ady === 0) return [startI, startJ];
+    const sx = dx === 0 ? 0 : (dx > 0 ? 1 : -1);
+    const sy = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
+    if (adx > ady * 2) {
+        return [startI + dx, startJ];      // horizontal
+    }
+    if (ady > adx * 2) {
+        return [startI, startJ + dy];      // vertical
+    }
+    const len = Math.max(adx, ady);
+    return [startI + sx * len, startJ + sy * len];  // diagonal
+}
+
+// Translucent tracer overlay drawn after view.draw() while the user
+// is dragging the pencil — shows where the line will land without
+// touching the underlying pattern data. Drawn only on the draft
+// view (the tool that's most natural for line-drawing); other views
+// will pick up the line once it's committed on mouseup.
+function _drawPencilPreview() {
+    if (!_pencil_stroke
+        || _pencil_stroke.mode !== "drag"
+        || !view || !view.draft
+        || !_pencil_stroke.previewCells.length) return;
+    const ctx = view.ctx;
+    const dx = settings.dx, dy = settings.dy;
+    const off = pattern.scroll | 0;
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = colors[selected_color] || "#888";
+    ctx.strokeStyle = "#ff5";
+    ctx.lineWidth = 1;
+    for (const [i, j] of _pencil_stroke.previewCells) {
+        const j_view = j - off;
+        if (i < 0 || i >= view.draft.width) continue;
+        if (j_view < 0 || j_view >= view.draft.height) continue;
+        const x = 0.5 + (view.draft.x + i) * dx;
+        const y = 0.5 + (view.draft.y + view.draft.height - j_view - 1) * dy;
+        ctx.fillRect(x, y, dx, dy);
+        ctx.strokeRect(x, y, dx, dy);
+    }
+    ctx.restore();
+}
+
+function _commitPencilStroke() {
+    if (!_pencil_stroke || _pencil_stroke.changes.length === 0) {
+        _pencil_stroke = null;
+        return;
+    }
+    const changes = _pencil_stroke.changes;
+    _pencil_stroke = null;
+    // Wrap the in-progress edits as one undo entry; apply() is a no-op
+    // the first time (work already done) but applies on redo.
+    let applied = true;
+    commandBus.execute({
+        label: "stroke",
+        apply: () => {
+            if (applied) { applied = false; return; }
+            for (const c of changes) pattern.set(c.i, c.j, c.newVal);
+            beadlist.update();
+            view.draw();
+        },
+        revert: () => {
+            for (let k = changes.length - 1; k >= 0; k--) {
+                pattern.set(changes[k].i, changes[k].j, changes[k].oldVal);
+            }
+            beadlist.update();
+            view.draw();
+        },
     });
 }
 
-function togglePattern(coord) {
-    const [i, j] = coord;
-    if (i === undefined || j === undefined) return;
-    const val = pattern.get(i, j);
-    if (event.ctrlKey) {
-        selected_color = pattern.get(i, j);
-    } else if (val !== selected_color) {
-        pattern.set(i, j, selected_color);
-	beadlist.update();
-    } else {
-        pattern.set(i, j, background_color);
-	beadlist.update();
+
+// ---- Selection transforms ----------------------------------------
+
+function _selectionRegion() {
+    const s = pattern.selection;
+    if (!s) return null;
+    return {
+        i1: Math.max(0, s.i1),
+        j1: Math.max(0, s.j1),
+        i2: Math.min(pattern.width - 1, s.i2),
+        j2: Math.min(pattern.height - 1, s.j2),
+    };
+}
+
+function _selectionTransform(kind) {
+    const r = _selectionRegion();
+    if (!r) return;
+    const W = r.i2 - r.i1 + 1, H = r.j2 - r.j1 + 1;
+    if (kind === "rotate" && W !== H) return;
+    const before = snapshotGridRegion(pattern, r.i1, r.j1, r.i2, r.j2);
+    const apply = () => {
+        switch (kind) {
+        case "delete":
+            for (let j = r.j1; j <= r.j2; j++)
+                for (let i = r.i1; i <= r.i2; i++)
+                    pattern.set(i, j, background_color);
+            break;
+        case "mirror-h": {
+            for (let j = r.j1; j <= r.j2; j++) {
+                const row = [];
+                for (let i = r.i1; i <= r.i2; i++) row.push(pattern.get(i, j));
+                row.reverse();
+                for (let i = 0; i < row.length; i++)
+                    pattern.set(r.i1 + i, j, row[i]);
+            }
+            break;
+        }
+        case "mirror-v": {
+            for (let j = 0; j < Math.floor(H / 2); j++) {
+                for (let i = r.i1; i <= r.i2; i++) {
+                    const a = pattern.get(i, r.j1 + j);
+                    const b = pattern.get(i, r.j2 - j);
+                    pattern.set(i, r.j1 + j, b);
+                    pattern.set(i, r.j2 - j, a);
+                }
+            }
+            break;
+        }
+        case "rotate": {
+            // 90° clockwise (relative to canvas-up coords). Snapshot
+            // the region first, then write back transposed.
+            const src = [];
+            for (let j = r.j1; j <= r.j2; j++) {
+                const row = [];
+                for (let i = r.i1; i <= r.i2; i++) row.push(pattern.get(i, j));
+                src.push(row);
+            }
+            // src[y][x] → out[x][H-1-y]
+            for (let y = 0; y < H; y++) {
+                for (let x = 0; x < W; x++) {
+                    pattern.set(r.i1 + (H - 1 - y), r.j1 + x, src[y][x]);
+                }
+            }
+            break;
+        }
+        }
+        beadlist.update();
+        view.draw();
+        setModified();
+    };
+    let applied = false;
+    commandBus.execute({
+        label: "selection." + kind,
+        apply: () => {
+            if (!applied) { apply(); applied = true; }
+            else { apply(); }
+        },
+        revert: () => {
+            restoreGridRegion(pattern, before);
+            beadlist.update();
+            view.draw();
+        },
+    });
+}
+
+// ---- Resize / row ops -------------------------------------------
+
+function _replacePatternData(newWidth, newHeight, newData) {
+    pattern.width = newWidth;
+    pattern.height = newHeight;
+    pattern.data = newData;
+    pattern.selection = null;
+    if (pattern.scroll > Math.max(0, newHeight - 1)) {
+        pattern.scroll = Math.max(0, newHeight - 1);
     }
+    if (newWidth > 0 && pattern.shift >= newWidth) {
+        pattern.shift = ((pattern.shift % newWidth) + newWidth) % newWidth;
+    }
+    if (view) view.layout();
+    if (beadlist) beadlist.update();
+    _refreshScrollbar();
+    if (view) view.draw();
+    setModified();
+}
+
+function _doResize(newWidth, newHeight) {
+    if (newWidth <= 0 || newHeight <= 0) return;
+    if (newWidth === pattern.width && newHeight === pattern.height) return;
+    const oldW = pattern.width, oldH = pattern.height;
+    const oldData = pattern.data.slice();
+    const newData = new Array(newWidth * newHeight).fill(0);
+    const cw = Math.min(oldW, newWidth);
+    const ch = Math.min(oldH, newHeight);
+    for (let j = 0; j < ch; j++) {
+        for (let i = 0; i < cw; i++) {
+            newData[i + j * newWidth] = oldData[i + j * oldW];
+        }
+    }
+    let applied = false;
+    commandBus.execute({
+        label: "resize",
+        apply: () => {
+            _replacePatternData(newWidth, newHeight, newData.slice());
+            applied = true;
+        },
+        revert: () => {
+            _replacePatternData(oldW, oldH, oldData.slice());
+        },
+    });
+}
+
+function _insertRowAt(j) {
+    const W = pattern.width, H = pattern.height;
+    if (j < 0) j = 0;
+    if (j > H) j = H;
+    const oldData = pattern.data.slice();
+    const newData = new Array(W * (H + 1)).fill(0);
+    // Rows below j (lower y indices) stay; new zero row at j;
+    // rows >= j shift up by one.
+    for (let r = 0; r < j; r++) {
+        for (let i = 0; i < W; i++) {
+            newData[i + r * W] = oldData[i + r * W];
+        }
+    }
+    for (let r = j; r < H; r++) {
+        for (let i = 0; i < W; i++) {
+            newData[i + (r + 1) * W] = oldData[i + r * W];
+        }
+    }
+    let applied = false;
+    commandBus.execute({
+        label: "insert-row",
+        apply: () => {
+            _replacePatternData(W, H + 1, newData.slice());
+            applied = true;
+        },
+        revert: () => {
+            _replacePatternData(W, H, oldData.slice());
+        },
+    });
+}
+
+function _deleteRowAt(j) {
+    const W = pattern.width, H = pattern.height;
+    if (H <= 1) return;            // refuse to leave an empty pattern
+    if (j < 0 || j >= H) return;
+    const oldData = pattern.data.slice();
+    const newData = new Array(W * (H - 1)).fill(0);
+    for (let r = 0; r < j; r++) {
+        for (let i = 0; i < W; i++) {
+            newData[i + r * W] = oldData[i + r * W];
+        }
+    }
+    for (let r = j + 1; r < H; r++) {
+        for (let i = 0; i < W; i++) {
+            newData[i + (r - 1) * W] = oldData[i + r * W];
+        }
+    }
+    let applied = false;
+    commandBus.execute({
+        label: "delete-row",
+        apply: () => {
+            _replacePatternData(W, H - 1, newData.slice());
+            applied = true;
+        },
+        revert: () => {
+            _replacePatternData(W, H, oldData.slice());
+        },
+    });
+}
+
+function _activeRow() {
+    // Top-of-selection if there is one; otherwise topmost used row.
+    if (pattern.selection) return pattern.selection.j2;
+    return Math.max(0, (beadlist.usedHeight | 0) - 1);
+}
+
+function _openSizeDialog(axis) {
+    const isWidth = axis === "width";
+    const cur = isWidth ? pattern.width : pattern.height;
+    const wrap = document.createElement("div");
+    const lbl = document.createElement("label");
+    lbl.textContent = isWidth
+        ? _actionLabel("pattern.new-width",  "New width:")
+        : _actionLabel("pattern.new-height", "New height:");
+    lbl.style.marginRight = "8px";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "1";
+    input.max = "5000";
+    input.value = String(cur);
+    input.style.width = "5rem";
+    wrap.appendChild(lbl);
+    wrap.appendChild(input);
+
+    Modal.open({
+        title: isWidth
+            ? _actionLabel("pattern.width-title",  "Pattern width")
+            : _actionLabel("pattern.height-title", "Pattern height"),
+        body: wrap,
+        buttons: [
+            { label: _actionLabel("btn.cancel", "Cancel"), role: "cancel" },
+            {
+                label: _actionLabel("btn.ok", "OK"), role: "primary",
+                onClick: (m) => {
+                    const v = parseInt(input.value, 10);
+                    if (!Number.isFinite(v) || v < 1) return;
+                    if (v < cur) {
+                        if (!confirm(_actionLabel(
+                            "pattern.confirm-shrink",
+                            "Shrinking will discard data outside the new "
+                            + "size. Continue?"))) return;
+                    }
+                    if (isWidth) _doResize(v, pattern.height);
+                    else         _doResize(pattern.width, v);
+                    m.close();
+                },
+            },
+        ],
+    });
+}
+
+
+// ---- Properties dialog ------------------------------------------
+
+function _openPropertiesDialog() {
+    if (readonly) return;
+    const cur = {
+        author:       (data && data.author) || "",
+        organization: (data && data.organization) || "",
+        notes:        (data && data.notes) || "",
+    };
+    const body = document.createElement("div");
+    body.style.minWidth = "420px";
+    body.innerHTML = `
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:0.4rem 1rem;align-items:start">
+            <label>${_actionLabel("props.author", "Author:")}</label>
+            <input id="tx-pp-author" type="text" style="width:100%">
+            <label>${_actionLabel("props.organization", "Organization:")}</label>
+            <input id="tx-pp-org" type="text" style="width:100%">
+            <label>${_actionLabel("props.notes", "Notes:")}</label>
+            <textarea id="tx-pp-notes" rows="6" style="width:100%;resize:vertical"></textarea>
+        </div>`;
+    const $ = (sel) => body.querySelector(sel);
+    $("#tx-pp-author").value = cur.author;
+    $("#tx-pp-org").value    = cur.organization;
+    $("#tx-pp-notes").value  = cur.notes;
+    setTimeout(() => {
+        $("#tx-pp-author").focus();
+        $("#tx-pp-author").select();
+    }, 0);
+
+    let modal;
+    const accept = () => {
+        const next = {
+            author:       $("#tx-pp-author").value,
+            organization: $("#tx-pp-org").value,
+            notes:        $("#tx-pp-notes").value,
+        };
+        if (next.author === cur.author
+            && next.organization === cur.organization
+            && next.notes === cur.notes) {
+            modal.close();
+            return;
+        }
+        const before = { ...cur };
+        const after  = { ...next };
+        let firstApply = true;
+        commandBus.execute({
+            label: "properties",
+            apply: () => {
+                data.author       = after.author;
+                data.organization = after.organization;
+                data.notes        = after.notes;
+                if (!firstApply) setModified();
+                firstApply = false;
+            },
+            revert: () => {
+                data.author       = before.author;
+                data.organization = before.organization;
+                data.notes        = before.notes;
+                setModified();
+            },
+        });
+        setModified();
+        modal.close();
+    };
+    modal = Modal.open({
+        title: _actionLabel("props.title", "Properties"),
+        body,
+        buttons: [
+            { label: _actionLabel("btn.cancel", "Cancel"), role: "cancel" },
+            { label: _actionLabel("btn.ok", "OK"), role: "primary",
+              onClick: accept },
+        ],
+    });
+}
+
+
+// ---- Technical info dialog --------------------------------------
+
+function _openTechInfoDialog() {
+    const root = document.createElement("div");
+    root.style.minWidth = "260px";
+
+    const used = beadlist.usedHeight | 0;
+    const total = used * pattern.width;
+    const repeat = beadlist.repeat | 0;
+
+    const items = [
+        [_actionLabel("info.circumference", "Circumference:"), pattern.width],
+        [_actionLabel("info.rows", "Rows:"), used],
+        [_actionLabel("info.total-beads", "Total beads:"), total],
+        [_actionLabel("info.repeat", "Repeat:"), repeat],
+        [_actionLabel("info.bead-runs", "Colour runs:"), beadlist.list.length],
+    ];
+
+    const tbl = document.createElement("table");
+    tbl.style.borderCollapse = "collapse";
+    for (const [label, value] of items) {
+        const tr = document.createElement("tr");
+        const th = document.createElement("th");
+        th.textContent = label;
+        th.style.textAlign = "left";
+        th.style.padding = "2px 12px 2px 0";
+        const td = document.createElement("td");
+        td.textContent = String(value);
+        td.style.padding = "2px 0";
+        td.style.fontFamily = "monospace";
+        tr.appendChild(th);
+        tr.appendChild(td);
+        tbl.appendChild(tr);
+    }
+    root.appendChild(tbl);
+
+    // Per-colour totals.
+    const counts = new Map();
+    for (let j = 0; j < used; j++) {
+        for (let i = 0; i < pattern.width; i++) {
+            const c = pattern.get(i, j);
+            if (c <= 0) continue;
+            counts.set(c, (counts.get(c) || 0) + 1);
+        }
+    }
+    if (counts.size > 0) {
+        const h = document.createElement("h4");
+        h.textContent = _actionLabel("info.per-color",
+                                     "Beads per colour:");
+        h.style.margin = "12px 0 4px";
+        root.appendChild(h);
+        const grid = document.createElement("div");
+        grid.style.display = "grid";
+        grid.style.gridTemplateColumns = "repeat(auto-fill, minmax(60px, 1fr))";
+        grid.style.gap = "4px";
+        const sorted = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]);
+        for (const [c, n] of sorted) {
+            const cell = document.createElement("div");
+            cell.style.display = "flex";
+            cell.style.alignItems = "center";
+            cell.style.gap = "4px";
+            const sw = document.createElement("span");
+            sw.style.display = "inline-block";
+            sw.style.width = "16px";
+            sw.style.height = "16px";
+            sw.style.border = "1px solid #888";
+            sw.style.background = colors[c];
+            cell.appendChild(sw);
+            const label = document.createElement("span");
+            label.textContent = `${n}×`;
+            label.style.fontFamily = "monospace";
+            cell.appendChild(label);
+            grid.appendChild(cell);
+        }
+        root.appendChild(grid);
+    }
+
+    Modal.open({
+        title: _actionLabel("info.title", "Technical info"),
+        body: root,
+        buttons: [
+            { label: _actionLabel("btn.ok", "OK"), role: "primary" },
+        ],
+    });
+}
+
+
+// ---- Colour palette editor --------------------------------------
+
+function _rgbFromString(rgbStr) {
+    // colors[] entries are "rgb(R, G, B)" strings.
+    const m = /rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/.exec(rgbStr || "");
+    if (!m) return [0, 0, 0];
+    return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10)];
+}
+
+function _applyPalette(palette) {
+    // palette is an array of [r, g, b] triples.
+    for (let i = 0; i < palette.length; i++) {
+        const [r, g, b] = palette[i];
+        colors[i] = `rgb(${r}, ${g}, ${b})`;
+        if (data && data.colors && data.colors[i]) {
+            data.colors[i] = [r | 0, g | 0, b | 0];
+        }
+    }
+}
+
+function _openPaletteDialog() {
+    // Live state we have to be able to roll back: colors[] (display
+    // strings) and data.colors (canonical [r, g, b] triples). We
+    // snapshot both up front, then use ColorPicker.showPaletteEditor
+    // for the actual UI — same widget the weave editor uses
+    // (showPaletteDialog in dbweave.js: hue ring + S/V square +
+    // numeric sliders + palette grid).
+    const before = colors.map(_rgbFromString);
+
+    ColorPicker.showPaletteEditor({
+        palette: before,
+        currentIndex: selected_color | 0,
+        getLabel: _actionLabel,
+        cols: 8,
+        // Live preview while the dialog is open.
+        onPreview: (draft) => {
+            _applyPalette(draft);
+            if (view) view.draw();
+        },
+        // Cancel rolls colour state back; the onPreview hook also
+        // restores it when ColorPicker calls `onPreview(before)`.
+        onCancel: () => { /* preview hook already reverted */ },
+        // OK commits the change as one undoable command. apply() is
+        // a no-op on first call (state is already live), but applies
+        // on redo.
+        onCommit: (after, currentIdx) => {
+            selected_color = currentIdx | 0;
+            const beforeSnap = before.map(c => c.slice());
+            const afterSnap  = after.map(c => c.slice());
+            let firstApply = true;
+            commandBus.execute({
+                label: "palette",
+                apply: () => {
+                    if (firstApply) { firstApply = false; return; }
+                    _applyPalette(afterSnap);
+                    if (view) view.draw();
+                    setModified();
+                },
+                revert: () => {
+                    _applyPalette(beforeSnap);
+                    if (view) view.draw();
+                    setModified();
+                },
+            });
+            setModified();
+        },
+    });
+}
+
+
+// ---- Arrange (copy selection with offset, N times) ---------------
+
+function _openArrangeDialog() {
+    if (!pattern.selection) return;
+    const sel = pattern.selection;
+    const W = sel.i2 - sel.i1 + 1;
+    const H = sel.j2 - sel.j1 + 1;
+
+    const wrap = document.createElement("div");
+    const mk = (id, labelKey, label, def) => {
+        const row = document.createElement("div");
+        row.style.margin = "6px 0";
+        const lbl = document.createElement("label");
+        lbl.textContent = _actionLabel(labelKey, label);
+        lbl.style.display = "inline-block";
+        lbl.style.minWidth = "9rem";
+        lbl.htmlFor = id;
+        const inp = document.createElement("input");
+        inp.type = "number";
+        inp.id = id;
+        inp.value = def;
+        inp.style.width = "5rem";
+        row.appendChild(lbl);
+        row.appendChild(inp);
+        wrap.appendChild(row);
+        return inp;
+    };
+    const inDx = mk("arr-dx", "arrange.dx", "Horizontal offset:", W);
+    const inDy = mk("arr-dy", "arrange.dy", "Vertical offset:", H);
+    const inN  = mk("arr-n",  "arrange.copies", "Number of copies:", 1);
+
+    Modal.open({
+        title: _actionLabel("arrange.title", "Arrange selection"),
+        body: wrap,
+        buttons: [
+            { label: _actionLabel("btn.cancel", "Cancel"), role: "cancel" },
+            {
+                label: _actionLabel("btn.ok", "OK"), role: "primary",
+                onClick: (m) => {
+                    const dx = parseInt(inDx.value, 10) || 0;
+                    const dy = parseInt(inDy.value, 10) || 0;
+                    const n  = Math.max(1, parseInt(inN.value, 10) || 1);
+                    _arrangeSelection(dx, dy, n);
+                    m.close();
+                },
+            },
+        ],
+    });
+}
+
+function _arrangeSelection(dx, dy, copies) {
+    if (!pattern.selection) return;
+    const sel = pattern.selection;
+    const W = sel.i2 - sel.i1 + 1;
+    const H = sel.j2 - sel.j1 + 1;
+    // Snapshot the affected destination region (selection itself + all
+    // copy targets) so undo restores everything in one go.
+    let i1 = sel.i1, i2 = sel.i2, j1 = sel.j1, j2 = sel.j2;
+    for (let k = 1; k <= copies; k++) {
+        i1 = Math.min(i1, sel.i1 + dx * k);
+        i2 = Math.max(i2, sel.i2 + dx * k);
+        j1 = Math.min(j1, sel.j1 + dy * k);
+        j2 = Math.max(j2, sel.j2 + dy * k);
+    }
+    i1 = Math.max(0, i1);
+    j1 = Math.max(0, j1);
+    i2 = Math.min(pattern.width - 1, i2);
+    j2 = Math.min(pattern.height - 1, j2);
+    if (i1 > i2 || j1 > j2) return;
+    const before = snapshotGridRegion(pattern, i1, j1, i2, j2);
+    // Capture source cells before any writes (in case copies overlap).
+    const src = [];
+    for (let j = 0; j < H; j++) {
+        const row = [];
+        for (let i = 0; i < W; i++) row.push(pattern.get(sel.i1 + i, sel.j1 + j));
+        src.push(row);
+    }
+    const apply = () => {
+        for (let k = 1; k <= copies; k++) {
+            const ox = sel.i1 + dx * k;
+            const oy = sel.j1 + dy * k;
+            for (let j = 0; j < H; j++) {
+                const ty = oy + j;
+                if (ty < 0 || ty >= pattern.height) continue;
+                for (let i = 0; i < W; i++) {
+                    const tx = ox + i;
+                    if (tx < 0 || tx >= pattern.width) continue;
+                    pattern.set(tx, ty, src[j][i]);
+                }
+            }
+        }
+        beadlist.update();
+        view.draw();
+        setModified();
+    };
+    let applied = false;
+    commandBus.execute({
+        label: "arrange",
+        apply: () => {
+            if (!applied) { apply(); applied = true; }
+            else { apply(); }
+        },
+        revert: () => {
+            restoreGridRegion(pattern, before);
+            beadlist.update();
+            view.draw();
+        },
+    });
+}
+
+
+function _shiftPattern(delta) {
+    // View-only operation: rotates the simulated bead tube by `delta`
+    // cells. The underlying data is not touched, so the bead-list,
+    // repeat, draft and corrected views are unaffected — matching
+    // desktop's Model.shift / SimulationPanel.getShift behaviour
+    // (only ch.jbead.view.SimulationPanel reads the shift value).
+    const W = pattern.width;
+    const before = pattern.shift | 0;
+    const after = (((before + delta) % W) + W) % W;
+    if (after === before) return;
+    let applied = false;
+    commandBus.execute({
+        label: "shift",
+        apply: () => {
+            pattern.shift = after;
+            view.draw();
+            setModified();
+            applied = true;
+        },
+        revert: () => {
+            pattern.shift = before;
+            view.draw();
+            setModified();
+        },
+    });
+}
+
+
+// ---- Fill tool ---------------------------------------------------
+
+function _bucketFill(i, j) {
+    const target = pattern.get(i, j);
+    if (target === selected_color) return;
+    const W = pattern.width, H = pattern.height;
+    const queue = [[i, j]];
+    const changes = [];
+    const seen = new Uint8Array(W * H);
+    seen[i + j * W] = 1;
+    while (queue.length) {
+        const [ci, cj] = queue.shift();
+        if (pattern.get(ci, cj) !== target) continue;
+        changes.push({ i: ci, j: cj, oldVal: target, newVal: selected_color });
+        const tries = [[ci - 1, cj], [ci + 1, cj], [ci, cj - 1], [ci, cj + 1]];
+        for (const [ni, nj] of tries) {
+            if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+            const k = ni + nj * W;
+            if (seen[k]) continue;
+            seen[k] = 1;
+            queue.push([ni, nj]);
+        }
+    }
+    if (!changes.length) return;
+    let firstApply = true;
+    commandBus.execute({
+        label: "fill",
+        apply: () => {
+            if (firstApply) {
+                for (const c of changes) pattern.set(c.i, c.j, c.newVal);
+                firstApply = false;
+            } else {
+                for (const c of changes) pattern.set(c.i, c.j, c.newVal);
+            }
+            beadlist.update();
+            view.draw();
+        },
+        revert: () => {
+            for (const c of changes) pattern.set(c.i, c.j, c.oldVal);
+            beadlist.update();
+            view.draw();
+        },
+    });
+    setModified();
 }
 
 function initPattern(data, pattern) {
@@ -644,25 +1866,427 @@ function initPattern(data, pattern) {
 }
 
 function saveSettings(data, settings) {
-    // TODO
+    if (!data.view) data.view = {};
+    data.view["selected-color"] = selected_color;
+    data.view["shift"] = pattern.shift | 0;
+    data.view["scroll"] = pattern.scroll | 0;
+    data.view["zoom"] = settings.dx | 0;
+    data.view["draft-visible"] = !!show_draft;
+    data.view["corrected-visible"] = !!show_corrected;
+    data.view["simulation-visible"] = !!show_simulation;
+    data.view["report-visible"] = !!show_report;
+    data.view["selected-tool"] = current_tool;
+    data.view["draw-colors"] = !!draw_colors;
+    data.view["draw-symbols"] = !!draw_symbols;
+    data.view["symbols"] = pattern_symbols || _DEFAULT_SYMBOLS;
 }
 
 function savePatternData(data, pattern) {
-    for (let j = 0; j < data.model.length; j++) {
-        const row = data.model[j];
-        for (let i = 0; i < row.length; i++) {
-            row[i] = pattern.get(i, j);
-        }
+    // Rebuild data.model from the live Pattern dimensions so that
+    // resize/insert-row/delete-row are persisted correctly even
+    // when data.model's old dimensions don't match.
+    const rows = [];
+    for (let j = 0; j < pattern.height; j++) {
+        const row = new Array(pattern.width);
+        for (let i = 0; i < pattern.width; i++) row[i] = pattern.get(i, j);
+        rows.push(row);
     }
+    data.model = rows;
     // Persist the detected repeat length so the server can index it.
     if (Number.isInteger(pattern.repeat) && pattern.repeat > 0) {
         data.repeat = pattern.repeat;
     }
 }
 
+// ---- Menubar / toolbar / shortcuts wiring ------------------------
+
+function _updateStatusbar() {
+    const sbTool = document.getElementById("sb-tool");
+    if (sbTool) {
+        const toolLabel = current_tool
+            ? _actionLabel("tool." + current_tool, current_tool) : "";
+        sbTool.textContent = current_tool
+            ? `${_actionLabel("sb.tool", "Tool")}: ${toolLabel}` : "";
+    }
+    const sbRepeat = document.getElementById("sb-repeat");
+    if (sbRepeat && beadlist) {
+        const total = beadlist.list.reduce((acc, [, c]) => acc + c, 0);
+        sbRepeat.textContent = beadlist.repeat
+            ? `${_actionLabel("sb.repeat", "Repeat")}: ${beadlist.repeat} `
+              + `(${total} ${_actionLabel("sb.beads", "beads")})`
+            : "";
+    }
+    const sbSel = document.getElementById("sb-selection");
+    if (sbSel) {
+        const s = pattern && pattern.selection;
+        sbSel.textContent = s
+            ? `${_actionLabel("sb.selection", "Sel")}: `
+              + `${s.i2 - s.i1 + 1} × ${s.j2 - s.j1 + 1}` : "";
+    }
+}
+
+async function _printPattern() {
+    if (!readonly) {
+        saveSettings(data, settings);
+        savePatternData(data, pattern);
+    }
+    const user = document.getElementById("user").value;
+    const name = document.getElementById("pattern").value;
+    const resp = await fetch(`/${user}/${name}/print`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: data, full_pattern: true }),
+    });
+    if (!resp.ok) { alert(`Print failed: ${resp.status}`); return; }
+    const blob = await resp.blob();
+    _downloadBlob(blob, `${name}.pdf`);
+}
+
+async function _exportPattern(fmt) {
+    if (!readonly) {
+        saveSettings(data, settings);
+        savePatternData(data, pattern);
+    }
+    const user = document.getElementById("user").value;
+    const name = document.getElementById("pattern").value;
+    const resp = await fetch(`/${user}/${name}/export/${fmt}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: data }),
+    });
+    if (!resp.ok) { alert(`Export failed: ${resp.status}`); return; }
+    const blob = await resp.blob();
+    const ext = fmt === "jpeg" ? "jpg" : fmt;
+    _downloadBlob(blob, `${name}.${ext}`);
+}
+
+function _downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function _setZoom(dx) {
+    dx = Math.max(4, Math.min(48, Math.round(dx)));
+    settings.dx = dx;
+    settings.dy = dx;
+    if (view) {
+        view.layout();
+        // Visible-rows count may have changed — clamp scroll and
+        // refresh the scrollbar's max.
+        if (pattern.scroll > _maxScroll()) pattern.scroll = _maxScroll();
+        _refreshScrollbar();
+        view.draw();
+    }
+    _updateStatusbar();
+}
+
+function setupEditorActions() {
+    const i18nEl = document.getElementById("tx-i18n");
+    if (i18nEl) {
+        try { _i18n = JSON.parse(i18nEl.textContent); }
+        catch (e) { console.warn("tx-i18n parse failed", e); }
+    }
+    const reg = (id, opts) => {
+        ActionRegistry.registerAction({
+            id,
+            label: _actionLabel(id, id),
+            ...opts,
+        });
+    };
+
+    reg("file.save", {
+        shortcut: "Ctrl+S",
+        enabledWhen: () => !readonly,
+        handler: () => {
+            saveSettings(data, settings);
+            savePatternData(data, pattern);
+            savePattern();
+        },
+    });
+    reg("file.print", {
+        shortcut: "Ctrl+P",
+        handler: () => _printPattern(),
+    });
+    reg("file.properties", {
+        enabledWhen: () => !readonly,
+        handler: () => _openPropertiesDialog(),
+    });
+    reg("file.export-png",  { handler: () => _exportPattern("png")  });
+    reg("file.export-jpeg", { handler: () => _exportPattern("jpeg") });
+    reg("file.export-svg",  { handler: () => _exportPattern("svg")  });
+    reg("file.export-pdf",  { handler: () => _exportPattern("pdf")  });
+    reg("file.close", { handler: () => closePattern() });
+
+    reg("view.zoom-in",     { shortcut: "Ctrl+I",
+        handler: () => _setZoom(settings.dx + 2) });
+    reg("view.zoom-out",    { shortcut: "Ctrl+U",
+        handler: () => _setZoom(settings.dx - 2) });
+    reg("view.zoom-normal", { handler: () => _setZoom(12) });
+
+    const toggleView = (varName, getter, setter) => () => {
+        setter(!getter());
+        if (view) { view.layout(); view.draw(); }
+        ActionRegistry.notify();
+    };
+    reg("view.show-draft", {
+        checkedWhen: () => show_draft,
+        handler: toggleView("draft",
+            () => show_draft, v => { show_draft = v; }),
+    });
+    reg("view.show-corrected", {
+        checkedWhen: () => show_corrected,
+        handler: toggleView("corrected",
+            () => show_corrected, v => { show_corrected = v; }),
+    });
+    reg("view.show-simulation", {
+        checkedWhen: () => show_simulation,
+        handler: toggleView("simulation",
+            () => show_simulation, v => { show_simulation = v; }),
+    });
+    reg("view.show-report", {
+        checkedWhen: () => show_report,
+        handler: toggleView("report",
+            () => show_report, v => { show_report = v; }),
+    });
+    reg("view.draw-colors", {
+        checkedWhen: () => draw_colors,
+        handler: () => {
+            draw_colors = !draw_colors;
+            if (view) view.draw();
+            ActionRegistry.notify();
+        },
+    });
+    reg("view.draw-symbols", {
+        checkedWhen: () => draw_symbols,
+        handler: () => {
+            draw_symbols = !draw_symbols;
+            if (view) view.draw();
+            ActionRegistry.notify();
+        },
+    });
+
+    // ---- Tool selection ----
+    const setTool = name => () => {
+        current_tool = name;
+        if (name !== "select") {
+            pattern.selection = null;
+            view.draw();
+        }
+        ActionRegistry.notify();
+        _updateStatusbar();
+    };
+    reg("tool.pencil",  {
+        checkedWhen: () => current_tool === "pencil",
+        handler: setTool("pencil"),
+    });
+    reg("tool.select",  {
+        checkedWhen: () => current_tool === "select",
+        handler: setTool("select"),
+    });
+    reg("tool.fill",    {
+        checkedWhen: () => current_tool === "fill",
+        handler: setTool("fill"),
+    });
+    reg("tool.pipette", {
+        checkedWhen: () => current_tool === "pipette",
+        handler: setTool("pipette"),
+    });
+    reg("info.tech",    { handler: () => _openTechInfoDialog() });
+
+    // ---- Edit actions ----
+    reg("edit.undo", {
+        shortcut: "Ctrl+Z",
+        enabledWhen: () => commandBus && commandBus.canUndo(),
+        handler: () => {
+            if (commandBus.undo()) { setModified(); }
+        },
+    });
+    reg("edit.redo", {
+        shortcut: "Ctrl+Y",
+        enabledWhen: () => commandBus && commandBus.canRedo(),
+        handler: () => {
+            if (commandBus.redo()) { setModified(); }
+        },
+    });
+    const hasSelection = () => pattern && pattern.selection != null;
+    reg("edit.delete", {
+        shortcut: "Delete",
+        enabledWhen: hasSelection,
+        handler: () => _selectionTransform("delete"),
+    });
+    reg("edit.mirror-h", {
+        shortcut: "H",
+        enabledWhen: hasSelection,
+        handler: () => _selectionTransform("mirror-h"),
+    });
+    reg("edit.mirror-v", {
+        shortcut: "V",
+        enabledWhen: hasSelection,
+        handler: () => _selectionTransform("mirror-v"),
+    });
+    reg("edit.rotate", {
+        shortcut: "R",
+        enabledWhen: () => {
+            if (!hasSelection()) return false;
+            const s = pattern.selection;
+            return (s.i2 - s.i1) === (s.j2 - s.j1);
+        },
+        handler: () => _selectionTransform("rotate"),
+    });
+    reg("edit.shift-left", {
+        shortcut: "ArrowLeft",
+        handler: () => _shiftPattern(-1),
+    });
+    reg("edit.shift-right", {
+        shortcut: "ArrowRight",
+        handler: () => _shiftPattern(1),
+    });
+    reg("edit.arrange", {
+        enabledWhen: hasSelection,
+        handler: () => _openArrangeDialog(),
+    });
+    reg("edit.insert-row", {
+        handler: () => _insertRowAt(_activeRow()),
+    });
+    reg("edit.delete-row", {
+        enabledWhen: () => pattern && pattern.height > 1,
+        handler: () => _deleteRowAt(_activeRow()),
+    });
+    reg("pattern.width",  { handler: () => _openSizeDialog("width") });
+    reg("pattern.height", { handler: () => _openSizeDialog("height") });
+    reg("colors.palette", {
+        handler: () => _openPaletteDialog(),
+    });
+
+    // Bind shortcuts.
+    for (const a of ActionRegistry.all()) Shortcuts.bindAction(a);
+    Shortcuts.install();
+
+    // Extra one-off shortcuts: 0-9 select colour, F5 redraw. The
+    // generic Shortcuts dispatcher binds one combo per action so we
+    // install a small auxiliary listener here for the digit keys.
+    window.addEventListener("keydown", (e) => {
+        const t = e.target;
+        if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA"
+                  || t.isContentEditable)) return;
+        if (e.ctrlKey || e.altKey || e.metaKey) return;
+        if (e.key >= "0" && e.key <= "9") {
+            const idx = parseInt(e.key, 10);
+            if (idx < colors.length) {
+                selected_color = idx;
+                view.draw();
+                e.preventDefault();
+            }
+        } else if (e.key === "F5") {
+            if (view) { view.layout(); view.draw(); }
+            e.preventDefault();
+        }
+    });
+
+    // Render menubar.
+    const fileItems = [];
+    if (!readonly) fileItems.push({ action: "file.save" });
+    fileItems.push({ action: "file.print" });
+    fileItems.push({ label: _menuLabel("export", "Export"), items: [
+        { action: "file.export-png" },
+        { action: "file.export-jpeg" },
+        { action: "file.export-svg" },
+        { action: "file.export-pdf" },
+    ]});
+    fileItems.push({ separator: true });
+    if (!readonly) fileItems.push({ action: "file.properties" });
+    fileItems.push({ action: "file.close" });
+
+    const tree = [
+        { label: _menuLabel("file", "File"),  items: fileItems },
+        { label: _menuLabel("edit", "Edit"),  items: [
+            { action: "edit.undo" },
+            { action: "edit.redo" },
+            { separator: true },
+            { action: "edit.delete" },
+            { action: "edit.mirror-h" },
+            { action: "edit.mirror-v" },
+            { action: "edit.rotate" },
+            { action: "edit.arrange" },
+            { separator: true },
+            { action: "edit.insert-row" },
+            { action: "edit.delete-row" },
+            { separator: true },
+            { action: "edit.shift-left" },
+            { action: "edit.shift-right" },
+        ], visibleWhen: () => !readonly },
+        { label: _menuLabel("pattern", "Pattern"), items: [
+            { action: "pattern.width" },
+            { action: "pattern.height" },
+        ], visibleWhen: () => !readonly },
+        { label: _menuLabel("view", "View"),  items: [
+            { action: "view.zoom-in" },
+            { action: "view.zoom-out" },
+            { action: "view.zoom-normal" },
+            { separator: true },
+            { action: "view.show-draft" },
+            { action: "view.show-corrected" },
+            { action: "view.show-simulation" },
+            { action: "view.show-report" },
+            { separator: true },
+            { action: "view.draw-colors" },
+            { action: "view.draw-symbols" },
+        ]},
+        { label: _menuLabel("tools", "Tools"), items: [
+            { action: "tool.pencil"  },
+            { action: "tool.select"  },
+            { action: "tool.fill"    },
+            { action: "tool.pipette" },
+        ]},
+        { label: _menuLabel("colors", "Colors"), items: [
+            { action: "colors.palette" },
+        ], visibleWhen: () => !readonly },
+        { label: _menuLabel("info", "Info"),  items: [
+            { action: "info.tech" },
+        ]},
+    ];
+    Menu.render(document.getElementById("tx-menubar"), tree);
+
+    // Wire any element with a data-action: toolbar buttons in the
+    // top icon strip *and* the side tools panel.
+    const TBSEL = "#tx-toolbar .tx-tb-btn, #tools-panel .tx-tool-btn";
+    document.querySelectorAll(TBSEL).forEach(btn => {
+        const id = btn.dataset.action;
+        if (!id) return;
+        btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            if (!ActionRegistry.isEnabled(id)) return;
+            ActionRegistry.invoke(id, e);
+        });
+    });
+    const refreshTb = () => {
+        document.querySelectorAll(TBSEL).forEach(btn => {
+            const id = btn.dataset.action;
+            if (!id) return;
+            btn.disabled = !ActionRegistry.isEnabled(id);
+            // Toolbar uses .checked (highlight); side tools panel
+            // uses .active (matches weave editor's CSS).
+            const checked = ActionRegistry.isChecked(id);
+            btn.classList.toggle("checked", checked);
+            btn.classList.toggle("active", checked);
+        });
+    };
+    ActionRegistry.subscribe(refreshTb);
+    refreshTb();
+}
+
+
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
     getPattern().then(init).then(() => {
+        setupEditorActions();
+        _updateStatusbar();
         const params = new URLSearchParams(window.location.search);
         if (!readonly && params.get("autosave") === "1") {
             setTimeout(() => {
@@ -683,12 +2307,8 @@ window.addEventListener("load", () => {
             saveSettings(data, settings);
             savePatternData(data, pattern);
         });
-        document.getElementById("public").addEventListener("click", togglePublic);
-        document.getElementById("save").addEventListener("click", () => {
-            saveSettings(data, settings);
-            savePatternData(data, pattern);
-            savePattern();
-        });
+        const pub = document.getElementById("public");
+        if (pub) pub.addEventListener("click", togglePublic);
     } else {
         const clone = document.getElementById("clone");
         if (clone) clone.addEventListener("click", clonePattern);
@@ -696,14 +2316,244 @@ window.addEventListener("load", () => {
     document.getElementById("close").addEventListener("click", closePattern);
 });
 
-window.addEventListener("resize", resizeWindow);
+// ---- Thumbnail / preview capture --------------------------------
+//
+// Mirrors `window.captureThumbnails` in dbweave.js (which common.js
+// invokes during save). The bead version paints two halves into an
+// offscreen canvas:
+//
+//   left half:  the rectangular draft view, scaled to fill the half
+//               completely (cells stretch slightly when the pattern's
+//               aspect doesn't match the half — the call site is a
+//               thumbnail, slight distortion is fine).
+//   right half: the hexagonally-offset simulation view. The natural
+//               width of the simulation is roughly half the draft's,
+//               so the right half ends up letterboxed horizontally
+//               (empty space on each side) — exactly what the user
+//               requested.
 
-async function checkAutosave() {
-    if (modified) {
-        saveSettings(data, settings);
-        savePatternData(data, pattern);
-        await savePattern();
-    }
+function _thumbColor(palette, idx) {
+    if (idx < 0 || !palette || idx >= palette.length) return null;
+    const c = palette[idx];
+    if (!Array.isArray(c) || c.length < 3) return null;
+    return `rgb(${c[0] | 0}, ${c[1] | 0}, ${c[2] | 0})`;
 }
 
-window.setInterval(checkAutosave, 5 * 1000);
+function _renderBeadThumbnail(currentData, w, h) {
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+
+    if (!currentData || !Array.isArray(currentData.model)
+        || currentData.model.length === 0) {
+        return canvas;
+    }
+    const rows = currentData.model;
+    const ph = rows.length;
+    const pw = (rows[0] || []).length;
+    if (pw <= 0 || ph <= 0) return canvas;
+
+    // Used-height: prefer the live beadlist (already up to date during
+    // save). Fall back to a manual scan for cold callers.
+    let usedH = 0;
+    if (typeof beadlist !== "undefined" && beadlist
+        && Number.isInteger(beadlist.usedHeight)
+        && beadlist.usedHeight > 0) {
+        usedH = beadlist.usedHeight;
+    } else {
+        for (let j = 0; j < ph; j++) {
+            for (let i = 0; i < pw; i++) {
+                if (rows[j][i] > 0) { usedH = j + 1; break; }
+            }
+        }
+    }
+    if (usedH < 1) usedH = 1;
+
+    const palette = currentData.colors || [];
+    const halfW = Math.floor(w / 2);
+
+    // Square cells (1:1) for both halves — bead patterns are
+    // displayed with square beads in the editor, and stretching to
+    // non-square here would misrepresent the shape. Pick the largest
+    // square cell that fits both axes (`min`); if that's so small
+    // that the simulation beads wouldn't read as round, bump up to
+    // a minimum and crop the topmost rows that no longer fit.
+    // 6 px is roughly the smallest size at which the half-bead
+    // ellipses on odd rows still look like beads instead of slivers.
+    const MIN_CELL = 6;
+    let cell = Math.min(halfW / pw, h / usedH);
+    let visRows = usedH;
+    if (cell < MIN_CELL) {
+        cell = MIN_CELL;
+        visRows = Math.max(1, Math.min(usedH, Math.floor(h / cell)));
+    }
+    const dCellW = cell;
+    const dCellH = cell;
+    // Letterbox offsets so the patterns sit centred in their half.
+    const draftContentW = pw * dCellW;
+    const draftContentH = visRows * dCellH;
+    const draftX0 = Math.floor((halfW - draftContentW) / 2);
+    const draftY1 = Math.floor((h + draftContentH) / 2);  // bottom edge
+
+    // ----- Left half: draft -----
+    // Anchor row 0 at the bottom of the content rectangle so the
+    // start of beading is visible — same as the editor. If visRows
+    // < usedH (very tall pattern, cells clamped to MIN_CELL), the
+    // topmost rows are simply not drawn.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, halfW, h);
+    ctx.clip();
+    for (let j = 0; j < visRows; j++) {
+        for (let i = 0; i < pw; i++) {
+            const c = rows[j][i] | 0;
+            const fill = _thumbColor(palette, c);
+            if (!fill) continue;
+            const px = Math.floor(draftX0 + i * dCellW);
+            const py = Math.floor(draftY1 - (j + 1) * dCellH);
+            const cw = Math.max(1, Math.ceil(draftX0 + (i + 1) * dCellW) - px);
+            const ch = Math.max(1, Math.ceil(draftY1 - j * dCellH) - py);
+            ctx.fillStyle = fill;
+            ctx.fillRect(px, py, cw, ch);
+        }
+    }
+    // Light grid on top, only when cells are big enough to be worth it.
+    if (dCellW >= 4) {
+        ctx.strokeStyle = "#aaa";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const top = draftY1 - draftContentH;
+        for (let i = 0; i <= pw; i++) {
+            const x = Math.round(draftX0 + i * dCellW) + 0.5;
+            ctx.moveTo(x, top + 0.5);
+            ctx.lineTo(x, draftY1 - 0.5);
+        }
+        for (let j = 0; j <= visRows; j++) {
+            const y = Math.round(draftY1 - j * dCellH) + 0.5;
+            ctx.moveTo(draftX0 + 0.5, y);
+            ctx.lineTo(draftX0 + draftContentW - 0.5, y);
+        }
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // ----- Right half: simulation -----
+    // True simulation view (not corrected) — only the front half of
+    // the bead rope is shown, like ViewSimulated.draw in jbead.js.
+    // Beads are laid out in rows of alternating widths W and W+1,
+    // and clipped to xi < simWidth on even rows / xi <= simWidth on
+    // odd rows. Half-beads appear at the start and end of every odd
+    // row so the rope reads as continuous. Beads on odd rows are
+    // shifted left by half a cell.
+    const W = pw;
+    const W2 = pw + 1;
+    const simWidth = Math.trunc((pw + 1) / 2);
+    const total = visRows * pw;
+    const idxToCorrected = (idx) => {
+        let k = 0, m = W;
+        while (idx >= m) { idx -= m; k++; m = (k % 2 === 0) ? W : W2; }
+        return [idx, k];
+    };
+
+    // Sim pane: visible rope-front area, sim_width cells wide. Use a
+    // soft grey background so the rope reads against it (mirrors the
+    // editor's #aaa fill).
+    const simPaneW = simWidth * dCellW;
+    const simPaneX = Math.floor(halfW + (halfW - simPaneW) / 2);
+    // Vertical extent: walk one bead to discover how many corrected
+    // rows the visRows data rows produce, then size the bg from there.
+    let simRowCount = 0;
+    if (total > 0) {
+        const [, lastY] = idxToCorrected(total - 1);
+        simRowCount = lastY + 1;
+    }
+    const simPaneH = simRowCount * dCellH;
+    const simPaneY = Math.floor(draftY1 - simPaneH);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(halfW, 0, w - halfW, h);
+    ctx.clip();
+    ctx.fillStyle = "#aaa";
+    ctx.fillRect(simPaneX, simPaneY, simPaneW, simPaneH);
+
+    for (let idx = 0; idx < total; idx++) {
+        const [xi, yj] = idxToCorrected(idx);
+        // Front-half visibility (mirrors ViewSimulated.draw).
+        if (yj % 2 === 0 && xi >= simWidth) continue;
+        if (yj % 2 === 1 && xi >  simWidth) continue;
+        const dataI = idx % pw;
+        const dataJ = Math.floor(idx / pw);
+        const c = rows[dataJ][dataI] | 0;
+        const fill = _thumbColor(palette, c);
+        if (!fill) continue;
+
+        // Compute the bead's centre and radii. Even rows: beads at
+        // (xi + 0.5)·cellW, full size. Odd rows: half-bead at xi=0
+        // and xi=simWidth, full beads at integer xi in between, all
+        // shifted by -cellW/2 versus the even rows.
+        let cx, rx;
+        const ry = dCellH / 2;
+        const isOdd = (yj % 2) === 1;
+        if (!isOdd) {
+            cx = simPaneX + (xi + 0.5) * dCellW;
+            rx = dCellW / 2;
+        } else if (xi === 0) {
+            cx = simPaneX + dCellW / 4;
+            rx = dCellW / 4;
+        } else if (xi === simWidth) {
+            cx = simPaneX + simPaneW - dCellW / 4;
+            rx = dCellW / 4;
+        } else {
+            cx = simPaneX + xi * dCellW;
+            rx = dCellW / 2;
+        }
+        const cy = draftY1 - (yj + 0.5) * dCellH;
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+
+    // 1-px separator between the halves.
+    ctx.fillStyle = "#bbb";
+    ctx.fillRect(halfW, 0, 1, h);
+
+    return canvas;
+}
+
+
+window.captureThumbnails = function (currentData) {
+    try {
+        // Wider than the weave editor's 192×96 / 512×256 — bead
+        // patterns need horizontal room because the rendered draft
+        // and simulation sit side by side, and the simulation has
+        // additional empty space on each side.
+        const t = _renderBeadThumbnail(currentData, 256, 128);
+        const p = _renderBeadThumbnail(currentData, 640, 320);
+        return {
+            thumbnail: t.toDataURL("image/png"),
+            preview:   p.toDataURL("image/png"),
+        };
+    } catch (e) {
+        console.error("captureThumbnails error", e);
+        return null;
+    }
+};
+
+
+window.addEventListener("resize", () => {
+    resizeWindow();
+    if (pattern && pattern.scroll > _maxScroll()) {
+        pattern.scroll = _maxScroll();
+    }
+    _refreshScrollbar();
+});
+
+// No autosave — the weave editor doesn't have one either; unsaved
+// changes are protected by `installBeforeUnloadGuard` (set up in the
+// load handler), which runs the standard "leave site?" prompt and
+// fires a best-effort beacon save when the page is closing.

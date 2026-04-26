@@ -467,15 +467,11 @@
 
         {% if not readonly %}
             <div id="modified" class="unchanged">&nbsp;</div>
-            <img id="public"
-                 {% if pattern.public %}
-                     src="{{url_for('static', filename='img/icons/icon-public.svg')}}"
-                     title="{{ gettext('Public - visible to all users') }}"
-                 {% else %}
-                     src="{{url_for('static', filename='img/icons/icon-private.svg')}}"
-                     title="{{ gettext('Private - not visible to other users') }}"
-                 {% endif %}
-                 height="20px" class="icon"/>
+            <button type="button" id="public" class="tx-publish-toggle"
+                    data-title-public="{{ gettext('Public - visible to all users') }}"
+                    data-title-private="{{ gettext('Private - not visible to other users') }}"
+                    title="{% if pattern.public %}{{ gettext('Public - visible to all users') }}{% else %}{{ gettext('Private - not visible to other users') }}{% endif %}"
+                >{% if pattern.public %}🌐{% else %}🔒{% endif %}</button>
         {% endif %}
         {% if readonly and g.user %}
             <div id="clone">{{ gettext('Clone') }}</div>

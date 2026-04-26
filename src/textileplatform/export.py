@@ -3,8 +3,8 @@
 Direct port of desktop ``exportbitmap.cpp``. The desktop ``paintPattern``
 helper draws onto a generic ``QPainter`` so the same code drives raster
 and vector output; here we abstract over a small ``DrawTarget``
-interface and provide concrete backends for Pillow (PNG/JPEG), pure
-SVG, and reportlab (PDF).
+interface (defined in :mod:`exportcommon`) and provide concrete
+backends for Pillow (PNG/JPEG), pure SVG, and reportlab (PDF).
 
 The four core grids (einzug / aufknuepfung / trittfolge / gewebe) are
 laid out exactly like the desktop (see exportbitmap.cpp:196-405):
@@ -26,7 +26,16 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass
-from typing import Callable, Tuple
+
+from textileplatform.exportcommon import (
+    BLACK, GRID_LINE,
+    DARST_FILLED, DARST_DOT, DARST_CROSS, DARST_CIRCLE,
+    DARST_RISING, DARST_VDASH,
+    DrawTarget, PILTarget, SVGTarget, PDFTarget, PDFTargetNoFlip,
+    paint_cell as _paint_cell,
+    page_size as _page_size,
+    svg_document,
+)
 
 # Range colours. Keep in sync with the JS rangecolors["light"] table —
 # exports are always rendered on a white background, so the dark-mode
@@ -47,110 +56,9 @@ RANGE_COLORS = [
     (0x72, 0xb4, 0x72),  # 12 abbindung
 ]
 
-GRID_LINE = (105, 105, 105)
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-
 AUSHEBUNG = 10
 ANBINDUNG = 11
 ABBINDUNG = 12
-
-# Symbol darstellung names — same keys the JS uses on settings.
-DARST_FILLED = "filled"
-DARST_DOT    = "dot"
-DARST_CROSS  = "cross"
-DARST_CIRCLE = "circle"
-DARST_RISING = "rising"
-DARST_FALLING = "falling"
-DARST_VDASH  = "vdash"
-DARST_DASH   = "dash"
-DARST_HDASH  = "hdash"
-DARST_PLUS   = "plus"
-DARST_SMALLCROSS  = "smallcross"
-DARST_SMALLCIRCLE = "smallcircle"
-DARST_NUMBER = "number"
-
-
-# ---------- Drawing target abstraction -----------------------------
-
-class DrawTarget:
-    """Minimal painter interface — fill_rect / stroke_rect / line /
-    ellipse / text. All coordinates in logical pixels (16 px = one
-    cell at unit ratio). Backends translate to their native units."""
-
-    def fill_rect(self, x, y, w, h, color):
-        raise NotImplementedError
-
-    def stroke_rect(self, x, y, w, h, color, width=1):
-        raise NotImplementedError
-
-    def line(self, x1, y1, x2, y2, color, width=1):
-        raise NotImplementedError
-
-    def ellipse_filled(self, cx, cy, rx, ry, color):
-        raise NotImplementedError
-
-    def ellipse_outlined(self, cx, cy, rx, ry, color, width=1):
-        raise NotImplementedError
-
-    def text_centered(self, x, y, w, h, text, color):
-        raise NotImplementedError
-
-
-# ---------- Cell painters -----------------------------------------
-
-def _paint_cell(t: DrawTarget, darst, x, y, gw, gh, color):
-    """Render one cell in the requested darstellung. AUSGEFUELLT fills
-    the full footprint (so neighbouring filled cells merge); the symbol
-    variants leave the background untouched. Direct port of the
-    paintExportCell lambda in exportbitmap.cpp:189-196."""
-    if darst == DARST_FILLED:
-        t.fill_rect(x, y, gw, gh, color)
-        return
-    # Compute inset for symbols. Mirrors the bxf=byf=0.15 frame
-    # the JS painters use.
-    bx = max(1, gw * 15 // 100)
-    by = max(1, gh * 15 // 100)
-    if darst == DARST_DOT:
-        rx = max(1, (gw - 2 * bx) // 4)
-        ry = max(1, (gh - 2 * by) // 4)
-        t.ellipse_filled(x + gw // 2, y + gh // 2, rx, ry, color)
-    elif darst == DARST_CIRCLE:
-        rx = max(1, (gw - 2 * bx) // 2)
-        ry = max(1, (gh - 2 * by) // 2)
-        t.ellipse_outlined(x + gw // 2, y + gh // 2, rx, ry, color, width=1)
-    elif darst == DARST_CROSS:
-        t.line(x + bx, y + by, x + gw - bx, y + gh - by, color, width=1)
-        t.line(x + bx, y + gh - by, x + gw - bx, y + by, color, width=1)
-    elif darst == DARST_RISING:
-        t.line(x + bx, y + gh - by, x + gw - bx, y + by, color, width=1)
-    elif darst == DARST_FALLING:
-        t.line(x + bx, y + by, x + gw - bx, y + gh - by, color, width=1)
-    elif darst in (DARST_VDASH, DARST_DASH):
-        # Vertical dash: thin rectangle centred horizontally.
-        w = max(1, gw // 5)
-        t.fill_rect(x + (gw - w) // 2, y + by, w, gh - 2 * by, color)
-    elif darst == DARST_HDASH:
-        h = max(1, gh // 5)
-        t.fill_rect(x + bx, y + (gh - h) // 2, gw - 2 * bx, h, color)
-    elif darst == DARST_PLUS:
-        t.line(x + gw // 2, y + by, x + gw // 2, y + gh - by, color, width=1)
-        t.line(x + bx, y + gh // 2, x + gw - bx, y + gh // 2, color, width=1)
-    elif darst == DARST_SMALLCROSS:
-        rx = max(1, (gw - 2 * bx) // 4)
-        ry = max(1, (gh - 2 * by) // 4)
-        cx, cy = x + gw // 2, y + gh // 2
-        t.line(cx - rx, cy - ry, cx + rx, cy + ry, color, width=1)
-        t.line(cx - rx, cy + ry, cx + rx, cy - ry, color, width=1)
-    elif darst == DARST_SMALLCIRCLE:
-        rx = max(1, (gw - 2 * bx) // 4)
-        ry = max(1, (gh - 2 * by) // 4)
-        t.ellipse_outlined(x + gw // 2, y + gh // 2, rx, ry, color, width=1)
-    elif darst == DARST_NUMBER:
-        t.text_centered(x, y, gw, gh, "1", color)
-    else:
-        # Unknown — fall back to filled.
-        t.fill_rect(x, y, gw, gh, color)
 
 
 # ---------- Layout / extent helpers ------------------------------
@@ -455,45 +363,11 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
     t.stroke_rect(x0, y0, dx * gw, dy * gh, BLACK)
 
 
-# ---------- Pillow backend (PNG / JPEG) ---------------------------
-
-class _PILTarget(DrawTarget):
-    def __init__(self, w, h):
-        from PIL import Image, ImageDraw
-        self.img = Image.new("RGB", (w, h), WHITE)
-        self.draw = ImageDraw.Draw(self.img)
-
-    def fill_rect(self, x, y, w, h, color):
-        self.draw.rectangle([x, y, x + w - 1, y + h - 1], fill=color)
-
-    def stroke_rect(self, x, y, w, h, color, width=1):
-        self.draw.rectangle([x, y, x + w, y + h], outline=color, width=width)
-
-    def line(self, x1, y1, x2, y2, color, width=1):
-        self.draw.line([x1, y1, x2, y2], fill=color, width=width)
-
-    def ellipse_filled(self, cx, cy, rx, ry, color):
-        self.draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=color)
-
-    def ellipse_outlined(self, cx, cy, rx, ry, color, width=1):
-        self.draw.ellipse(
-            [cx - rx, cy - ry, cx + rx, cy + ry],
-            outline=color, width=width,
-        )
-
-    def text_centered(self, x, y, w, h, text, color):
-        # Tiny text using PIL's default font.
-        try:
-            bbox = self.draw.textbbox((0, 0), text)
-            tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        except Exception:
-            tw, th = 6, 8
-        self.draw.text((x + (w - tw) // 2, y + (h - th) // 2), text, fill=color)
-
+# ---------- Raster (PNG / JPEG) ----------------------------------
 
 def _export_raster(data, fmt: str, jpeg_quality=92):
     layout = _pattern_layout(data)
-    target = _PILTarget(layout.width, layout.height)
+    target = PILTarget(layout.width, layout.height)
     paint_pattern(target, data, layout)
     buf = io.BytesIO()
     save_kwargs = {}
@@ -512,136 +386,58 @@ def export_jpeg(data) -> bytes:
     return _export_raster(data, "JPEG")
 
 
-# ---------- SVG backend -------------------------------------------
-
-class _SVGTarget(DrawTarget):
-    def __init__(self, w, h):
-        self.w = w
-        self.h = h
-        self.parts = []
-
-    def _color(self, color):
-        return f"#{color[0]:02x}{color[1]:02x}{color[2]:02x}"
-
-    def fill_rect(self, x, y, w, h, color):
-        self.parts.append(
-            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
-            f'fill="{self._color(color)}" stroke="none"/>'
-        )
-
-    def stroke_rect(self, x, y, w, h, color, width=1):
-        self.parts.append(
-            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
-            f'fill="none" stroke="{self._color(color)}" stroke-width="{width}"/>'
-        )
-
-    def line(self, x1, y1, x2, y2, color, width=1):
-        self.parts.append(
-            f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" '
-            f'stroke="{self._color(color)}" stroke-width="{width}"/>'
-        )
-
-    def ellipse_filled(self, cx, cy, rx, ry, color):
-        self.parts.append(
-            f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" '
-            f'fill="{self._color(color)}" stroke="none"/>'
-        )
-
-    def ellipse_outlined(self, cx, cy, rx, ry, color, width=1):
-        self.parts.append(
-            f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" '
-            f'fill="none" stroke="{self._color(color)}" stroke-width="{width}"/>'
-        )
-
-    def text_centered(self, x, y, w, h, text, color):
-        self.parts.append(
-            f'<text x="{x + w // 2}" y="{y + h - 2}" '
-            f'text-anchor="middle" font-family="sans-serif" '
-            f'font-size="{max(6, h - 4)}" fill="{self._color(color)}">{text}</text>'
-        )
-
+# ---------- SVG --------------------------------------------------
 
 def export_svg(data) -> bytes:
     layout = _pattern_layout(data)
-    target = _SVGTarget(layout.width, layout.height)
+    target = SVGTarget(layout.width, layout.height)
     paint_pattern(target, data, layout)
-    body = "".join(target.parts)
-    svg = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        f'<svg xmlns="http://www.w3.org/2000/svg" '
-        f'width="{layout.width}" height="{layout.height}" '
-        f'viewBox="0 0 {layout.width} {layout.height}">'
-        f'<rect width="100%" height="100%" fill="#ffffff"/>'
-        f'{body}</svg>'
-    )
-    return svg.encode("utf-8")
+    return svg_document(target)
 
 
-# ---------- reportlab backend (PDF) -------------------------------
+# ---------- PDF (single-page) ------------------------------------
 
-class _PDFTarget(DrawTarget):
-    """Logical-pixel painter that writes to a reportlab Canvas. The
-    caller sets up the Canvas's coordinate system so that one logical
-    px == one PDF point's worth of scaled space; this class just emits
-    primitives. Y-axis is flipped internally so callers can use the
-    top-left origin convention used everywhere else."""
+def export_pdf(data, title=None) -> bytes:
+    """Single-page PDF. Cell size is fixed at 2.5 mm; if the rendered
+    pattern is larger than the page's printable area it shrinks
+    proportionally to fit. Mirrors exportbitmap.cpp::DoExportPdf."""
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import mm
 
-    def __init__(self, c, w, h):
-        self.c = c
-        self.h = h  # for Y-flip
-        self.w = w
+    layout = _pattern_layout(data)
+    page_w, page_h = _page_size()
+    margin = 10 * mm
+    paint_w = page_w - 2 * margin
+    paint_h = page_h - 2 * margin
 
-    def _y(self, y):
-        return self.h - y
+    # Natural size: 2.5 mm per (smaller-axis) cell. The non-equal axis
+    # already reflects the warp/weft ratio in layout.gw/gh.
+    mm_per_cell = 2.5
+    base = min(layout.gw, layout.gh)
+    pt_per_logical = (mm_per_cell / base) * mm
+    natural_w = layout.width * pt_per_logical
+    natural_h = layout.height * pt_per_logical
+    scale = 1.0
+    if natural_w > paint_w or natural_h > paint_h:
+        scale = min(paint_w / natural_w, paint_h / natural_h)
+    final_w = natural_w * scale
+    final_h = natural_h * scale
 
-    def _set_color(self, color, fill=False):
-        r, g, b = color
-        if fill:
-            self.c.setFillColorRGB(r / 255.0, g / 255.0, b / 255.0)
-        else:
-            self.c.setStrokeColorRGB(r / 255.0, g / 255.0, b / 255.0)
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=(page_w, page_h))
+    c.setCreator("textileplatform")
+    if title:
+        c.setTitle(title)
 
-    def fill_rect(self, x, y, w, h, color):
-        self._set_color(color, fill=True)
-        self.c.rect(x, self._y(y + h), w, h, stroke=0, fill=1)
-
-    def stroke_rect(self, x, y, w, h, color, width=1):
-        self._set_color(color, fill=False)
-        self.c.setLineWidth(width)
-        self.c.rect(x, self._y(y + h), w, h, stroke=1, fill=0)
-
-    def line(self, x1, y1, x2, y2, color, width=1):
-        self._set_color(color, fill=False)
-        self.c.setLineWidth(width)
-        self.c.line(x1, self._y(y1), x2, self._y(y2))
-
-    def ellipse_filled(self, cx, cy, rx, ry, color):
-        self._set_color(color, fill=True)
-        self.c.ellipse(cx - rx, self._y(cy + ry), cx + rx, self._y(cy - ry),
-                       stroke=0, fill=1)
-
-    def ellipse_outlined(self, cx, cy, rx, ry, color, width=1):
-        self._set_color(color, fill=False)
-        self.c.setLineWidth(width)
-        self.c.ellipse(cx - rx, self._y(cy + ry), cx + rx, self._y(cy - ry),
-                       stroke=1, fill=0)
-
-    def text_centered(self, x, y, w, h, text, color):
-        self._set_color(color, fill=True)
-        size = max(4, h - 4)
-        self.c.setFont("Helvetica", size)
-        self.c.drawCentredString(x + w / 2, self._y(y + h - 2), text)
-
-
-# Page-size selection: PAPERSIZE env, then locale-default. For the
-# web port a fixed A4 default is fine — most users in central Europe.
-def _page_size():
-    from reportlab.lib.pagesizes import A4, LETTER
-    import os
-    env = os.environ.get("PAPERSIZE", "").strip().lower()
-    if env in ("letter", "us-letter"):
-        return LETTER
-    return A4
+    c.saveState()
+    c.translate(margin, page_h - margin - final_h)
+    c.scale(final_w / layout.width, final_h / layout.height)
+    target = PDFTarget(c, layout.width, layout.height)
+    paint_pattern(target, data, layout)
+    c.restoreState()
+    c.showPage()
+    c.save()
+    return buf.getvalue()
 
 
 # ---------- Print (multi-page tiled PDF) -------------------------
@@ -719,125 +515,19 @@ def print_pdf(data, title=None,
             page_x_pt = col * paint_w
             page_y_pt = row * paint_h
             c.saveState()
-            # Optional: page header — pattern title + page index. Kept
-            # minimal so it doesn't eat into the printable area.
             if title and (cols * rows) > 1:
                 c.setFont("Helvetica", 8)
                 c.setFillColorRGB(0, 0, 0)
                 hdr = f"{title}    {col + 1 + row * cols} / {cols * rows}"
                 c.drawString(margin, page_h - margin / 2, hdr)
-            # Clip to the printable rectangle (margin .. margin + paint).
             p = c.beginPath()
             p.rect(margin, margin, paint_w, paint_h)
             c.clipPath(p, stroke=0, fill=0)
-            # Translate so the (page_x_pt, page_y_pt) tile origin lands
-            # on the top-left of the printable area, then scale logical
-            # → points so the painter's coordinates draw at the right
-            # position. The DrawTarget flips Y internally, so we use a
-            # top-left origin: PDF y_top = page_h - margin.
             c.translate(margin - page_x_pt, page_h - margin + page_y_pt)
             c.scale(pt_per_logical, -pt_per_logical)
-            target = _PDFTargetNoFlip(c)
+            target = PDFTargetNoFlip(c)
             paint_pattern(target, data, layout)
             c.restoreState()
             c.showPage()
-    c.save()
-    return buf.getvalue()
-
-
-class _PDFTargetNoFlip(DrawTarget):
-    """PDF backend used when the canvas has already been transformed
-    so that one logical px = one unit and the Y axis is flipped via
-    a negative scale. Lets us draw with top-left origin without the
-    per-call Y flip _PDFTarget does."""
-
-    def __init__(self, c):
-        self.c = c
-
-    def _set_color(self, color, fill=False):
-        r, g, b = color
-        if fill:
-            self.c.setFillColorRGB(r / 255.0, g / 255.0, b / 255.0)
-        else:
-            self.c.setStrokeColorRGB(r / 255.0, g / 255.0, b / 255.0)
-
-    def fill_rect(self, x, y, w, h, color):
-        self._set_color(color, fill=True)
-        self.c.rect(x, y, w, h, stroke=0, fill=1)
-
-    def stroke_rect(self, x, y, w, h, color, width=1):
-        self._set_color(color, fill=False)
-        self.c.setLineWidth(width)
-        self.c.rect(x, y, w, h, stroke=1, fill=0)
-
-    def line(self, x1, y1, x2, y2, color, width=1):
-        self._set_color(color, fill=False)
-        self.c.setLineWidth(width)
-        self.c.line(x1, y1, x2, y2)
-
-    def ellipse_filled(self, cx, cy, rx, ry, color):
-        self._set_color(color, fill=True)
-        self.c.ellipse(cx - rx, cy - ry, cx + rx, cy + ry, stroke=0, fill=1)
-
-    def ellipse_outlined(self, cx, cy, rx, ry, color, width=1):
-        self._set_color(color, fill=False)
-        self.c.setLineWidth(width)
-        self.c.ellipse(cx - rx, cy - ry, cx + rx, cy + ry, stroke=1, fill=0)
-
-    def text_centered(self, x, y, w, h, text, color):
-        self._set_color(color, fill=True)
-        size = max(4, h - 4)
-        # Y is flipped via negative scale; flip back locally so text
-        # draws right-side up.
-        self.c.saveState()
-        self.c.scale(1, -1)
-        self.c.setFont("Helvetica", size)
-        self.c.drawCentredString(x + w / 2, -(y + h - 2), text)
-        self.c.restoreState()
-
-
-def export_pdf(data, title=None) -> bytes:
-    """Single-page PDF. Cell size is fixed at 2.5 mm; if the rendered
-    pattern is larger than the page's printable area it shrinks
-    proportionally to fit. Mirrors exportbitmap.cpp::DoExportPdf."""
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.units import mm
-
-    layout = _pattern_layout(data)
-    page_w, page_h = _page_size()
-    margin = 10 * mm
-    paint_w = page_w - 2 * margin
-    paint_h = page_h - 2 * margin
-
-    # Natural size: 2.5 mm per (smaller-axis) cell. The non-equal axis
-    # already reflects the warp/weft ratio in layout.gw/gh.
-    mm_per_cell = 2.5
-    base = min(layout.gw, layout.gh)
-    pt_per_logical = (mm_per_cell / base) * mm
-    natural_w = layout.width * pt_per_logical
-    natural_h = layout.height * pt_per_logical
-    scale = 1.0
-    if natural_w > paint_w or natural_h > paint_h:
-        scale = min(paint_w / natural_w, paint_h / natural_h)
-    final_w = natural_w * scale
-    final_h = natural_h * scale
-
-    buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=(page_w, page_h))
-    c.setCreator("textileplatform")
-    if title:
-        c.setTitle(title)
-
-    # Translate to top-left of pattern area (margin), then scale logical
-    # coordinates into PDF points. The DrawTarget exposes a top-left
-    # origin and flips Y internally; we set up the Canvas matrix to
-    # match.
-    c.saveState()
-    c.translate(margin, page_h - margin - final_h)
-    c.scale(final_w / layout.width, final_h / layout.height)
-    target = _PDFTarget(c, layout.width, layout.height)
-    paint_pattern(target, data, layout)
-    c.restoreState()
-    c.showPage()
     c.save()
     return buf.getvalue()

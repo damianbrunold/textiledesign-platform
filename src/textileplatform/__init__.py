@@ -251,18 +251,23 @@ def create_bead_pattern(user_name, pattern_name):
         pattern["author"] = user.label
         pattern["organization"] = ""
         pattern["notes"] = ""
-        pattern["model"] = [[0] * width] * height
-        pattern["colors"] = default_bead_palette[:]
+        # See controller.create_pattern for why each row needs its
+        # own list and why the view defaults look the way they do.
+        pattern["model"] = [[0] * width for _ in range(height)]
+        pattern["colors"] = [list(c) for c in default_bead_palette]
         view = dict()
         view["draft-visible"] = True
         view["corrected-visible"] = True
         view["simulation-visible"] = True
         view["report-visible"] = True
-        view["zoom"] = 2
+        view["draw-colors"] = True
+        view["draw-symbols"] = False
+        view["zoom"] = 12
         view["shift"] = 0
         view["scroll"] = 0
-        view["selected-tool"] = "select"
+        view["selected-tool"] = "pencil"
         view["selected-color"] = 1
+        view["symbols"] = "·abcdefghijklmnopqrstuvwxyz+-/\\*"
         pattern["view"] = view
         add_bead_pattern(pattern, user)
         db.session.commit()

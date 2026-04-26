@@ -2,7 +2,17 @@
 
 {% block headext %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/jbead.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/editor-menu.css') }}">
+    {% if g.user and g.user.darkmode %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/editor-menu-dark.css') }}">
+    {% endif %}
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/commands.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/actions.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/shortcuts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/colorpicker.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jbead.js') }}"></script>
 {% endblock %}
 
@@ -23,30 +33,147 @@
     <input type="hidden" id="darkmode" value="{{g.user.darkmode if g.user else 'False'}}"/>
     <input type="hidden" id="readonly" value="{{readonly}}"/>
 
-    <div id="header">
+    {# Translated labels for actions and menus (JS cannot call gettext). #}
+    <script type="application/json" id="tx-i18n">{
+        "actions": {
+            "file.save":          {"label": {{ gettext('Save') | tojson }}},
+            "file.close":         {"label": {{ gettext('Close') | tojson }}},
+            "file.print":         {"label": {{ gettext('Print…') | tojson }}},
+            "file.export-png":    {"label": {{ gettext('PNG image…') | tojson }}},
+            "file.export-jpeg":   {"label": {{ gettext('JPEG image…') | tojson }}},
+            "file.export-svg":    {"label": {{ gettext('SVG file…') | tojson }}},
+            "file.export-pdf":    {"label": {{ gettext('PDF file…') | tojson }}},
+            "view.zoom-in":       {"label": {{ gettext('Zoom in') | tojson }}},
+            "view.zoom-out":      {"label": {{ gettext('Zoom out') | tojson }}},
+            "view.zoom-normal":   {"label": {{ gettext('Zoom normal') | tojson }}},
+            "view.show-draft":       {"label": {{ gettext('Draft view') | tojson }}},
+            "view.show-corrected":   {"label": {{ gettext('Corrected view') | tojson }}},
+            "view.show-simulation":  {"label": {{ gettext('Simulation view') | tojson }}},
+            "view.show-report":      {"label": {{ gettext('Report view') | tojson }}},
+            "view.draw-colors":      {"label": {{ gettext('Draw colors') | tojson }}},
+            "view.draw-symbols":     {"label": {{ gettext('Draw symbols') | tojson }}},
+            "tool.pencil":   {"label": {{ gettext('Pencil') | tojson }}},
+            "tool.select":   {"label": {{ gettext('Select') | tojson }}},
+            "tool.fill":     {"label": {{ gettext('Fill') | tojson }}},
+            "tool.pipette":  {"label": {{ gettext('Pipette') | tojson }}},
+            "edit.undo":         {"label": {{ gettext('Undo') | tojson }}},
+            "edit.redo":         {"label": {{ gettext('Redo') | tojson }}},
+            "edit.delete":       {"label": {{ gettext('Delete selection') | tojson }}},
+            "edit.mirror-h":     {"label": {{ gettext('Mirror horizontal') | tojson }}},
+            "edit.mirror-v":     {"label": {{ gettext('Mirror vertical') | tojson }}},
+            "edit.rotate":       {"label": {{ gettext('Rotate') | tojson }}},
+            "edit.shift-left":   {"label": {{ gettext('Shift left') | tojson }}},
+            "edit.shift-right":  {"label": {{ gettext('Shift right') | tojson }}},
+            "edit.arrange":      {"label": {{ gettext('Arrange…') | tojson }}},
+            "edit.insert-row":   {"label": {{ gettext('Insert row') | tojson }}},
+            "edit.delete-row":   {"label": {{ gettext('Delete row') | tojson }}},
+            "pattern.width":     {"label": {{ gettext('Pattern width…') | tojson }}},
+            "pattern.height":    {"label": {{ gettext('Pattern height…') | tojson }}},
+            "pattern.width-title":  {"label": {{ gettext('Pattern width') | tojson }}},
+            "pattern.height-title": {"label": {{ gettext('Pattern height') | tojson }}},
+            "pattern.new-width":  {"label": {{ gettext('New width:') | tojson }}},
+            "pattern.new-height": {"label": {{ gettext('New height:') | tojson }}},
+            "pattern.confirm-shrink": {"label": {{ gettext('Shrinking will discard data outside the new size. Continue?') | tojson }}},
+            "info.title":           {"label": {{ gettext('Technical info') | tojson }}},
+            "info.circumference":   {"label": {{ gettext('Circumference:') | tojson }}},
+            "info.rows":            {"label": {{ gettext('Rows:') | tojson }}},
+            "info.total-beads":     {"label": {{ gettext('Total beads:') | tojson }}},
+            "info.repeat":          {"label": {{ gettext('Repeat:') | tojson }}},
+            "info.bead-runs":       {"label": {{ gettext('Colour runs:') | tojson }}},
+            "info.per-color":       {"label": {{ gettext('Beads per colour:') | tojson }}},
+            "colors.palette":    {"label": {{ gettext('Edit palette…') | tojson }}},
+            "arrange.title":     {"label": {{ gettext('Arrange selection') | tojson }}},
+            "arrange.dx":        {"label": {{ gettext('Horizontal offset:') | tojson }}},
+            "arrange.dy":        {"label": {{ gettext('Vertical offset:') | tojson }}},
+            "arrange.copies":    {"label": {{ gettext('Number of copies:') | tojson }}},
+            "btn.ok":            {"label": {{ gettext('OK') | tojson }}},
+            "btn.cancel":        {"label": {{ gettext('Cancel') | tojson }}},
+            "file.properties":     {"label": {{ gettext('Properties…') | tojson }}},
+            "props.title":         {"label": {{ gettext('Properties') | tojson }}},
+            "props.author":        {"label": {{ gettext('Author:') | tojson }}},
+            "props.organization":  {"label": {{ gettext('Organization:') | tojson }}},
+            "props.notes":         {"label": {{ gettext('Notes:') | tojson }}},
+            "color.palette-title": {"label": {{ gettext('Color definition') | tojson }}},
+            "color.hsv-title":     {"label": {{ gettext('HSV color picker') | tojson }}},
+            "color.rgb-title":     {"label": {{ gettext('RGB') | tojson }}},
+            "color.index":         {"label": {{ gettext('Index') | tojson }}},
+            "color.hue":           {"label": {{ gettext('Hue:') | tojson }}},
+            "color.sat":           {"label": {{ gettext('Saturation:') | tojson }}},
+            "color.val":           {"label": {{ gettext('Value:') | tojson }}},
+            "color.edit-rgb":      {"label": {{ gettext('Edit RGB…') | tojson }}},
+            "color.edit-hsv":      {"label": {{ gettext('Edit HSV…') | tojson }}},
+            "color.revert":        {"label": {{ gettext('Revert') | tojson }}},
+            "sb.zoom":           {"label": {{ gettext('Zoom') | tojson }}},
+            "sb.tool":           {"label": {{ gettext('Tool') | tojson }}},
+            "sb.repeat":         {"label": {{ gettext('Repeat') | tojson }}},
+            "sb.beads":          {"label": {{ gettext('beads') | tojson }}},
+            "sb.selection":      {"label": {{ gettext('Sel') | tojson }}},
+            "info.tech":     {"label": {{ gettext('Technical info…') | tojson }}}
+        },
+        "menus": {
+            "file":   {{ gettext('File') | tojson }},
+            "edit":   {{ gettext('Edit') | tojson }},
+            "view":   {{ gettext('View') | tojson }},
+            "tools":  {{ gettext('Tools') | tojson }},
+            "info":   {{ gettext('Info') | tojson }},
+            "export": {{ gettext('Export') | tojson }},
+            "colors": {{ gettext('Colors') | tojson }},
+            "pattern": {{ gettext('Pattern') | tojson }}
+        }
+    }</script>
+
+    <div id="tx-menubar"></div>
+
+    {% set ICONJB = url_for('static', filename='img/icons-jbead/') %}
+    <div id="tx-toolbar">
         {% if not readonly %}
-            <img
-                id="public"
-                {% if pattern.public %}
-                    src="{{url_for('static', filename='img/icons/icon-public.svg')}}"
-                    title="{{ gettext('Public - visible to all users') }}"
-                {% else %}
-                    src="{{url_for('static', filename='img/icons/icon-private.svg')}}"
-                    title="{{ gettext('Private - not visible to other users') }}"
-                {% endif %}
-                height="26px"
-                class="icon"/>
+        <button class="tx-tb-btn" data-action="file.save"  title="{{ gettext('Save') }} (Ctrl+S)"><img src="{{ICONJB}}file.save.png"></button>
+        <button class="tx-tb-btn" data-action="file.print" title="{{ gettext('Print…') }} (Ctrl+P)"><img src="{{ICONJB}}file.print.png"></button>
+        <span class="tx-tb-sep"></span>
+        <button class="tx-tb-btn" data-action="edit.undo"  title="{{ gettext('Undo') }} (Ctrl+Z)"><img src="{{ICONJB}}edit.undo.png"></button>
+        <button class="tx-tb-btn" data-action="edit.redo"  title="{{ gettext('Redo') }} (Ctrl+Y)"><img src="{{ICONJB}}edit.redo.png"></button>
+        <button class="tx-tb-btn" data-action="edit.shift-left"  title="{{ gettext('Shift left') }} (←)"><img src="{{ICONJB}}view.rotateleft.png"></button>
+        <button class="tx-tb-btn" data-action="edit.shift-right" title="{{ gettext('Shift right') }} (→)"><img src="{{ICONJB}}view.rotateright.png"></button>
+        <button class="tx-tb-btn" data-action="edit.arrange" title="{{ gettext('Arrange…') }}"><img src="{{ICONJB}}edit.arrange.png"></button>
+        <span class="tx-tb-sep"></span>
+        {% endif %}
+        <button class="tx-tb-btn" data-action="view.zoom-in"  title="{{ gettext('Zoom in') }} (Ctrl+I)"><img src="{{ICONJB}}view.zoomin.png"></button>
+        <button class="tx-tb-btn" data-action="view.zoom-out" title="{{ gettext('Zoom out') }} (Ctrl+U)"><img src="{{ICONJB}}view.zoomout.png"></button>
+        {% if not readonly %}
+        <span class="tx-tb-sep"></span>
+        <button class="tx-tb-btn" data-action="tool.pencil"  title="{{ gettext('Pencil') }}"><img src="{{ICONJB}}tool.pencil.png"></button>
+        <button class="tx-tb-btn" data-action="tool.select"  title="{{ gettext('Select') }}"><img src="{{ICONJB}}tool.select.png"></button>
+        <button class="tx-tb-btn" data-action="tool.fill"    title="{{ gettext('Fill') }}"><img src="{{ICONJB}}tool.fill.png"></button>
+        <button class="tx-tb-btn" data-action="tool.pipette" title="{{ gettext('Pipette') }}"><img src="{{ICONJB}}tool.pipette.png"></button>
+        {% endif %}
+
+        <span class="tx-tb-spacer"></span>
+
+        {% if not readonly %}
+            <div id="modified" class="unchanged">&nbsp;</div>
+            <button type="button" id="public" class="tx-publish-toggle"
+                    data-title-public="{{ gettext('Public - visible to all users') }}"
+                    data-title-private="{{ gettext('Private - not visible to other users') }}"
+                    title="{% if pattern.public %}{{ gettext('Public - visible to all users') }}{% else %}{{ gettext('Private - not visible to other users') }}{% endif %}"
+                >{% if pattern.public %}🌐{% else %}🔒{% endif %}</button>
         {% endif %}
         {% if readonly and g.user %}
             <div id="clone">{{ gettext('Clone') }}</div>
-        {% elif g.user %}
-            <div id="modified" class="unchanged">&nbsp;</div>
-            <div id="save">{{ gettext('Save') }}</div>
         {% endif %}
         <div id="close">{{ gettext('Close') }}</div>
     </div>
 
     <div id="container">
         <canvas id="canvas"></canvas>
+        <input id="scrollbar" type="range" orient="vertical" min="0" max="0" value="0"
+               aria-label="{{ gettext('Scroll pattern') }}"/>
+    </div>
+
+    <div id="tx-statusbar">
+        <span id="sb-cursor"></span>
+        <span id="sb-selection"></span>
+        <span id="sb-repeat"></span>
+        <span class="tx-tb-spacer"></span>
+        <span id="sb-tool"></span>
     </div>
 {% endblock %}

@@ -29,7 +29,11 @@ def render_jbb_data(pattern):
         'draft-visible', 'corrected-visible', 'simulation-visible',
         'report-visible', 'selected-tool', 'selected-color',
         'zoom', 'scroll', 'shift',
+        'draw-colors', 'draw-symbols', 'symbols',
     ]
+    # Skip keys that the file doesn't carry — keeps backward
+    # compatibility with patterns saved before these slots existed.
+    view_keys = [k for k in view_keys if k in view]
     lines.append('    (view')
     for i, key in enumerate(view_keys):
         close = '))' if i == len(view_keys) - 1 else ')'

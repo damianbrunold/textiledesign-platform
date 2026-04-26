@@ -23,17 +23,27 @@ async function clearModified() {
 
 
 function togglePublic() {
-    const icon = document.getElementById("public");
-    let state = undefined;
-    if (icon.src.endsWith("icon-public.svg")) {
-        icon.src = icon.src.replace("-public", "-private");
-        icon.title = "Private - not visible to others"; // TODO translate!
-        state = false;
+    const el = document.getElementById("public");
+    let state;
+    // Modern markup: a text element (button/span) carrying the
+    // 🔒 / 🌐 emoji, matching the user-private listing page.
+    // Legacy markup: an <img> with src ending in icon-public/private.svg.
+    if (el.tagName === "IMG") {
+        if (el.src.endsWith("icon-public.svg")) {
+            el.src = el.src.replace("-public", "-private");
+            state = false;
+        } else {
+            el.src = el.src.replace("-private", "-public");
+            state = true;
+        }
     } else {
-        icon.src = icon.src.replace("-private", "-public");
-        icon.title = "Public - visible to all users"; // TODO translate!
-        state = true;
+        const isPublic = el.textContent.indexOf("🌐") >= 0;
+        state = !isPublic;
+        el.textContent = state ? "🌐" : "🔒";
     }
+    el.title = state
+        ? el.dataset.titlePublic  || "Public - visible to all users"
+        : el.dataset.titlePrivate || "Private - not visible to others";
     const user = document.getElementById("user").value;
     const pattern = document.getElementById("pattern").value;
     const request = {
