@@ -5046,34 +5046,9 @@ function keyDown(e) {
     }
     // Alt+1..4 (weave style) and Ctrl+Z/Y/X/C/V/B/I/S/Del, H/V/R/I selection
     // transforms are handled by the Shortcuts dispatcher + action registry
-    // (see setupEditorActions). Keep cursor navigation + pane-visibility
-    // toggles here for now.
-    if (e.key === "a") { // TODO use better key shortcut
-        settings.display_entering = !settings.display_entering;
-        update_view_options(settings);
-        view.layout();
-        view.draw();
-        e.preventDefault();
-    } else if (e.key === "b") { // TODO use better key shortcut
-        settings.display_treadling = !settings.display_treadling;
-        update_view_options(settings);
-        view.layout();
-        view.draw();
-        e.preventDefault();
-    } else if (e.key === "c") { // TODO use better key shortcut
-        settings.display_reed = !settings.display_reed;
-        update_view_options(settings);
-        view.layout();
-        view.draw();
-        e.preventDefault();
-    } else if (e.key === "d") { // TODO use better key shortcut
-        settings.display_colors_warp = !settings.display_colors_warp;
-        settings.display_colors_weft = !settings.display_colors_weft;
-        update_view_options(settings);
-        view.layout();
-        view.draw();
-        e.preventDefault();
-    } else if ((e.key == " " || e.key === "Enter") && e.shiftKey
+    // (see setupEditorActions). Keep cursor navigation + Space/Enter cell
+    // toggles here for now. Pane-visibility lives in the Ansicht menu.
+    if ((e.key == " " || e.key === "Enter") && e.shiftKey
                && (cursor.selected_part === "color_warp"
                 || cursor.selected_part === "color_weft")) {
         // Color sniffer via cursor: Shift+Space / Shift+Enter on a
@@ -5229,6 +5204,29 @@ function _advanceCursorAfterToggle() {
     if (h & CD_RIGHT) (rtl ? cursorLeft : cursorRight)(ev);
 }
 
+// When the cursor currently spans a multi-cell selection, an unmodified
+// arrow collapses to a single cell adjacent to the corresponding edge,
+// anchored at the base (min) of the perpendicular axis — independent of
+// which corner originally anchored the selection. Returns true if the
+// collapse fired.
+function _collapseSelectionForArrow(dir) {
+    if (cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2) return false;
+    const i1 = Math.min(cursor.x1, cursor.x2);
+    const i2 = Math.max(cursor.x1, cursor.x2);
+    const j1 = Math.min(cursor.y1, cursor.y2);
+    const j2 = Math.max(cursor.y1, cursor.y2);
+    const w = cursor.selected_pattern.width;
+    const h = cursor.selected_pattern.height;
+    let x = i1, y = j1;
+    if (dir === "right")     x = Math.min(i2 + 1, w - 1);
+    else if (dir === "left") x = Math.max(i1 - 1, 0);
+    else if (dir === "up")   y = Math.min(j2 + 1, h - 1);
+    else if (dir === "down") y = Math.max(j1 - 1, 0);
+    cursor.x1 = cursor.x2 = x;
+    cursor.y1 = cursor.y2 = y;
+    return true;
+}
+
 function cursorUp(e) {
     if (e.shiftKey) {
         if (e.ctrlKey) {
@@ -5245,7 +5243,7 @@ function cursorUp(e) {
         if (cursor.y2 >= cursor.selected_pattern.height) {
             cursor.y2 = cursor.selected_pattern.height - 1;
         }
-    } else {
+    } else if (!_collapseSelectionForArrow("up")) {
         cursor.x1 = cursor.x2;
         if (e.ctrlKey) {
             cursor.y2 += settings.unit_height;
@@ -5284,7 +5282,7 @@ function cursorDown(e) {
         if (cursor.y2 < 0) {
             cursor.y2 = 0;
         }
-    } else {
+    } else if (!_collapseSelectionForArrow("down")) {
         cursor.x1 = cursor.x2;
         if (e.ctrlKey) {
             cursor.y2 -= settings.unit_height;
@@ -5323,7 +5321,7 @@ function cursorRight(e) {
         if (cursor.x2 >= cursor.selected_pattern.width) {
             cursor.x2 = cursor.selected_pattern.width - 1;
         }
-    } else {
+    } else if (!_collapseSelectionForArrow("right")) {
         if (e.ctrlKey) {
             cursor.x2 += settings.unit_width;
         } else {
@@ -5362,7 +5360,7 @@ function cursorLeft(e) {
         if (cursor.x2 < 0) {
             cursor.x2 = 0;
         }
-    } else {
+    } else if (!_collapseSelectionForArrow("left")) {
         if (e.ctrlKey) {
             cursor.x2 -= settings.unit_width;
         } else {
@@ -5527,9 +5525,41 @@ function tieupSwapSides() {
 }
 
 // Cut / Copy / Paste — uses Selection + Clipboard modules from selection.js.
+//
+// After a copy, the cursor advances to just past the copied range — to the
+// right for most fields, below for treadling/color_weft. This matches the
+// desktop CopySelection(_movecursor=true) path: cursor moves while
+// selection collapses (the web model unifies cursor + selection in the
+// (x1,y1)-(x2,y2) pair, so we collapse to a single cell at the new spot).
+function _moveCursorAfterCopy() {
+    if (typeof Selection === "undefined") return;
+    if (Selection.isEmpty()) return;
+    const sel = Selection.current();
+    if (!sel) return;
+    const part = sel.part;
+    const grid = cursor.selected_pattern;
+    const w = grid && grid.width !== undefined ? grid.width : Infinity;
+    const h = grid && grid.height !== undefined ? grid.height : Infinity;
+    let x, y;
+    if (part === "treadling" || part === "color_weft") {
+        x = sel.i1;
+        y = Math.min(sel.j2 + 1, h - 1);
+    } else {
+        x = Math.min(sel.i2 + 1, w - 1);
+        y = sel.j1;
+    }
+    cursor.x1 = cursor.x2 = x;
+    cursor.y1 = cursor.y2 = y;
+    if (typeof updateSelectionIcons === "function") updateSelectionIcons();
+    if (typeof save_part_position === "function") save_part_position();
+    if (typeof view !== "undefined" && view.draw) view.draw();
+}
+
 function selectionCopy() {
     if (typeof Selection === "undefined") return;
+    if (Selection.isEmpty()) return;
     Selection.copyToClipboard();
+    _moveCursorAfterCopy();
 }
 
 function selectionCut() {
