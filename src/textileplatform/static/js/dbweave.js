@@ -4921,7 +4921,29 @@ function initPatternData(data, pattern) {
         pattern.rapport_s_b = data.rapport_s_b;
     }
 
+    // Pegplan + .dbw imports: the desktop's .dbw file format does not
+    // store an explicit pegplan grid, only treadling+tieup. If the
+    // pattern was last viewed in pegplan mode (display_pegplan=true),
+    // recalc_weave would derive the weave from an empty pegplan. To
+    // make pegplan-mode imports work, derive pegplan from the weave
+    // computed via treadling+tieup, then resume the user's chosen
+    // display mode.
+    const pegplanWasOn = !!(settings && settings.display_pegplan);
+    let pegplanIsEmpty = true;
+    if (pegplanWasOn) {
+        for (let i = 0; i < pattern.pegplan.data.length; i++) {
+            if (pattern.pegplan.data[i] > 0) { pegplanIsEmpty = false; break; }
+        }
+        if (pegplanIsEmpty) {
+            settings.display_pegplan = false;  // force treadling-based recalc
+        }
+    }
     pattern.recalc_weave();
+    if (pegplanWasOn && pegplanIsEmpty) {
+        pattern._recalc_pegplan_from_weave();
+        settings.display_pegplan = true;
+        pattern.recalc_weave();  // re-derive weave from now-populated pegplan
+    }
 }
 
 function _loadMusterArray(arr, target) {
