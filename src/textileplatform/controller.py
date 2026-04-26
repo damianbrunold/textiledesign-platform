@@ -6,8 +6,21 @@ from textileplatform.models import Pattern
 from textileplatform.models import Group
 from textileplatform.models import Membership
 from textileplatform.models import Assignment
+from textileplatform.messaging import (
+    ensure_group_conversation,
+    get_or_create_direct_conversation,
+    get_or_create_group_participant,
+    can_access_conversation,
+    post_message,
+    unread_count,
+    conversations_for_user,
+)
+from textileplatform.models import Conversation
+from textileplatform.models import ConversationParticipant
+from textileplatform.models import Message
 from textileplatform.patterns import add_weave_pattern
 from textileplatform.patterns import add_bead_pattern
+from textileplatform.patterns import apply_pattern_metadata
 from textileplatform.patterns import get_patterns_for_user
 from textileplatform.patterns import clone_pattern
 from textileplatform.name import from_label
@@ -59,15 +72,18 @@ def load_logged_in_user():
         try:
             g.user = User.query.filter(User.name == user_name).first()
             if g.user:
+                impersonating = bool(session.get("impersonator"))
                 # if the user got disabled, we force logout
-                if g.user.disabled:
+                if g.user.disabled and not impersonating:
                     session.clear()
                     return redirect(url_for("login"))
                 now = datetime.datetime.now()
 
-                # we force logout after a month of inactivity
+                # we force logout after a month of inactivity (skip while
+                # impersonating — superuser may be testing dormant users)
                 if (
-                    g.user.access_date
+                    not impersonating
+                    and g.user.access_date
                     and (now - g.user.access_date).days > 30
                 ):
                     session.clear()
@@ -75,9 +91,12 @@ def load_logged_in_user():
 
                 # we update access date every 10 minutes in the database
                 # this gives us reasonably accurrate usage info without
-                # writing to the database with each click.
+                # writing to the database with each click. Don't update
+                # access_date while impersonating, so we don't disturb
+                # the real user's last-seen timestamp.
                 if (
-                    g.user.access_date
+                    not impersonating
+                    and g.user.access_date
                     and (now - g.user.access_date).total_seconds() > 600
                 ):
                     g.user.access_date = now
@@ -102,6 +121,15 @@ def superuser_required(view):
             return redirect(url_for("index"))
         return view(**kwargs)
     return wrapped_view
+
+
+def is_real_superuser():
+    """True if the logged-in session was opened as superuser (whether or
+    not we are currently impersonating)."""
+    return (
+        session.get("impersonator") == "superuser"
+        or session.get("user_name") == "superuser"
+    )
 
 
 def respond(status, message, status_code=500):
@@ -166,72 +194,112 @@ def user(user_name):
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
         return redirect(url_for("index"))
-    elif g.user and (g.user.name == user.name or g.user.name == "superuser"):
-        # show private view
-        patterns_weave = []
-        patterns_bead = []
-        patterns_other = []
-        group_patterns = {}
+    elif g.user and g.user.name == user.name:
+        # Private view: groups list + per-group pattern lists with the
+        # full metadata the new UI needs (dimensions, rapport, author,
+        # organisation, notes). The template renders the shell, JS
+        # handles view-mode / sort / filter / actions.
+        is_owner = (g.user.name == user.name)
+        groups = []
+        patterns_by_group = {}
+        seen = set()
         for m in user.memberships:
-            # only collect the users patterns
-            if m.group.name == user.name:
-                for a in m.group.assignments:
-                    if a.pattern.pattern_type == "DB-WEAVE Pattern":
-                        patterns_weave.append(a.pattern)
-                    elif a.pattern.pattern_type == "JBead Pattern":
-                        patterns_bead.append(a.pattern)
-                    else:
-                        patterns_other.append(a.pattern)
-            else:
-                if m.group.id not in group_patterns:
-                    group_patterns[m.group.id] = [m.group, []]
-                    patterns = group_patterns[m.group.id][1]
-                    for a in m.group.assignments:
-                        patterns.append(a.pattern)
-        patterns_weave.sort(key=lambda p: (p.label, p.name, p.id))
-        patterns_bead.sort(key=lambda p: (p.label, p.name, p.id))
-        patterns_other.sort(key=lambda p: (p.label, p.name, p.id))
-        for gid in group_patterns:
-            group_patterns[gid][1].sort(key=lambda p: (p.label, p.name, p.id))
+            if m.state != "accepted":
+                continue
+            if m.group.id in seen:
+                continue
+            seen.add(m.group.id)
+            role = m.role
+            can_write = role in ("owner", "writer")
+            patterns = []
+            for a in m.group.assignments:
+                p = a.pattern
+                # Owner of pattern can fully manage it; others can only
+                # view (or clone elsewhere). For pattern owned by THIS
+                # user (the profile owner), treat as writable.
+                pattern_is_mine = (p.owner_id == user.id)
+                patterns.append({
+                    "name": p.name,
+                    "label": p.label,
+                    "owner_name": p.owner.name,
+                    "owner_label": p.owner.label,
+                    "pattern_type": p.pattern_type,
+                    "public": bool(p.public),
+                    "modified": p.modified.isoformat() if p.modified else None,
+                    "created": p.created.isoformat() if p.created else None,
+                    "author": p.author or "",
+                    "organization": p.organization or "",
+                    "notes": p.notes or "",
+                    "pattern_width": p.pattern_width,
+                    "pattern_height": p.pattern_height,
+                    "rapport_width": p.rapport_width,
+                    "rapport_height": p.rapport_height,
+                    "is_mine": pattern_is_mine,
+                })
+            patterns.sort(key=lambda d: (d["label"].lower(), d["name"]))
+            groups.append({
+                "name": m.group.name,
+                "label": m.group.label,
+                "is_personal": (m.group.name == user.name),
+                "role": role,
+                "can_write": can_write,
+            })
+            patterns_by_group[m.group.name] = patterns
+        # Order: personal first, then alphabetical by label.
+        groups.sort(key=lambda gr: (
+            0 if gr["is_personal"] else 1, gr["label"].lower(),
+        ))
+        active = request.args.get("group") or user.name
+        if active not in patterns_by_group:
+            active = user.name if user.name in patterns_by_group else (
+                groups[0]["name"] if groups else user.name
+            )
         return render_template(
             "user_private.html",
             user=user,
-            patterns_weave=patterns_weave,
-            patterns_bead=patterns_bead,
-            patterns_other=patterns_other,
-            group_patterns=group_patterns.values(),
-            active_group=user.name,
+            is_owner=is_owner,
+            groups=groups,
+            patterns_by_group=patterns_by_group,
+            active_group=active,
         )
     else:
-        # show public view
-        patterns_weave = []
-        patterns_bead = []
-        patterns_other = []
+        # Public view: same metadata shape as the private view so the
+        # template can reuse view modes / sort / filter, but only the
+        # user's *own* public patterns are listed (deduped).
         ids = set()
+        patterns = []
         for m in user.memberships:
             for a in m.group.assignments:
-                if not a.pattern.public:
+                p = a.pattern
+                if not p.public:
                     continue
-                if a.pattern.owner.id != user.id:
+                if p.owner_id != user.id:
                     continue
-                if a.pattern.id in ids:
+                if p.id in ids:
                     continue
-                ids.add(a.pattern.id)
-                if a.pattern.pattern_type == "DB-WEAVE Pattern":
-                    patterns_weave.append(a.pattern)
-                elif a.pattern.pattern_type == "JBead Pattern":
-                    patterns_bead.append(a.pattern)
-                else:
-                    patterns_other.append(a.pattern)
-        patterns_weave.sort(key=lambda p: (p.label, p.name, p.id))
-        patterns_bead.sort(key=lambda p: (p.label, p.name, p.id))
-        patterns_other.sort(key=lambda p: (p.label, p.name, p.id))
+                ids.add(p.id)
+                patterns.append({
+                    "name": p.name,
+                    "label": p.label,
+                    "owner_name": p.owner.name,
+                    "owner_label": p.owner.label,
+                    "pattern_type": p.pattern_type,
+                    "public": True,
+                    "modified": p.modified.isoformat() if p.modified else None,
+                    "created": p.created.isoformat() if p.created else None,
+                    "author": p.author or "",
+                    "organization": p.organization or "",
+                    "notes": p.notes or "",
+                    "pattern_width": p.pattern_width,
+                    "pattern_height": p.pattern_height,
+                    "rapport_width": p.rapport_width,
+                    "rapport_height": p.rapport_height,
+                })
+        patterns.sort(key=lambda d: (d["label"].lower(), d["name"]))
         return render_template(
             "user_public.html",
             user=user,
-            patterns_weave=patterns_weave,
-            patterns_bead=patterns_bead,
-            patterns_other=patterns_other,
+            patterns=patterns,
         )
 
 
@@ -545,11 +613,13 @@ def profile():
     if request.method == "POST":
         email = request.form["email"]
         darkmode = request.form.get("darkmode") == "1"
+        block_invitations = request.form.get("block_invitations") == "1"
         user = g.user
         user.email = email
         user.email_lower = email.lower()
         # TODO reset verified?!
         user.darkmode = darkmode
+        user.block_invitations = block_invitations
         try:
             db.session.commit()
             return redirect(url_for("user", user_name=user.name))
@@ -567,6 +637,10 @@ def upload_pattern():
         name = request.form["name"]
         name = name.replace("..", "").replace("/", "").replace("\\", "")
         files = request.files.getlist("file")
+        # Track names of imported patterns so we can redirect a
+        # single-file upload directly into the editor (which will
+        # auto-save to capture thumbnail + rapport).
+        imported = []  # list of (saved_name, owner_name)
         for idx, file in enumerate(files):
             if not name or len(files) > 1:
                 if file.filename:
@@ -575,19 +649,33 @@ def upload_pattern():
                     name = f"unnamed {idx+1}"
             bytedata = file.read()
             data = bytedata.decode("latin-1", "ignore")
+            saved = None
             if data.startswith("@dbw3:"):
-                add_weave_pattern(parse_dbw_data(data, name), g.user)
+                saved = add_weave_pattern(parse_dbw_data(data, name), g.user)
             elif data.startswith("(jbb"):
-                add_bead_pattern(parse_jbb_data(data, name), g.user)
+                saved = add_bead_pattern(parse_jbb_data(data, name), g.user)
             else:
                 try:
                     jsondata = json.loads(bytedata.decode("utf-8", "ignore"))
                     if "max_shafts" in jsondata:
-                        add_weave_pattern(jsondata, g.user)
+                        if "name" not in jsondata:
+                            jsondata["name"] = name
+                        saved = add_weave_pattern(jsondata, g.user)
                     else:
-                        add_bead_pattern(jsondata, g.user)
+                        if "name" not in jsondata:
+                            jsondata["name"] = name
+                        saved = add_bead_pattern(jsondata, g.user)
                 except Exception:
                     pass  # TODO handle errors
+            if saved:
+                imported.append(saved)
+        if len(imported) == 1:
+            return redirect(url_for(
+                "edit_pattern",
+                user_name=g.user.name,
+                pattern_name=imported[0],
+                autosave="1",
+            ))
         return redirect(url_for("user", user_name=g.user.name))
     return render_template("upload_pattern.html", user=g.user)
 
@@ -811,17 +899,32 @@ def assignments(pattern_name):
                 for assignment in pattern.assignments
                 if assignment.group.name == g.user.name
             ]
-            new_group_ids = request.form.getlist("assignments")
+            # Only allow assigning to groups where the user can write.
+            writable_group_ids = {
+                m.group_id for m in g.user.memberships
+                if m.state == "accepted"
+                and m.role in ("owner", "writer")
+                and m.group.name != g.user.name
+            }
+            requested_ids = request.form.getlist("assignments")
+            new_group_ids = [
+                gid for gid in requested_ids
+                if int(gid) in writable_group_ids
+            ]
+            new_group_ids_int = {int(gid) for gid in new_group_ids}
             old_group_ids = [a.group.id for a in pattern.assignments]
             existing = []
             todelete = []
             new = []
             for assignment in pattern.assignments:
-                if assignment.group_id in new_group_ids:
+                if assignment.group_id in new_group_ids_int:
                     existing.append(assignment)
-                elif assignment.group.name != g.user.name:
+                elif (
+                    assignment.group.name != g.user.name
+                    and assignment.group_id in writable_group_ids
+                ):
                     todelete.append(assignment)
-            for group_id in new_group_ids:
+            for group_id in new_group_ids_int:
                 if group_id in old_group_ids:
                     continue
                 new.append(
@@ -848,7 +951,10 @@ def edit_groups():
     return render_template(
         "edit_groups.html",
         user=g.user,
-        groups=[m.group for m in g.user.memberships],
+        groups=[
+            m.group for m in g.user.memberships
+            if m.state == "accepted"
+        ],
     )
 
 
@@ -857,12 +963,268 @@ def edit_groups():
 def edit_group(group_name):
     group = Group.query.filter(Group.name == group_name).first()
     if not group:
-        return redirect('index')
+        return redirect(url_for("edit_groups"))
+    if not g.user.is_in_group(group.id):
+        return redirect(url_for("edit_groups"))
+    role = g.user.role_in(group)
     return render_template(
         "edit_group.html",
         user=g.user,
         group=group,
+        role=role,
+        is_owner=(role == "owner"),
+        is_personal=(group.name == g.user.name),
     )
+
+
+@app.route("/groups/<group_name>/invite", methods=("POST",))
+@login_required
+def invite_to_group(group_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group:
+        abort(404)
+    if not g.user.is_owner_of(group):
+        abort(403)
+    if group.name == g.user.name:
+        flash(gettext("Cannot invite to a personal group"))
+        return redirect(url_for("edit_group", group_name=group.name))
+
+    target_name = (request.form.get("user_name") or "").strip().lower()
+    role = request.form.get("role") or "reader"
+    if role not in ("owner", "writer", "reader"):
+        flash(gettext("Invalid role"))
+        return redirect(url_for("edit_group", group_name=group.name))
+
+    target = User.query.filter(User.name == target_name).first()
+    if not target or target.disabled or not target.verified:
+        flash(gettext("User not found"))
+        return redirect(url_for("edit_group", group_name=group.name))
+    if target.name == "superuser":
+        flash(gettext("User not found"))
+        return redirect(url_for("edit_group", group_name=group.name))
+    if target.block_invitations:
+        flash(gettext("User not found"))
+        return redirect(url_for("edit_group", group_name=group.name))
+
+    existing = target.membership_in(group)
+    if existing is not None:
+        if existing.state == "accepted":
+            flash(gettext("User is already a member"))
+        elif existing.state == "invited":
+            flash(gettext("User has already been invited"))
+        else:
+            # declined → re-invite with new role
+            existing.role = role
+            existing.state = "invited"
+            db.session.commit()
+            flash(gettext("Invitation sent"))
+        return redirect(url_for("edit_group", group_name=group.name))
+
+    membership = Membership(
+        user=target,
+        group=group,
+        role=role,
+        state="invited",
+    )
+    db.session.add(membership)
+    db.session.commit()
+    flash(gettext("Invitation sent"))
+    return redirect(url_for("edit_group", group_name=group.name))
+
+
+@app.route("/invitations")
+@login_required
+def invitations():
+    pending = g.user.pending_invitations()
+    return render_template(
+        "invitations.html",
+        user=g.user,
+        invitations=pending,
+    )
+
+
+@app.route("/invitations/<int:membership_id>/accept", methods=("POST",))
+@login_required
+def accept_invitation(membership_id):
+    m = Membership.query.filter(Membership.id == membership_id).first()
+    if not m or m.user_id != g.user.id:
+        abort(404)
+    if m.state != "invited":
+        return redirect(url_for("invitations"))
+    m.state = "accepted"
+    db.session.commit()
+    flash(gettext("Invitation accepted"))
+    return redirect(url_for("edit_group", group_name=m.group.name))
+
+
+@app.route("/invitations/<int:membership_id>/decline", methods=("POST",))
+@login_required
+def decline_invitation(membership_id):
+    m = Membership.query.filter(Membership.id == membership_id).first()
+    if not m or m.user_id != g.user.id:
+        abort(404)
+    if m.state != "invited":
+        return redirect(url_for("invitations"))
+    m.state = "declined"
+    db.session.commit()
+    flash(gettext("Invitation declined"))
+    return redirect(url_for("invitations"))
+
+
+@app.route(
+    "/groups/<group_name>/members/<user_name>",
+    methods=("POST",),
+)
+@login_required
+def update_membership(group_name, user_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group:
+        abort(404)
+    if not g.user.is_owner_of(group):
+        abort(403)
+    if group.name == g.user.name:
+        abort(400)
+
+    target = User.query.filter(User.name == user_name.lower()).first()
+    if not target:
+        abort(404)
+    membership = target.membership_in(group)
+    if membership is None or membership.state != "accepted":
+        abort(404)
+
+    action = request.form.get("action")
+    if action == "remove":
+        # Last-owner protection
+        if membership.role == "owner" and group.owner_count() <= 1:
+            flash(gettext("Cannot remove the last owner of a group"))
+            return redirect(url_for("edit_group", group_name=group.name))
+        db.session.delete(membership)
+        db.session.commit()
+        flash(gettext("Member removed"))
+    elif action == "set_role":
+        new_role = request.form.get("role")
+        if new_role not in ("owner", "writer", "reader"):
+            flash(gettext("Invalid role"))
+            return redirect(url_for("edit_group", group_name=group.name))
+        if (
+            membership.role == "owner"
+            and new_role != "owner"
+            and group.owner_count() <= 1
+        ):
+            flash(gettext("Cannot demote the last owner of a group"))
+            return redirect(url_for("edit_group", group_name=group.name))
+        membership.role = new_role
+        db.session.commit()
+        flash(gettext("Role updated"))
+    else:
+        abort(400)
+    return redirect(url_for("edit_group", group_name=group.name))
+
+
+@app.route("/groups/<group_name>/leave", methods=("POST",))
+@login_required
+def leave_group(group_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group:
+        abort(404)
+    if group.name == g.user.name:
+        flash(gettext("Cannot leave your personal group"))
+        return redirect(url_for("edit_group", group_name=group.name))
+    membership = g.user.membership_in(group)
+    if membership is None or membership.state != "accepted":
+        abort(404)
+    if membership.role == "owner" and group.owner_count() <= 1:
+        flash(gettext(
+            "You are the last owner. Promote another owner before leaving."
+        ))
+        return redirect(url_for("edit_group", group_name=group.name))
+    db.session.delete(membership)
+    db.session.commit()
+    flash(gettext("You left the group"))
+    return redirect(url_for("edit_groups"))
+
+
+@app.route("/api/users/search")
+@login_required
+def api_users_search():
+    q = (request.args.get("q") or "").strip().lower()
+    group_name = request.args.get("group")
+    if len(q) < 2:
+        return jsonify({"status": "OK", "users": []})
+    query = (
+        User.query
+        .filter(User.name.ilike(f"%{q}%") | User.label.ilike(f"%{q}%"))
+        .filter(User.verified.is_(True))
+        .filter((User.disabled.is_(False)) | (User.disabled.is_(None)))
+        .filter(User.name != "superuser")
+        .filter(
+            (User.block_invitations.is_(False))
+            | (User.block_invitations.is_(None))
+        )
+        .order_by(User.label)
+        .limit(20)
+        .all()
+    )
+    exclude_ids = set()
+    if group_name:
+        group = Group.query.filter(Group.name == group_name).first()
+        if group:
+            for m in group.memberships:
+                if m.state in ("accepted", "invited"):
+                    exclude_ids.add(m.user_id)
+    results = [
+        {"name": u.name, "label": u.label}
+        for u in query
+        if u.id not in exclude_ids and u.id != g.user.id
+    ]
+    return jsonify({"status": "OK", "users": results})
+
+
+@app.route("/admin/impersonate/<string:user_name>", methods=("POST",))
+@login_required
+def impersonate(user_name):
+    if not is_real_superuser():
+        abort(403)
+    target = User.query.filter(User.name == user_name.lower()).first()
+    if not target or target.name == "superuser":
+        abort(404)
+    if target.disabled:
+        flash(gettext("Cannot impersonate a disabled user"))
+        return redirect(url_for("users"))
+    session["impersonator"] = "superuser"
+    session["user_name"] = target.name
+    return redirect(url_for("user", user_name=target.name))
+
+
+@app.route("/admin/stop-impersonating", methods=("POST",))
+def stop_impersonating():
+    impersonator = session.get("impersonator")
+    if not impersonator:
+        return redirect(url_for("index"))
+    session["user_name"] = impersonator
+    session.pop("impersonator", None)
+    return redirect(url_for("user", user_name=impersonator))
+
+
+@app.context_processor
+def inject_impersonation():
+    return {
+        "impersonating": bool(session.get("impersonator")),
+        "impersonator_name": session.get("impersonator"),
+    }
+
+
+@app.context_processor
+def inject_invitation_count():
+    if g.get("user"):
+        try:
+            count = sum(
+                1 for m in g.user.memberships if m.state == "invited"
+            )
+        except Exception:
+            count = 0
+        return {"invitation_count": count}
+    return {"invitation_count": 0}
 
 
 @app.route("/groups/add", methods=("GET", "POST"))
@@ -890,6 +1252,8 @@ def add_group():
             )
             db.session.add(group)
             db.session.add(membership)
+            db.session.flush()
+            ensure_group_conversation(group)
             db.session.commit()
             # TODO errorhandling
             return redirect(url_for("edit_groups", user_name=g.user.name))
@@ -1017,6 +1381,8 @@ def register():
                     state="accepted",
                 )
                 db.session.add(membership)
+                db.session.flush()
+                ensure_group_conversation(group)
                 db.session.commit()
 
                 send_verification_mail(user)
@@ -1265,16 +1631,61 @@ def update_pattern(user_name, pattern_name):
         elif action == "save-pattern":
             if not g.user or user.name != g.user.name:
                 return respond("NOK", "Invalid user", 403)
-            pattern.contents = json.dumps(data["contents"])
+            contents = data["contents"]
+            pattern.contents = json.dumps(contents)
             pattern.modified = datetime.datetime.utcnow()
+            apply_pattern_metadata(pattern, contents)
+            thumb_bytes = _decode_data_url_png(data.get("thumbnail"))
+            if thumb_bytes is not None:
+                pattern.thumbnail_image = thumb_bytes
+            preview_bytes = _decode_data_url_png(data.get("preview"))
+            if preview_bytes is not None:
+                pattern.preview_image = preview_bytes
             db.session.commit()
             return jsonify({"status": "OK"}), 200
         elif action == "clone-pattern":
             if not g.user:
                 return respond("NOK", "Invalid user", 403)
-            contents = json.dumps(data["contents"])
+            # Inline clone (from the profile list) doesn't send the
+            # pattern body — fall back to the persisted contents.
+            payload = data.get("contents")
+            contents = (
+                json.dumps(payload) if payload is not None
+                else pattern.contents
+            )
             clone_pattern(g.user, pattern, contents)
             return jsonify({"status": "OK"}), 200
+        elif action == "rename-pattern":
+            if not g.user or user.name != g.user.name:
+                return respond("NOK", "Invalid user", 403)
+            new_label = (data.get("label") or "").strip()
+            if not new_label:
+                return respond("NOK", "Label is required", 400)
+            new_name = from_label(new_label)
+            if not is_valid(new_name):
+                return respond("NOK", "Invalid name", 400)
+            if new_name != pattern.name:
+                # Check uniqueness for this owner.
+                existing = (
+                    Pattern.query
+                    .filter(Pattern.owner_id == user.id)
+                    .filter(Pattern.name == new_name)
+                    .first()
+                )
+                if existing:
+                    return respond("NOK", "Name already in use", 409)
+            pattern.label = new_label
+            pattern.name = new_name
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                return respond("NOK", "Name already in use", 409)
+            return jsonify({
+                "status": "OK",
+                "name": pattern.name,
+                "label": pattern.label,
+            }), 200
         else:
             return respond("NOK", "Illegal action", 400)
     except HTTPException:
@@ -1282,3 +1693,360 @@ def update_pattern(user_name, pattern_name):
     except Exception:
         logging.exception("Failed to update pattern")
         return respond("NOK", "Failed to update pattern", 500)
+
+
+# --- Thumbnails ------------------------------------------------------------
+
+import base64 as _base64
+
+
+def _decode_data_url_png(value):
+    """Accept a 'data:image/png;base64,...' string and return raw bytes,
+    or None if the value is missing/invalid. Caller decides whether to
+    persist."""
+    if not value or not isinstance(value, str):
+        return None
+    prefix = "data:image/png;base64,"
+    if not value.startswith(prefix):
+        return None
+    try:
+        return _base64.b64decode(value[len(prefix):], validate=True)
+    except Exception:
+        return None
+
+
+_PLACEHOLDER_SVG = (
+    '<?xml version="1.0" encoding="UTF-8"?>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 96" '
+    'preserveAspectRatio="xMidYMid meet">'
+    '<rect width="192" height="96" fill="#eee"/>'
+    '<line x1="96" y1="0" x2="96" y2="96" stroke="#bbb"/>'
+    '<text x="96" y="54" text-anchor="middle" font-family="sans-serif" '
+    'font-size="14" fill="#888">no preview</text>'
+    '</svg>'
+)
+
+
+def _serve_pattern_image(user_name, pattern_name, attr):
+    user = User.query.filter(User.name == user_name.lower()).first()
+    if not user:
+        abort(404)
+    pattern = (
+        Pattern.query
+        .join(User)
+        .filter(Pattern.name == pattern_name)
+        .filter(User.name == user_name.lower())
+        .first()
+    )
+    if not pattern:
+        abort(404)
+    superuser = g.user and g.user.name == "superuser"
+    if (
+        not superuser
+        and not pattern.public
+        and (not g.user or user.name != g.user.name)
+    ):
+        # Non-owner can fetch images for public patterns; private 403.
+        abort(403)
+    img = getattr(pattern, attr)
+    if not img:
+        # Don't cache the placeholder — once the user saves, the next
+        # request should return the real PNG, not a cached SVG.
+        response = send_file(
+            io.BytesIO(_PLACEHOLDER_SVG.encode("utf-8")),
+            mimetype="image/svg+xml",
+            max_age=0,
+        )
+        response.cache_control.no_cache = True
+        return response
+    etag = (
+        pattern.modified.isoformat()
+        if pattern.modified else str(pattern.id)
+    )
+    response = send_file(
+        io.BytesIO(img),
+        mimetype="image/png",
+        max_age=0,
+    )
+    response.set_etag(etag)
+    response.cache_control.no_cache = True
+    return response.make_conditional(request)
+
+
+@app.route("/thumbnail/<string:user_name>/<string:pattern_name>")
+def pattern_thumbnail(user_name, pattern_name):
+    return _serve_pattern_image(user_name, pattern_name, "thumbnail_image")
+
+
+@app.route("/preview/<string:user_name>/<string:pattern_name>")
+def pattern_preview(user_name, pattern_name):
+    return _serve_pattern_image(user_name, pattern_name, "preview_image")
+
+
+# --- Messaging API ---------------------------------------------------------
+
+def _serialize_message(msg):
+    return {
+        "id": msg.id,
+        "sender": {
+            "name": msg.sender.name,
+            "label": msg.sender.label,
+        },
+        "body": "" if msg.deleted else msg.body,
+        "deleted": bool(msg.deleted),
+        "created": msg.created.isoformat() if msg.created else None,
+    }
+
+
+def _serialize_conversation(conv, user):
+    last_msg = None
+    for m in reversed(conv.messages):
+        if not m.deleted:
+            last_msg = m
+            break
+    base = {
+        "id": conv.id,
+        "kind": conv.kind,
+        "unread": unread_count(conv, user),
+        "last_message": _serialize_message(last_msg) if last_msg else None,
+    }
+    if conv.kind == "group":
+        base["group"] = {
+            "name": conv.group.name,
+            "label": conv.group.label,
+        }
+        base["url"] = url_for(
+            "messages_group", group_name=conv.group.name,
+        )
+    else:
+        other = conv.other_user(user.id)
+        if other is not None:
+            base["user"] = {"name": other.name, "label": other.label}
+            base["url"] = url_for(
+                "messages_direct", user_name=other.name,
+            )
+    return base
+
+
+@app.route("/api/conversations")
+@login_required
+def api_conversations():
+    convs = conversations_for_user(g.user)
+    convs.sort(
+        key=lambda c: (
+            c.messages[-1].created if c.messages else c.created
+            or datetime.datetime.min
+        ),
+        reverse=True,
+    )
+    return jsonify({
+        "status": "OK",
+        "conversations": [_serialize_conversation(c, g.user) for c in convs],
+    })
+
+
+def _conversation_history(conv, before_id, limit):
+    q = Message.query.filter(Message.conversation_id == conv.id)
+    if before_id is not None:
+        q = q.filter(Message.id < before_id)
+    msgs = q.order_by(Message.id.desc()).limit(limit).all()
+    msgs.reverse()
+    return msgs
+
+
+@app.route("/api/conversations/direct/<string:user_name>",
+           methods=("GET", "POST"))
+@login_required
+def api_direct_conversation(user_name):
+    target = User.query.filter(User.name == user_name.lower()).first()
+    if not target or target.disabled or target.name == "superuser":
+        return respond("NOK", "User not found", 404)
+    if target.id == g.user.id:
+        return respond("NOK", "Cannot message yourself", 400)
+
+    existing = (
+        Conversation.query
+        .filter(Conversation.kind == "direct")
+        .join(ConversationParticipant,
+              Conversation.id == ConversationParticipant.conversation_id)
+        .filter(ConversationParticipant.user_id == g.user.id)
+        .all()
+    )
+    conv = None
+    for c in existing:
+        ids = {p.user_id for p in c.participants}
+        if ids == {g.user.id, target.id}:
+            conv = c
+            break
+
+    if request.method == "POST":
+        # Sending a new message: enforce block_invitations only when
+        # *starting* a new conversation.
+        if conv is None and target.block_invitations:
+            return respond("NOK", "User does not accept messages", 403)
+        if conv is None:
+            conv = get_or_create_direct_conversation(g.user, target)
+        data = request.get_json(silent=True) or {}
+        body = data.get("body", "")
+        msg = post_message(conv, g.user, body)
+        if msg is None:
+            return respond("NOK", "Empty message", 400)
+        db.session.commit()
+        return jsonify({
+            "status": "OK",
+            "conversation_id": conv.id,
+            "message": _serialize_message(msg),
+        })
+
+    # GET history
+    if conv is None:
+        return jsonify({
+            "status": "OK",
+            "conversation_id": None,
+            "user": {"name": target.name, "label": target.label},
+            "messages": [],
+            "blocked": bool(target.block_invitations),
+        })
+    before = request.args.get("before", type=int)
+    limit = min(int(request.args.get("limit", 50) or 50), 200)
+    msgs = _conversation_history(conv, before, limit)
+    return jsonify({
+        "status": "OK",
+        "conversation_id": conv.id,
+        "user": {"name": target.name, "label": target.label},
+        "messages": [_serialize_message(m) for m in msgs],
+        "has_more": len(msgs) == limit,
+    })
+
+
+@app.route("/api/conversations/group/<string:group_name>",
+           methods=("GET", "POST"))
+@login_required
+def api_group_conversation(group_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group or not g.user.is_in_group(group.id):
+        return respond("NOK", "Not a member of this group", 403)
+    conv = ensure_group_conversation(group)
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        msg = post_message(conv, g.user, data.get("body", ""))
+        if msg is None:
+            return respond("NOK", "Empty message", 400)
+        db.session.commit()
+        return jsonify({
+            "status": "OK",
+            "conversation_id": conv.id,
+            "message": _serialize_message(msg),
+        })
+
+    before = request.args.get("before", type=int)
+    limit = min(int(request.args.get("limit", 50) or 50), 200)
+    msgs = _conversation_history(conv, before, limit)
+    return jsonify({
+        "status": "OK",
+        "conversation_id": conv.id,
+        "group": {"name": group.name, "label": group.label},
+        "messages": [_serialize_message(m) for m in msgs],
+        "has_more": len(msgs) == limit,
+    })
+
+
+@app.route("/api/messages/<int:message_id>", methods=("DELETE",))
+@login_required
+def api_delete_message(message_id):
+    msg = Message.query.filter(Message.id == message_id).first()
+    if msg is None:
+        return respond("NOK", "Message not found", 404)
+    if msg.sender_id != g.user.id:
+        return respond("NOK", "Not your message", 403)
+    if msg.deleted:
+        return jsonify({"status": "OK"})
+    msg.deleted = True
+    db.session.commit()
+    return jsonify({"status": "OK"})
+
+
+@app.route("/api/conversations/<int:conversation_id>/read",
+           methods=("POST",))
+@login_required
+def api_mark_read(conversation_id):
+    conv = Conversation.query.filter(
+        Conversation.id == conversation_id,
+    ).first()
+    if not conv or not can_access_conversation(conv, g.user):
+        return respond("NOK", "Conversation not found", 404)
+    p = get_or_create_group_participant(conv, g.user) \
+        if conv.kind == "group" \
+        else next(
+            (pp for pp in conv.participants if pp.user_id == g.user.id),
+            None,
+        )
+    if p is None:
+        return respond("NOK", "Not a participant", 403)
+    p.last_read_at = datetime.datetime.utcnow()
+    db.session.commit()
+    total = sum(
+        unread_count(c, g.user)
+        for c in conversations_for_user(g.user)
+    )
+    return jsonify({"status": "OK", "unread_total": total})
+
+
+@app.context_processor
+def inject_unread_message_count():
+    if g.get("user"):
+        try:
+            convs = conversations_for_user(g.user)
+            count = sum(unread_count(c, g.user) for c in convs)
+        except Exception:
+            count = 0
+        return {"unread_message_count": count}
+    return {"unread_message_count": 0}
+
+
+@app.route("/messages")
+@login_required
+def messages_inbox():
+    return render_template("messages_inbox.html")
+
+
+@app.route("/messages/u/<string:user_name>")
+@login_required
+def messages_direct(user_name):
+    target = User.query.filter(User.name == user_name.lower()).first()
+    if not target or target.disabled or target.name == "superuser":
+        return redirect(url_for("messages_inbox"))
+    if target.id == g.user.id:
+        return redirect(url_for("messages_inbox"))
+    return render_template(
+        "conversation.html",
+        kind="direct",
+        partner=target,
+        group=None,
+        api_url=url_for("api_direct_conversation", user_name=target.name),
+        title=target.label,
+        is_blocked=bool(target.block_invitations),
+    )
+
+
+@app.route("/messages/g/<string:group_name>")
+@login_required
+def messages_group(group_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group or not g.user.is_in_group(group.id):
+        return redirect(url_for("messages_inbox"))
+    accepted = sum(
+        1 for m in group.memberships if m.state == "accepted"
+    )
+    if accepted < 2:
+        return redirect(url_for("edit_group", group_name=group.name))
+    return render_template(
+        "conversation.html",
+        kind="group",
+        partner=None,
+        group=group,
+        api_url=url_for("api_group_conversation", group_name=group.name),
+        title=group.label,
+        is_blocked=False,
+    )

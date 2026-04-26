@@ -654,11 +654,30 @@ function savePatternData(data, pattern) {
             row[i] = pattern.get(i, j);
         }
     }
+    // Persist the detected repeat length so the server can index it.
+    if (Number.isInteger(pattern.repeat) && pattern.repeat > 0) {
+        data.repeat = pattern.repeat;
+    }
 }
 
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    getPattern().then(init);
+    getPattern().then(init).then(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (!readonly && params.get("autosave") === "1") {
+            setTimeout(() => {
+                try {
+                    saveSettings(data, settings);
+                    savePatternData(data, pattern);
+                    savePattern();
+                } catch (e) { console.error(e); }
+                params.delete("autosave");
+                const url = window.location.pathname
+                    + (params.toString() ? "?" + params : "");
+                history.replaceState(null, "", url);
+            }, 100);
+        }
+    });
     if (!readonly) {
         installBeforeUnloadGuard(() => {
             saveSettings(data, settings);

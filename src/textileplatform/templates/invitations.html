@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ gettext('Invitations') }}</h1>
+{% endblock %}
+
+{% block content %}
+<style>
+ul.invitations { list-style: none; padding-left: 0; }
+ul.invitations li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.role-tag {
+    display: inline-block;
+    padding: 0 0.4rem;
+    border-radius: 3px;
+    background: #eee;
+    font-size: 0.85em;
+}
+</style>
+{% if invitations %}
+<ul class="invitations">
+{% for m in invitations %}
+    <li>
+        <strong>{{ m.group.label }}</strong>
+        <span class="role-tag">{{ gettext(m.role|capitalize) }}</span>
+        <form method="post"
+              action="{{ url_for('accept_invitation', membership_id=m.id) }}"
+              style="display:inline">
+            <button type="submit">{{ gettext('Accept') }}</button>
+        </form>
+        <form method="post"
+              action="{{ url_for('decline_invitation', membership_id=m.id) }}"
+              style="display:inline">
+            <button type="submit">{{ gettext('Decline') }}</button>
+        </form>
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+<p>{{ gettext('No pending invitations.') }}</p>
+{% endif %}
+{% endblock %}

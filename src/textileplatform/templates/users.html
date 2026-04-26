@@ -44,6 +44,13 @@
                         Details
                     </a>
                 </div>
+                {% if user.name != 'superuser' %}
+                <div class="user_details">
+                    <form method="post" action="{{ url_for('impersonate', user_name=user.name) }}" style="display:inline">
+                        <button type="submit">{{ gettext('Impersonate') }}</button>
+                    </form>
+                </div>
+                {% endif %}
             </div>
         {% endfor %}
     </div>

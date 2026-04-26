@@ -62,12 +62,29 @@ async function getPattern() {
 }
 
 
+// Editor-specific code may register this to produce thumbnail/preview
+// PNG data URLs from the current `data` and runtime state. Returning
+// null/undefined for a key just omits it from the save payload.
+window.captureThumbnails = window.captureThumbnails || null;
+
+async function _runCaptureThumbnails() {
+    if (typeof window.captureThumbnails === "function") {
+        try { return (await window.captureThumbnails(data)) || {}; }
+        catch (e) { console.error("captureThumbnails failed", e); }
+    }
+    return {};
+}
+
+
 async function savePattern() {
     const user = document.getElementById("user").value;
     const pattern = document.getElementById("pattern").value;
+    const thumbs = await _runCaptureThumbnails();
     const request = {
         action: "save-pattern",
-        contents: data
+        contents: data,
+        thumbnail: thumbs.thumbnail || null,
+        preview: thumbs.preview || null,
     };
     await fetch(`/api/pattern/${user}/${pattern}`, {
         method: "PUT",

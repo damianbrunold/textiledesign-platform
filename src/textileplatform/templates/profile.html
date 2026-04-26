@@ -21,6 +21,13 @@
         <button type="button" id="btn-dark" class="mode-btn {% if user.darkmode %}active{% endif %}">{{ gettext('Dark') }}</button>
         <input type="hidden" name="darkmode" id="darkmode-value" value="{{ '1' if user.darkmode else '' }}">
     </div>
+    <div class="block-invitations">
+        <label>
+            <input type="checkbox" name="block_invitations" value="1"
+                   {% if user.block_invitations %}checked{% endif %}>
+            {{ gettext('Block invitations and direct messages from other users') }}
+        </label>
+    </div>
     <button id="save">{{ gettext('Save') }}</button>
   </form>
   <div><a class="button" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a></div>

@@ -191,3 +191,90 @@
     margin-bottom: -1px;
 }
 /* Pane visibility is driven by inline style toggled in JS. */
+
+/* Tools / Ranges side panels — stacked vertically inside #container,
+   to the right of the canvas like #palette-panel. Explicit widths
+   keep the flex distribution stable so the canvas's bitmap stays in
+   1:1 correspondence with mouse-event offsetX/Y. */
+#tools-panel {
+    flex: 0 0 32px;
+    width: 32px;
+    margin-left: 4px;
+    padding: 2px;
+    border: 1px solid #555;
+    background: #f4f4f4;
+    color: #222;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+#ranges-panel {
+    flex: 0 0 24px;
+    width: 24px;
+    margin-left: 4px;
+    padding: 2px;
+    border: 1px solid #555;
+    background: #f4f4f4;
+    color: #222;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+#tools-panel.hidden, #ranges-panel.hidden { display: none; }
+#tools-panel-list, #ranges-panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.tx-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: #fff;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.tx-range-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #888;
+    border-radius: 0;
+    background: #fff;
+    cursor: pointer;
+    box-sizing: border-box;
+    padding: 0;
+}
+.tx-range-btn canvas {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+.tx-tool-btn:hover, .tx-range-btn:hover {
+    background: #d8e2f2;
+    border-color: #93b1d8;
+}
+.tx-tool-btn.active, .tx-range-btn.active {
+    background: #c4d4ec;
+    border-color: #6b8db8;
+    box-shadow: 0 0 0 1px #6b8db8 inset;
+}
+.tx-tool-btn img {
+    width: 16px;
+    height: 16px;
+    image-rendering: pixelated;
+}
+.tx-range-btn .tx-range-letter {
+    font-weight: bold;
+    font-size: 13px;
+    line-height: 1;
+}
+.tx-range-sep {
+    height: 1px;
+    background: #aaa;
+    margin: 2px 0;
+}

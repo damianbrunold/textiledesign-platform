@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ gettext('Messages') }}</h1>
+{% endblock %}
+
+{% block content %}
+<style>
+ul.inbox { list-style: none; padding-left: 0; }
+ul.inbox li {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+ul.inbox .meta { flex-grow: 1; }
+ul.inbox .preview {
+    color: #666;
+    font-size: 0.9em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 32rem;
+    display: block;
+}
+ul.inbox .unread {
+    background: #b94a48;
+    color: #fff;
+    border-radius: 1rem;
+    padding: 0 0.5rem;
+    font-size: 0.85em;
+}
+.kind-tag {
+    display: inline-block;
+    padding: 0 0.4rem;
+    border-radius: 3px;
+    background: #eee;
+    font-size: 0.8em;
+    margin-right: 0.5rem;
+}
+.sort-bar {
+    margin-bottom: 0.75rem;
+    font-size: 0.9em;
+}
+.sort-bar button {
+    margin-left: 0.25rem;
+}
+.sort-bar button.active {
+    font-weight: bold;
+}
+.start-chat {
+    margin-bottom: 1rem;
+    position: relative;
+    max-width: 24rem;
+}
+.start-chat input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.4rem;
+}
+#start-chat-suggestions {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border: 1px solid #ccc;
+    background: #fff;
+    z-index: 10;
+}
+#start-chat-suggestions div {
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+}
+#start-chat-suggestions div:hover { background: #eef; }
+</style>
+
+<div class="start-chat">
+    <input type="text" id="start-chat-input" autocomplete="off"
+           placeholder="{{ gettext('Search users to start a new chat…') }}">
+    <div id="start-chat-suggestions" style="display:none"></div>
+</div>
+
+<div class="sort-bar">
+    {{ gettext('Sort by:') }}
+    <button type="button" id="sort-recent" class="active">{{ gettext('Most recent') }}</button>
+    <button type="button" id="sort-name">{{ gettext('Name') }}</button>
+</div>
+
+<ul class="inbox" id="inbox-list">
+    <li id="inbox-empty" style="display:none">{{ gettext('No conversations yet.') }}</li>
+</ul>
+
+<script>
+(function() {
+    const list = document.getElementById('inbox-list');
+    const empty = document.getElementById('inbox-empty');
+    const btnRecent = document.getElementById('sort-recent');
+    const btnName = document.getElementById('sort-name');
+    const KIND_GROUP = "{{ gettext('Group') }}";
+    const KIND_DIRECT = "{{ gettext('Direct') }}";
+
+    let sortMode = localStorage.getItem('inboxSort') || 'recent';
+    let items = [];
+
+    function setSort(mode) {
+        sortMode = mode;
+        localStorage.setItem('inboxSort', mode);
+        btnRecent.classList.toggle('active', mode === 'recent');
+        btnName.classList.toggle('active', mode === 'name');
+        render();
+    }
+
+    function title(c) {
+        if (c.kind === 'group') return c.group ? c.group.label : '?';
+        return c.user ? c.user.label : '?';
+    }
+
+    function sortKeyRecent(c) {
+        if (c.last_message && c.last_message.created) {
+            return c.last_message.created;
+        }
+        return '';
+    }
+
+    function render() {
+        // Remove existing rows except the empty placeholder.
+        Array.from(list.querySelectorAll('li.row')).forEach(el => el.remove());
+        const sorted = items.slice();
+        if (sortMode === 'name') {
+            sorted.sort((a, b) =>
+                title(a).localeCompare(title(b), undefined,
+                                       { sensitivity: 'base' }));
+        } else {
+            sorted.sort((a, b) => {
+                const ka = sortKeyRecent(a);
+                const kb = sortKeyRecent(b);
+                if (ka === kb) return title(a).localeCompare(title(b));
+                return ka < kb ? 1 : -1;
+            });
+        }
+        empty.style.display = sorted.length === 0 ? '' : 'none';
+        sorted.forEach(c => {
+            const li = document.createElement('li');
+            li.className = 'row';
+            const tag = document.createElement('span');
+            tag.className = 'kind-tag';
+            tag.textContent = c.kind === 'group' ? KIND_GROUP : KIND_DIRECT;
+            li.appendChild(tag);
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            const a = document.createElement('a');
+            a.href = c.url;
+            const strong = document.createElement('strong');
+            strong.textContent = title(c);
+            a.appendChild(strong);
+            meta.appendChild(a);
+            if (c.last_message) {
+                const preview = document.createElement('span');
+                preview.className = 'preview';
+                preview.textContent =
+                    c.last_message.sender.label + ': ' + c.last_message.body;
+                meta.appendChild(preview);
+            }
+            li.appendChild(meta);
+            if (c.unread > 0) {
+                const u = document.createElement('span');
+                u.className = 'unread';
+                u.textContent = c.unread;
+                li.appendChild(u);
+            }
+            list.appendChild(li);
+        });
+    }
+
+    function updateNavBadge(total) {
+        const link = document.getElementById('nav-messages');
+        if (!link) return;
+        const existing = link.querySelector('.nav-count');
+        if (total > 0) {
+            link.classList.add('invitation-badge');
+            if (existing) {
+                existing.textContent = '(' + total + ')';
+            } else {
+                const span = document.createElement('span');
+                span.className = 'nav-count';
+                span.textContent = ' (' + total + ')';
+                link.appendChild(span);
+            }
+        } else {
+            link.classList.remove('invitation-badge');
+            if (existing) existing.remove();
+        }
+    }
+
+    async function refresh() {
+        try {
+            const res = await fetch('/api/conversations');
+            const data = await res.json();
+            items = data.conversations || [];
+            render();
+            const total = items.reduce((s, c) => s + (c.unread || 0), 0);
+            updateNavBadge(total);
+        } catch (e) { /* ignore transient errors */ }
+    }
+
+    btnRecent.addEventListener('click', () => setSort('recent'));
+    btnName.addEventListener('click', () => setSort('name'));
+    setSort(sortMode);
+    refresh();
+    setInterval(refresh, 30000);
+
+    const searchInput = document.getElementById('start-chat-input');
+    const searchBox = document.getElementById('start-chat-suggestions');
+    let searchTimer = null;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        const q = searchInput.value.trim();
+        if (q.length < 2) { searchBox.style.display = 'none'; return; }
+        searchTimer = setTimeout(async () => {
+            const res = await fetch(
+                '/api/users/search?q=' + encodeURIComponent(q));
+            const data = await res.json();
+            searchBox.innerHTML = '';
+            if (!data.users || data.users.length === 0) {
+                searchBox.style.display = 'none';
+                return;
+            }
+            data.users.forEach(u => {
+                const div = document.createElement('div');
+                div.textContent = u.label + ' (' + u.name + ')';
+                div.addEventListener('click', () => {
+                    window.location =
+                        '/messages/u/' + encodeURIComponent(u.name);
+                });
+                searchBox.appendChild(div);
+            });
+            searchBox.style.display = 'block';
+        }, 200);
+    });
+    document.addEventListener('click', e => {
+        if (e.target !== searchInput) searchBox.style.display = 'none';
+    });
+})();
+</script>
+{% endblock %}

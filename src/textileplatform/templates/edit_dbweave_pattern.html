@@ -61,7 +61,6 @@
             "view.show-reed": {"label": {{ gettext('Show Reed') | tojson }}},
             "view.show-colors": {"label": {{ gettext('Show Colors') | tojson }}},
             "view.show-hlines": {"label": {{ gettext('Show Grid Lines') | tojson }}},
-            "view.toggle-entering-bottom": {"label": {{ gettext('Threading at Bottom') | tojson }}},
             "view.pattern-only": {"label": {{ gettext('Pattern Only') | tojson }}},
             "tool.point": {"label": {{ gettext('Point') | tojson }}},
             "tool.line": {"label": {{ gettext('Line') | tojson }}},
@@ -125,6 +124,8 @@
             "colors.palette":     {"label": {{ gettext('Edit palette…') | tojson }}},
             "colors.blend":       {"label": {{ gettext('Color blending…') | tojson }}},
             "colors.toolbox":     {"label": {{ gettext('Palette') | tojson }}},
+            "tools.toolbox":      {"label": {{ gettext('Tools') | tojson }}},
+            "ranges.toolbox":     {"label": {{ gettext('Ranges') | tojson }}},
             "base.american":      {"label": {{ gettext('American') | tojson }}},
             "base.scandinavian":  {"label": {{ gettext('Scandinavian') | tojson }}},
             "base.swiss":         {"label": {{ gettext('German/Swiss') | tojson }}},
@@ -138,6 +139,10 @@
             "opt.tab-settings":   {"label": {{ gettext('Settings') | tojson }}},
             "opt.tab-grid":       {"label": {{ gettext('Grid') | tojson }}},
             "extras.ratio":       {"label": {{ gettext('Weft/warp ratio…') | tojson }}},
+            "extras.weave-locked": {"label": {{ gettext('Pattern locked') | tojson }}},
+            "cursor.locked":         {"label": {{ gettext('In rapport') | tojson }}},
+            "cursor.movement":       {"label": {{ gettext('Movement…') | tojson }}},
+            "cursor.movement-title": {"label": {{ gettext('Cursor movement') | tojson }}},
             "ratio.title":        {"label": {{ gettext('Weft/warp ratio') | tojson }}},
             "ratio.warp-factor":  {"label": {{ gettext('Warp factor:') | tojson }}},
             "ratio.weft-factor":  {"label": {{ gettext('Weft factor:') | tojson }}},
@@ -402,6 +407,7 @@
             "pegplan":   {{ gettext('Pegplan') | tojson }},
             "repeat":    {{ gettext('Repeat') | tojson }},
             "extras":    {{ gettext('Extras') | tojson }},
+            "cursor":    {{ gettext('Cursor') | tojson }},
             "threading": {{ gettext('Threading') | tojson }},
             "treadling": {{ gettext('Treadling') | tojson }},
             "insertMenu":         {{ gettext('Insert') | tojson }},
@@ -494,6 +500,12 @@
         <div id="palette-panel" class="hidden">
             <div id="palette-panel-grid"></div>
         </div>
+        <div id="tools-panel" class="hidden">
+            <div id="tools-panel-list"></div>
+        </div>
+        <div id="ranges-panel" class="hidden">
+            <div id="ranges-panel-list"></div>
+        </div>
     </div>
 
     <div id="tx-statusbar">
@@ -502,6 +514,7 @@
         <span class="tx-tb-spacer"></span>
         <span id="sb-range"></span>
         <span id="sb-rapport"></span>
+        <span id="sb-lock"></span>
     </div>
 
 {% endblock %}

@@ -1,354 +1,556 @@
 {% extends 'base.html' %}
 
+{% block body_class %}view-thumb{% endblock %}
+
 {% block header %}
 <style>
 #groups {
-    margin: 0;
     display: flex;
-    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0.5rem 1rem;
+    margin: 0;
+    padding-bottom: 0.4rem;
+    overflow-x: auto;
+    scrollbar-width: thin;
 }
-.group {
-    margin-right: 1rem;
-    font-size: 1.2rem;
-    padding: 0.1rem 0 0.2rem 0;
+#groups::-webkit-scrollbar { height: 6px; }
+#groups::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
+.group-tab {
     cursor: pointer;
+    padding: 0.15rem 0.5rem;
+    font-size: 1.1rem;
+    border-bottom: 2px solid transparent;
+    user-select: none;
+    white-space: nowrap;
+    flex: 0 0 auto;
 }
-.group.active {
+.group-tab.active {
     font-weight: bold;
+    border-bottom-color: #b94a48;
+}
+.group-tab .role-tag {
+    font-size: 0.7em;
+    color: #888;
+    padding-left: 0.25rem;
 }
 </style>
-<div id="groups">
-    {% if active_group == user.name %}
-    <div class="group active" data-group-name="{{ user.name }}">{{ user.label }}</div>
-    {% else %}
-    <div class="group" data-group-name="{{ user.name }}">{{ user.label }}</div>
-    {% endif %}
-    {% for group_data in group_patterns %}
-    {% if active_group == group_data[0].name %}
-    <div class="group active" data-group-name="{{ group_data[0].name }}">{{ group_data[0].label }}</div>
-    {% else %}
-    <div class="group" data-group-name="{{ group_data[0].name }}">{{ group_data[0].label }}</div>
-    {% endif %}
+<div id="groups" data-active-group="{{ active_group }}">
+    {% for gr in groups %}
+    <div class="group-tab{% if gr.name == active_group %} active{% endif %}"
+         data-group-name="{{ gr.name }}"
+         data-can-write="{{ '1' if gr.can_write else '0' }}"
+         data-is-personal="{{ '1' if gr.is_personal else '0' }}">
+        {{ gr.label }}{% if not gr.is_personal %}<span class="role-tag">({{ gettext(gr.role|capitalize) }})</span>{% endif %}
+    </div>
     {% endfor %}
 </div>
 {% endblock %}
 
 {% block content %}
+{% include '_profile_toolbar.css.html' %}
 <style>
-#filter {
-    margin: 0;
+#admin-row {
     display: flex;
-    flex-direction: row;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #ccc;
 }
-#filter input[type=text] {
-    outline: 0;
+.section-title { display: flex; align-items: center; gap: 0.4rem; }
+.section-action {
+    border: 1px solid #ccc;
+    background: #f6f6f6;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 3px;
+    width: 1.5rem;
     height: 1.5rem;
-    margin: 0;
-    max-width: 35rem;
-    flex-grow: 1;
-    margin-right: 1rem;
+    line-height: 1;
+    font-size: 1rem;
+    padding: 0;
 }
-#filter .filtertext {
-    height: 1.5rem;
-    padding-top: 0.3rem;
-    padding-right: 0.5rem;
+.section-action:hover { background: #e8e8e8; }
+.inline-new-form {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.4rem 0;
 }
-#patterns {
-    max-width: 60rem;
+.inline-new-form.open { display: flex; }
+.inline-new-form input[type=text] {
+    height: 1.7rem;
+    padding: 0 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+    font: inherit;
+    width: 18rem;
 }
-#patterns a {
-    display: block;
-}
-.patterns-label {
-    font-size: 1.2rem;
-    font-weight: bold;
-    margin-top: 0.3rem;
-}
-.pattern {
-    display: flex;
-}
-.pattern_name {
-    width: 30rem;
-    flex-grow: 0;
-    flex-shrink: 0;
-    overflow-x: hidden;
-    margin-right: 1rem;
-}
-.pattern_info {
-    display: flex;
-    padding: 0 0.3rem 0 0;
-}
-.pattern_public {
-    width: 6rem;
-    margin-right: 1rem;
-}
-.pattern_delete {
-    width: 5rem;
-    padding-left: 1rem;
-    text-align: center;
-}
-.pattern_assignments {
-    width: 5rem;
-    padding-left: 1rem;
-    text-align: center;
+.inline-new-form button {
+    height: 1.7rem;
+    padding: 0 0.7rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #f6f6f6;
+    cursor: pointer;
+    font: inherit;
 }
 {% if g.user and g.user.darkmode %}
-#filter input[type=text] {
-    border: 1px solid #666;
-    background: #777;
+.section-action {
+    background: #2a2a2a; border-color: #555; color: #ddd;
 }
-#filter input[type=submit] {
-    border: 1px solid #666;
-    background: #777;
+.section-action:hover { background: #444; }
+.inline-new-form input[type=text],
+.inline-new-form button {
+    background: #1f1f1f; color: #ddd; border-color: #555;
 }
-.pattern:hover { background: #222; }
-{% else %}
-#filter input[type=text] {
-    border: 1px solid #ccc;
-    background: #ddd;
-}
-.pattern:hover { background: #cae6f6; }
+.inline-new-form button { background: #2a2a2a; }
+.inline-new-form button:hover { background: #444; }
 {% endif %}
 </style>
-<div id="header">
-    <div class="button">
-        <a href="{{ url_for('create_pattern') }}">
-            {{ gettext('New Pattern') }}
-        </a>
+
+<form id="hidden-create-form" method="post" action="{{ url_for('create_pattern') }}" style="display:none">
+    <input type="hidden" name="pattern_type" id="hcf-type">
+    <input type="hidden" name="name" id="hcf-name">
+    <input type="hidden" name="width" id="hcf-width">
+    <input type="hidden" name="height" id="hcf-height">
+</form>
+<form id="hidden-upload-form" method="post" action="{{ url_for('upload_pattern') }}"
+      enctype="multipart/form-data" style="display:none">
+    <input type="hidden" name="name" value="">
+    <input type="file" name="file" id="hidden-upload-input" multiple>
+</form>
+
+<div id="profile-toolbar">
+    <input type="text" id="filter-input" placeholder="{{ gettext('Filter…') }}">
+    <div class="sort-modes" id="sort-modes">
+        <button type="button" data-sort="name-asc" class="active">{{ gettext('Name ↑') }}</button>
+        <button type="button" data-sort="name-desc">{{ gettext('Name ↓') }}</button>
+        <button type="button" data-sort="modified-desc">{{ gettext('Newest') }}</button>
+        <button type="button" data-sort="modified-asc">{{ gettext('Oldest') }}</button>
     </div>
-    <div class="button">
-        <a href="{{ url_for('upload_pattern') }}">
-            {{ gettext('Upload Pattern') }}
-        </a>
+    <div class="view-modes" id="view-modes">
+        <button type="button" data-view="thumb" class="active">{{ gettext('Thumbnails') }}</button>
+        <button type="button" data-view="detail">{{ gettext('Detail') }}</button>
     </div>
-    <div class="button">
-        <a href="{{ url_for('edit_groups') }}">
-            {{ gettext('Groups') }}
-        </a>
-    </div>
+    <span class="toolbar-spacer"></span>
+    <span class="button"><a href="{{ url_for('edit_groups') }}">{{ gettext('Groups') }}</a></span>
 </div>
 
-<div id="filter">
-    <span class="filtertext">Filter </span><input type="text" id="filter-query" value=""/>
-</div>
+<div id="groups-content">
+{% for gr in groups %}
+<div class="group-content" data-group-name="{{ gr.name }}"
+     data-can-write="{{ '1' if gr.can_write else '0' }}"
+     style="{% if gr.name != active_group %}display:none{% endif %}">
+    {% set patterns = patterns_by_group[gr.name] %}
+    {% set weave = patterns | selectattr('pattern_type', 'equalto', 'DB-WEAVE Pattern') | list %}
+    {% set bead  = patterns | selectattr('pattern_type', 'equalto', 'JBead Pattern')   | list %}
+    {% set others = patterns | rejectattr('pattern_type', 'in', ['DB-WEAVE Pattern', 'JBead Pattern']) | list %}
 
-<div id="patterns">
-    {% if patterns_weave %}
-    <div class="patterns-label" data-group-name="{{ user.name }}">
-        {{ gettext('DB-WEAVE Patterns') }}
-    </div>
-    {% for pattern in patterns_weave %}
-    <div class="pattern" data-group-name="{{ user.name }}">
-        <div class="pattern_name">
-            <a class="action"
-               href="{{ url_for('edit_pattern',
-                                user_name=pattern.owner.name,
-                                pattern_name=pattern.name) }}">
-                {{ pattern.label }}
-            </a>
-        </div>
-        <div class="pattern_info">
-            <div class="pattern_public">
-                <a class="action" href="#">
-                    {{
-                        gettext('Public')
-                        if pattern.public
-                        else gettext('Private')
-                    }}
-                </a>
-            </div>
-            <div class="pattern_delete">
-                <a class="action"
-                   href="{{ url_for('delete',
-                                    pattern_name=pattern.name) }}">
-                    {{ gettext('Delete') }}
-                </a>
-            </div>
-            <div class="pattern_assignments">
-                <a class="action"
-                   href="{{ url_for('assignments',
-                                    pattern_name=pattern.name) }}">
-                    {{ gettext('Assignments') }}
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-    
-    {% if patterns_bead %}
-    <div class="patterns-label" data-group-name="{{ user.name }}">
-        {{ gettext('JBead Patterns') }}
-    </div>
-    {% for pattern in patterns_bead %}
-    <div class="pattern" data-group-name="{{ user.name }}">
-        <div class="pattern_name">
-            <a class="action"
-               href="{{ url_for('edit_pattern',
-                                user_name=pattern.owner.name,
-                                pattern_name=pattern.name) }}">
-                {{ pattern.label }}
-            </a>
-        </div>
-        <div class="pattern_info">
-            <div class="pattern_public">
-                <a class="action" href="#">
-                    {{
-                        gettext('Public')
-                        if pattern.public
-                        else gettext('Private')
-                    }}
-                </a>
-            </div>
-            <div class="pattern_delete">
-                <a class="action"
-                    href="{{ url_for('delete', pattern_name=pattern.name) }}">
-                    {{ gettext('Delete') }}
-                </a>
-            </div>
-            <div class="pattern_assignments">
-                <a class="action"
-                   href="{{ url_for('assignments',
-                                    pattern_name=pattern.name) }}">
-                    {{ gettext('Assignments') }}
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    {% for group_data in group_patterns %}
-    <div class="patterns-label" data-group-name="{{ group_data[0].name }}">
-        {{ group_data[0].label }}
-    </div>
-    {% for pattern in group_data[1] %}
-    <div class="pattern" data-group-name="{{ group_data[0].name }}">
-        <div class="pattern_name">
-            <a class="action"
-               href="{{ url_for('edit_pattern',
-                                user_name=pattern.owner.name,
-                                pattern_name=pattern.name) }}">
-                {{ pattern.owner.label }} - {{ pattern.label }}
-            </a>
-        </div>
-        <div class="pattern_info">
-            {% if group_data[0].name == user.name %}
-            <div class="pattern_public">
-                <a class="action" href="#">
-                    {{
-                        gettext('Public')
-                        if pattern.public
-                        else gettext('Private')
-                    }}
-                </a>
-            </div>
-            <div class="pattern_delete">
-                <a class="action"
-                   href="{{ url_for('delete',
-                                    pattern_name=pattern.name) }}">
-                    {{ gettext('Delete') }}
-                </a>
-            </div>
-            <div class="pattern_assignments">
-                <a class="action"
-                   href="{{ url_for('assignments',
-                                    pattern_name=pattern.name) }}">
-                    {{ gettext('Assignments') }}
-                </a>
-            </div>
+    {% macro render_pattern_section(title, items, group, kind=None) %}
+    {% if items or kind %}
+    <div class="patterns-section">
+        <div class="section-title">
+            {{ title }}
+            {% if kind and gr.is_personal %}
+            <button type="button" class="section-action" data-add="{{ kind }}" title="{{ gettext('Add new pattern') }}">+</button>
+            <button type="button" class="section-action" data-upload="{{ kind }}" title="{{ gettext('Upload pattern file') }}">↑</button>
             {% endif %}
         </div>
+        <div class="patterns-list">
+        {% for p in items %}
+        <div class="pattern-row has-actions{% if p.public %} is-public{% endif %}"
+             data-pattern-name="{{ p.name }}"
+             data-owner-name="{{ p.owner_name }}"
+             data-is-mine="{{ '1' if p.is_mine else '0' }}"
+             data-pattern-type="{{ p.pattern_type }}"
+             data-label="{{ p.label }}"
+             data-modified="{{ p.modified or '' }}"
+             data-search="{{ (p.label ~ ' ' ~ p.author ~ ' ' ~ p.organization ~ ' ' ~ p.notes ~ ' ' ~ (group.label if not p.is_mine else '')) | lower }}">
+            {% set link_origin = ('groups-edit-' ~ group.name) if not group.is_personal else '' %}
+            {% set edit_url = url_for('edit_pattern', user_name=p.owner_name, pattern_name=p.name, origin=link_origin) %}
+            <a class="thumb-link" href="{{ edit_url }}">
+                <img class="thumb" loading="lazy"
+                     src="{{ url_for('pattern_preview', user_name=p.owner_name, pattern_name=p.name, v=p.modified or '') }}"
+                     alt="">
+            </a>
+            <div class="row-name">
+                {% if not p.is_mine %}<span class="owner-prefix">{{ p.owner_label }} —</span> {% endif %}
+                <a href="{{ edit_url }}">{{ p.label }}</a>
+                <span class="pub-tag" title="{{ gettext('Public') if p.public else gettext('Private') }}"></span>
+            </div>
+            <div class="row-meta">
+                <span class="meta-dim">{% if p.pattern_width and p.pattern_height %}{{ p.pattern_width }}×{{ p.pattern_height }}{% else %}—{% endif %}</span>
+                <span class="meta-rap">{% if p.rapport_width or p.rapport_height %}r:{% if p.rapport_width %}{{ p.rapport_width }}{% else %}—{% endif %}×{% if p.rapport_height %}{{ p.rapport_height }}{% else %}—{% endif %}{% else %}—{% endif %}</span>
+                <span class="meta-author">{{ p.author or '—' }}</span>
+                <span class="meta-org">{{ p.organization or '—' }}</span>
+                <span class="meta-modified">{{ p.modified[:10] if p.modified else '—' }}</span>
+                <span class="meta-public">{{ gettext('Public') if p.public else gettext('Private') }}</span>
+            </div>
+            <div class="row-actions">
+                {% if p.is_mine %}
+                <button type="button" class="act-rename" title="{{ gettext('Rename') }}">✎</button>
+                <button type="button" class="act-publish" title="{{ gettext('Toggle public/private') }}">{% if p.public %}🌐{% else %}🔒{% endif %}</button>
+                <a class="icon" href="{{ url_for('assignments', pattern_name=p.name) }}" title="{{ gettext('Share to groups') }}">↗</a>
+                <a class="icon" href="{{ url_for('download_pattern_legacy', user_name=p.owner_name, pattern_name=p.name) }}" title="{{ gettext('Download') }}">⤓</a>
+                <button type="button" class="act-clone" title="{{ gettext('Clone pattern') }}">⎘</button>
+                <button type="button" class="act-delete" title="{{ gettext('Delete') }}">🗑</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        </div>
     </div>
-    {% endfor %}
-    {% endfor %}        
+    {% endif %}
+    {% endmacro %}
+
+    {{ render_pattern_section(gettext('DB-WEAVE Patterns'), weave, gr, kind='weave' if gr.is_personal else None) }}
+    {{ render_pattern_section(gettext('JBead Patterns'), bead, gr, kind='bead' if gr.is_personal else None) }}
+    {{ render_pattern_section(gettext('Other Patterns'), others, gr) }}
+    {% if not weave and not bead and not others and not gr.is_personal %}
+    <div class="empty-note">{{ gettext('No patterns in this group.') }}</div>
+    {% endif %}
 </div>
-<script>
-    function filter_patterns() {
-        const group = document.getElementById("groups").getElementsByClassName("group active")[0];
-        const query = document.getElementById("filter-query").value;
-        const terms = query.toLowerCase().split(/ +/);
+{% endfor %}
+</div>
 
-        // filter group labels
-        const labels = document.getElementById("patterns").getElementsByClassName("patterns-label");
-        for (let j = 0; j < labels.length; j++) {
-            const label = labels[j];
-            if (label.dataset.groupName == group.dataset.groupName) {
-                label.style.display = "";
-            } else {
-                label.style.display = "none";
-            }
-        }
-
-        // filter patterns according to group and the filter terms
-        const patterns = document.getElementById("patterns").getElementsByClassName("pattern");
-        for (let j = 0; j < patterns.length; j++) {
-            const pattern = patterns[j];
-            var visible = true;
-
-            if (pattern.dataset.groupName !== group.dataset.groupName) {
-                visible = false;
-            } else if (query !== "") {
-                var text = "";
-                const name_els = pattern.getElementsByClassName("pattern_name");
-                if (name_els.length > 0) {
-                    const name = name_els[0].innerText;
-                    text += name.toLowerCase();
-                }
-                const visibility_els = pattern.getElementsByClassName("pattern_public");
-                if (visibility_els.length > 0) {
-                    const visibility = visibility_els[0].innerText;
-                    text += visibility.toLowerCase();
-                }
-                let matches = true;
-                for (let term of terms) {
-                    if (text.indexOf(term) === -1) {
-                        matches = false;
-                        break;
-                    }
-                }
-                if (!matches) {
-                    visible = false;
-                }
-            }
-            if (visible) {
-                pattern.style.display = "";
-            } else {
-                pattern.style.display = "none";
-            }
-        }
-    }
-    const groups = document.getElementById("groups").getElementsByClassName("group");
-    for (let i = 0; i < groups.length; i++) {
-        const group = groups[i];
-        group.addEventListener("click", e => {
-            const old_group = document.getElementById("groups").getElementsByClassName("group active")[0];
-            old_group.classList.remove("active");
-            group.classList.add("active");
-            filter_patterns();
-        });
-    }
-    filter_patterns();
-    document.getElementById("filter-query").addEventListener("change", (e) => {
-        filter_patterns();
-    });
-    document.getElementById("filter-query").focus();
-</script>
 {% if g.user and g.user.name == 'superuser' %}
-<style>
-#admin {
-    display: flex;
-    margin-top: 1rem;
-}
-#admin a {
-    margin-right: 1rem;
-}
-</style>
-<div id="admin">
-    <span>Administration:&nbsp;</a>
+<div id="admin-row">
+    <span>{{ gettext('Administration:') }}</span>
     <a href="{{ url_for('groups') }}">{{ gettext('Groups') }}</a>
     <a href="{{ url_for('users') }}">{{ gettext('Users') }}</a>
     <a href="{{ url_for('patterns') }}">{{ gettext('All Patterns') }}</a>
 </div>
 {% endif %}
+
+<script>
+(function() {
+    const root = document.body;
+    const groupsEl = document.getElementById('groups');
+    const groupsContent = document.getElementById('groups-content');
+    const filterInput = document.getElementById('filter-input');
+    const viewModes = document.getElementById('view-modes');
+    const sortModes = document.getElementById('sort-modes');
+    const userName = "{{ user.name }}";
+    const isOwner = {{ 'true' if is_owner else 'false' }};
+
+    // ---- Persistent prefs ------------------------------------------
+    let viewMode = localStorage.getItem('profileViewMode') || 'thumb';
+    if (viewMode === 'compact') viewMode = 'thumb';
+    let sortMode = localStorage.getItem('profileSortMode') || 'name-asc';
+    setView(viewMode);
+    setSort(sortMode);
+
+    function setView(mode) {
+        viewMode = mode;
+        localStorage.setItem('profileViewMode', mode);
+        root.classList.remove('view-compact', 'view-detail', 'view-thumb');
+        root.classList.add('view-' + mode);
+        Array.from(viewModes.querySelectorAll('button')).forEach(b => {
+            b.classList.toggle('active', b.dataset.view === mode);
+        });
+    }
+
+    function setSort(mode) {
+        sortMode = mode;
+        localStorage.setItem('profileSortMode', mode);
+        Array.from(sortModes.querySelectorAll('button')).forEach(b => {
+            b.classList.toggle('active', b.dataset.sort === mode);
+        });
+        applySort();
+    }
+
+    function applySort() {
+        const lists = groupsContent.querySelectorAll('.patterns-list');
+        lists.forEach(list => {
+            const rows = Array.from(list.querySelectorAll(':scope > .pattern-row'));
+            const cmp = (a, b) => {
+                if (sortMode.startsWith('name')) {
+                    const la = (a.dataset.label || '').toLowerCase();
+                    const lb = (b.dataset.label || '').toLowerCase();
+                    if (la === lb) return 0;
+                    const r = la < lb ? -1 : 1;
+                    return sortMode === 'name-asc' ? r : -r;
+                } else {
+                    const ma = a.dataset.modified || '';
+                    const mb = b.dataset.modified || '';
+                    if (ma === mb) return 0;
+                    const r = ma < mb ? -1 : 1;
+                    return sortMode === 'modified-asc' ? r : -r;
+                }
+            };
+            rows.sort(cmp);
+            rows.forEach(r => list.appendChild(r));
+        });
+    }
+
+    // ---- Filter ----------------------------------------------------
+    function applyFilter() {
+        const q = filterInput.value.trim().toLowerCase();
+        const terms = q ? q.split(/\s+/) : [];
+        groupsContent.querySelectorAll('.pattern-row').forEach(r => {
+            const text = r.dataset.search || '';
+            const matches = terms.every(t => text.indexOf(t) !== -1);
+            r.style.display = matches ? '' : 'none';
+        });
+        // Hide section titles whose lists are empty after filtering.
+        groupsContent.querySelectorAll('.patterns-section').forEach(sec => {
+            const visible = sec.querySelectorAll('.pattern-row:not([style*="display: none"])').length;
+            sec.style.display = visible ? '' : 'none';
+        });
+    }
+
+    // ---- Group switcher --------------------------------------------
+    function switchGroup(name) {
+        let activeTab = null;
+        groupsEl.querySelectorAll('.group-tab').forEach(t => {
+            const on = t.dataset.groupName === name;
+            t.classList.toggle('active', on);
+            if (on) activeTab = t;
+        });
+        groupsContent.querySelectorAll('.group-content').forEach(g => {
+            g.style.display = g.dataset.groupName === name ? '' : 'none';
+        });
+        if (activeTab && activeTab.scrollIntoView) {
+            activeTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+        const url = new URL(window.location);
+        url.searchParams.set('group', name);
+        history.replaceState(null, '', url);
+        applyFilter();
+        applySort();
+    }
+
+    groupsEl.addEventListener('click', e => {
+        const tab = e.target.closest('.group-tab');
+        if (tab) switchGroup(tab.dataset.groupName);
+    });
+    viewModes.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-view]');
+        if (btn) setView(btn.dataset.view);
+    });
+    sortModes.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-sort]');
+        if (btn) setSort(btn.dataset.sort);
+    });
+    filterInput.addEventListener('input', applyFilter);
+
+    // ---- Per-row actions -------------------------------------------
+    groupsContent.addEventListener('click', async e => {
+        const row = e.target.closest('.pattern-row');
+        if (!row) return;
+        if (e.target.closest('.act-rename')) {
+            startRename(row);
+        } else if (e.target.closest('.act-publish')) {
+            await togglePublish(row);
+        } else if (e.target.closest('.act-clone')) {
+            await cloneRow(row);
+        } else if (e.target.closest('.act-delete')) {
+            await deleteRow(row);
+        }
+    });
+
+    async function cloneRow(row) {
+        const owner = row.dataset.ownerName;
+        const name = row.dataset.patternName;
+        if (!confirm("{{ gettext('Clone this pattern?') }}")) return;
+        try {
+            const res = await fetch(`/api/pattern/${owner}/${name}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'clone-pattern' }),
+            });
+            const data = await res.json();
+            if (data.status === 'OK') {
+                window.location.reload();
+            } else {
+                alert(data.message || "{{ gettext('Clone failed') }}");
+            }
+        } catch (e) { alert(e); }
+    }
+
+    function startRename(row) {
+        if (row.querySelector('.rename-input')) return;
+        const nameEl = row.querySelector('.row-name');
+        const linkEl = nameEl.querySelector('a');
+        const original = linkEl.textContent;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'rename-input';
+        input.value = original;
+        linkEl.style.display = 'none';
+        nameEl.appendChild(input);
+        input.focus();
+        input.select();
+        const finish = async (commit) => {
+            const newLabel = input.value.trim();
+            input.remove();
+            linkEl.style.display = '';
+            if (!commit || !newLabel || newLabel === original) return;
+            const owner = row.dataset.ownerName;
+            const oldName = row.dataset.patternName;
+            try {
+                const res = await fetch(`/api/pattern/${owner}/${oldName}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'rename-pattern',
+                        label: newLabel,
+                    }),
+                });
+                const data = await res.json();
+                if (data.status === 'OK') {
+                    row.dataset.patternName = data.name;
+                    row.dataset.label = data.label;
+                    linkEl.textContent = data.label;
+                    // Update edit link href.
+                    linkEl.href = linkEl.href.replace(
+                        encodeURIComponent(oldName),
+                        encodeURIComponent(data.name));
+                    // Update other action links.
+                    row.querySelectorAll('a.icon').forEach(a => {
+                        a.href = a.href.replace(
+                            encodeURIComponent(oldName),
+                            encodeURIComponent(data.name));
+                    });
+                    // Update thumbnail src.
+                    const thumb = row.querySelector('.thumb');
+                    if (thumb) {
+                        thumb.src = thumb.src.replace(
+                            encodeURIComponent(oldName),
+                            encodeURIComponent(data.name));
+                    }
+                    applySort();
+                } else {
+                    alert(data.message || "{{ gettext('Rename failed') }}");
+                }
+            } catch (err) {
+                alert(err);
+            }
+        };
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')   { e.preventDefault(); finish(true);  }
+            if (e.key === 'Escape')  { e.preventDefault(); finish(false); }
+        });
+        input.addEventListener('blur', () => finish(true));
+    }
+
+    async function togglePublish(row) {
+        const owner = row.dataset.ownerName;
+        const name  = row.dataset.patternName;
+        const next  = !row.classList.contains('is-public');
+        const res = await fetch(`/api/pattern/${owner}/${name}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'set-publication-state',
+                publication_state: next,
+            }),
+        });
+        const data = await res.json();
+        if (data.status === 'OK') {
+            row.classList.toggle('is-public', next);
+            const btn = row.querySelector('.act-publish');
+            if (btn) btn.textContent = next ? '🌐' : '🔒';
+            const tag = row.querySelector('.meta-public');
+            if (tag) tag.textContent = next ? "{{ gettext('Public') }}" : "{{ gettext('Private') }}";
+        } else {
+            alert(data.message || "{{ gettext('Failed') }}");
+        }
+    }
+
+    async function deleteRow(row) {
+        const label = row.dataset.label;
+        if (!confirm("{{ gettext('Delete pattern') }} \"" + label + "\"?")) return;
+        const name = row.dataset.patternName;
+        // Reuse the existing /patterns/delete/<name> POST endpoint.
+        const form = new FormData();
+        const res = await fetch(`/patterns/delete/${encodeURIComponent(name)}`, {
+            method: 'POST',
+            body: form,
+            credentials: 'same-origin',
+        });
+        if (res.ok || res.redirected) {
+            row.remove();
+        } else {
+            alert("{{ gettext('Delete failed') }}");
+        }
+    }
+
+    applyFilter();
+    applySort();
+
+    // ---- Section actions: + new, ↑ upload --------------------------
+    const PATTERN_DEFAULTS = {
+        weave: { type: 'DB-WEAVE Pattern', width: 50, height: 50 },
+        bead:  { type: 'JBead Pattern',     width: 12, height: 300 },
+    };
+    const uploadInput = document.getElementById('hidden-upload-input');
+    const uploadForm  = document.getElementById('hidden-upload-form');
+    uploadInput.addEventListener('change', () => {
+        if (uploadInput.files && uploadInput.files.length > 0) {
+            uploadForm.submit();
+        }
+    });
+
+    groupsContent.addEventListener('click', e => {
+        const addBtn = e.target.closest('.section-action[data-add]');
+        if (addBtn) {
+            openInlineNewForm(addBtn);
+            return;
+        }
+        const upBtn = e.target.closest('.section-action[data-upload]');
+        if (upBtn) {
+            const kind = upBtn.dataset.upload;
+            uploadInput.accept = kind === 'weave' ? '.dbw,.json'
+                              : kind === 'bead'  ? '.jbb,.json'
+                              : '';
+            uploadInput.click();
+            return;
+        }
+    });
+
+    function openInlineNewForm(btn) {
+        const section = btn.closest('.patterns-section');
+        let form = section.querySelector(':scope > .inline-new-form');
+        if (form) { form.classList.toggle('open'); if (form.classList.contains('open')) form.querySelector('input').focus(); return; }
+        form = document.createElement('div');
+        form.className = 'inline-new-form open';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = "{{ gettext('Pattern name') }}";
+        const submit = document.createElement('button');
+        submit.type = 'button';
+        submit.textContent = "{{ gettext('Create') }}";
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = "{{ gettext('Cancel') }}";
+        form.appendChild(input);
+        form.appendChild(submit);
+        form.appendChild(cancel);
+        // Insert right after the section title.
+        const title = section.querySelector('.section-title');
+        title.after(form);
+        input.focus();
+
+        const create = () => {
+            const name = input.value.trim();
+            if (!name) { input.focus(); return; }
+            const def = PATTERN_DEFAULTS[btn.dataset.add];
+            if (!def) return;
+            document.getElementById('hcf-type').value = def.type;
+            document.getElementById('hcf-name').value = name;
+            document.getElementById('hcf-width').value = def.width;
+            document.getElementById('hcf-height').value = def.height;
+            document.getElementById('hidden-create-form').submit();
+        };
+        submit.addEventListener('click', create);
+        cancel.addEventListener('click', () => form.remove());
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')  { e.preventDefault(); create(); }
+            if (e.key === 'Escape') { form.remove(); }
+        });
+    }
+})();
+</script>
 {% endblock %}

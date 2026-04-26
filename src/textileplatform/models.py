@@ -30,9 +30,30 @@ class User(db.Model):
 
     def is_in_group(self, group_id):
         for m in self.memberships:
-            if m.group.id == group_id:
+            if m.group.id == group_id and m.state == "accepted":
                 return True
         return False
+
+    def membership_in(self, group):
+        for m in self.memberships:
+            if m.group_id == group.id:
+                return m
+        return None
+
+    def role_in(self, group):
+        m = self.membership_in(group)
+        if m is None or m.state != "accepted":
+            return None
+        return m.role
+
+    def is_owner_of(self, group):
+        return self.role_in(group) == "owner"
+
+    def can_assign_to(self, group):
+        return self.role_in(group) in ("owner", "writer")
+
+    def pending_invitations(self):
+        return [m for m in self.memberships if m.state == "invited"]
 
 
 class Membership(db.Model):
@@ -68,6 +89,20 @@ class Group(db.Model):
             if m.user.id == user_id:
                 return True
         return False
+
+    def accepted_memberships(self):
+        return [m for m in self.memberships if m.state == "accepted"]
+
+    def owner_count(self):
+        return sum(
+            1 for m in self.memberships
+            if m.state == "accepted" and m.role == "owner"
+        )
+
+    def is_personal(self):
+        return any(
+            m.user.name == self.name for m in self.memberships
+        )
 
     def is_assigned(self, pattern):
         for assignment in self.assignments:
@@ -150,6 +185,101 @@ class Assignment(db.Model):
     pattern = db.relationship("Pattern", back_populates="assignments")
 
 
+class Conversation(db.Model):
+    __tablename__ = "txconversation"
+
+    id = db.Column(db.Integer, primary_key=True)
+    kind = db.Column(db.String(10), nullable=False)  # "direct", "group"
+    group_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txgroup.id"),
+        nullable=True,
+        unique=True,
+    )
+    created = db.Column(db.DateTime)
+
+    group = db.relationship("Group")
+    participants = db.relationship(
+        "ConversationParticipant",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+    )
+    messages = db.relationship(
+        "Message",
+        back_populates="conversation",
+        order_by="Message.created",
+        cascade="all, delete-orphan",
+    )
+
+    def participant_user_ids(self):
+        if self.kind == "group" and self.group is not None:
+            return {
+                m.user_id for m in self.group.memberships
+                if m.state == "accepted"
+            }
+        return {p.user_id for p in self.participants}
+
+    def other_user(self, user_id):
+        if self.kind != "direct":
+            return None
+        for p in self.participants:
+            if p.user_id != user_id:
+                return p.user
+        return None
+
+
+class ConversationParticipant(db.Model):
+    __tablename__ = "txconversation_participant"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txconversation.id"),
+        nullable=False,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txuser.id"),
+        nullable=False,
+    )
+    last_read_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "conversation_id", "user_id",
+            name="uq_conversation_participant",
+        ),
+    )
+
+    conversation = db.relationship(
+        "Conversation", back_populates="participants",
+    )
+    user = db.relationship("User")
+
+
+class Message(db.Model):
+    __tablename__ = "txmessage"
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txconversation.id"),
+        nullable=False,
+        index=True,
+    )
+    sender_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txuser.id"),
+        nullable=False,
+    )
+    body = db.Column(db.Text, nullable=False)
+    created = db.Column(db.DateTime, nullable=False, index=True)
+    deleted = db.Column(db.Boolean, default=False)
+
+    conversation = db.relationship("Conversation", back_populates="messages")
+    sender = db.relationship("User")
+
+
 class Pattern(db.Model):
     __tablename__ = "txpattern"
 
@@ -165,6 +295,14 @@ class Pattern(db.Model):
     created = db.Column(db.DateTime)
     modified = db.Column(db.DateTime)
     public = db.Column(db.Boolean)
+    # Metadata extracted from contents JSON for fast list rendering.
+    author = db.Column(db.String(120))
+    organization = db.Column(db.String(120))
+    notes = db.Column(db.Text)
+    pattern_width = db.Column(db.Integer)
+    pattern_height = db.Column(db.Integer)
+    rapport_width = db.Column(db.Integer)
+    rapport_height = db.Column(db.Integer)
 
     db.UniqueConstraint(owner_id, name)
 

@@ -89,13 +89,18 @@ function goto_next_part() {
     } else if (cursor.selected_part === "color_weft") {
         select_part("color_warp", saved_x_weave, 0);
     } else if (cursor.selected_part === "color_warp") {
+        select_part("reed", saved_x_weave, 0);
+    } else if (cursor.selected_part === "reed") {
         select_part("weave", saved_x_weave, saved_y_weave);
     }
     if (cursor.selected_view instanceof GridViewDummy) goto_next_part();
+    if (cursor.selected_part === "weave" && settings.weave_locked) goto_next_part();
 }
 
 function goto_prev_part() {
     if (cursor.selected_part === "weave") {
+        select_part("reed", saved_x_weave, 0);
+    } else if (cursor.selected_part === "reed") {
         select_part("color_warp", saved_x_weave, 0);
     } else if (cursor.selected_part === "entering") {
         select_part("weave", saved_x_weave, saved_y_weave);
@@ -111,6 +116,7 @@ function goto_prev_part() {
         select_part("color_weft", 0, saved_y_weave);
     }
     if (cursor.selected_view instanceof GridViewDummy) goto_prev_part();
+    if (cursor.selected_part === "weave" && settings.weave_locked) goto_prev_part();
 }
 
 function save_part_position() {
@@ -129,6 +135,8 @@ function save_part_position() {
     } else if (cursor.selected_part === "color_weft") {
         saved_y_weave = cursor.y2;
     } else if (cursor.selected_part === "color_warp") {
+        saved_x_weave = cursor.x2;
+    } else if (cursor.selected_part === "reed") {
         saved_x_weave = cursor.x2;
     }
 }
@@ -178,6 +186,11 @@ function select_part(part, x1, y1, x2, y2) {
         cursor.selected_part = "pegplan";
         cursor.selected_pattern = pattern.pegplan;
         cursor.selected_view = view.pegplan;
+    } else if (part === "reed") {
+        saved_x_weave = cursor.x2;
+        cursor.selected_part = "reed";
+        cursor.selected_pattern = pattern.reed;
+        cursor.selected_view = view.reed;
     } else {
         console.log("ERR: cannot select part", part);
     }
@@ -1673,6 +1686,28 @@ class GridViewReed {
         this.drawData(ctx, settings);
     }
 
+    drawCursor(ctx, settings, cursor) {
+        const width = Math.min(this.width, this.data.width);
+        let i1 = Math.min(cursor.x1, cursor.x2);
+        let i2 = Math.max(cursor.x1, cursor.x2);
+        i1 = Math.min(Math.max(i1, this.offset_i), this.offset_i + width);
+        i2 = Math.min(Math.max(i2, this.offset_i), this.offset_i + width);
+        const x1 = this.calc_x(i1 - this.offset_i);
+        const x2 = this.calc_x(i2 + 1 - this.offset_i);
+        const y1 = this.calc_y(0);
+        const y2 = this.calc_y(1);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x1, y2);
+        ctx.lineTo(x1, y1);
+        ctx.closePath();
+        ctx.strokeStyle = settings.darcula ? "#f99" : "#500";
+        ctx.lineWidth = 3.0;
+        ctx.stroke();
+    }
+
     drawGrid(ctx, settings) {
         const dx = this.dx || settings.dx;
         const dy = this.dy || settings.dy;
@@ -2212,17 +2247,21 @@ class ScrollbarHorz {
             this.calc_x(a / dx),
             0.5 + this.y + this.delta,
             this.calc_x(b / dx),
-            0.5 + this.y + this.height,
+            this.y + this.height - 0.5,
             1.0
         );
         ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
         ctx.lineWidth = 1;
+        // Far edges use -0.5 (instead of +0.5) so a 1px stroke whose
+        // bottom centre would otherwise sit at canvas.height stays
+        // fully inside the canvas. Without this, a perfectly-fitting
+        // layout (leftover = 0) clips the bottom line in half.
         strokeRect(
             ctx,
             this.calc_x(0),
             0.5 + this.y + this.delta,
             this.calc_x(this.width),
-            0.5 + this.y + this.height
+            this.y + this.height - 0.5
         );
    }
 }
@@ -2288,15 +2327,18 @@ class ScrollbarVert {
             ctx,
             0.5 + this.x + this.delta,
             this.calc_y(a / dy),
-            0.5 + this.x + this.width,
+            this.x + this.width - 0.5,
             this.calc_y(b / dy)
         );
         ctx.strokeSyle = settings.darcula ? "#aaa" : "#000";
+        // Far edge uses -0.5 (see ScrollbarHorz.draw above) so the
+        // right line stays fully inside the canvas when the layout
+        // happens to put the bar flush against canvas.width.
         strokeRect(
             ctx,
             0.5 + this.x + this.delta,
             this.calc_y(0),
-            0.5 + this.x + this.width,
+            this.x + this.width - 0.5,
             this.calc_y(this.height)
         );
     }
@@ -2352,7 +2394,13 @@ class PatternView {
                          + (hlBar ? base_dx : 0);
         const xAvailWarp = this.ctx.canvas.width - scroll - xUsedFixed
                          - xGaps * PANE_GAP;
-        const width1 = Math.max(0, Math.floor(xAvailWarp / warp_dx));
+        // Cap visible width at the actual pattern width: a small pattern
+        // shouldn't stretch the weave pane across the full canvas, which
+        // would push the side panes (treadling / tie-up) far to the right
+        // and leave dead space between them.
+        const dataWidth = (this.data.weave && this.data.weave.width) || 0;
+        let width1 = Math.max(0, Math.floor(xAvailWarp / warp_dx));
+        if (dataWidth > 0) width1 = Math.min(width1, dataWidth);
 
         const yVisibleBands = (hlBar ? 1 : 0)
             + (height4 > 0 ? 1 : 0)
@@ -2366,7 +2414,12 @@ class PatternView {
                          + height2 * base_dy;
         const yAvailWeft = this.ctx.canvas.height - scroll - yUsedFixed
                          - yGaps * PANE_GAP;
-        const height1 = Math.max(0, Math.floor(yAvailWeft / weft_dy));
+        // Same cap on the weft axis: don't stretch the weave pane below
+        // the actual pattern height — keeps the lower bands (e.g. weft
+        // colour bar) near the top.
+        const dataHeight = (this.data.weave && this.data.weave.height) || 0;
+        let height1 = Math.max(0, Math.floor(yAvailWeft / weft_dy));
+        if (dataHeight > 0) height1 = Math.min(height1, dataHeight);
 
         // Cell-coord bookkeeping kept for the bar definitions below.
         const dx = base_dx;
@@ -3363,11 +3416,59 @@ function _finishToolDrag() {
 }
 
 
+// Layout-resize drag state. Active while the user is dragging the
+// boundary line between einzug+blatteinzug ↔ gewebe (changes
+// visible_shafts) or trittfolge/aufknüpfung ↔ gewebe (changes
+// visible_treadles). The boundary lives in the inter-pane gap.
+let _layoutDrag = null;
+
+function _layoutDragHit(px, py) {
+    if (!view) return null;
+    const TOL = 5;
+    // Horizontal boundary: top edge of the weave pane (just below the
+    // einzug + blatteinzug stack). Drag up = fewer shafts; drag down =
+    // more shafts.
+    const w = view.weave;
+    if (w && w.width > 0 && w.height > 0 &&
+        view.entering && !(view.entering instanceof GridViewDummy)) {
+        if (py >= w.y - TOL && py <= w.y + 2 &&
+            px >= w.x && px <= w.x + w.width * w.dx) {
+            return { type: "shafts" };
+        }
+    }
+    // Vertical boundary: left edge of the side pane (trittfolge in
+    // normal mode, pegplan/aufknüpfung in pegplan mode). Drag right =
+    // fewer treadles; drag left = more.
+    const sp = settings.display_pegplan ? view.pegplan : view.treadling;
+    if (sp && sp.width > 0 && sp.height > 0 && !(sp instanceof GridViewDummy)) {
+        if (px >= sp.x - TOL && px <= sp.x + 2 &&
+            py >= sp.y && py <= sp.y + sp.height * sp.dy) {
+            return { type: "treadles" };
+        }
+    }
+    return null;
+}
+
 function mouseDown(event) {
     had_selection = cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2;
     mousedown = true;
     const x = event.offsetX;
     const y = event.offsetY;
+
+    // Layout-boundary drag — short-circuits everything else. The drag
+    // continues in mouseMove and ends in mouseUp.
+    if (!readonly) {
+        const lh = _layoutDragHit(x, y);
+        if (lh) {
+            _layoutDrag = {
+                type: lh.type,
+                startX: x, startY: y,
+                startShafts:   view.visible_shafts,
+                startTreadles: view.visible_treadles,
+            };
+            return;
+        }
+    }
 
     // Drawing tool drag — short-circuits the usual selection logic on
     // paintable 2D panes.
@@ -3416,13 +3517,59 @@ function mouseDown(event) {
     } else if ((hit = _paneHit(view.color_weft, x, y, settings))) {
         const jj = j_to_doc(hit.j, view.color_weft, false);
         select_part("color_weft", 0, jj, 0, jj);
+    } else if ((hit = _paneHit(view.reed, x, y, settings))) {
+        const ii = i_to_doc(hit.i, view.reed, settings.direction_righttoleft);
+        select_part("reed", ii, 0, ii, 0);
     }
 }
 
 function mouseMove(event) {
-    if (!mousedown) return;
     const x = event.offsetX;
     const y = event.offsetY;
+
+    // Layout-resize drag in progress.
+    if (_layoutDrag) {
+        const base = settings.dx;
+        if (_layoutDrag.type === "shafts") {
+            const dy = y - _layoutDrag.startY;
+            let v = _layoutDrag.startShafts + Math.round(dy / base);
+            const max = (pattern && pattern.entering) ? pattern.entering.height : v;
+            v = Math.max(1, Math.min(max, v));
+            if (v !== view.visible_shafts) {
+                view.visible_shafts = v;
+                if (data) data.visible_shafts = v;
+                view.layout();
+                view.draw();
+            }
+        } else if (_layoutDrag.type === "treadles") {
+            const dx = x - _layoutDrag.startX;
+            let v = _layoutDrag.startTreadles - Math.round(dx / base);
+            const sp = settings.display_pegplan ? pattern.pegplan : pattern.treadling;
+            const max = sp ? sp.width : v;
+            v = Math.max(1, Math.min(max, v));
+            if (v !== view.visible_treadles) {
+                view.visible_treadles = v;
+                if (data) data.visible_treadles = v;
+                view.layout();
+                view.draw();
+            }
+        }
+        return;
+    }
+
+    // Cursor hint when hovering over a draggable boundary (no drag in
+    // progress, no button held).
+    if (!mousedown) {
+        const canvas = document.getElementById("canvas");
+        if (canvas) {
+            const lh = !readonly ? _layoutDragHit(x, y) : null;
+            const want = lh
+                ? (lh.type === "shafts" ? "ns-resize" : "ew-resize")
+                : "";
+            if (canvas.style.cursor !== want) canvas.style.cursor = want;
+        }
+        return;
+    }
 
     // Update tool drag preview.
     if (toolDrag && toolDrag.active) {
@@ -3483,6 +3630,39 @@ function mouseUp(event) {
     const x = event.offsetX;
     const y = event.offsetY;
 
+    // End of layout-boundary drag. Push one undoable command capturing
+    // the before/after viewport sizes — both axes, so a single command
+    // covers the rare combined drag too.
+    if (_layoutDrag) {
+        const ld = _layoutDrag;
+        _layoutDrag = null;
+        const canvas = document.getElementById("canvas");
+        if (canvas) canvas.style.cursor = "";
+        const endShafts   = view.visible_shafts;
+        const endTreadles = view.visible_treadles;
+        const changed = (endShafts !== ld.startShafts) ||
+                        (endTreadles !== ld.startTreadles);
+        if (changed) {
+            const setBoth = (s, t) => {
+                view.visible_shafts = s;
+                view.visible_treadles = t;
+                if (data) {
+                    data.visible_shafts = s;
+                    data.visible_treadles = t;
+                }
+                view.layout(); view.draw();
+            };
+            const cmd = {
+                label: "resize panes",
+                apply()  { setBoth(endShafts,   endTreadles);   setModified(); },
+                revert() { setBoth(ld.startShafts, ld.startTreadles); setModified(); },
+            };
+            if (commandBus) commandBus.execute(cmd);
+            else setModified();
+        }
+        return;
+    }
+
     // Hilfslinien bar click → toggle a guide line.
     if (!readonly && settings.display_hlines) {
         const bhit = _hlineHitPx(x, y);
@@ -3490,6 +3670,17 @@ function mouseUp(event) {
             _hlineToggle(bhit.typ, bhit.feld, bhit.pos);
             return;
         }
+    }
+
+    // Ctrl+click: just move the cursor — no toggle, no colour sniff,
+    // no treadle change. mouseDown has already called select_part with
+    // the clicked cell, so the cursor is in place; we just need to
+    // redraw and skip the edit dispatch below. Shift+click on the
+    // colour bars remains the colour sniffer.
+    if (event.ctrlKey) {
+        updateSelectionIcons();
+        view.draw();
+        return;
     }
 
     // Finish tool drag: commit shape as one undoable command.
@@ -3536,7 +3727,7 @@ function mouseUp(event) {
         cursor.y2 = jj;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
         if (no_selection && !had_selection) {
-            if (settings.single_treadling && !event.ctrlKey) {
+            if (settings.single_treadling) {
                 _applyTreadlingSingle(ii, jj);
             } else {
                 _applyGridToggle(pattern.treadling, ii, jj, 1, "weave_recalc");
@@ -3573,10 +3764,11 @@ function mouseUp(event) {
         cursor.x2 = ii;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
         if (no_selection && !had_selection) {
-            // Ctrl- or Shift-click on a color bar acts as a sniffer:
-            // pick the clicked cell's color into settings.current_color
-            // instead of overwriting it with the current paint color.
-            if (event.ctrlKey || event.shiftKey) {
+            // Shift-click on a color bar acts as a sniffer: pick the
+            // clicked cell's color into settings.current_color instead
+            // of overwriting it with the current paint color. (Ctrl+
+            // click is reserved for cursor-only positioning.)
+            if (event.shiftKey) {
                 settings.current_color = pattern.color_warp.get(ii, 0);
                 update_color_selector(settings);
             } else {
@@ -3590,7 +3782,7 @@ function mouseUp(event) {
         cursor.y2 = jj;
         const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
         if (no_selection && !had_selection) {
-            if (event.ctrlKey || event.shiftKey) {
+            if (event.shiftKey) {
                 settings.current_color = pattern.color_weft.get(0, jj);
                 update_color_selector(settings);
             } else {
@@ -3601,7 +3793,13 @@ function mouseUp(event) {
         view.draw();
     } else if ((hit = _paneHit(view.reed, x, y, settings))) {
         const ii = i_to_doc(hit.i, view.reed, settings.direction_righttoleft);
-        _applyGridToggle(pattern.reed, ii, 0, 1, null);
+        cursor.x2 = ii;
+        cursor.y2 = 0;
+        const no_selection = cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
+        if (no_selection && !had_selection) {
+            _applyGridToggle(pattern.reed, ii, 0, 1, null);
+        }
+        updateSelectionIcons();
         view.draw();
     } else {
         if (view.scroll_1_hor.contains(x, y)) {
@@ -3664,6 +3862,16 @@ function init() {
     if (palettePanel) {
         palettePanel.classList.toggle("hidden", !settings.display_palette);
     }
+    const toolsPanel = document.getElementById("tools-panel");
+    if (toolsPanel) {
+        toolsPanel.classList.toggle("hidden", !settings.display_tools_panel);
+        if (settings.display_tools_panel) _toolsToolboxRefresh();
+    }
+    const rangesPanel = document.getElementById("ranges-panel");
+    if (rangesPanel) {
+        rangesPanel.classList.toggle("hidden", !settings.display_ranges_panel);
+        if (settings.display_ranges_panel) _rangesToolboxRefresh();
+    }
     // Force a synchronous layout pass so canvas.clientWidth reflects
     // the post-toggle flex distribution.
     void container.offsetWidth;
@@ -3694,6 +3902,21 @@ function init() {
     update_range_selector(settings);
     if (settings.display_palette) _paletteToolboxRefresh();
     view.draw();
+    // Defensive second pass: after the browser has settled the initial
+    // flex distribution (toolbox panels are now in their final widths),
+    // re-sync canvas.width with canvas.clientWidth and re-layout. This
+    // matches what _sidePanelApply does and prevents click hit-testing
+    // from drifting on a fresh page-load with toolboxes visible.
+    requestAnimationFrame(() => {
+        const c = document.getElementById("canvas");
+        if (!c || !view) return;
+        if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
+            c.width = c.clientWidth;
+            c.height = c.clientHeight;
+            view.layout();
+            view.draw();
+        }
+    });
 
     document.getElementById("icon-selection-mirrorv").addEventListener("click", selectionMirrorV);
     document.getElementById("icon-selection-mirrorh").addEventListener("click", selectionMirrorH);
@@ -4361,6 +4584,8 @@ async function _revertChanges() {
     update_view_options(settings);
     update_range_selector(settings);
     _paletteToolboxApply();
+    _toolsToolboxApply();
+    _rangesToolboxApply();
     clearModified();
     ActionRegistry.notify();
 }
@@ -4454,6 +4679,16 @@ function initSettings(data, settings) {
     settings.highlight = false;
     settings.threading_arrangement = val(data, "threading_arrangement", "minimal-z");
     settings.treadling_arrangement = val(data, "treadling_arrangement", "minimal-z");
+    // Cursor behaviour (Extras ▸ Cursor): lock to rapport, and the
+    // direction(s) the cursor auto-advances after a Space toggle. The
+    // direction is a CD_* bitmask: 1=UP, 2=LEFT, 4=DOWN, 8=RIGHT
+    // (matches the desktop CURSORDIRECTION enum). Default is CD_UP.
+    settings.cursor_locked = val(data, "cursor_locked", false);
+    settings.cursor_dir    = val(data, "cursor_dir", 1);
+    // Side toolboxes (Werkzeuge / Bereiche) — visibility persisted per
+    // pattern, like display_palette.
+    settings.display_tools_panel  = val(data, "display_tools_panel",  false);
+    settings.display_ranges_panel = val(data, "display_ranges_panel", false);
 }
 
 
@@ -4553,6 +4788,10 @@ function saveSettings(data, settings) {
     data["threading_arrangement"] = settings.threading_arrangement;
     data["treadling_arrangement"] = settings.treadling_arrangement;
     data["color_effect_with_grid"] = settings.color_effect_with_grid;
+    data["cursor_locked"] = settings.cursor_locked;
+    data["cursor_dir"]    = settings.cursor_dir;
+    data["display_tools_panel"]  = settings.display_tools_panel;
+    data["display_ranges_panel"] = settings.display_ranges_panel;
     // Cursor position persists across reloads so the user can pick up where
     // they left off. We only store a single cell, not the whole selection.
     if (typeof cursor !== "undefined" && cursor !== null) {
@@ -4670,6 +4909,18 @@ function initPatternData(data, pattern) {
         }
     }
 
+    // Restore persisted rapport bounds (auto-detected on save). Older
+    // patterns lack these keys — leave Pattern's default "no rapport"
+    // (rapport_*_b < rapport_*_a) in place and let the user re-detect.
+    if (Number.isInteger(data.rapport_k_a) && Number.isInteger(data.rapport_k_b)) {
+        pattern.rapport_k_a = data.rapport_k_a;
+        pattern.rapport_k_b = data.rapport_k_b;
+    }
+    if (Number.isInteger(data.rapport_s_a) && Number.isInteger(data.rapport_s_b)) {
+        pattern.rapport_s_a = data.rapport_s_a;
+        pattern.rapport_s_b = data.rapport_s_b;
+    }
+
     pattern.recalc_weave();
 }
 
@@ -4686,6 +4937,13 @@ function _loadMusterArray(arr, target) {
 
 
 function savePatternData(data, pattern) {
+    // Persist the drag-resizable viewport sizes (einzug height,
+    // trittfolge width). They live on the runtime view; mirror back
+    // into data so a reload picks them up.
+    if (typeof view !== "undefined" && view) {
+        data.visible_shafts   = view.visible_shafts;
+        data.visible_treadles = view.visible_treadles;
+    }
     for (let i = 0; i < data.width; i++) {
         data.data_reed[i] = pattern.reed.get(i, 0);
         data.colors_warp[i] = pattern.color_warp.get(i, 0);
@@ -4733,6 +4991,14 @@ function savePatternData(data, pattern) {
     data.hlines = (pattern.hlines || []).map(h => ({
         typ: h.typ, feld: h.feld | 0, pos: h.pos | 0,
     }));
+
+    // Persist auto-detected rapport bounds so the server can index
+    // pattern_width/height + rapport_width/height for list views, and
+    // so reloading restores the same bounds without re-detection.
+    data.rapport_k_a = pattern.rapport_k_a | 0;
+    data.rapport_k_b = pattern.rapport_k_b | 0;
+    data.rapport_s_a = pattern.rapport_s_a | 0;
+    data.rapport_s_b = pattern.rapport_s_b | 0;
 
     // Palette — write back as [r,g,b,0] triples to match the storage
     // format (the 4th slot mirrors the legacy alpha/marker channel).
@@ -4785,11 +5051,6 @@ function keyDown(e) {
         view.layout();
         view.draw();
         e.preventDefault();
-    } else if (e.key === "e") { // TODO use better key shortcut
-        settings.entering_at_bottom = !settings.entering_at_bottom;
-        view.layout();
-        view.draw();
-        e.preventDefault();
     } else if ((e.key == " " || e.key === "Enter") && e.shiftKey
                && (cursor.selected_part === "color_warp"
                 || cursor.selected_part === "color_weft")) {
@@ -4836,8 +5097,7 @@ function keyDown(e) {
             } else if (part === "reed") {
                 _applyGridToggle(grid, i, 0, 1, null);
             }
-            cursor.y1 += 1; // TODO handle configurable cursor movement
-            cursor.y2 = cursor.y1;
+            _advanceCursorAfterToggle();
             view.draw();
         }
     } else if (e.key == "Enter" || e.key == "Tab") {
@@ -4886,6 +5146,67 @@ function keyDown(e) {
     // through Shortcuts + ActionRegistry (see setupEditorActions).
 }
 
+// Cursor-direction bitmask values (CD_*) — match the desktop
+// CURSORDIRECTION enum so saved patterns round-trip 1:1.
+const CD_UP = 1, CD_LEFT = 2, CD_DOWN = 4, CD_RIGHT = 8;
+
+// Snap the cursor into the active rapport when "in rapport" mode is on.
+// Mirrors CrCursorHandlerImpl::CheckLocked: warp axis (k) clamps for
+// entering / weave; weft axis (s) clamps for weave / treadling /
+// pegplan. Wraps modulo the rapport length so arrow keys cycle inside
+// the repeat. No-op unless a rapport has been detected.
+function _applyCursorLock() {
+    if (!settings.cursor_locked) return;
+    const part = cursor.selected_part;
+    const wrap = (v, a, b) => {
+        const len = b - a + 1;
+        if (len <= 0) return v;
+        return a + ((v - a) % len + len) % len;
+    };
+    if (part === "weave" || part === "entering") {
+        const x = wrap(cursor.x2, pattern.rapport_k_a, pattern.rapport_k_b);
+        cursor.x2 = x; cursor.x1 = x;
+    }
+    if (part === "weave" || part === "treadling" || part === "pegplan") {
+        const y = wrap(cursor.y2, pattern.rapport_s_a, pattern.rapport_s_b);
+        cursor.y2 = y; cursor.y1 = y;
+    }
+}
+
+// Auto-advance the cursor after a Space toggle, in the direction(s)
+// configured by Extras ▸ Cursor ▸ Movement. Multiple bits OR'd together
+// produce diagonal moves. Uses the existing cursorUp/Down/Left/Right
+// handlers so screen-axis flipping (toptobottom / righttoleft) stays
+// consistent with arrow-key behaviour.
+function _advanceCursorAfterToggle() {
+    const dir = settings.cursor_dir | 0;
+    const ev = { shiftKey: false, ctrlKey: false };
+    const ttb = !!(cursor.selected_view && cursor.selected_view.toptobottom);
+    const rtl = !!(cursor.selected_view && cursor.selected_view.righttoleft);
+    // Single-row bars (color_warp, reed) must only advance horizontally;
+    // single-column bars (color_weft) only vertically. Strip the
+    // perpendicular bits, and if the user's cursor_dir has no bit on
+    // the bar's long axis fall back to a sensible default so Space
+    // still advances at all.
+    const pat = cursor.selected_pattern;
+    const isHorzBar = pat && pat.height === 1 && pat.width > 1;
+    const isVertBar = pat && pat.width === 1 && pat.height > 1;
+    let h = dir & (CD_LEFT | CD_RIGHT);
+    let v = dir & (CD_UP | CD_DOWN);
+    if (isHorzBar) {
+        v = 0;
+        if (!h) h = CD_RIGHT;
+    } else if (isVertBar) {
+        h = 0;
+        if (!v) v = CD_UP;
+    }
+    if (!h && !v) return;
+    if (v & CD_UP)    (ttb ? cursorDown : cursorUp)(ev);
+    if (v & CD_DOWN)  (ttb ? cursorUp   : cursorDown)(ev);
+    if (h & CD_LEFT)  (rtl ? cursorRight: cursorLeft)(ev);
+    if (h & CD_RIGHT) (rtl ? cursorLeft : cursorRight)(ev);
+}
+
 function cursorUp(e) {
     if (e.shiftKey) {
         if (e.ctrlKey) {
@@ -4900,7 +5221,7 @@ function cursorUp(e) {
             cursor.y2++;
         }
         if (cursor.y2 >= cursor.selected_pattern.height) {
-            cursor.y2 = cursor.selected_pattern.height;
+            cursor.y2 = cursor.selected_pattern.height - 1;
         }
     } else {
         cursor.x1 = cursor.x2;
@@ -4910,7 +5231,7 @@ function cursorUp(e) {
             cursor.y2++;
         }
         if (cursor.y2 >= cursor.selected_pattern.height) {
-            cursor.y2 = cursor.selected_pattern.height;
+            cursor.y2 = cursor.selected_pattern.height - 1;
         }
         cursor.y1 = cursor.y2;
     }
@@ -4919,6 +5240,7 @@ function cursorUp(e) {
         const scroll_delta = cursor.y2 - max_y + 1;
         cursor.selected_view.scroll("v", scroll_delta);
     }
+    _applyCursorLock();
     updateSelectionIcons();
     save_part_position();
     view.draw();
@@ -4957,6 +5279,7 @@ function cursorDown(e) {
         const scroll_delta = cursor.y2 - min_y;
         cursor.selected_view.scroll("v", scroll_delta);
     }
+    _applyCursorLock();
     updateSelectionIcons();
     save_part_position();
     view.draw();
@@ -4995,6 +5318,7 @@ function cursorRight(e) {
         const scroll_delta = cursor.x2 - max_x + 1;
         cursor.selected_view.scroll("h", scroll_delta);
     }
+    _applyCursorLock();
     updateSelectionIcons();
     save_part_position();
     view.draw();
@@ -5033,6 +5357,7 @@ function cursorLeft(e) {
         const scroll_delta = cursor.x2 - min_x;
         cursor.selected_view.scroll("h", scroll_delta);
     }
+    _applyCursorLock();
     updateSelectionIcons();
     save_part_position();
     view.draw();
@@ -9514,6 +9839,200 @@ function _paletteToolboxApply() {
     }
 }
 
+// ---- Tools side panel (Werkzeuge) -----------------------------------
+// Mirrors the desktop "Tools" dock: a vertical column of icon buttons,
+// one per drawing tool, with the active tool highlighted. Visibility is
+// persisted in settings.display_tools_panel.
+const _TOOLS_LIST = [
+    { id: "point",       icon: "tool_cursor.png" },
+    { id: "line",        icon: "tool_line.png" },
+    { id: "rect",        icon: "tool_rectangle.png" },
+    { id: "fillrect",    icon: "tool_filledrectangle.png" },
+    { id: "ellipse",     icon: "tool_ellipse.png" },
+    { id: "fillellipse", icon: "tool_filledellipse.png" },
+];
+function _toolsToolboxIconBase() {
+    // Same path used by the top toolbar. Snag it off any existing
+    // button so we don't have to thread Flask url_for into the JS.
+    const ref = document.querySelector('#tx-toolbar img');
+    if (ref && ref.src) return ref.src.replace(/[^/]+$/, "");
+    return "/static/img/icons16/";
+}
+function _toolsToolboxRefresh() {
+    const list = document.getElementById("tools-panel-list");
+    if (!list) return;
+    if (list.childElementCount !== _TOOLS_LIST.length) {
+        list.innerHTML = "";
+        const base = _toolsToolboxIconBase();
+        const i18n = _getI18n();
+        const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+        for (const t of _TOOLS_LIST) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "tx-tool-btn";
+            btn.dataset.tool = t.id;
+            btn.title = L("tool." + t.id, t.id);
+            const img = document.createElement("img");
+            img.src = base + t.icon;
+            btn.appendChild(img);
+            btn.addEventListener("click", () => {
+                settings.tool = t.id;
+                toolDrag = null;
+                _toolsToolboxRefresh();
+                ActionRegistry.notify();
+            });
+            list.appendChild(btn);
+        }
+    }
+    const active = settings.tool || "point";
+    for (const btn of list.children) {
+        btn.classList.toggle("active", btn.dataset.tool === active);
+    }
+}
+function _toolsToolboxToggle() {
+    settings.display_tools_panel = !settings.display_tools_panel;
+    _toolsToolboxApply();
+    ActionRegistry.notify();
+}
+function _toolsToolboxApply() {
+    _sidePanelApply("tools-panel", settings.display_tools_panel,
+                    _toolsToolboxRefresh);
+}
+
+// ---- Ranges side panel (Bereiche) -----------------------------------
+// 9 colour-swatch buttons + separator + 3 special buttons (Aushebung /
+// Anbindung / Abbindung). Direct port of the desktop range dock.
+// Render the special-range glyph (Aushebung/Anbindung/Abbindung) onto
+// a 14×14 button canvas using the same painters the cells use, so the
+// toolbox icons match what's drawn in the pattern.
+function _rangesToolboxPaintSpecial(canvas, r) {
+    const px = canvas.width;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, px, px);
+    const fakeView = {
+        calc_x: (x) => x * px,
+        calc_y: (y) => y * px,
+        dx: px, dy: px,
+        bx: px * settings.bxf, by: px * settings.byf,
+    };
+    if (r === 10)      aushebungPainter(ctx, settings, fakeView, 0, 0);
+    else if (r === 11) anbindungPainter(ctx, settings, fakeView, 0, 0, true);
+    else if (r === 12) abbindungPainter(ctx, settings, fakeView, 0, 0, true);
+}
+function _rangesToolboxRefresh() {
+    const list = document.getElementById("ranges-panel-list");
+    if (!list) return;
+    if (list.childElementCount === 0) {
+        const i18n = _getI18n();
+        const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+        const make = (r, title) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "tx-range-btn";
+            btn.dataset.range = String(r);
+            btn.title = title;
+            if (r >= 1 && r <= 9) {
+                btn.style.background = getRangeColor(settings, r);
+            } else {
+                const c = document.createElement("canvas");
+                c.width = 14; c.height = 14;
+                btn.appendChild(c);
+            }
+            btn.addEventListener("click", () => _rangesToolboxPick(r));
+            return btn;
+        };
+        for (let r = 1; r <= 9; r++) {
+            list.appendChild(make(r, L("statusbar.range", "Range") + " " + r));
+        }
+        const sep = document.createElement("div");
+        sep.className = "tx-range-sep";
+        list.appendChild(sep);
+        list.appendChild(make(10, L("statusbar.aushebung", "Lift out")));
+        list.appendChild(make(11, L("statusbar.anbindung", "Binding")));
+        list.appendChild(make(12, L("statusbar.abbindung", "Unbinding")));
+    }
+    const cur = settings.current_range | 0;
+    for (const child of list.children) {
+        if (!child.dataset || !child.dataset.range) continue;
+        const r = +child.dataset.range;
+        child.classList.toggle("active", r === cur);
+        // Refresh dark-mode swatches every time, since darcula may flip.
+        if (r >= 1 && r <= 9) {
+            child.style.background = getRangeColor(settings, r);
+        } else {
+            const c = child.querySelector("canvas");
+            if (c) {
+                child.style.background = settings.darcula ? "#222" : "#fff";
+                _rangesToolboxPaintSpecial(c, r);
+            }
+        }
+    }
+}
+function _rangesToolboxPick(r) {
+    settings.current_range = r;
+    update_range_selector(settings);
+    const hadSel = (cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2);
+    if (hadSel && cursor.selected_pattern && r >= 1 && r <= 9) {
+        // Mirror the Shift+1..9 keyboard handler: stamp the selection.
+        const grid = cursor.selected_pattern;
+        const i1 = Math.min(cursor.x1, cursor.x2);
+        const i2 = Math.max(cursor.x1, cursor.x2);
+        const j1 = Math.min(cursor.y1, cursor.y2);
+        const j2 = Math.max(cursor.y1, cursor.y2);
+        _runSelectionCommand("apply range " + r, grid, () => {
+            for (let i = i1; i <= i2; i++) {
+                for (let j = j1; j <= j2; j++) {
+                    if (grid.get(i, j) !== 0) grid.set(i, j, r);
+                }
+            }
+        });
+    }
+    _rangesToolboxRefresh();
+    ActionRegistry.notify();
+    if (view) view.draw();
+}
+function _rangesToolboxToggle() {
+    settings.display_ranges_panel = !settings.display_ranges_panel;
+    _rangesToolboxApply();
+    ActionRegistry.notify();
+}
+function _rangesToolboxApply() {
+    _sidePanelApply("ranges-panel", settings.display_ranges_panel,
+                    _rangesToolboxRefresh);
+}
+
+// Shared show/hide + canvas reflow for the side panels (palette uses
+// its own copy because it has more bespoke layout logic).
+function _sidePanelApply(panelId, show, populate) {
+    const panel = document.getElementById(panelId);
+    const container = document.getElementById("container");
+    if (!panel || !container) return;
+    if (show) {
+        panel.classList.remove("hidden");
+        if (populate) populate();
+    } else {
+        panel.classList.add("hidden");
+    }
+    const reflow = () => {
+        void container.offsetWidth;
+        const canvas = document.getElementById("canvas");
+        if (canvas) {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        if (view) {
+            view.layout();
+            view.draw();
+        }
+    };
+    reflow();
+    // A second pass after the browser has settled all pending layouts
+    // (e.g. after toolbox icon images load, or after the new flex slot
+    // has fully propagated). Without this, the bitmap can stay sized
+    // for the pre-toggle width and mouse-click hit-testing drifts.
+    requestAnimationFrame(reflow);
+}
+
 // Fill all warp cells with the picked palette index. Port of
 // SetKettfarbeClick.
 function _colorsSetWarp() {
@@ -10086,6 +10605,86 @@ function showWarpWeftRatioDialog() {
     };
     modal = Modal.open({
         title: L("ratio.title", "Weft/warp ratio"),
+        body,
+        buttons: [
+            { label: L("btn.cancel", "Cancel"), role: "cancel" },
+            { label: L("btn.ok",     "OK"),     role: "primary", onClick: accept },
+        ],
+    });
+}
+
+// Cursor movement dialog — port of CursorDirDialog. Four toggle buttons
+// arranged in a cross; OR'd into the CD_* bitmask. Supports diagonals
+// by checking multiple bits at once.
+function showCursorMovementDialog() {
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    const body = document.createElement("div");
+    body.style.minWidth = "240px";
+    const ARR = (s) => `<span style="font-size:1.4rem;line-height:1">${s}</span>`;
+    body.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(3,3rem);
+                    grid-template-rows:repeat(3,3rem);gap:0.3rem;
+                    justify-content:center">
+            <div></div>
+            <button type="button" id="tx-cd-up"    class="tx-cd-btn">${ARR("&#8593;")}</button>
+            <div></div>
+            <button type="button" id="tx-cd-left"  class="tx-cd-btn">${ARR("&#8592;")}</button>
+            <div></div>
+            <button type="button" id="tx-cd-right" class="tx-cd-btn">${ARR("&#8594;")}</button>
+            <div></div>
+            <button type="button" id="tx-cd-down"  class="tx-cd-btn">${ARR("&#8595;")}</button>
+            <div></div>
+        </div>`;
+    const $ = (sel) => body.querySelector(sel);
+    const btns = {
+        [CD_UP]:    $("#tx-cd-up"),
+        [CD_DOWN]:  $("#tx-cd-down"),
+        [CD_LEFT]:  $("#tx-cd-left"),
+        [CD_RIGHT]: $("#tx-cd-right"),
+    };
+    let dir = settings.cursor_dir | 0;
+    const refresh = () => {
+        for (const [bit, b] of Object.entries(btns)) {
+            const on = (dir & (+bit)) !== 0;
+            b.style.background = on ? "#c4d4ec" : "";
+            b.style.borderColor = on ? "#6b8db8" : "";
+        }
+    };
+    for (const [bit, b] of Object.entries(btns)) {
+        b.style.cursor = "pointer";
+        b.style.border = "1px solid #888";
+        b.style.borderRadius = "3px";
+        b.style.background = "#f4f4f4";
+        b.addEventListener("click", (e) => {
+            const mask = +bit;
+            // Alt-click clears the opposite axis bit, matching desktop.
+            if (e.altKey) {
+                const opp = (mask === CD_UP)   ? CD_DOWN
+                          : (mask === CD_DOWN) ? CD_UP
+                          : (mask === CD_LEFT) ? CD_RIGHT
+                          :                      CD_LEFT;
+                dir &= ~opp;
+            }
+            dir ^= mask;
+            refresh();
+        });
+    }
+    refresh();
+
+    let modal;
+    const accept = () => {
+        if (dir !== (settings.cursor_dir | 0)) {
+            _snapshotCommand("change cursor movement",
+                () => ({ d: settings.cursor_dir | 0 }),
+                (s) => { settings.cursor_dir = s.d; },
+                () => { settings.cursor_dir = dir; },
+            );
+        }
+        modal.close();
+    };
+    modal = Modal.open({
+        title: L("cursor.movement-title", "Cursor movement"),
         body,
         buttons: [
             { label: L("btn.cancel", "Cancel"), role: "cancel" },
@@ -10684,9 +11283,6 @@ function setupEditorActions() {
     }, { checkedWhen: () => settings && settings.display_colors_warp && settings.display_colors_weft });
     R("view.show-hlines", null, toggleFlag("display_hlines", true),
         { checkedWhen: () => settings && settings.display_hlines });
-    R("view.toggle-entering-bottom", null, toggleFlag("entering_at_bottom", true),
-        { checkedWhen: () => settings && settings.entering_at_bottom });
-
     // Pattern-Only: peripheral panes keep their layout and gridlines but
     // their data contents are hidden. Matches the desktop DB-WEAVE behaviour.
     R("view.pattern-only", "Ctrl+/", () => {
@@ -10748,6 +11344,7 @@ function setupEditorActions() {
     const setRange = (r) => () => {
         settings.current_range = r;
         update_range_selector(settings);
+        if (settings.display_ranges_panel) _rangesToolboxRefresh();
         const hadSel = (cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2);
         if (hadSel && cursor.selected_pattern) {
             const grid = cursor.selected_pattern;
@@ -10838,11 +11435,34 @@ function setupEditorActions() {
     R("opt.pattern", null, () => showOptionsDialog(false), {});
     R("opt.global",  null, () => showOptionsDialog(true),  {});
     R("extras.ratio", null, () => showWarpWeftRatioDialog(), {});
+    R("extras.weave-locked", null, () => {
+        settings.weave_locked = !settings.weave_locked;
+        // When the lock turns on while the cursor sits on the weave
+        // pane, hop to the next traversable field — matches desktop
+        // OptionsLockGewebe behaviour. The Tab cycle skips weave too
+        // (see goto_next_part / goto_prev_part).
+        if (settings.weave_locked && cursor.selected_part === "weave") {
+            goto_next_part();
+        }
+        if (view) view.draw();
+        ActionRegistry.notify();
+    }, { checkedWhen: () => !!(settings && settings.weave_locked) });
+    R("cursor.locked", "Ctrl+Q", () => {
+        settings.cursor_locked = !settings.cursor_locked;
+        if (settings.cursor_locked) _applyCursorLock();
+        if (view) view.draw();
+        ActionRegistry.notify();
+    }, { checkedWhen: () => !!(settings && settings.cursor_locked) });
+    R("cursor.movement", null, () => showCursorMovementDialog(), {});
     R("base.american",     null, () => _applyBaseStyle("american"),     {});
     R("base.scandinavian", null, () => _applyBaseStyle("scandinavian"), {});
     R("base.swiss",        null, () => _applyBaseStyle("swiss"),        {});
     R("colors.toolbox", "Ctrl+F", _paletteToolboxToggle,
         { checkedWhen: () => !!(settings && settings.display_palette) });
+    R("tools.toolbox", null, _toolsToolboxToggle,
+        { checkedWhen: () => !!(settings && settings.display_tools_panel) });
+    R("ranges.toolbox", null, _rangesToolboxToggle,
+        { checkedWhen: () => !!(settings && settings.display_ranges_panel) });
     R("colors.set-warp", null, _colorsSetWarp,
         { enabledWhen: () => !readonly });
     R("colors.set-weft", null, _colorsSetWeft,
@@ -10898,6 +11518,7 @@ function setupEditorActions() {
         settings.tool = t;
         // Drop any in-flight drag when switching tools mid-gesture.
         toolDrag = null;
+        if (settings.display_tools_panel) _toolsToolboxRefresh();
         ActionRegistry.notify();
     };
     R("tool.point",       null, selectTool("point"),
@@ -11056,8 +11677,6 @@ function setupEditorActions() {
                 { action: "view.show-reed" },
                 { action: "view.show-colors" },
                 { action: "view.show-hlines" },
-                { action: "colors.toolbox" },
-                { action: "view.toggle-entering-bottom" },
                 { action: "view.pattern-only" },
                 { separator: true },
                 { label: i18n.menus.viewStyle || "Style", items: [
@@ -11074,6 +11693,10 @@ function setupEditorActions() {
                 { action: "view.zoom-out" },
                 { separator: true },
                 { action: "view.overview" },
+                { separator: true },
+                { action: "colors.toolbox" },
+                { action: "tools.toolbox" },
+                { action: "ranges.toolbox" },
             ]},
             { label: i18n.menus.threading || "Threading", items: [
                 { action: "ez.assistent" },
@@ -11199,7 +11822,13 @@ function setupEditorActions() {
             { label: i18n.menus.extras || "Extras", items: [
                 { action: "pegplan.toggle" },
                 { separator: true },
+                { action: "extras.weave-locked" },
                 { action: "extras.ratio" },
+                { separator: true },
+                { label: i18n.menus.cursor || "Cursor", items: [
+                    { action: "cursor.locked" },
+                    { action: "cursor.movement" },
+                ]},
                 { separator: true },
                 { label: i18n.menus.baseSettings || "Base settings", items: [
                     { action: "base.american" },
@@ -11227,7 +11856,24 @@ function setupEditorActions() {
 
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    getPattern().then(init).then(setupEditorActions).then(setupToolbarAndStatusbar);
+    getPattern().then(init).then(setupEditorActions).then(setupToolbarAndStatusbar).then(() => {
+        // Auto-save once after load (used by the upload flow to capture
+        // a thumbnail and persist auto-detected rapport bounds without
+        // requiring the user to click Save themselves).
+        const params = new URLSearchParams(window.location.search);
+        if (!readonly && params.get("autosave") === "1") {
+            // Defer one tick so layout/draw have settled.
+            setTimeout(() => {
+                try { savePattern(); } catch (e) { console.error(e); }
+                // Strip the flag from the URL so a manual reload
+                // doesn't keep re-saving.
+                params.delete("autosave");
+                const url = window.location.pathname
+                    + (params.toString() ? "?" + params : "");
+                history.replaceState(null, "", url);
+            }, 100);
+        }
+    });
     if (!readonly) {
         installBeforeUnloadGuard(() => {
             saveSettings(data, settings);
@@ -11341,6 +11987,11 @@ function updateStatusBar() {
         }
     }
     _setText("sb-rapport", rap);
+
+    // Pattern-locked indicator (port of statusbar.cpp:158). Empty when
+    // unlocked so the slot only shows up when relevant.
+    _setText("sb-lock", settings.weave_locked
+        ? L("extras.weave-locked", "Pattern locked") : "");
 }
 
 function _setText(id, text) {
@@ -11349,3 +12000,249 @@ function _setText(id, text) {
 }
 
 window.addEventListener("resize", resizeWindow);
+
+
+// --- Thumbnail / preview capture ---------------------------------------
+//
+// Renders the current weave pattern to a small offscreen canvas with two
+// halves: the left half is the patrone (draft) view, the right half is
+// the simulation view (warp/weft yarn colours). Two sizes are produced
+// — a small thumbnail and a larger preview — both as PNG data URLs.
+//
+// Edge cases:
+//   * Patterns much wider than tall (or vice versa) are letterboxed in
+//     each half, preserving aspect ratio.
+//   * Very small patterns get chunky cells; very large patterns get
+//     sub-pixel cells (rendered with overlapping fillRect — visually OK
+//     for a thumbnail).
+//   * Robust against missing palette / colour arrays — falls back to
+//     #888 for an unresolvable colour.
+
+function _paletteRgb(data, idx) {
+    const pal = data && data.palette;
+    if (Array.isArray(pal) && idx >= 0 && idx < pal.length) {
+        const c = pal[idx];
+        if (Array.isArray(c) && c.length >= 3) {
+            return `rgb(${c[0]|0}, ${c[1]|0}, ${c[2]|0})`;
+        }
+    }
+    return "#888";
+}
+
+// Minimum thumbnail cell size in pixels. Must be odd (so symbol
+// painters render symmetrically). When the pattern is too large to fit
+// at this size, the renderer crops a leading slice rather than
+// shrinking cells further.
+const _THUMB_MIN_CELL_PX = 5;
+
+function _renderTwoPaneToCanvas(data, pat, w, h) {
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+
+    const dataW = (data && data.width)  | 0;
+    const dataH = (data && data.height) | 0;
+    if (dataW <= 0 || dataH <= 0 || !pat || !pat.weave) {
+        ctx.fillStyle = "#bbb";
+        ctx.fillRect((w >> 1) - 1, 0, 1, h);
+        return canvas;
+    }
+
+    // Crop to actual content extent so empty padding doesn't waste
+    // thumbnail space. Fall back to full dimensions if the extent is
+    // missing or degenerate.
+    let i0 = 0, j0 = 0, pw = dataW, ph = dataH;
+    if (Number.isInteger(pat.min_x) && Number.isInteger(pat.max_x)
+        && pat.max_x >= pat.min_x) {
+        i0 = Math.max(0, pat.min_x);
+        pw = Math.min(dataW, pat.max_x - pat.min_x + 1);
+    }
+    if (Number.isInteger(pat.min_y) && Number.isInteger(pat.max_y)
+        && pat.max_y >= pat.min_y) {
+        j0 = Math.max(0, pat.min_y);
+        ph = Math.min(dataH, pat.max_y - pat.min_y + 1);
+    }
+
+    const halfW = Math.floor(w / 2);
+    const halfH = h;
+    const minCell = _THUMB_MIN_CELL_PX;
+
+    // Cell aspect ratio honours warp_factor / weft_factor (the editor's
+    // configurable cell aspect): cellW : cellH = wf : sf. Defaults to
+    // square cells when the factors aren't set or are equal.
+    const baseSettings = (typeof settings !== "undefined" && settings)
+        ? settings : { darcula: false };
+    const wf = Math.max(0.01, +baseSettings.warp_factor || 1.0);
+    const sf = Math.max(0.01, +baseSettings.weft_factor || 1.0);
+
+    // Pick the cell scale k such that cellW = wf*k, cellH = sf*k. We
+    // want to fill the half — taking the LARGER of the two "fit" k
+    // values guarantees that at least one axis is fully covered, with
+    // slight (or significant, for large patterns) overflow on the
+    // other axis that we crop with a clip rect. This avoids any
+    // letterbox whitespace.
+    const kFillW = halfW / (wf * pw);
+    const kFillH = halfH / (sf * ph);
+    let k = Math.max(kFillW, kFillH);
+    let cellW = wf * k;
+    let cellH = sf * k;
+
+    // Floor: if at the fill scale cells are too small to be discernible
+    // (very large pattern), bump k up so the smaller dimension reaches
+    // MIN_CELL. The other dimension stays in proportion.
+    if (Math.min(cellW, cellH) < minCell) {
+        k = minCell / Math.min(wf, sf);
+        cellW = wf * k;
+        cellH = sf * k;
+    }
+
+    // Render exactly enough cells to cover the half (ceil → slight
+    // overflow), capped at the pattern extent. The clip rect handles
+    // the overflow.
+    const visW = Math.min(pw, Math.max(1, Math.ceil(halfW / cellW)));
+    const visH = Math.min(ph, Math.max(1, Math.ceil(halfH / cellH)));
+
+    const thumbSettings = Object.assign({}, baseSettings, {
+        bxf: 0.15,
+        byf: 0.15,
+        _fixForceRed: false,
+    });
+
+    // Orientation: respect the user's display settings so the thumbnail
+    // matches what they see in the editor. RTL flips x (i=0 on the
+    // right); TTB flips y (j=0 at the top).
+    const rtl = !!baseSettings.direction_righttoleft;
+    const ttb = !!baseSettings.direction_toptobottom;
+
+    function makeView(x0, y0) {
+        const bx = cellW * thumbSettings.bxf;
+        const by = cellH * thumbSettings.byf;
+        return {
+            calc_x: (i) => rtl
+                ? x0 + (visW - i) * cellW
+                : x0 + i * cellW,
+            calc_y: (j) => ttb
+                ? y0 + j * cellH
+                : y0 + (visH - j) * cellH,
+            dx: cellW,
+            dy: cellH,
+            bx: bx,
+            by: by,
+            offset_i: 0,
+            offset_j: 0,
+            width: visW,
+            height: visH,
+        };
+    }
+
+    const colorsWarp = (data.colors_warp || []);
+    const colorsWeft = (data.colors_weft || []);
+
+    // ----- Left half: patrone (draft) view -----
+    // No centering — render from the half's top-left corner so the
+    // half is fully filled. Slight overflow on the right/bottom is
+    // hidden by the clip rect.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, halfW, halfH);
+    ctx.clip();
+
+    const leftView = makeView(0, 0);
+    for (let ii = 0; ii < visW; ii++) {
+        for (let jj = 0; jj < visH; jj++) {
+            const value = pat.weave.get(i0 + ii, j0 + jj);
+            if (value <= 0) continue;
+            if (value <= 9) {
+                cellPainterFilled(ctx, thumbSettings, leftView, ii, jj, value);
+            } else if (value === 10) {
+                aushebungPainter(ctx, thumbSettings, leftView, ii, jj);
+            } else if (value === 11) {
+                anbindungPainter(ctx, thumbSettings, leftView, ii, jj, true);
+            } else if (value === 12) {
+                abbindungPainter(ctx, thumbSettings, leftView, ii, jj, true);
+            }
+        }
+    }
+
+    // Grid lines on top of the cells. +0.5 keeps 1px lines crisp.
+    ctx.strokeStyle = thumbSettings.darcula ? "#aaa" : "#777";
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    for (let ii = 0; ii <= visW; ii++) {
+        const x = Math.round(ii * cellW) + 0.5;
+        ctx.moveTo(x, 0.5);
+        ctx.lineTo(x, halfH - 0.5);
+    }
+    for (let jj = 0; jj <= visH; jj++) {
+        const y = Math.round(jj * cellH) + 0.5;
+        ctx.moveTo(0.5, y);
+        ctx.lineTo(halfW - 0.5, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // ----- Right half: simulation view -----
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(halfW, 0, halfW, halfH);
+    ctx.clip();
+
+    for (let ii = 0; ii < visW; ii++) {
+        for (let jj = 0; jj < visH; jj++) {
+            const i = i0 + ii;
+            const j = j0 + jj;
+            const s = pat.weave.get(i, j);
+            const xCell = rtl ? (visW - 1 - ii) : ii;
+            const yCell = ttb ? jj : (visH - 1 - jj);
+            const x = halfW + xCell * cellW;
+            const y = yCell * cellH;
+            const px = Math.floor(x);
+            const py = Math.floor(y);
+            const cw = Math.max(1, Math.ceil(x + cellW) - px);
+            const ch = Math.max(1, Math.ceil(y + cellH) - py);
+            const warp = _paletteRgb(data, colorsWarp[i] | 0);
+            const weft = _paletteRgb(data, colorsWeft[j] | 0);
+            if (s > 0) {
+                // Warp on top: weft visible at top/bottom edges.
+                ctx.fillStyle = weft;
+                ctx.fillRect(px, py, cw, ch);
+                const inset = Math.max(1, Math.round(ch * 0.2));
+                ctx.fillStyle = warp;
+                ctx.fillRect(px, py + inset, cw, ch - 2 * inset);
+            } else {
+                // Weft on top: warp visible at left/right edges.
+                ctx.fillStyle = warp;
+                ctx.fillRect(px, py, cw, ch);
+                const inset = Math.max(1, Math.round(cw * 0.2));
+                ctx.fillStyle = weft;
+                ctx.fillRect(px + inset, py, cw - 2 * inset, ch);
+            }
+        }
+    }
+    ctx.restore();
+
+    // 1-pixel separator between the two halves.
+    ctx.fillStyle = "#bbb";
+    ctx.fillRect(halfW, 0, 1, h);
+
+    return canvas;
+}
+
+
+window.captureThumbnails = function(currentData) {
+    if (typeof pattern === "undefined" || !pattern) return null;
+    try {
+        const tCanvas = _renderTwoPaneToCanvas(currentData, pattern, 192, 96);
+        const pCanvas = _renderTwoPaneToCanvas(currentData, pattern, 512, 256);
+        return {
+            thumbnail: tCanvas.toDataURL("image/png"),
+            preview:   pCanvas.toDataURL("image/png"),
+        };
+    } catch (e) {
+        console.error("captureThumbnails error", e);
+        return null;
+    }
+};

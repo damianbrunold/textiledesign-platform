@@ -6,8 +6,12 @@
 
 {% block content %}
     <form enctype="multipart/form-data" method="POST">
+        {% set has_any = namespace(value=false) %}
         {% for membership in g.user.memberships %}
-        {% if g.user.name != membership.group.name %}
+        {% if g.user.name != membership.group.name
+              and membership.state == 'accepted'
+              and membership.role in ('owner', 'writer') %}
+        {% set has_any.value = true %}
         <div>
             {% if membership.group.is_assigned(pattern) %}
             <input type="checkbox" checked="checked" name="assignments" value="{{membership.group.id}}" />
@@ -15,10 +19,13 @@
             <input type="checkbox" name="assignments" value="{{membership.group.id}}"/>
             {% endif %}
             {{ membership.group.label }}
+            <span style="font-size: 0.85em; color: #666;">({{ gettext(membership.role|capitalize) }})</span>
         </div>
         {% endif %}
         {% endfor %}
-        </ul>
+        {% if not has_any.value %}
+        <p><em>{{ gettext('You are not a writer or owner in any group yet.') }}</em></p>
+        {% endif %}
         <input type="submit" value="{{ gettext('Save') }}">
     </form>
     <a class="action" href="{{ url_for('user', user_name=g.user.name) }}">{{ gettext('Cancel') }}</a>

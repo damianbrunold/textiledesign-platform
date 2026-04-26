@@ -1,80 +1,146 @@
+def _dig(d, *path, default=None):
+    """Walk a nested dict, returning default if any segment is missing."""
+    cur = d
+    for key in path:
+        if not isinstance(cur, dict) or key not in cur:
+            return default
+        cur = cur[key]
+    return cur
+
+
 def parse_dbw_data(dbwdata, name=''):
+    """Parse a desktop .dbw export into the platform's JSON-shape dict.
+
+    Tolerant of missing sections / keys: the desktop app omits some
+    blocks depending on which features were used, and the format has
+    evolved over the years. Anything we can't read falls back to a
+    sensible default rather than raising.
+    """
     contents = _parse_dbw_into_struct(dbwdata)
     result = dict()
 
-    props = contents['properties']
     result['name'] = name
-    result['author'] = props['author']
-    result['organization'] = props['organization']
-    result['notes'] = props['remarks']
+    result['author'] = _dig(contents, 'properties', 'author', default='') or ''
+    result['organization'] = _dig(
+        contents, 'properties', 'organization', default='') or ''
+    result['notes'] = _dig(contents, 'properties', 'remarks', default='') or ''
 
-    data = contents['data']
+    size = _dig(contents, 'data', 'size', default={}) or {}
+    result['width'] = int(size.get('maxx1') or 0) or 50
+    result['height'] = int(size.get('maxy2') or 0) or 50
+    result['max_shafts'] = int(size.get('maxx2') or 0) or 32
+    result['max_treadles'] = int(size.get('maxy1') or 0) or 32
 
-    size = data['size']
-    result['width'] = int(size['maxx1'])
-    result['height'] = int(size['maxy2'])
-    result['max_shafts'] = int(size['maxx2'])
-    result['max_treadles'] = int(size['maxy1'])
+    width = result['width']
+    height = result['height']
+    max_shafts = result['max_shafts']
+    max_treadles = result['max_treadles']
 
-    fields = data['fields']
-    result['data_entering'] = _dehex_short(fields['einzug']['data'])
-    result['data_tieup'] = _dehex_byte(fields['aufknuepfung']['data'])
-    result['data_treadling'] = _dehex_byte(
-        fields['trittfolge']['trittfolge']['data']
+    entering_hex = _dig(contents, 'data', 'fields', 'einzug', 'data')
+    result['data_entering'] = (
+        _dehex_short(entering_hex) if entering_hex else [0] * width
     )
-    # TODO handle pegplan?
-    result['data_reed'] = _dehex_byte(fields['blatteinzug']['data'])
-    result['colors_warp'] = _dehex_ubyte(fields['kettfarben']['data'])
-    result['colors_weft'] = _dehex_ubyte(fields['schussfarben']['data'])
+    tieup_hex = _dig(contents, 'data', 'fields', 'aufknuepfung', 'data')
+    result['data_tieup'] = (
+        _dehex_byte(tieup_hex) if tieup_hex
+        else [0] * (max_shafts * max_treadles)
+    )
+    treadling_hex = _dig(
+        contents, 'data', 'fields', 'trittfolge', 'trittfolge', 'data')
+    result['data_treadling'] = (
+        _dehex_byte(treadling_hex) if treadling_hex
+        else [0] * (max_treadles * height)
+    )
+    reed_hex = _dig(contents, 'data', 'fields', 'blatteinzug', 'data')
+    result['data_reed'] = (
+        _dehex_byte(reed_hex) if reed_hex
+        else ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
+    )
+    cw_hex = _dig(contents, 'data', 'fields', 'kettfarben', 'data')
+    result['colors_warp'] = (
+        _dehex_ubyte(cw_hex) if cw_hex else [55] * width
+    )
+    cwf_hex = _dig(contents, 'data', 'fields', 'schussfarben', 'data')
+    result['colors_weft'] = (
+        _dehex_ubyte(cwf_hex) if cwf_hex else [49] * height
+    )
 
-    result['palette'] = _dehex_colors(data['palette']['data2'])
+    palette_hex = _dig(contents, 'data', 'palette', 'data2')
+    if palette_hex:
+        result['palette'] = _dehex_colors(palette_hex)
+    else:
+        # Fall back to the platform default so the editor always has
+        # a working colour set; users can still edit the palette later.
+        from textileplatform.palette import default_weave_palette
+        result['palette'] = list(default_weave_palette)
 
-    view = contents['view']
-    result['visible_shafts'] = int(view['einzug']['hvisible'])
-    result['visible_treadles'] = int(view['trittfolge']['wvisible'])
-    result['warp_lifting'] = view['general']['hebung'] == '0'
-    result['zoom'] = int(view['general']['zoom'])
-    result['current_color'] = int(view['general']['color'])
-    result['color_effect_with_grid'] = view['gewebe']['withgrid'] == '1'
-    result['single_treadling'] = view['trittfolge']['single'] == '1'
-    result['weave_locked'] = view['gewebe']['locked'] == '1'
-    result['unit_width'] = int(view['gewebe']['stronglinex'])
-    result['unit_height'] = int(view['gewebe']['strongliney'])
-    result['warp_factor'] = float(view['general']['faktor_kette'])
-    result['weft_factor'] = float(view['general']['faktor_schuss'])
-    result['direction_righttoleft'] = view['general']['righttoleft'] == '1'
-    result['direction_toptobottom'] = view['general']['toptobottom'] == '1'
-    result['entering_at_bottom'] = view['einzug']['down'] == '1'
+    view = _dig(contents, 'view', default={}) or {}
 
-    result['display_reed'] = view['blatteinzug']['visible'] == '1'
-    result['display_colors_warp'] = view['kettfarben']['visible'] == '1'
-    result['display_colors_weft'] = view['schussfarben']['visible'] == '1'
-    result['display_hlines'] = view['general']['viewhlines'] == '1'
-    result['display_repeat'] = view['general']['viewrapport'] == '1'
-    result['display_palette'] = view['general']['viewpalette'] == '1'
-    result['display_pegplan'] = view['general']['viewpegplan'] == '1'
-    result['display_entering'] = view['einzug']['visible'] == '1'
-    result['display_treadling'] = view['trittfolge']['visible'] == '1'
+    def vint(*path, default=0):
+        v = _dig(view, *path)
+        try:
+            return int(v) if v is not None else default
+        except (ValueError, TypeError):
+            return default
 
-    state = view['gewebe']['state']
-    if state == '0':
-        result['weave_style'] = 'draft'
-    elif state == '1':
-        result['weave_style'] = 'color'
-    elif state == '2':
-        result['weave_style'] = 'simulation'
-    elif state == '3':
-        result['weave_style'] = 'invisible'
+    def vfloat(*path, default=1.0):
+        v = _dig(view, *path)
+        try:
+            return float(v) if v is not None else default
+        except (ValueError, TypeError):
+            return default
 
-    result['entering_style'] = _decode_viewtype(view['einzug']['viewtype'])
+    def vbool(*path, default=False, true_value='1'):
+        v = _dig(view, *path)
+        if v is None:
+            return default
+        return v == true_value
+
+    result['visible_shafts'] = vint('einzug', 'hvisible', default=12)
+    result['visible_treadles'] = vint('trittfolge', 'wvisible', default=12)
+    result['warp_lifting'] = vbool('general', 'hebung', default=True,
+                                   true_value='0')
+    result['zoom'] = vint('general', 'zoom', default=3)
+    result['current_color'] = vint('general', 'color', default=0)
+    result['color_effect_with_grid'] = vbool('gewebe', 'withgrid')
+    result['single_treadling'] = vbool('trittfolge', 'single', default=True)
+    result['weave_locked'] = vbool('gewebe', 'locked')
+    result['unit_width'] = vint('gewebe', 'stronglinex', default=4)
+    result['unit_height'] = vint('gewebe', 'strongliney', default=4)
+    result['warp_factor'] = vfloat('general', 'faktor_kette', default=1.0)
+    result['weft_factor'] = vfloat('general', 'faktor_schuss', default=1.0)
+    result['direction_righttoleft'] = vbool('general', 'righttoleft')
+    result['direction_toptobottom'] = vbool('general', 'toptobottom')
+    result['entering_at_bottom'] = vbool('einzug', 'down')
+
+    result['display_reed'] = vbool('blatteinzug', 'visible', default=True)
+    result['display_colors_warp'] = vbool('kettfarben', 'visible', default=True)
+    result['display_colors_weft'] = vbool('schussfarben', 'visible',
+                                          default=True)
+    result['display_hlines'] = vbool('general', 'viewhlines')
+    result['display_repeat'] = vbool('general', 'viewrapport')
+    result['display_palette'] = vbool('general', 'viewpalette', default=True)
+    result['display_pegplan'] = vbool('general', 'viewpegplan')
+    result['display_entering'] = vbool('einzug', 'visible', default=True)
+    result['display_treadling'] = vbool('trittfolge', 'visible', default=True)
+
+    state = _dig(view, 'gewebe', 'state')
+    state_map = {
+        '0': 'draft', '1': 'color', '2': 'simulation', '3': 'invisible',
+    }
+    result['weave_style'] = state_map.get(state, 'draft')
+
+    result['entering_style'] = _decode_viewtype(
+        _dig(view, 'einzug', 'viewtype', default='1'))
     result['treadling_style'] = _decode_viewtype(
-        view['trittfolge']['viewtype'])
-    result['tieup_style'] = _decode_viewtype(view['aufknuepfung']['viewtype'])
+        _dig(view, 'trittfolge', 'viewtype', default='3'))
+    result['tieup_style'] = _decode_viewtype(
+        _dig(view, 'aufknuepfung', 'viewtype', default='2'))
 
     # TODO add fixeinzug?
     # TODO add block/bereich data
     # TODO add page setup
-    # TODO add weave stuff
+    # TODO add weave stuff (rapport bounds, hlines, pegplan, etc.)
 
     return result
 

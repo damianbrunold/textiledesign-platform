@@ -1,95 +1,184 @@
 {% extends 'base.html' %}
 
-{% block header %}
-<h1>{{ user.label }}</h1>
+{% block body_class %}view-thumb no-page-header{% endblock %}
+
+{% block headext %}
+<style>body.no-page-header .content > header { display: none; }</style>
+{% endblock %}
+
+{% block nav_extra %}
+{% if g.user and g.user.id != user.id and not user.block_invitations and user.name != 'superuser' %}
+<li><a href="{{ url_for('messages_direct', user_name=user.name) }}">{{ gettext('Send message') }}</a>
+{% endif %}
 {% endblock %}
 
 {% block content %}
-<style>
-#patterns {
-    max-width: 60rem;
-}
-#patterns a {
-    display: block;
-}
-.patterns-label {
-    font-size: 1.2rem;
-    font-weight: bold;
-    margin-top: 0.3rem;
-}
-.pattern {
-    display: flex;
-}
-.pattern_name {
-    width: 30rem;
-    flex-grow: 0;
-    flex-shrink: 0;
-    overflow-x: hidden;
-    margin-right: 1rem;
-}
-.pattern_info {
-    display: flex;
-    padding: 0 0.3rem 0 0;
-}
-{% if g.user and g.user.darkmode %}
-.pattern:hover { background: #222; }
-{% else %}
-.pattern:hover { background: #cae6f6; }
+{% include '_profile_toolbar.css.html' %}
+
+<div id="profile-toolbar">
+    <input type="text" id="filter-input" placeholder="{{ gettext('Filter…') }}">
+    <div class="sort-modes" id="sort-modes">
+        <button type="button" data-sort="name-asc" class="active">{{ gettext('Name ↑') }}</button>
+        <button type="button" data-sort="name-desc">{{ gettext('Name ↓') }}</button>
+        <button type="button" data-sort="modified-desc">{{ gettext('Newest') }}</button>
+        <button type="button" data-sort="modified-asc">{{ gettext('Oldest') }}</button>
+    </div>
+    <div class="view-modes" id="view-modes">
+        <button type="button" data-view="thumb" class="active">{{ gettext('Thumbnails') }}</button>
+        <button type="button" data-view="detail">{{ gettext('Detail') }}</button>
+    </div>
+</div>
+
+{% set weave  = patterns | selectattr('pattern_type', 'equalto', 'DB-WEAVE Pattern') | list %}
+{% set bead   = patterns | selectattr('pattern_type', 'equalto', 'JBead Pattern')   | list %}
+{% set others = patterns | rejectattr('pattern_type', 'in', ['DB-WEAVE Pattern', 'JBead Pattern']) | list %}
+
+{% if not weave and not bead and not others %}
+<div class="empty-note">{{ gettext('No public patterns.') }}</div>
 {% endif %}
-</style>
-    <div id="patterns">
-    {% if patterns_weave %}
-    <div class="patterns-label">
-        {{ gettext('DB-WEAVE Patterns') }}
-    </div>
-    {% for pattern in patterns_weave %}
-    <div class="pattern">
-        <div class="pattern_name">
-            <a class="action"
-               href="{{ url_for('edit_pattern',
-                                user_name=pattern.owner.name,
-                                pattern_name=pattern.name) }}">
-                {{ pattern.label }}
-            </a>
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
 
-    {% if patterns_bead %}
-    <div class="patterns-label">
-        {{ gettext('JBead Patterns') }}
-    </div>
-    {% for pattern in patterns_bead %}
-    <div class="pattern">
-        <div class="pattern_name">
-            <a class="action"
-               href="{{ url_for('edit_pattern',
-                                user_name=pattern.owner.name,
-                                pattern_name=pattern.name) }}">
-                {{ pattern.label }}
-            </a>
+{% macro render_section(title, items) %}
+{% if items %}
+<div class="patterns-section">
+    <div class="section-title">{{ title }}</div>
+    <div class="patterns-list">
+    {% for p in items %}
+    {% set show_clone = g.user and g.user.id != user.id %}
+    <div class="pattern-row{% if show_clone %} has-actions{% endif %}"
+         data-pattern-name="{{ p.name }}"
+         data-owner-name="{{ p.owner_name }}"
+         data-label="{{ p.label }}"
+         data-modified="{{ p.modified or '' }}"
+         data-search="{{ (p.label ~ ' ' ~ p.author ~ ' ' ~ p.organization ~ ' ' ~ p.notes) | lower }}">
+        {% set edit_url = url_for('edit_pattern', user_name=p.owner_name, pattern_name=p.name) %}
+        <a class="thumb-link" href="{{ edit_url }}">
+            <img class="thumb" loading="lazy"
+                 src="{{ url_for('pattern_preview', user_name=p.owner_name, pattern_name=p.name, v=p.modified or '') }}"
+                 alt="">
+        </a>
+        <div class="row-name"><a href="{{ edit_url }}">{{ p.label }}</a></div>
+        <div class="row-meta">
+            <span class="meta-dim">{% if p.pattern_width and p.pattern_height %}{{ p.pattern_width }}×{{ p.pattern_height }}{% else %}—{% endif %}</span>
+            <span class="meta-rap">{% if p.rapport_width or p.rapport_height %}r:{% if p.rapport_width %}{{ p.rapport_width }}{% else %}—{% endif %}×{% if p.rapport_height %}{{ p.rapport_height }}{% else %}—{% endif %}{% else %}—{% endif %}</span>
+            <span class="meta-author">{{ p.author or '—' }}</span>
+            <span class="meta-org">{{ p.organization or '—' }}</span>
+            <span class="meta-modified">{{ p.modified[:10] if p.modified else '—' }}</span>
+            <span class="meta-public">{{ gettext('Public') }}</span>
         </div>
+        {% if show_clone %}
+        <div class="row-actions">
+            <button type="button" class="act-clone" title="{{ gettext('Clone to my patterns') }}">⎘</button>
+        </div>
+        {% endif %}
     </div>
     {% endfor %}
-    {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endmacro %}
 
-    {% if patterns_other %}
-    <div class="patterns-label">
-        {{ gettext('Other Patterns') }}
-    </div>
-    {% for pattern in patterns_other %}
-    <div class="pattern">
-        <div class="pattern_name">
-            <a class="action"
-               href="{{ url_for('edit_pattern',
-                                user_name=pattern.owner.name,
-                                pattern_name=pattern.name) }}">
-                {{ pattern.label }}
-            </a>
-        </div>
-    </div>
-    {% endfor %}
-    {% endif %}
-    </div>
+{{ render_section(gettext('DB-WEAVE Patterns'), weave) }}
+{{ render_section(gettext('JBead Patterns'), bead) }}
+{{ render_section(gettext('Other Patterns'), others) }}
+
+<script>
+(function() {
+    const root = document.body;
+    const filterInput = document.getElementById('filter-input');
+    const viewModes = document.getElementById('view-modes');
+    const sortModes = document.getElementById('sort-modes');
+
+    let viewMode = localStorage.getItem('profileViewMode') || 'thumb';
+    if (viewMode === 'compact') viewMode = 'thumb';
+    let sortMode = localStorage.getItem('profileSortMode') || 'name-asc';
+    setView(viewMode);
+    setSort(sortMode);
+
+    document.querySelectorAll('.act-clone').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const row = btn.closest('.pattern-row');
+            const owner = row.dataset.ownerName;
+            const name = row.dataset.patternName;
+            if (!confirm("{{ gettext('Clone this pattern into your patterns?') }}")) return;
+            try {
+                const res = await fetch(`/api/pattern/${owner}/${name}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'clone-pattern' }),
+                });
+                const data = await res.json();
+                if (data.status === 'OK') {
+                    btn.textContent = '✓';
+                    btn.disabled = true;
+                } else {
+                    alert(data.message || "{{ gettext('Clone failed') }}");
+                }
+            } catch (e) { alert(e); }
+        });
+    });
+
+    function setView(mode) {
+        viewMode = mode;
+        localStorage.setItem('profileViewMode', mode);
+        root.classList.remove('view-compact', 'view-detail', 'view-thumb');
+        root.classList.add('view-' + mode);
+        Array.from(viewModes.querySelectorAll('button')).forEach(b => {
+            b.classList.toggle('active', b.dataset.view === mode);
+        });
+    }
+    function setSort(mode) {
+        sortMode = mode;
+        localStorage.setItem('profileSortMode', mode);
+        Array.from(sortModes.querySelectorAll('button')).forEach(b => {
+            b.classList.toggle('active', b.dataset.sort === mode);
+        });
+        applySort();
+    }
+    function applySort() {
+        document.querySelectorAll('.patterns-list').forEach(list => {
+            const rows = Array.from(list.querySelectorAll(':scope > .pattern-row'));
+            rows.sort((a, b) => {
+                if (sortMode.startsWith('name')) {
+                    const la = (a.dataset.label || '').toLowerCase();
+                    const lb = (b.dataset.label || '').toLowerCase();
+                    if (la === lb) return 0;
+                    const r = la < lb ? -1 : 1;
+                    return sortMode === 'name-asc' ? r : -r;
+                } else {
+                    const ma = a.dataset.modified || '';
+                    const mb = b.dataset.modified || '';
+                    if (ma === mb) return 0;
+                    const r = ma < mb ? -1 : 1;
+                    return sortMode === 'modified-asc' ? r : -r;
+                }
+            });
+            rows.forEach(r => list.appendChild(r));
+        });
+    }
+    function applyFilter() {
+        const q = filterInput.value.trim().toLowerCase();
+        const terms = q ? q.split(/\s+/) : [];
+        document.querySelectorAll('.pattern-row').forEach(r => {
+            const text = r.dataset.search || '';
+            const matches = terms.every(t => text.indexOf(t) !== -1);
+            r.style.display = matches ? '' : 'none';
+        });
+        document.querySelectorAll('.patterns-section').forEach(sec => {
+            const visible = sec.querySelectorAll('.pattern-row:not([style*="display: none"])').length;
+            sec.style.display = visible ? '' : 'none';
+        });
+    }
+    viewModes.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-view]');
+        if (btn) setView(btn.dataset.view);
+    });
+    sortModes.addEventListener('click', e => {
+        const btn = e.target.closest('button[data-sort]');
+        if (btn) setSort(btn.dataset.sort);
+    });
+    filterInput.addEventListener('input', applyFilter);
+    applyFilter();
+    applySort();
+})();
+</script>
 {% endblock %}

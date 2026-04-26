@@ -6,19 +6,164 @@
 
 {% block content %}
 <style>
-ul {
+ul.members, ul.patterns {
     list-style: none;
+    padding-left: 0;
 }
+table.members { border-collapse: collapse; }
+table.members td, table.members th {
+    padding: 0.25rem 0.75rem;
+    text-align: left;
+    vertical-align: middle;
+}
+.role-tag {
+    display: inline-block;
+    padding: 0 0.4rem;
+    border-radius: 3px;
+    background: #eee;
+    font-size: 0.85em;
+}
+.invite-form { margin: 1rem 0; }
+.invite-form input[type=text] { width: 16rem; }
+#user-suggestions { border: 1px solid #ccc; max-width: 16rem; background: #fff; }
+#user-suggestions div { padding: 0.25rem 0.5rem; cursor: pointer; }
+#user-suggestions div:hover { background: #eef; }
 </style>
+
+{% if group.description %}
+<p>{{ group.description }}</p>
+{% endif %}
+
+<p><em>{{ gettext('Your role') }}: <span class="role-tag">{{ gettext(role|capitalize) }}</span></em></p>
+
+{% set accepted_count = group.memberships | selectattr('state', 'equalto', 'accepted') | list | length %}
+{% if not is_personal and accepted_count > 1 %}
+<p><a class="action" href="{{ url_for('messages_group', group_name=group.name) }}">{{ gettext('Group chat') }}</a></p>
+{% endif %}
+
 <h2>{{ gettext('Members') }}</h2>
-<ul>
-{% for m in group.memberships %}
-<li><a href="{{ url_for('user', user_name=m.user.name) }}">{{ m.user.label }}</a></li>
+{% if is_owner and not is_personal %}
+<table class="members">
+    <thead>
+        <tr>
+            <th>{{ gettext('User') }}</th>
+            <th>{{ gettext('Role') }}</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for m in group.memberships if m.state == 'accepted' %}
+        <tr>
+            <td><a href="{{ url_for('user', user_name=m.user.name) }}">{{ m.user.label }}</a></td>
+            <td>
+                <form method="post"
+                      action="{{ url_for('update_membership', group_name=group.name, user_name=m.user.name) }}"
+                      style="display:inline">
+                    <input type="hidden" name="action" value="set_role">
+                    <select name="role" onchange="this.form.submit()">
+                        <option value="owner" {% if m.role == 'owner' %}selected{% endif %}>{{ gettext('Owner') }}</option>
+                        <option value="writer" {% if m.role == 'writer' %}selected{% endif %}>{{ gettext('Writer') }}</option>
+                        <option value="reader" {% if m.role == 'reader' %}selected{% endif %}>{{ gettext('Reader') }}</option>
+                    </select>
+                </form>
+            </td>
+            <td>
+                {% if m.user_id != g.user.id %}
+                <form method="post"
+                      action="{{ url_for('update_membership', group_name=group.name, user_name=m.user.name) }}"
+                      style="display:inline"
+                      onsubmit="return confirm('{{ gettext('Remove this member?') }}');">
+                    <input type="hidden" name="action" value="remove">
+                    <button type="submit">{{ gettext('Remove') }}</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% set pending = group.memberships | selectattr('state', 'equalto', 'invited') | list %}
+{% if pending %}
+<h3>{{ gettext('Pending invitations') }}</h3>
+<ul class="members">
+{% for m in pending %}
+    <li>{{ m.user.label }} &mdash; <span class="role-tag">{{ gettext(m.role|capitalize) }}</span></li>
 {% endfor %}
 </ul>
+{% endif %}
+
+<h3>{{ gettext('Invite a user') }}</h3>
+<form class="invite-form" method="post"
+      action="{{ url_for('invite_to_group', group_name=group.name) }}">
+    <label for="invite-user">{{ gettext('User') }}</label>
+    <input type="text" id="invite-user" name="user_name" autocomplete="off" required>
+    <div id="user-suggestions" style="display:none"></div>
+    <label for="invite-role">{{ gettext('Role') }}</label>
+    <select id="invite-role" name="role">
+        <option value="reader">{{ gettext('Reader') }}</option>
+        <option value="writer">{{ gettext('Writer') }}</option>
+        <option value="owner">{{ gettext('Owner') }}</option>
+    </select>
+    <button type="submit">{{ gettext('Invite') }}</button>
+</form>
+<script>
+(function() {
+    const input = document.getElementById('invite-user');
+    const box = document.getElementById('user-suggestions');
+    let timer = null;
+    input.addEventListener('input', () => {
+        clearTimeout(timer);
+        const q = input.value.trim();
+        if (q.length < 2) { box.style.display = 'none'; return; }
+        timer = setTimeout(async () => {
+            const url = '{{ url_for("api_users_search") }}?q='
+                + encodeURIComponent(q)
+                + '&group={{ group.name }}';
+            const res = await fetch(url);
+            const data = await res.json();
+            box.innerHTML = '';
+            if (!data.users || data.users.length === 0) {
+                box.style.display = 'none';
+                return;
+            }
+            data.users.forEach(u => {
+                const div = document.createElement('div');
+                div.textContent = u.label + ' (' + u.name + ')';
+                div.addEventListener('click', () => {
+                    input.value = u.name;
+                    box.style.display = 'none';
+                });
+                box.appendChild(div);
+            });
+            box.style.display = 'block';
+        }, 200);
+    });
+    document.addEventListener('click', e => {
+        if (e.target !== input) box.style.display = 'none';
+    });
+})();
+</script>
+{% else %}
+<ul class="members">
+{% for m in group.memberships if m.state == 'accepted' %}
+<li>
+    <a href="{{ url_for('user', user_name=m.user.name) }}">{{ m.user.label }}</a>
+    <span class="role-tag">{{ gettext(m.role|capitalize) }}</span>
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if not is_personal %}
+<form method="post" action="{{ url_for('leave_group', group_name=group.name) }}"
+      onsubmit="return confirm('{{ gettext('Leave this group?') }}');">
+    <button type="submit">{{ gettext('Leave group') }}</button>
+</form>
+{% endif %}
 
 <h2>{{ gettext('Patterns') }}</h2>
-<ul>
+<ul class="patterns">
 {% for a in group.assignments %}
 <li><a href="{{ url_for('edit_pattern', user_name=a.pattern.owner.name, pattern_name=a.pattern.name, origin='groups-edit-'+group.name) }}">{{ a.pattern.owner.label }} - {{ a.pattern.label }}</a></li>
 {% endfor %}

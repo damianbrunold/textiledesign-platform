@@ -15,7 +15,7 @@
         <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
         {% block headext %}{% endblock %}
     </head>
-    <body>
+    <body class="{% if impersonating %}impersonating {% endif %}{% block body_class %}{% endblock %}">
         <nav>
             <h1>
                 <a href="{{ url_for('index') }}">
@@ -32,6 +32,11 @@
             </h1>
             <ul>
             {% if g.user %}
+                {% block nav_extra %}{% endblock %}
+                {% if invitation_count and invitation_count > 0 %}
+                <li><a href="{{ url_for('invitations') }}" class="invitation-badge">{{ gettext('Invitations') }} ({{ invitation_count }})</a>
+                {% endif %}
+                <li><a id="nav-messages" href="{{ url_for('messages_inbox') }}"{% if unread_message_count and unread_message_count > 0 %} class="invitation-badge"{% endif %} data-base-label="{{ gettext('Messages') }}">{{ gettext('Messages') }}{% if unread_message_count and unread_message_count > 0 %} <span class="nav-count">({{ unread_message_count }})</span>{% endif %}</a>
                 <li><a href="{{ url_for('profile') }}">{{ g.user.label }}</a>
             {% else %}
                 <li><a href="{{ url_for('register') }}">{{ gettext('Register') }}</a>
@@ -39,6 +44,15 @@
             {% endif %}
             </ul>
         </nav>
+        {% if impersonating %}
+        <div class="impersonation-banner">
+            {{ gettext('Impersonating') }} <strong>{{ g.user.label }}</strong>
+            ({{ gettext('as') }} {{ impersonator_name }}) &mdash;
+            <form method="post" action="{{ url_for('stop_impersonating') }}" style="display:inline">
+                <button type="submit">{{ gettext('Stop impersonating') }}</button>
+            </form>
+        </div>
+        {% endif %}
         <section class="content">
             <header>
                 {% block header %}{% endblock %}

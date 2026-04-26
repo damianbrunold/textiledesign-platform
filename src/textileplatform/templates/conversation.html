@@ -1,0 +1,349 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ title }}</h1>
+{% endblock %}
+
+{% block content %}
+<style>
+.chat {
+    display: flex;
+    flex-direction: column;
+    max-width: 50rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.chat-toolbar {
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid #ddd;
+    background: #fafafa;
+    font-size: 0.9em;
+}
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.msg {
+    max-width: 70%;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    background: #eef;
+    align-self: flex-start;
+    word-wrap: break-word;
+}
+.msg.mine {
+    align-self: flex-end;
+    background: #d4edda;
+}
+.msg .sender {
+    font-size: 0.8em;
+    color: #555;
+    margin-bottom: 0.15rem;
+}
+.msg .body { white-space: pre-wrap; }
+.msg.deleted .body { font-style: italic; color: #888; }
+.msg .time {
+    font-size: 0.75em;
+    color: #888;
+    margin-top: 0.15rem;
+}
+.msg .delete-btn {
+    position: absolute;
+    top: 0.15rem;
+    right: 0.25rem;
+    cursor: pointer;
+    color: #b94a48;
+    font-size: 0.8em;
+    background: none;
+    border: none;
+    padding: 0;
+    display: none;
+}
+.msg.mine { position: relative; padding-right: 1.4rem; }
+.msg.mine:hover .delete-btn { display: inline; }
+.chat-input {
+    border-top: 1px solid #ddd;
+    padding: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+}
+.chat-input textarea {
+    flex-grow: 1;
+    resize: none;
+    min-height: 1.6rem;
+    max-height: 12rem;
+    overflow-y: auto;
+    line-height: 1.4;
+    font-family: inherit;
+    font-size: inherit;
+}
+.load-more {
+    align-self: center;
+    margin-bottom: 0.5rem;
+}
+.blocked-note {
+    color: #b94a48;
+    padding: 0.5rem;
+}
+</style>
+
+<div class="chat" data-api-url="{{ api_url }}"
+     data-current-user-id="{{ g.user.id }}"
+     {% if is_blocked %}data-blocked="1"{% endif %}>
+    <div class="chat-toolbar">
+        <a href="{{ url_for('messages_inbox') }}">&larr; {{ gettext('Inbox') }}</a>
+        {% if kind == 'group' %}
+        &middot;
+        <a href="{{ url_for('edit_group', group_name=group.name) }}">{{ gettext('Group page') }}</a>
+        {% else %}
+        &middot;
+        <a href="{{ url_for('user', user_name=partner.name) }}">{{ gettext('Profile') }}</a>
+        {% endif %}
+    </div>
+    <div class="chat-messages" id="chat-messages">
+        <button type="button" class="load-more" id="load-more" style="display:none">
+            {{ gettext('Load older messages') }}
+        </button>
+    </div>
+    <form class="chat-input" id="chat-form">
+        <textarea name="body" id="chat-body" rows="1"
+                  placeholder="{{ gettext('Type a message…') }}"></textarea>
+        <button type="submit">{{ gettext('Send') }}</button>
+    </form>
+    {% if is_blocked %}
+    <div class="blocked-note">
+        {{ gettext('This user does not accept new messages.') }}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    const chat = document.querySelector('.chat');
+    const apiUrl = chat.dataset.apiUrl;
+    const blocked = chat.dataset.blocked === "1";
+    const currentUserId = parseInt(chat.dataset.currentUserId, 10);
+    const messagesEl = document.getElementById('chat-messages');
+    const loadMore = document.getElementById('load-more');
+    const form = document.getElementById('chat-form');
+    const body = document.getElementById('chat-body');
+
+    let oldestId = null;
+    let newestId = null;
+    let conversationId = null;
+    let hasMore = false;
+
+    function fmtTime(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        return d.toLocaleString();
+    }
+
+    const DELETED_LABEL = "{{ gettext('(message deleted)') }}";
+    const CONFIRM_DELETE = "{{ gettext('Delete this message?') }}";
+
+    function renderMessage(m, prepend) {
+        const div = document.createElement('div');
+        const isMine = m.sender && m.sender.name === '{{ g.user.name }}';
+        div.className = 'msg'
+            + (isMine ? ' mine' : '')
+            + (m.deleted ? ' deleted' : '');
+        div.dataset.msgId = m.id;
+        const senderEl = document.createElement('div');
+        senderEl.className = 'sender';
+        senderEl.textContent = m.sender ? m.sender.label : '';
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'body';
+        bodyEl.textContent = m.deleted ? DELETED_LABEL : m.body;
+        const timeEl = document.createElement('div');
+        timeEl.className = 'time';
+        timeEl.textContent = fmtTime(m.created);
+        div.appendChild(senderEl);
+        div.appendChild(bodyEl);
+        div.appendChild(timeEl);
+        if (isMine && !m.deleted) {
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'delete-btn';
+            del.title = "{{ gettext('Delete') }}";
+            del.textContent = '×';
+            del.addEventListener('click', () => deleteMessage(m.id, div));
+            div.appendChild(del);
+        }
+        if (prepend) {
+            messagesEl.insertBefore(div, loadMore.nextSibling);
+        } else {
+            messagesEl.appendChild(div);
+        }
+        return div;
+    }
+
+    async function deleteMessage(id, div) {
+        if (!confirm(CONFIRM_DELETE)) return;
+        const res = await fetch('/api/messages/' + id, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.status === 'OK') {
+            applyDeleted(div);
+        } else {
+            alert(data.message || 'Failed to delete');
+        }
+    }
+
+    async function loadInitial() {
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        conversationId = data.conversation_id;
+        hasMore = !!data.has_more;
+        loadMore.style.display = hasMore ? '' : 'none';
+        (data.messages || []).forEach(m => {
+            renderMessage(m, false);
+            if (oldestId === null || m.id < oldestId) oldestId = m.id;
+            if (newestId === null || m.id > newestId) newestId = m.id;
+        });
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        markRead();
+    }
+
+    async function loadOlder() {
+        if (!oldestId) return;
+        const res = await fetch(apiUrl + '?before=' + oldestId);
+        const data = await res.json();
+        hasMore = !!data.has_more;
+        loadMore.style.display = hasMore ? '' : 'none';
+        const prevHeight = messagesEl.scrollHeight;
+        const msgs = data.messages || [];
+        for (let i = msgs.length - 1; i >= 0; i--) {
+            renderMessage(msgs[i], true);
+            if (oldestId === null || msgs[i].id < oldestId) oldestId = msgs[i].id;
+        }
+        messagesEl.scrollTop = messagesEl.scrollHeight - prevHeight;
+    }
+
+    function applyDeleted(div) {
+        if (div.classList.contains('deleted')) return;
+        div.classList.add('deleted');
+        const bodyEl = div.querySelector('.body');
+        if (bodyEl) bodyEl.textContent = DELETED_LABEL;
+        const btn = div.querySelector('.delete-btn');
+        if (btn) btn.remove();
+    }
+
+    async function poll() {
+        if (!conversationId) return;
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        const msgs = data.messages || [];
+        let added = false;
+        msgs.forEach(m => {
+            if (newestId !== null && m.id > newestId) {
+                renderMessage(m, false);
+                newestId = m.id;
+                added = true;
+            } else if (m.deleted) {
+                const div = messagesEl.querySelector(
+                    '[data-msg-id="' + m.id + '"]');
+                if (div) applyDeleted(div);
+            }
+        });
+        if (added) {
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            markRead();
+        }
+    }
+
+    function updateNavBadge(total) {
+        const link = document.getElementById('nav-messages');
+        if (!link) return;
+        const existing = link.querySelector('.nav-count');
+        if (total > 0) {
+            link.classList.add('invitation-badge');
+            if (existing) {
+                existing.textContent = '(' + total + ')';
+            } else {
+                const span = document.createElement('span');
+                span.className = 'nav-count';
+                span.textContent = ' (' + total + ')';
+                link.appendChild(span);
+            }
+        } else {
+            link.classList.remove('invitation-badge');
+            if (existing) existing.remove();
+        }
+    }
+
+    async function markRead() {
+        if (!conversationId) return;
+        const res = await fetch(
+            '/api/conversations/' + conversationId + '/read',
+            { method: 'POST' });
+        try {
+            const data = await res.json();
+            if (typeof data.unread_total === 'number') {
+                updateNavBadge(data.unread_total);
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const text = body.value.trim();
+        if (!text) return;
+        const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ body: text }),
+        });
+        const data = await res.json();
+        if (data.status === 'OK') {
+            conversationId = data.conversation_id;
+            const m = data.message;
+            renderMessage(m, false);
+            if (newestId === null || m.id > newestId) newestId = m.id;
+            if (oldestId === null || m.id < oldestId) oldestId = m.id;
+            body.value = '';
+            autosize();
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            markRead();
+        } else {
+            alert(data.message || 'Failed to send');
+        }
+    });
+
+    function autosize() {
+        body.style.height = 'auto';
+        const max = parseFloat(getComputedStyle(body).maxHeight) || 192;
+        body.style.height = Math.min(body.scrollHeight, max) + 'px';
+    }
+    body.addEventListener('input', autosize);
+    autosize();
+
+    body.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
+    function fitChat() {
+        const top = chat.getBoundingClientRect().top;
+        const h = window.innerHeight - top - 16;
+        chat.style.height = Math.max(h, 200) + 'px';
+    }
+    fitChat();
+    window.addEventListener('resize', fitChat);
+
+    loadMore.addEventListener('click', loadOlder);
+
+    if (blocked && conversationId === null) {
+        // Display the blocked note; still allow loading any history.
+    }
+
+    loadInitial();
+    setInterval(poll, 10000);
+})();
+</script>
+{% endblock %}

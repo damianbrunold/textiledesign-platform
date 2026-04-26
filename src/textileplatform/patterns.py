@@ -12,6 +12,97 @@ from flask import abort
 from sqlalchemy.exc import IntegrityError
 
 
+def _truncate(value, n):
+    if value is None:
+        return None
+    return str(value)[:n] or None
+
+
+def extract_pattern_metadata(pattern_dict, pattern_type):
+    """Pull list-view fields out of the pattern JSON.
+
+    Returns a dict with keys matching new Pattern columns. Missing keys
+    in the JSON yield None — list views render '—' or skip them.
+    """
+    md = {
+        "author": _truncate(pattern_dict.get("author"), 120),
+        "organization": _truncate(pattern_dict.get("organization"), 120),
+        "notes": pattern_dict.get("notes") or None,
+        "pattern_width": None,
+        "pattern_height": None,
+        "rapport_width": None,
+        "rapport_height": None,
+    }
+    try:
+        if pattern_type == "DB-WEAVE Pattern":
+            # "Used" extents: largest warp index with a non-zero entering
+            # entry, largest weft index with a non-zero treadling entry.
+            # These match the editor's runtime min/max_x/min/max_y, which
+            # is what users care about ("how big is the pattern actually").
+            used_w = 0
+            entering = pattern_dict.get("data_entering") or []
+            for i, v in enumerate(entering):
+                if v and v > 0:
+                    used_w = i + 1
+            used_h = 0
+            treadling = pattern_dict.get("data_treadling") or []
+            max_treadles = pattern_dict.get("max_treadles") or 0
+            if isinstance(treadling, list) and max_treadles:
+                rows = len(treadling) // max_treadles
+                for j in range(rows):
+                    base = j * max_treadles
+                    if any(
+                        v and v > 0
+                        for v in treadling[base:base + max_treadles]
+                    ):
+                        used_h = j + 1
+            md["pattern_width"] = used_w if used_w > 0 else (
+                int(pattern_dict.get("width") or 0) or None
+            )
+            md["pattern_height"] = used_h if used_h > 0 else (
+                int(pattern_dict.get("height") or 0) or None
+            )
+            ka = pattern_dict.get("rapport_k_a")
+            kb = pattern_dict.get("rapport_k_b")
+            sa = pattern_dict.get("rapport_s_a")
+            sb = pattern_dict.get("rapport_s_b")
+            if (
+                isinstance(ka, int) and isinstance(kb, int)
+                and kb >= ka and ka >= 0
+            ):
+                md["rapport_width"] = kb - ka + 1
+            if (
+                isinstance(sa, int) and isinstance(sb, int)
+                and sb >= sa and sa >= 0
+            ):
+                md["rapport_height"] = sb - sa + 1
+        elif pattern_type == "JBead Pattern":
+            model = pattern_dict.get("model")
+            if isinstance(model, list) and model:
+                first = model[0]
+                if isinstance(first, list):
+                    md["pattern_width"] = len(first)
+                # Used height: highest row index containing a non-zero
+                # cell (matches the editor's runtime usedHeight).
+                used_h = 0
+                for j, row in enumerate(model):
+                    if isinstance(row, list) and any(c for c in row):
+                        used_h = j + 1
+                md["pattern_height"] = used_h or len(model)
+            repeat = pattern_dict.get("repeat")
+            if isinstance(repeat, int) and repeat > 0:
+                md["rapport_height"] = repeat
+    except Exception:
+        logging.exception("extract_pattern_metadata failed")
+    return md
+
+
+def apply_pattern_metadata(pattern, pattern_dict):
+    md = extract_pattern_metadata(pattern_dict, pattern.pattern_type)
+    for key, value in md.items():
+        setattr(pattern, key, value)
+
+
 def add_weave_pattern(pattern, user):
     group = Group.query.filter(Group.name == user.name).one_or_none()
     if not group:
@@ -39,6 +130,7 @@ def add_weave_pattern(pattern, user):
                 public=False,
                 owner=user,
             )
+            apply_pattern_metadata(p, pattern)
             assignment = Assignment(
                 pattern=p,
                 group=group,
@@ -82,6 +174,7 @@ def add_bead_pattern(pattern, user):
                 public=False,
                 owner=user,
             )
+            apply_pattern_metadata(p, pattern)
             assignment = Assignment(
                 pattern=p,
                 group=group,
@@ -145,6 +238,10 @@ def clone_pattern(user, pattern, contents):
                 public=False,
                 owner=user,
             )
+            try:
+                apply_pattern_metadata(p, json.loads(contents))
+            except Exception:
+                logging.exception("metadata extract on clone failed")
             assignment = Assignment(
                 pattern=p,
                 group=group,

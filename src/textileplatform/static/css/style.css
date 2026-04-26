@@ -301,3 +301,31 @@ img.icon.selected {
 .mode-btn:hover:not(.active) {
     background: #eee;
 }
+
+.impersonation-banner {
+    background: #fff3cd;
+    color: #663d00;
+    border-bottom: 1px solid #e0a800;
+    padding: 0.5rem 1rem;
+    font-size: 0.95em;
+    height: 2.25rem;
+    box-sizing: border-box;
+}
+body.impersonating .content {
+    height: calc(100vh - 3rem - 2.25rem);
+}
+.impersonation-banner button {
+    margin-left: 0.5rem;
+}
+.invitation-badge {
+    color: #b94a48;
+    font-weight: bold;
+}
+nav ul li a, #nav-messages {
+    white-space: nowrap;
+}
+#nav-messages .nav-count {
+    display: inline;
+    padding: 0;
+    margin-left: 0.25rem;
+}
