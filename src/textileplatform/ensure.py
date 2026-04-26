@@ -55,6 +55,8 @@ def ensure_db_contents(app):
             membership = Membership(
                 group=group,
                 user=examples,
+                role="owner",
+                state="accepted",
             )
             db.session.add(membership)
             superuser = (
@@ -64,6 +66,8 @@ def ensure_db_contents(app):
                 membership = Membership(
                     group=group,
                     user=superuser,
+                    role="owner",
+                    state="accepted",
                 )
                 db.session.add(membership)
             db.session.commit()
@@ -94,6 +98,8 @@ def ensure_db_contents(app):
             membership = Membership(
                 group=group,
                 user=beispiele,
+                role="owner",
+                state="accepted",
             )
             db.session.add(membership)
             superuser = (
@@ -103,6 +109,8 @@ def ensure_db_contents(app):
                 membership = Membership(
                     group=group,
                     user=superuser,
+                    role="owner",
+                    state="accepted",
                 )
                 db.session.add(membership)
             db.session.commit()
