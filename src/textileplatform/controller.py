@@ -153,29 +153,37 @@ def group(group_name):
         group = Group.query.filter(Group.name == group_name).one_or_none()
         if not group:
             return redirect(url_for("index"))
-        if g.user and g.user.is_in_group(group.id):
-            # show private view
-            patterns = []
-            for a in group.assignments:
-                patterns.append(a.pattern)
-        else:
-            # show public view
-            patterns = []
-            for a in group.assignments:
-                if not a.pattern.public:
-                    continue
-                patterns.append(a.pattern)
-        patterns.sort(key=lambda p: (p.label, p.name, p.owner.name, p.id))
-        patterns_weave = []
-        patterns_bead = []
-        patterns_other = []
-        for pattern in patterns:
-            if pattern.pattern_type == "DB-WEAVE Pattern":
-                patterns_weave.append(pattern)
-            elif pattern.pattern_type == "JBead Pattern":
-                patterns_bead.append(pattern)
-            else:
-                patterns_other.append(pattern)
+        is_member = bool(g.user and g.user.is_in_group(group.id))
+        raw = []
+        for a in group.assignments:
+            p = a.pattern
+            if not is_member and not p.public:
+                continue
+            raw.append(p)
+        raw.sort(key=lambda p: (p.label.lower(), p.name, p.owner.name, p.id))
+        # Flatten into the same shape as the user_private/_public templates
+        # so we can reuse the thumbnail-card markup.
+        patterns = [{
+            "name": p.name,
+            "label": p.label,
+            "owner_name": p.owner.name,
+            "owner_label": p.owner.label,
+            "pattern_type": p.pattern_type,
+            "public": bool(p.public),
+            "modified": p.modified.isoformat() if p.modified else None,
+            "created": p.created.isoformat() if p.created else None,
+            "author": p.author or "",
+            "organization": p.organization or "",
+            "notes": p.notes or "",
+            "pattern_width": p.pattern_width,
+            "pattern_height": p.pattern_height,
+            "rapport_width": p.rapport_width,
+            "rapport_height": p.rapport_height,
+        } for p in raw]
+        patterns_weave = [p for p in patterns if p["pattern_type"] == "DB-WEAVE Pattern"]
+        patterns_bead = [p for p in patterns if p["pattern_type"] == "JBead Pattern"]
+        patterns_other = [p for p in patterns
+                          if p["pattern_type"] not in ("DB-WEAVE Pattern", "JBead Pattern")]
         return render_template(
             "group.html",
             group=group,
