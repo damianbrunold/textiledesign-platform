@@ -55,7 +55,7 @@ const Menu = (function () {
             sub.className = "tx-menu-dropdown tx-menu-submenu";
             for (const child of item.items) sub.appendChild(_buildItem(child));
             wrap.appendChild(sub);
-            wrap.addEventListener("mouseenter", () => {
+            const openSub = () => {
                 // Close sibling open submenus
                 const parent = wrap.parentElement;
                 if (parent) {
@@ -64,6 +64,23 @@ const Menu = (function () {
                     });
                 }
                 wrap.classList.add("open");
+            };
+            wrap.addEventListener("mouseenter", openSub);
+            // Tap-to-open for touch: clicking on the parent row of a
+            // submenu opens (or toggles) it instead of doing nothing.
+            // Stop propagation so the document-level click handler
+            // doesn't immediately close the whole menu.
+            wrap.addEventListener("click", (e) => {
+                // Only intercept clicks directly on this wrapper (label /
+                // arrow), not bubbled clicks from leaf items inside the
+                // submenu.
+                if (e.target.closest(".tx-menu-item") !== wrap) return;
+                e.stopPropagation();
+                if (wrap.classList.contains("open")) {
+                    wrap.classList.remove("open");
+                } else {
+                    openSub();
+                }
             });
             if (typeof item.visibleWhen === "function") {
                 wrap._visibleWhen = item.visibleWhen;

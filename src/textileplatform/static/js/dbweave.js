@@ -3449,6 +3449,87 @@ function _layoutDragHit(px, py) {
     return null;
 }
 
+// ---- Long-press → Ctrl synthesis -------------------------------
+//
+// On touch/pen there are no modifier keys, so a pressed-and-held
+// gesture (≥500ms with little movement) maps to "Ctrl+click". The
+// down-event is buffered until we know whether it's a tap, a drag,
+// or a long-press; this matters because mouseDown for some tools
+// starts a stroke or selection, which would conflict with a later
+// long-press → ctrl-cursor-only decision.
+
+const _LP_DELAY_MS = 500;
+const _LP_MOVE_TOL = 8;
+let _lpTimer = null;
+let _lpDownEvent = null;
+let _lpStartXY = null;
+let _ctrlOverride = false;
+let _activePointerId = null;
+
+function _ctrlOrLp(event) {
+    return event.ctrlKey || _ctrlOverride;
+}
+
+function _pointerDown(event) {
+    if (_activePointerId !== null) return;
+    _activePointerId = event.pointerId;
+    _ctrlOverride = false;
+    if (event.pointerType === "mouse") {
+        mouseDown(event);
+        return;
+    }
+    _lpDownEvent = event;
+    _lpStartXY = { x: event.clientX, y: event.clientY };
+    _lpTimer = setTimeout(() => {
+        _lpTimer = null;
+        if (!_lpDownEvent) return;
+        _ctrlOverride = true;
+        mouseDown(_lpDownEvent);
+        _lpDownEvent = null;
+    }, _LP_DELAY_MS);
+}
+
+function _pointerMove(event) {
+    if (_activePointerId !== null && event.pointerId !== _activePointerId
+        && _lpDownEvent) return;
+    if (_lpTimer && _lpStartXY) {
+        const dx = event.clientX - _lpStartXY.x;
+        const dy = event.clientY - _lpStartXY.y;
+        if ((dx * dx + dy * dy) > (_LP_MOVE_TOL * _LP_MOVE_TOL)) {
+            clearTimeout(_lpTimer);
+            _lpTimer = null;
+            mouseDown(_lpDownEvent);
+            _lpDownEvent = null;
+        } else {
+            return;
+        }
+    }
+    mouseMove(event);
+}
+
+function _pointerUp(event) {
+    // pointerup is registered on window so that drag-out-then-release
+    // still finishes the drag — but that means it also fires for clicks
+    // on menus, toolbars, and anything else outside the canvas. Only
+    // act if pointerdown was first received on the canvas (which sets
+    // _activePointerId), and only for that same pointer.
+    if (_activePointerId === null) return;
+    if (event.pointerId !== _activePointerId) return;
+    if (_lpTimer) {
+        clearTimeout(_lpTimer);
+        _lpTimer = null;
+        if (_lpDownEvent) {
+            mouseDown(_lpDownEvent);
+            _lpDownEvent = null;
+        }
+        mouseUp(event);
+    } else {
+        mouseUp(event);
+    }
+    _ctrlOverride = false;
+    _activePointerId = null;
+}
+
 function mouseDown(event) {
     had_selection = cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2;
     mousedown = true;
@@ -3677,7 +3758,7 @@ function mouseUp(event) {
     // the clicked cell, so the cursor is in place; we just need to
     // redraw and skip the edit dispatch below. Shift+click on the
     // colour bars remains the colour sniffer.
-    if (event.ctrlKey) {
+    if (_ctrlOrLp(event)) {
         updateSelectionIcons();
         view.draw();
         return;
@@ -3924,12 +4005,20 @@ function init() {
     document.getElementById("icon-selection-rotate").addEventListener("click", selectionRotate);
     document.getElementById("icon-selection-invert").addEventListener("click", selectionInvert);
 
-    canvas.addEventListener("touchstart", mouseDown);
-    canvas.addEventListener("touchmove", mouseMove);
-    // canvas.addEventListener("touchend", mouseUp);
-    canvas.addEventListener("mousedown", mouseDown);
-    canvas.addEventListener("mousemove", mouseMove);
-    canvas.addEventListener("mouseup", mouseUp);
+    // Pointer Events unify mouse, touch and pen. The wrappers below
+    // add a long-press gesture (~500ms hold without movement) that
+    // simulates Ctrl+click — this is how a finger or stylus user
+    // reaches the cursor-only-positioning gesture.
+    canvas.addEventListener("pointerdown", _pointerDown);
+    canvas.addEventListener("pointermove", _pointerMove);
+    window.addEventListener("pointerup", _pointerUp);
+    window.addEventListener("pointercancel", _pointerUp);
+    // Disable the browser's default touch gestures (pan/zoom) on the
+    // canvas — the editor needs full control of pointer drags.
+    canvas.style.touchAction = "none";
+    // Prevent the browser's long-press context menu so our long-press
+    // gesture (Ctrl synthesis) is unimpeded on touch.
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 }
 
 function updateSelectionIcons() {

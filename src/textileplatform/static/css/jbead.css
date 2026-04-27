@@ -166,3 +166,15 @@
 
 .changed { background: #900; }
 .unchanged { background: #090; }
+
+/* ---- Touch-device adjustments -------------------------------- */
+@media (pointer: coarse) {
+    #tx-toolbar { min-height: 44px; padding: 4px 6px; gap: 4px; }
+    .tx-tb-btn { width: 36px; height: 36px; padding: 4px; }
+    .tx-tb-btn img { width: 22px; height: 22px; }
+    .tx-tb-sep { height: 24px; margin: 0 6px; }
+    .tx-publish-toggle { padding: 4px 8px; font-size: 20px; }
+    #tx-toolbar #close, #tx-toolbar #clone {
+        padding: 0.5rem 0.7rem;
+    }
+}

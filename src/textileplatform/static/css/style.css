@@ -329,3 +329,29 @@ nav ul li a, #nav-messages {
     padding: 0;
     margin-left: 0.25rem;
 }
+
+/* ---- Touch-device adjustments -------------------------------- */
+/* `pointer: coarse` matches finger / stylus input. Mouse users
+   are unaffected. The aim is a basic-usable hit target (~36-44px)
+   without redesigning the layout. */
+@media (pointer: coarse) {
+    nav { height: auto; min-height: 3rem; }
+    nav ul li a, nav ul li span, header .action {
+        padding: 0.75rem 0.7rem;
+    }
+    .content > header { height: auto; min-height: 2.5rem; }
+    #header .button,
+    #clone, #save, #close,
+    #current-range, #current-color, #current-layout,
+    #view-options-menu {
+        height: auto;
+        min-height: 36px;
+        padding: 0.5rem 0.6rem;
+    }
+    #ranges div, #layouts div, #view-options div, #colors div {
+        padding: 0.5rem 0.7rem;
+    }
+    .mode-btn { padding: 0.5rem 1rem; }
+    /* Slight spacing increase between items so taps don't collide. */
+    nav ul li { margin: 0 0.1rem; }
+}

@@ -165,3 +165,12 @@
     padding: 0;
     display: flex;
 }
+
+/* ---- Touch-device adjustments -------------------------------- */
+@media (pointer: coarse) {
+    #tx-menubar { height: auto; min-height: 2.6rem; font-size: 14px; }
+    .tx-menubar .tx-menu-top { padding: 0.5rem 0.9rem; }
+    .tx-menubar .tx-menu-item { padding: 0.6rem 1rem; }
+    .tx-menubar .tx-menu-dropdown { min-width: 240px; }
+    .tx-menubar .tx-menu-separator { margin: 0.35rem 0.3rem; }
+}

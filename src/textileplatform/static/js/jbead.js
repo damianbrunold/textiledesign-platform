@@ -791,14 +791,25 @@ function init() {
 
     view.draw();
 
-    canvas.addEventListener('mousedown', _onMouseDown);
-    canvas.addEventListener('mousemove', _onMouseMove);
-    window.addEventListener('mouseup', _onMouseUp);
+    // Pointer Events unify mouse, touch and pen. The wrappers below add
+    // a long-press gesture (~500ms) that simulates Ctrl+click — this is
+    // how a finger/stylus user reaches the pipette and other Ctrl-only
+    // gestures.
+    canvas.addEventListener('pointerdown', _pointerDown);
+    canvas.addEventListener('pointermove', _pointerMove);
+    window.addEventListener('pointerup', _pointerUp);
+    window.addEventListener('pointercancel', _pointerUp);
     canvas.addEventListener('dblclick', _onDoubleClick);
-    canvas.addEventListener('mouseleave', () => {
+    canvas.addEventListener('pointerleave', () => {
         const sb = document.getElementById("sb-cursor");
         if (sb) sb.textContent = "";
     });
+    // Disable the browser's default touch gestures (pan/zoom) on the
+    // canvas — the editor needs full control of pointer drags.
+    canvas.style.touchAction = "none";
+    // Prevent the browser's long-press context menu so our long-press
+    // gesture (Ctrl synthesis) is unimpeded on touch.
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
     // Mouse wheel = pattern scroll. One notch ≈ 3 rows.
     canvas.addEventListener('wheel', (e) => {
@@ -941,6 +952,95 @@ function _onDoubleClick(event) {
     }, _actionLabel);
 }
 
+// ---- Long-press → Ctrl synthesis -------------------------------
+//
+// On touch/pen there are no modifier keys, so a pressed-and-held
+// gesture (≥500ms with little movement) maps to "Ctrl+click". The
+// down-event is buffered until we know whether it's a tap, a drag,
+// or a long-press; this matters because _onMouseDown for some tools
+// starts a stroke or selection, which would conflict with a later
+// long-press → pipette decision.
+
+const _LP_DELAY_MS = 500;
+const _LP_MOVE_TOL = 8;
+let _lpTimer = null;
+let _lpDownEvent = null;
+let _lpStartXY = null;
+let _ctrlOverride = false;
+let _activePointerId = null;
+
+function _ctrlOrLp(event) {
+    return event.ctrlKey || _ctrlOverride;
+}
+
+function _pointerDown(event) {
+    if (_activePointerId !== null) return;
+    _activePointerId = event.pointerId;
+    _ctrlOverride = false;
+    if (event.pointerType === 'mouse') {
+        _onMouseDown(event);
+        return;
+    }
+    // Buffer the down so the handler isn't called until we know what
+    // kind of gesture this is.
+    _lpDownEvent = event;
+    _lpStartXY = { x: event.clientX, y: event.clientY };
+    _lpTimer = setTimeout(() => {
+        _lpTimer = null;
+        if (!_lpDownEvent) return;
+        _ctrlOverride = true;
+        _onMouseDown(_lpDownEvent);
+        _lpDownEvent = null;
+    }, _LP_DELAY_MS);
+}
+
+function _pointerMove(event) {
+    if (_activePointerId !== null && event.pointerId !== _activePointerId
+        && _lpDownEvent) return;
+    if (_lpTimer && _lpStartXY) {
+        const dx = event.clientX - _lpStartXY.x;
+        const dy = event.clientY - _lpStartXY.y;
+        if ((dx * dx + dy * dy) > (_LP_MOVE_TOL * _LP_MOVE_TOL)) {
+            // Movement: this is a drag, commit the buffered down now.
+            clearTimeout(_lpTimer);
+            _lpTimer = null;
+            _onMouseDown(_lpDownEvent);
+            _lpDownEvent = null;
+        } else {
+            return;
+        }
+    }
+    _onMouseMove(event);
+}
+
+function _pointerUp(event) {
+    // pointerup is registered on window so that drag-out-then-release
+    // still finishes the drag — but that means it also fires for clicks
+    // on menus, toolbars, and anything else outside the canvas. Only
+    // act if pointerdown was first received on the canvas (which sets
+    // _activePointerId), and only for that same pointer.
+    if (_activePointerId === null) return;
+    if (event.pointerId !== _activePointerId) return;
+    if (_lpTimer) {
+        // Quick tap before long-press fired: commit the down then up.
+        clearTimeout(_lpTimer);
+        _lpTimer = null;
+        if (_lpDownEvent) {
+            _onMouseDown(_lpDownEvent);
+            _lpDownEvent = null;
+        }
+        _onMouseUp(event);
+    } else {
+        // Either a real drag (down already committed in _pointerMove)
+        // or a long-press already fired in _pointerDown's timer. Both
+        // need _onMouseUp to finish the stroke / commit selection.
+        _onMouseUp(event);
+    }
+    _ctrlOverride = false;
+    _activePointerId = null;
+}
+
+
 function _onMouseDown(event) {
     if (readonly) return;
     const [x, y] = _eventCoords(event);
@@ -955,7 +1055,7 @@ function _onMouseDown(event) {
     const [i, j] = hit.coord;
     if (i === undefined || j === undefined) return;
 
-    if (event.ctrlKey) {
+    if (_ctrlOrLp(event)) {
         // Ctrl-click is the universal pipette gesture, regardless of tool.
         selected_color = pattern.get(i, j);
         view.draw();
@@ -1024,7 +1124,7 @@ function _onMouseMove(event) {
     }
     if (_pencil_stroke && current_tool === "pencil") {
         let endI = i, endJ = j;
-        if (event.ctrlKey) {
+        if (_ctrlOrLp(event)) {
             [endI, endJ] = _constrainTo8Dir(
                 _pencil_stroke.startI, _pencil_stroke.startJ, endI, endJ);
         }
