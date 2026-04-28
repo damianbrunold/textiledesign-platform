@@ -294,11 +294,14 @@ def _map_raw_to_platform(raw, name):
     hl_list = _dig(raw, 'data', 'hilfslinien', 'list') or ''
     result['hlines'] = _decode_hlines(hl_list, hl_count)
     result['entering_style'] = _decode_viewtype(
-        _dig(view, 'einzug', 'viewtype', default='1'))
+        _dig(view, 'einzug', 'viewtype', default='1'),
+        _dig(view, 'einzug', 'viewtype2'))
     result['treadling_style'] = _decode_viewtype(
-        _dig(view, 'trittfolge', 'viewtype', default='3'))
+        _dig(view, 'trittfolge', 'viewtype', default='3'),
+        _dig(view, 'trittfolge', 'viewtype2'))
     result['tieup_style'] = _decode_viewtype(
-        _dig(view, 'aufknuepfung', 'viewtype', default='2'))
+        _dig(view, 'aufknuepfung', 'viewtype', default='2'),
+        _dig(view, 'aufknuepfung', 'viewtype2'))
 
     return result
 
@@ -441,16 +444,14 @@ def _apply_platform_to_raw(raw, pattern):
     einzug_view['down'] = (
         '1' if pattern.get('entering_at_bottom') else '0'
     )
-    einzug_view['viewtype'] = _encode_viewtype(
-        pattern.get('entering_style', 'filled'))
+    _write_viewtype(einzug_view, pattern.get('entering_style', 'filled'))
     einzug_view.setdefault('stronglinex', '4')
     einzug_view.setdefault('strongliney', '4')
     einzug_view['hvisible'] = str(int(pattern.get('visible_shafts') or 12))
     einzug_view.setdefault('style', '1')
 
     aufk_view = view.setdefault('aufknuepfung', {})
-    aufk_view['viewtype'] = _encode_viewtype(
-        pattern.get('tieup_style', 'filled'))
+    _write_viewtype(aufk_view, pattern.get('tieup_style', 'filled'))
     aufk_view.setdefault('stronglinex', '4')
     aufk_view.setdefault('strongliney', '4')
 
@@ -458,8 +459,7 @@ def _apply_platform_to_raw(raw, pattern):
     tf_view['visible'] = (
         '1' if pattern.get('display_treadling') else '0'
     )
-    tf_view['viewtype'] = _encode_viewtype(
-        pattern.get('treadling_style', 'filled'))
+    _write_viewtype(tf_view, pattern.get('treadling_style', 'filled'))
     tf_view.setdefault('stronglinex', '4')
     tf_view.setdefault('strongliney', '4')
     tf_view['single'] = (
@@ -597,7 +597,10 @@ def _render_struct(d):
             lines.append('}')
         else:
             lines.append(f'{key}=={_format_value(value)}')
-    return '\n'.join(lines) + '\n'
+    # Legacy dbweave requires CRLF line endings (in particular after
+    # the @dbw3:file signature), so emit CRLF throughout for full
+    # compatibility.
+    return '\r\n'.join(lines) + '\r\n'
 
 
 def _render_dict_into(d, lines, indent):
@@ -625,7 +628,7 @@ def _format_value(v):
         out.append(s[:70] + '\\')
         s = s[70:]
     out.append(s)
-    return '\n'.join(out)
+    return '\r\n'.join(out)
 
 
 def _looks_like_long_hex(s):
@@ -790,19 +793,57 @@ def _hlines_equal(a, b):
     return True
 
 
+# Numeric viewtype codes used in `.dbw` files. 0..9 are the legacy
+# values understood by every reader; 10 (HDASH) and 11 (PLUS) were
+# added later. Files written by recent dbweave/textile versions store
+# the extended values in a sibling "viewtype2" field while keeping
+# "viewtype" coerced to a 0..9 visual analogue, so older readers still
+# render something sensible.
+_VIEWTYPE_TO_STYLE = {
+    '0': 'filled', '1': 'vdash', '2': 'cross', '3': 'dot',
+    '4': 'circle', '5': 'rising', '6': 'falling',
+    '7': 'smallcross', '8': 'smallcircle', '9': 'number',
+    '10': 'hdash', '11': 'plus',
+}
+
+# 'dash' is a legacy alias for 'vdash' kept on the import side for
+# patterns saved by older textile versions; the JS settings dialog
+# only lists 'vdash', so we always normalise to that on decode.
+_STYLE_TO_VIEWTYPE = {
+    'filled': '0', 'vdash': '1', 'dash': '1', 'cross': '2', 'dot': '3',
+    'circle': '4', 'rising': '5', 'falling': '6',
+    'smallcross': '7', 'smallcircle': '8', 'number': '9',
+    'hdash': '10', 'plus': '11',
+}
+
+# When writing for legacy readers, HDASH/PLUS need a 0..9 substitute.
+# Matches dbweave's filesave.cpp `legacyViewtype`: HDASH→STRICH(dash),
+# PLUS→KREUZ(cross).
+_LEGACY_COERCE = {'10': '1', '11': '2'}
+
+
+def _decode_viewtype(n, n2=None):
+    """Resolve the effective style. ``n2`` (viewtype2) wins when it
+    encodes one of the extended values (HDASH/PLUS); otherwise the
+    legacy ``n`` is used."""
+    if n2 in ('10', '11'):
+        return _VIEWTYPE_TO_STYLE[n2]
+    return _VIEWTYPE_TO_STYLE.get(n, 'filled')
+
+
 def _encode_viewtype(style):
-    styles = {
-        'filled': '0', 'dash': '1', 'cross': '2', 'dot': '3',
-        'circle': '4', 'rising': '5', 'falling': '6',
-        'smallcross': '7', 'smallcircle': '8', 'number': '9',
-    }
-    return styles.get(style, '0')
+    """Legacy 0..9 viewtype string (HDASH→dash, PLUS→cross). Companion
+    viewtype2 is emitted separately by :func:`_write_viewtype`."""
+    n = _STYLE_TO_VIEWTYPE.get(style, '0')
+    return _LEGACY_COERCE.get(n, n)
 
 
-def _decode_viewtype(n):
-    decode = {
-        '0': 'filled', '1': 'dash', '2': 'cross', '3': 'dot',
-        '4': 'circle', '5': 'rising', '6': 'falling',
-        '7': 'smallcross', '8': 'smallcircle', '9': 'number',
-    }
-    return decode.get(n, 'filled')
+def _write_viewtype(view_dict, style):
+    """Emit ``viewtype`` (legacy-coerced) and, only when needed,
+    ``viewtype2`` carrying the full extended value."""
+    n = _STYLE_TO_VIEWTYPE.get(style, '0')
+    view_dict['viewtype'] = _LEGACY_COERCE.get(n, n)
+    if n in _LEGACY_COERCE:
+        view_dict['viewtype2'] = n
+    else:
+        view_dict.pop('viewtype2', None)
