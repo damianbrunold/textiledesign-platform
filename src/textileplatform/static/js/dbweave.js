@@ -567,12 +567,24 @@ function cellPainterNumber(ctx, settings, view, i, j, value) {
             8,
             Math.min(view.dx, view.dy) - 2 * Math.max(view.bx, view.by) - 2
         );
+        // Desktop parity (draw_cell.cpp NUMBER branch + draw.cpp call
+        // sites): the rendered glyph is the index of the meaningful
+        // axis (1-based), not the cell value. For einzug / aufknüpfung
+        // that's the shaft (j-axis); for pegplan it's the shaft along
+        // the i-axis. (Treadling never renders NUMBER on the desktop
+        // — and the dialog excludes it from that select anyway — so
+        // we don't need a treadling case.) Pick by painter_prop
+        // because the painter is shared across panes.
+        const axisI = view.painter_prop === "pegplan_style";
+        const num = axisI
+            ? (i + (view.offset_i || 0) + 1)
+            : (j + (view.offset_j || 0) + 1);
         ctx.font = `${fontSize}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillStyle = getRangeColor(settings, value);
         ctx.fillText(
-            String(value),
+            String(num),
             view.calc_x(i + 0.5),
             view.calc_y(j + 0.5)
         );
@@ -1220,7 +1232,23 @@ class GridView {
     }
 
     drawData(ctx, settings) {
-        const painter = cellPainters[settings[this.painter_prop]];
+        const styleKey = settings[this.painter_prop];
+        let painter = cellPainters[styleKey];
+        if (typeof painter !== "function") {
+            // Defensive: a settings key got cleared / set to a value
+            // that isn't in cellPainters. Fall back to "filled" so the
+            // editor keeps rendering, and log once so we can chase the
+            // offender.
+            if (!GridView._warnedPainter) GridView._warnedPainter = {};
+            if (!GridView._warnedPainter[this.painter_prop]) {
+                GridView._warnedPainter[this.painter_prop] = true;
+                console.warn("drawData: no painter for settings."
+                    + this.painter_prop + " = "
+                    + JSON.stringify(styleKey)
+                    + " — falling back to 'filled'");
+            }
+            painter = cellPainters['filled'];
+        }
         // Fixiert / user-defined threading: highlight warps whose
         // assigned shaft no longer matches the saved template. fixeinzug
         // is packed (empty warps skipped) and tiled across the array
@@ -1425,14 +1453,19 @@ class GridViewPattern {
     drawDataColor(ctx, settings) {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
+        // Sinking shed (Untenhebend): the binding marks indicate where
+        // the warp goes UNDER the weft instead of over it, so the
+        // colour effect is inverted.
+        const sink = !!settings.sinking_shed;
 
         for (let i = this.offset_i; i < this.offset_i + width; i++) {
             if (i < pattern.min_x || pattern.max_x < i) continue;
             for (let j = this.offset_j; j < this.offset_j + height; j++) {
                 if (j < pattern.min_y || pattern.max_y < j) continue;
                 const value = this.data.get(i, j);
+                const warpUp = (value > 0) !== sink;
                 let color = null;
-                if (value > 0) {
+                if (warpUp) {
                     color = colors[pattern.color_warp.get(i, 0)];
                 } else {
                     color = colors[pattern.color_weft.get(j, 0)];
@@ -1456,6 +1489,9 @@ class GridViewPattern {
 
         const dx = this.dx || settings.dx;
         const dy = this.dy || settings.dy;
+        // Sinking shed: marks mean warp-down, so warp/weft visibility
+        // flips relative to the rising-shed default.
+        const sink = !!settings.sinking_shed;
 
         for (let i = this.offset_i; i < this.offset_i + width; i++) {
             if (i < pattern.min_x || pattern.max_x < i) continue;
@@ -1463,6 +1499,7 @@ class GridViewPattern {
                 if (j < pattern.min_y || pattern.max_y < j) continue;
 
                 const value = this.data.get(i, j);
+                const warpUp = (value > 0) !== sink;
 
                 const color_warp = colors[pattern.color_warp.get(i, 0)];
                 const color_weft = colors[pattern.color_weft.get(j, 0)];
@@ -1479,7 +1516,7 @@ class GridViewPattern {
 
                 ctx.fillStyle = settings.darcula ? "#444" : "#fff";
                 fillRect(ctx, x0, y0, x3, y3);
-                if (value > 0) {
+                if (warpUp) {
                     ctx.fillStyle = color_weft;
                     fillRect(ctx, x0, y1, x3, y2, -0.5);
 
@@ -2520,7 +2557,7 @@ class PatternView {
             pegplanMode,
             GridView, p.pegplan,
             x2, y1, width2, height1,
-            'treadling_style',
+            'pegplan_style',
             false, false
         );
         this.treadling = this.make(
@@ -4726,10 +4763,15 @@ function initSettings(data, settings) {
     // pattern JSON doesn't already specify (Phase 12). Saved patterns
     // continue to win — the prefs only fill the gaps.
     const prefs = (typeof _prefsLoad === "function") ? _prefsLoad() : {};
+    // Coerce a saved-but-unknown style key (e.g. an old pattern with an
+    // empty string left over from the symbol-options dialog regression)
+    // back to "filled" so cellPainters[...] always resolves.
+    const _coerceStyle = (v) =>
+        (typeof v === "string" && cellPainters[v]) ? v : "filled";
     settings.style = val(data, "weave_style", "draft");
-    settings.entering_style = val(data, "entering_style", prefs.entering_style || "filled");
-    settings.tieup_style = val(data, "tieup_style", prefs.tieup_style || "filled");
-    settings.treadling_style = val(data, "treadling_style", prefs.treadling_style || "filled");
+    settings.entering_style  = _coerceStyle(val(data, "entering_style",  prefs.entering_style  || "filled"));
+    settings.tieup_style     = _coerceStyle(val(data, "tieup_style",     prefs.tieup_style     || "filled"));
+    settings.treadling_style = _coerceStyle(val(data, "treadling_style", prefs.treadling_style || "filled"));
     settings.single_treadling = val(data, "single_treadling", true);
     settings.weave_locked = val(data, "weave_locked", false);
     settings.unit_width = val(data, "unit_width", prefs.unit_width || 4);
@@ -4739,13 +4781,14 @@ function initSettings(data, settings) {
     settings.entering_at_bottom = val(data, "entering_at_bottom", !!prefs.entering_at_bottom);
     settings.warp_factor = val(data, "warp_factor", prefs.warp_factor || 1.0);
     settings.weft_factor = val(data, "weft_factor", prefs.weft_factor || 1.0);
-    // Phase 12 extras (port of XOptionsDialog fields). Some are
-    // currently no-ops (alt_palette, alt_pegplan, sinking_shed) but
-    // are kept on `settings` so the Optionen dialog round-trips them.
-    settings.pegplan_style    = val(data, "pegplan_style",    prefs.pegplan_style    || "filled");
-    settings.aushebung_style  = val(data, "aushebung_style",  prefs.aushebung_style  || "rising");
-    settings.anbindung_style  = val(data, "anbindung_style",  prefs.anbindung_style  || "cross");
-    settings.abbindung_style  = val(data, "abbindung_style",  prefs.abbindung_style  || "circle");
+    // Phase 12 extras (port of XOptionsDialog fields). alt_palette and
+    // alt_pegplan are currently no-ops but kept on `settings` so the
+    // Optionen dialog round-trips them. sinking_shed inverts the colour
+    // effect / simulation render.
+    settings.pegplan_style    = _coerceStyle(val(data, "pegplan_style",    prefs.pegplan_style    || "filled"));
+    settings.aushebung_style  = _coerceStyle(val(data, "aushebung_style",  prefs.aushebung_style  || "rising"));
+    settings.anbindung_style  = _coerceStyle(val(data, "anbindung_style",  prefs.anbindung_style  || "cross"));
+    settings.abbindung_style  = _coerceStyle(val(data, "abbindung_style",  prefs.abbindung_style  || "circle"));
     settings.alt_palette      = val(data, "alt_palette",      !!prefs.alt_palette);
     settings.alt_pegplan      = val(data, "alt_pegplan",      !!prefs.alt_pegplan);
     settings.sinking_shed     = val(data, "sinking_shed",     !!prefs.sinking_shed);
@@ -6158,10 +6201,14 @@ function showOverviewWindow() {
         const jLo = farbeffekt ? Math.max(0, pattern.min_y) : 0;
         const jHi = farbeffekt ? Math.min(my - 1, pattern.max_y) : my - 1;
 
+        const sink = !!settings.sinking_shed;
         for (let j = jLo; j <= jHi; j++) {
             for (let i = iLo; i <= iHi; i++) {
                 const v = pattern.weave.get(i, j);
-                const woven = v > 0 && v !== 12;
+                // "Woven" = warp on top. With sinking shed the mark
+                // means the opposite, so the colour effect flips.
+                let woven = v > 0 && v !== 12;
+                if (sink && farbeffekt) woven = !woven;
                 const x = rtl ? (cw - (i + 1) * gw) : (i * gw);
                 const y = my * gh - (j + 1) * gh;
                 if (farbeffekt) {
@@ -10312,7 +10359,7 @@ const _PREFS_DEFAULTS = {
     alt_pegplan:    false,   // no-op
     // Einstellungen
     single_treadling: true,
-    sinking_shed:     false, // no-op: rendering doesn't honour it yet
+    sinking_shed:     false,
     // Grössen — desktop allows resizing; web pattern dimensions are
     // fixed at create time, so these are display-only / no-op.
     max_shafts:       16,
@@ -10464,6 +10511,8 @@ function _applyBaseStyle(name) {
 const _SYMBOL_OPTS = [
     ["filled",      "Filled"],
     ["vdash",       "Vertical"],
+    ["hdash",       "Horizontal"],
+    ["plus",        "Plus"],
     ["cross",       "Cross"],
     ["dot",         "Point"],
     ["circle",      "Circle"],
@@ -10657,14 +10706,17 @@ function showOptionsDialog(global) {
         color_effect_with_grid: $("#tx-opt-fewr").checked,
         alt_palette:            $("#tx-opt-altpal").checked,
         alt_pegplan:            $("#tx-opt-altpeg").checked,
-        // Symbols
-        entering_style:  $("#tx-opt-sym-ez").value,
-        treadling_style: $("#tx-opt-sym-tf").value,
-        tieup_style:     $("#tx-opt-sym-au").value,
-        pegplan_style:   $("#tx-opt-sym-sp").value,
-        aushebung_style: $("#tx-opt-sym-au-lift").value,
-        anbindung_style: $("#tx-opt-sym-anb").value,
-        abbindung_style: $("#tx-opt-sym-abb").value,
+        // Symbols. The selects only offer the styles in _SYMBOL_OPTS;
+        // a pattern saved with another painter (dash/hdash/plus) leaves
+        // the select with an empty value. Fall back to the current
+        // setting in that case so a no-op submit doesn't clobber it.
+        entering_style:  $("#tx-opt-sym-ez").value      || cur.entering_style,
+        treadling_style: $("#tx-opt-sym-tf").value      || cur.treadling_style,
+        tieup_style:     $("#tx-opt-sym-au").value      || cur.tieup_style,
+        pegplan_style:   $("#tx-opt-sym-sp").value      || cur.pegplan_style,
+        aushebung_style: $("#tx-opt-sym-au-lift").value || cur.aushebung_style,
+        anbindung_style: $("#tx-opt-sym-anb").value     || cur.anbindung_style,
+        abbindung_style: $("#tx-opt-sym-abb").value     || cur.abbindung_style,
         // Settings
         single_treadling: body.querySelector("input[name='tx-opt-tt']:checked").value === "single",
         sinking_shed:     body.querySelector("input[name='tx-opt-shed']:checked").value === "sinking",
