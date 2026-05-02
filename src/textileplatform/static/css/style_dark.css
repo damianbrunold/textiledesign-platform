@@ -122,10 +122,15 @@ img.icon.selected { outline: 2px solid #999; }
     background: #777;
 }
 
+/* ---- Profile page ------------------------------------------- */
 .profile-section {
     background: #1f1f1f;
     border-color: #444;
+    color: #ddd;
 }
+.profile-section h2 { color: #fff; }
+.profile-section .field label,
+.profile-section .checkbox-field label { color: #ddd; }
 .profile-section input[type=text],
 .profile-section input[type=email],
 .profile-section input[type=password] {
@@ -151,3 +156,4 @@ img.icon.selected { outline: 2px solid #999; }
     color: #fff;
 }
 .btn.danger:hover { background: #c0392b; }
+
