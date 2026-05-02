@@ -6,63 +6,173 @@
 
 {% block content %}
 <style>
-#email {
-    width: 30rem;   
+.profile {
+    max-width: 38rem;
+    margin: 0 0 2rem 0;
 }
-#save {
-    width: 6rem;
+.profile-section {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    background: #fafafa;
+}
+.profile-section h2 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.1rem;
+}
+.profile-section form {
+    margin: 0;
+}
+.profile-section .field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.75rem;
+}
+.profile-section .field label {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+.profile-section input[type=text],
+.profile-section input[type=email],
+.profile-section input[type=password] {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font: inherit;
+    margin: 0;
+}
+.profile-section .checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+.profile-section .checkbox-field label {
+    font-weight: normal;
+    margin: 0;
+}
+.btn {
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    border: 1px solid #ccc;
+    background: #ddd;
+    color: #000;
+    border-radius: 3px;
+    cursor: pointer;
+    font: inherit;
+    text-decoration: none;
+    line-height: 1.4;
+}
+.btn:hover { background: #eee; }
+.btn.primary {
+    background: #08619d;
+    border-color: #08619d;
+    color: #fff;
+}
+.btn.primary:hover { background: #0a76bf; }
+.btn.danger {
+    background: #c0392b;
+    border-color: #a93226;
+    color: #fff;
+}
+.btn.danger:hover { background: #d44637; }
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
 }
 </style>
-  <form id="profile-form" method="post">
-    <label for="email">{{ gettext('E-Mail') }}</label>
-    <input name="email" id="email" required value="{{ user.email }}">
-    <div class="mode-toggle">
-        <button type="button" id="btn-light" class="mode-btn {% if user.darkmode is sameas false %}active{% endif %}">{{ gettext('Light') }}</button>
-        <button type="button" id="btn-dark" class="mode-btn {% if user.darkmode is sameas true %}active{% endif %}">{{ gettext('Dark') }}</button>
-        <button type="button" id="btn-system" class="mode-btn {% if user.darkmode is none %}active{% endif %}">{{ gettext('System') }}</button>
-        <input type="hidden" name="darkmode" id="darkmode-value" value="{% if user.darkmode is sameas true %}1{% elif user.darkmode is sameas false %}0{% else %}auto{% endif %}">
+
+<div class="profile">
+
+  <div class="profile-section">
+    <h2>{{ gettext('Account') }}</h2>
+    <form method="post">
+      <input type="hidden" name="action" value="settings">
+      <div class="field">
+        <label for="email">{{ gettext('E-Mail') }}</label>
+        <input name="email" id="email" type="email" required value="{{ user.email }}">
+      </div>
+      <div class="field">
+        <label>{{ gettext('Appearance') }}</label>
+        <div class="mode-toggle">
+          <button type="button" id="btn-light" class="mode-btn {% if user.darkmode is sameas false %}active{% endif %}">{{ gettext('Light') }}</button>
+          <button type="button" id="btn-dark" class="mode-btn {% if user.darkmode is sameas true %}active{% endif %}">{{ gettext('Dark') }}</button>
+          <button type="button" id="btn-system" class="mode-btn {% if user.darkmode is none %}active{% endif %}">{{ gettext('System') }}</button>
+          <input type="hidden" name="darkmode" id="darkmode-value" value="{% if user.darkmode is sameas true %}1{% elif user.darkmode is sameas false %}0{% else %}auto{% endif %}">
+        </div>
+      </div>
+      <div class="checkbox-field">
+        <input type="checkbox" name="block_invitations" id="block-invitations" value="1"
+               {% if user.block_invitations %}checked{% endif %}>
+        <label for="block-invitations">{{ gettext('Block invitations and direct messages from other users') }}</label>
+      </div>
+      <div class="profile-actions">
+        <button type="submit" class="btn primary">{{ gettext('Save') }}</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="profile-section">
+    <h2>{{ gettext('Change Password') }}</h2>
+    <form method="post">
+      <input type="hidden" name="action" value="password">
+      <div class="field">
+        <label for="current_password">{{ gettext('Current Password') }}</label>
+        <input name="current_password" id="current_password" type="password" required autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="new_password">{{ gettext('New Password') }}</label>
+        <input name="new_password" id="new_password" type="password" required autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="confirm_password">{{ gettext('Confirm New Password') }}</label>
+        <input name="confirm_password" id="confirm_password" type="password" required autocomplete="new-password">
+      </div>
+      <div class="profile-actions">
+        <button type="submit" class="btn primary">{{ gettext('Change Password') }}</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="profile-section">
+    <h2>{{ gettext('Session') }}</h2>
+    <div class="profile-actions">
+      <a class="btn danger" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a>
     </div>
-    <div class="block-invitations">
-        <label>
-            <input type="checkbox" name="block_invitations" value="1"
-                   {% if user.block_invitations %}checked{% endif %}>
-            {{ gettext('Block invitations and direct messages from other users') }}
-        </label>
-    </div>
-    <button id="save">{{ gettext('Save') }}</button>
-  </form>
-  <div><a class="button" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a></div>
-  <script>
-      document.getElementById("save").addEventListener("click", e => {
-        document.getElementById("profile-form").submit();
-      });
-      const darkStyleUrl = "{{ url_for('static', filename='css/style_dark.css') }}";
-      function setDarkMode(mode) {
-          // mode: 'light' | 'dark' | 'system'
-          let link = document.getElementById('dark-stylesheet');
-          if (link) link.remove();
-          if (mode === 'dark') {
-              link = document.createElement('link');
-              link.rel = 'stylesheet';
-              link.id = 'dark-stylesheet';
-              link.href = darkStyleUrl;
-              document.head.appendChild(link);
-          } else if (mode === 'system') {
-              link = document.createElement('link');
-              link.rel = 'stylesheet';
-              link.id = 'dark-stylesheet';
-              link.href = darkStyleUrl;
-              link.media = '(prefers-color-scheme: dark)';
-              document.head.appendChild(link);
-          }
-          const value = mode === 'dark' ? '1' : (mode === 'light' ? '0' : 'auto');
-          document.getElementById('darkmode-value').value = value;
-          document.getElementById('btn-light').classList.toggle('active', mode === 'light');
-          document.getElementById('btn-dark').classList.toggle('active', mode === 'dark');
-          document.getElementById('btn-system').classList.toggle('active', mode === 'system');
-      }
-      document.getElementById('btn-light').addEventListener('click', () => setDarkMode('light'));
-      document.getElementById('btn-dark').addEventListener('click', () => setDarkMode('dark'));
-      document.getElementById('btn-system').addEventListener('click', () => setDarkMode('system'));
-  </script>
+  </div>
+
+</div>
+
+<script>
+    const darkStyleUrl = "{{ url_for('static', filename='css/style_dark.css') }}";
+    function setDarkMode(mode) {
+        // mode: 'light' | 'dark' | 'system'
+        let link = document.getElementById('dark-stylesheet');
+        if (link) link.remove();
+        if (mode === 'dark') {
+            link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.id = 'dark-stylesheet';
+            link.href = darkStyleUrl;
+            document.head.appendChild(link);
+        } else if (mode === 'system') {
+            link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.id = 'dark-stylesheet';
+            link.href = darkStyleUrl;
+            link.media = '(prefers-color-scheme: dark)';
+            document.head.appendChild(link);
+        }
+        const value = mode === 'dark' ? '1' : (mode === 'light' ? '0' : 'auto');
+        document.getElementById('darkmode-value').value = value;
+        document.getElementById('btn-light').classList.toggle('active', mode === 'light');
+        document.getElementById('btn-dark').classList.toggle('active', mode === 'dark');
+        document.getElementById('btn-system').classList.toggle('active', mode === 'system');
+    }
+    document.getElementById('btn-light').addEventListener('click', () => setDarkMode('light'));
+    document.getElementById('btn-dark').addEventListener('click', () => setDarkMode('dark'));
+    document.getElementById('btn-system').addEventListener('click', () => setDarkMode('system'));
+</script>
 {% endblock %}

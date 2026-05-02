@@ -644,7 +644,29 @@ def source_pattern(user_name, pattern_name):
 @app.route("/profile", methods=("GET", "POST"))
 @login_required
 def profile():
+    user = g.user
     if request.method == "POST":
+        action = request.form.get("action", "settings")
+        if action == "password":
+            current = request.form.get("current_password", "")
+            new = request.form.get("new_password", "")
+            confirm = request.form.get("confirm_password", "")
+            if not check_password_hash(user.password, current):
+                flash(gettext("Current password is incorrect"))
+            elif not new:
+                flash(gettext("Password cannot be empty"))
+            elif new != confirm:
+                flash(gettext("Passwords do not match"))
+            else:
+                try:
+                    user.password = generate_password_hash(new)
+                    db.session.commit()
+                    flash(gettext("Password changed"))
+                except Exception:
+                    logging.exception("Password change failed")
+                    flash(gettext("Changes could not be saved"))
+            return redirect(url_for("profile"))
+
         email = request.form["email"]
         darkmode_raw = request.form.get("darkmode", "")
         if darkmode_raw == "1":
@@ -654,7 +676,6 @@ def profile():
         else:
             darkmode = None
         block_invitations = request.form.get("block_invitations") == "1"
-        user = g.user
         user.email = email
         user.email_lower = email.lower()
         # TODO reset verified?!
@@ -662,12 +683,13 @@ def profile():
         user.block_invitations = block_invitations
         try:
             db.session.commit()
-            return redirect(url_for("user", user_name=user.name))
+            flash(gettext("Profile updated"))
         except Exception:
             logging.exception("Profile changes not changed")
             flash(gettext("Changes could not be saved"))
+        return redirect(url_for("profile"))
 
-    return render_template("profile.html", user=g.user)
+    return render_template("profile.html", user=user)
 
 
 @app.route("/patterns/upload", methods=("GET", "POST"))

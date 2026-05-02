@@ -121,3 +121,33 @@ img.icon.selected { outline: 2px solid #999; }
 .mode-btn:hover:not(.active) {
     background: #777;
 }
+
+.profile-section {
+    background: #1f1f1f;
+    border-color: #444;
+}
+.profile-section input[type=text],
+.profile-section input[type=email],
+.profile-section input[type=password] {
+    background: #2a2a2a;
+    border-color: #555;
+    color: #ddd;
+}
+.btn {
+    background: #2a2a2a;
+    border-color: #555;
+    color: #ddd;
+}
+.btn:hover { background: #3a3a3a; }
+.btn.primary {
+    background: #0a76bf;
+    border-color: #0a76bf;
+    color: #fff;
+}
+.btn.primary:hover { background: #1389d9; }
+.btn.danger {
+    background: #a93226;
+    border-color: #922b1f;
+    color: #fff;
+}
+.btn.danger:hover { background: #c0392b; }
