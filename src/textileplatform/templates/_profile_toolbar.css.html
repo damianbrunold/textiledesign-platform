@@ -169,7 +169,8 @@
 }
 .empty-note { color: #888; padding: 0.5rem; }
 
-{% if g.user and g.user.darkmode %}
+{% set dark_pref = g.user.darkmode if g.user else none %}
+{% macro _toolbar_dark() %}
 #profile-toolbar .button,
 .view-modes button, .sort-modes button {
     background: #2a2a2a;
@@ -195,6 +196,14 @@
 }
 .pattern-row .row-actions a.icon:hover,
 .pattern-row .row-actions button:hover { background: #444; }
+{% endmacro %}
+{% if dark_pref %}
+{{ _toolbar_dark() }}
+{% elif dark_pref is none %}
+.pattern-row:hover { background: #f5f9fc; }
+@media (prefers-color-scheme: dark) {
+{{ _toolbar_dark() }}
+}
 {% else %}
 .pattern-row:hover { background: #f5f9fc; }
 {% endif %}

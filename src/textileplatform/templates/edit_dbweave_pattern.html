@@ -3,8 +3,11 @@
 {% block headext %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dbweave.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/editor-menu.css') }}">
-    {% if g.user and g.user.darkmode %}
+    {% set dark_pref = g.user.darkmode if g.user else none %}
+    {% if dark_pref %}
         <link rel="stylesheet" href="{{ url_for('static', filename='css/editor-menu-dark.css') }}">
+    {% elif dark_pref is none %}
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/editor-menu-dark.css') }}" media="(prefers-color-scheme: dark)">
     {% endif %}
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
     <script src="{{ url_for('static', filename='js/commands.js') }}"></script>
@@ -31,7 +34,7 @@
     <input type="hidden" id="origin" value="{{origin}}"/>
     <input type="hidden" id="pattern" value="{{pattern.name}}"/>
     <input type="hidden" id="viewer" value="{{g.user.name if g.user else ''}}"/>
-    <input type="hidden" id="darkmode" value="{{g.user.darkmode if g.user else 'False'}}"/>
+    <input type="hidden" id="darkmode" value="{% if g.user and g.user.darkmode is sameas true %}True{% elif g.user and g.user.darkmode is sameas false %}False{% else %}auto{% endif %}"/>
     <input type="hidden" id="readonly" value="{{readonly}}"/>
 
     {# Translated labels for actions and menus (JS cannot call gettext). #}

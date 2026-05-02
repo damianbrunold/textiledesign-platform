@@ -646,7 +646,13 @@ def source_pattern(user_name, pattern_name):
 def profile():
     if request.method == "POST":
         email = request.form["email"]
-        darkmode = request.form.get("darkmode") == "1"
+        darkmode_raw = request.form.get("darkmode", "")
+        if darkmode_raw == "1":
+            darkmode = True
+        elif darkmode_raw == "0":
+            darkmode = False
+        else:
+            darkmode = None
         block_invitations = request.form.get("block_invitations") == "1"
         user = g.user
         user.email = email
@@ -1410,7 +1416,7 @@ def register():
                     email=email,
                     email_lower=email.lower(),
                     password=generate_password_hash(password),
-                    darkmode=False,
+                    darkmode=None,
                     verified=False,
                     disabled=False,
                     locale=str(locale),

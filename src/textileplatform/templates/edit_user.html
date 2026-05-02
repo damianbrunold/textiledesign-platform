@@ -45,8 +45,14 @@ h2 { margin-bottom: 0; }
     width: 6rem;
     margin-right: 1rem;
 }
-{% if g.user and g.user.darkmode %}
+{% set dark_pref = g.user.darkmode if g.user else none %}
+{% if dark_pref %}
 .pattern:hover { background: #222; }
+{% elif dark_pref is none %}
+.pattern:hover { background: #cae6f6; }
+@media (prefers-color-scheme: dark) {
+    .pattern:hover { background: #222; }
+}
 {% else %}
 .pattern:hover { background: #cae6f6; }
 {% endif %}

@@ -8,8 +8,11 @@
             <title>{{ gettext('Textile Platform') }}</title>
         {% endif %}
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-        {% if g.user and g.user.darkmode %}
+        {% set dark_pref = g.user.darkmode if g.user else none %}
+        {% if dark_pref %}
             <link rel="stylesheet" id="dark-stylesheet" href="{{ url_for('static', filename='css/style_dark.css') }}">
+        {% elif dark_pref is none %}
+            <link rel="stylesheet" id="dark-stylesheet" href="{{ url_for('static', filename='css/style_dark.css') }}" media="(prefers-color-scheme: dark)">
         {% endif %}
         <link rel="stylesheet" href="{{ url_for('static', filename='fa/css/all.min.css') }}">
         <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">

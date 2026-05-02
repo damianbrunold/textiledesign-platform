@@ -3933,7 +3933,11 @@ function mouseUp(event) {
 }
 
 function init() {
-    const darkmode = document.getElementById("darkmode").value === "True";
+    const darkmodeRaw = document.getElementById("darkmode").value;
+    const darkmode = darkmodeRaw === "True"
+        || (darkmodeRaw === "auto"
+            && window.matchMedia
+            && window.matchMedia("(prefers-color-scheme: dark)").matches);
     let canvas = document.getElementById('canvas');
     let ctx = canvas.getContext('2d');
 

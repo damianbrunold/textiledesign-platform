@@ -22,8 +22,14 @@
 .user_label {
     flex-grow: 2;
 }
-{% if g.user and g.user.darkmode %}
+{% set dark_pref = g.user.darkmode if g.user else none %}
+{% if dark_pref %}
 .user:hover { background: #333; }
+{% elif dark_pref is none %}
+.user:hover { background: #ccc; }
+@media (prefers-color-scheme: dark) {
+    .user:hover { background: #333; }
+}
 {% else %}
 .user:hover { background: #ccc; }
 {% endif %}

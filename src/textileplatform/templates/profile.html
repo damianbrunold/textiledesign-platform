@@ -17,9 +17,10 @@
     <label for="email">{{ gettext('E-Mail') }}</label>
     <input name="email" id="email" required value="{{ user.email }}">
     <div class="mode-toggle">
-        <button type="button" id="btn-light" class="mode-btn {% if not user.darkmode %}active{% endif %}">{{ gettext('Light') }}</button>
-        <button type="button" id="btn-dark" class="mode-btn {% if user.darkmode %}active{% endif %}">{{ gettext('Dark') }}</button>
-        <input type="hidden" name="darkmode" id="darkmode-value" value="{{ '1' if user.darkmode else '' }}">
+        <button type="button" id="btn-light" class="mode-btn {% if user.darkmode is sameas false %}active{% endif %}">{{ gettext('Light') }}</button>
+        <button type="button" id="btn-dark" class="mode-btn {% if user.darkmode is sameas true %}active{% endif %}">{{ gettext('Dark') }}</button>
+        <button type="button" id="btn-system" class="mode-btn {% if user.darkmode is none %}active{% endif %}">{{ gettext('System') }}</button>
+        <input type="hidden" name="darkmode" id="darkmode-value" value="{% if user.darkmode is sameas true %}1{% elif user.darkmode is sameas false %}0{% else %}auto{% endif %}">
     </div>
     <div class="block-invitations">
         <label>
@@ -36,22 +37,32 @@
         document.getElementById("profile-form").submit();
       });
       const darkStyleUrl = "{{ url_for('static', filename='css/style_dark.css') }}";
-      function setDarkMode(enabled) {
+      function setDarkMode(mode) {
+          // mode: 'light' | 'dark' | 'system'
           let link = document.getElementById('dark-stylesheet');
-          if (enabled && !link) {
+          if (link) link.remove();
+          if (mode === 'dark') {
               link = document.createElement('link');
               link.rel = 'stylesheet';
               link.id = 'dark-stylesheet';
               link.href = darkStyleUrl;
               document.head.appendChild(link);
-          } else if (!enabled && link) {
-              link.remove();
+          } else if (mode === 'system') {
+              link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.id = 'dark-stylesheet';
+              link.href = darkStyleUrl;
+              link.media = '(prefers-color-scheme: dark)';
+              document.head.appendChild(link);
           }
-          document.getElementById('darkmode-value').value = enabled ? '1' : '';
-          document.getElementById('btn-light').classList.toggle('active', !enabled);
-          document.getElementById('btn-dark').classList.toggle('active', enabled);
+          const value = mode === 'dark' ? '1' : (mode === 'light' ? '0' : 'auto');
+          document.getElementById('darkmode-value').value = value;
+          document.getElementById('btn-light').classList.toggle('active', mode === 'light');
+          document.getElementById('btn-dark').classList.toggle('active', mode === 'dark');
+          document.getElementById('btn-system').classList.toggle('active', mode === 'system');
       }
-      document.getElementById('btn-light').addEventListener('click', () => setDarkMode(false));
-      document.getElementById('btn-dark').addEventListener('click', () => setDarkMode(true));
+      document.getElementById('btn-light').addEventListener('click', () => setDarkMode('light'));
+      document.getElementById('btn-dark').addEventListener('click', () => setDarkMode('dark'));
+      document.getElementById('btn-system').addEventListener('click', () => setDarkMode('system'));
   </script>
 {% endblock %}

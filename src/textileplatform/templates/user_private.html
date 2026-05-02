@@ -95,7 +95,8 @@
     cursor: pointer;
     font: inherit;
 }
-{% if g.user and g.user.darkmode %}
+{% set dark_pref = g.user.darkmode if g.user else none %}
+{% macro _dark_overrides() %}
 .section-action {
     background: #2a2a2a; border-color: #555; color: #ddd;
 }
@@ -106,6 +107,13 @@
 }
 .inline-new-form button { background: #2a2a2a; }
 .inline-new-form button:hover { background: #444; }
+{% endmacro %}
+{% if dark_pref %}
+{{ _dark_overrides() }}
+{% elif dark_pref is none %}
+@media (prefers-color-scheme: dark) {
+{{ _dark_overrides() }}
+}
 {% endif %}
 </style>
 

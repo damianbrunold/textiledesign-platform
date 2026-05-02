@@ -733,7 +733,11 @@ class PatternView {
 
 
 function init() {
-    const darkmode = document.getElementById("darkmode").value === "True";
+    const darkmodeRaw = document.getElementById("darkmode").value;
+    const darkmode = darkmodeRaw === "True"
+        || (darkmodeRaw === "auto"
+            && window.matchMedia
+            && window.matchMedia("(prefers-color-scheme: dark)").matches);
     pattern = new Pattern(data.model[0].length, data.model.length);
     settings = new ViewSettings();
     settings.darcula = darkmode;
