@@ -109,7 +109,7 @@ def add_weave_pattern(pattern, user):
         logging.error(f"User {user.name} does not have primary group")
         abort(500)
     suffix = None
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     while True:
         if suffix and suffix > 10:
             break
@@ -153,7 +153,7 @@ def add_bead_pattern(pattern, user):
         logging.error(f"User {user.name} does not have primary group")
         abort(500)
     suffix = None
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.timezone.utc)
     while True:
         if suffix and suffix > 10:
             break
@@ -219,7 +219,7 @@ def clone_pattern(user, pattern, contents):
         if suffix and suffix > 10:
             break
         try:
-            now = datetime.datetime.utcnow()
+            now = datetime.datetime.now(datetime.timezone.utc)
             if suffix:
                 label = pattern.label + " - " + str(suffix)
             else:

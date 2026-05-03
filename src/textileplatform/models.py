@@ -17,9 +17,9 @@ class User(db.Model):
     locale = db.Column(db.String(20))
     timezone = db.Column(db.String(20))
     verification_code = db.Column(db.String(100))
-    create_date = db.Column(db.DateTime)
-    verify_date = db.Column(db.DateTime)
-    access_date = db.Column(db.DateTime)
+    create_date = db.Column(db.DateTime(timezone=True))
+    verify_date = db.Column(db.DateTime(timezone=True))
+    access_date = db.Column(db.DateTime(timezone=True))
 
     memberships = db.relationship("Membership", back_populates="user")
     mypatterns = db.relationship(
@@ -196,7 +196,7 @@ class Conversation(db.Model):
         nullable=True,
         unique=True,
     )
-    created = db.Column(db.DateTime)
+    created = db.Column(db.DateTime(timezone=True))
 
     group = db.relationship("Group")
     participants = db.relationship(
@@ -242,7 +242,7 @@ class ConversationParticipant(db.Model):
         db.ForeignKey("txuser.id"),
         nullable=False,
     )
-    last_read_at = db.Column(db.DateTime, nullable=True)
+    last_read_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         db.UniqueConstraint(
@@ -273,7 +273,7 @@ class Message(db.Model):
         nullable=False,
     )
     body = db.Column(db.Text, nullable=False)
-    created = db.Column(db.DateTime, nullable=False, index=True)
+    created = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
     deleted = db.Column(db.Boolean, default=False)
 
     conversation = db.relationship("Conversation", back_populates="messages")
@@ -292,8 +292,8 @@ class Pattern(db.Model):
     contents = db.Column(db.Text)
     preview_image = db.Column(db.LargeBinary)
     thumbnail_image = db.Column(db.LargeBinary)
-    created = db.Column(db.DateTime)
-    modified = db.Column(db.DateTime)
+    created = db.Column(db.DateTime(timezone=True))
+    modified = db.Column(db.DateTime(timezone=True))
     public = db.Column(db.Boolean)
     # Metadata extracted from contents JSON for fast list rendering.
     author = db.Column(db.String(120))

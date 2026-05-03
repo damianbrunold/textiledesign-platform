@@ -26,7 +26,7 @@ def ensure_group_conversation(group):
         conv = Conversation(
             kind="group",
             group_id=group.id,
-            created=datetime.datetime.utcnow(),
+            created=datetime.datetime.now(datetime.timezone.utc),
         )
         db.session.add(conv)
         db.session.flush()
@@ -59,7 +59,7 @@ def get_or_create_direct_conversation(user_a, user_b):
     conv = Conversation(
         kind="direct",
         group_id=None,
-        created=datetime.datetime.utcnow(),
+        created=datetime.datetime.now(datetime.timezone.utc),
     )
     db.session.add(conv)
     db.session.flush()
@@ -107,7 +107,7 @@ def post_message(conversation, sender, body):
         conversation_id=conversation.id,
         sender_id=sender.id,
         body=body,
-        created=datetime.datetime.utcnow(),
+        created=datetime.datetime.now(datetime.timezone.utc),
         deleted=False,
     )
     db.session.add(msg)

@@ -10,7 +10,7 @@ import datetime
 
 def ensure_db_contents(app):
     with app.app_context():
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.timezone.utc)
         if User.query.count() == 0:
             db.session.add(User(
                 name="superuser",

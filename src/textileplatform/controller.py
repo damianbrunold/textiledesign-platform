@@ -79,7 +79,7 @@ def load_logged_in_user():
                 if g.user.disabled and not impersonating:
                     session.clear()
                     return redirect(url_for("login"))
-                now = datetime.datetime.now()
+                now = datetime.datetime.now(datetime.timezone.utc)
 
                 # we force logout after a month of inactivity (skip while
                 # impersonating — superuser may be testing dormant users)
@@ -1708,7 +1708,7 @@ def register():
                     locale=str(locale),
                     timezone=str(tz),
                     verification_code=secrets.token_urlsafe(30),
-                    create_date=datetime.datetime.now(),
+                    create_date=datetime.datetime.now(datetime.timezone.utc),
                     verify_date=None,
                     access_date=None,
                 )
@@ -1781,7 +1781,7 @@ def login():
             session["user_name"] = user.name
             session.permanent = True
 
-            user.access_date = datetime.datetime.now()
+            user.access_date = datetime.datetime.now(datetime.timezone.utc)
             db.session.commit()
 
             return redirect(url_for("user", user_name=user.name))
@@ -1978,7 +1978,7 @@ def update_pattern(user_name, pattern_name):
                 return respond("NOK", "Invalid user", 403)
             contents = data["contents"]
             pattern.contents = json.dumps(contents)
-            pattern.modified = datetime.datetime.utcnow()
+            pattern.modified = datetime.datetime.now(datetime.timezone.utc)
             apply_pattern_metadata(pattern, contents)
             thumb_bytes = _decode_data_url_png(data.get("thumbnail"))
             if thumb_bytes is not None:
@@ -2345,7 +2345,7 @@ def api_mark_read(conversation_id):
         )
     if p is None:
         return respond("NOK", "Not a participant", 403)
-    p.last_read_at = datetime.datetime.utcnow()
+    p.last_read_at = datetime.datetime.now(datetime.timezone.utc)
     db.session.commit()
     total = sum(
         unread_count(c, g.user)

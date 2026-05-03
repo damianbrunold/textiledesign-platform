@@ -34,8 +34,8 @@
             <tr>
                 <td>{{ pattern.name }}</td>
                 <td>{{ pattern.pattern_type.pattern_type }}</td>
-                <td>{{ pattern.created.strftime("%Y-%m-%d %H:%M") }}</td>
-                <td>{{ pattern.modified.strftime("%Y-%m-%d %H:%M") }}</td>
+                <td>{{ pattern.created|datetimeformat('short') }}</td>
+                <td>{{ pattern.modified|datetimeformat('short') }}</td>
                 <td>{{ pattern.public }}</td>
             </tr>
         {% endfor %}

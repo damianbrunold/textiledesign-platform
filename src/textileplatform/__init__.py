@@ -49,10 +49,14 @@ def get_locale():
     return "en"
 
 
+DEFAULT_TIMEZONE = "Europe/Zurich"
+
+
 def get_timezone():
     user = getattr(g, "user", None)
-    if user is not None:
+    if user is not None and user.timezone:
         return user.timezone
+    return DEFAULT_TIMEZONE
 
 
 babel = Babel(app, locale_selector=get_locale, timezone_selector=get_timezone)
@@ -121,7 +125,8 @@ def clean_up_non_verified_users():
                 continue
             # only clean up 24 hours after account creation
             if user.verify_date: 
-                delta = datetime.datetime.now() - user.verify_date
+                now = datetime.datetime.now(datetime.timezone.utc)
+                delta = now - user.verify_date
                 if delta.days < 1:
                     continue
             todelete.append(user)
