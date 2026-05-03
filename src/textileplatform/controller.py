@@ -28,6 +28,9 @@ from textileplatform.name import is_valid
 from textileplatform.mail import send_verification_mail
 from textileplatform.mail import send_admin_notification_mail
 from textileplatform.mail import send_recover_mail
+from textileplatform.mail import send_support_dm_mail
+from textileplatform.support import SUPPORT_USERNAME
+from textileplatform.support import is_support
 from textileplatform.palette import default_weave_palette
 from textileplatform.palette import default_bead_palette
 from textileplatform.weavepattern import parse_dbw_data, render_dbw_data
@@ -116,21 +119,21 @@ def login_required(view):
     return wrapped_view
 
 
-def superuser_required(view):
+def support_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
-        if g.user is None or g.user.name != "superuser":
+        if g.user is None or g.user.name != SUPPORT_USERNAME:
             return redirect(url_for("index"))
         return view(**kwargs)
     return wrapped_view
 
 
-def is_real_superuser():
+def is_real_support():
     """True if the logged-in session was opened as superuser (whether or
     not we are currently impersonating)."""
     return (
-        session.get("impersonator") == "superuser"
-        or session.get("user_name") == "superuser"
+        session.get("impersonator") == SUPPORT_USERNAME
+        or session.get("user_name") == SUPPORT_USERNAME
     )
 
 
@@ -204,7 +207,11 @@ def user(user_name):
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
         return redirect(url_for("index"))
-    elif g.user and g.user.name == user.name:
+    if is_support(user) and (not g.user or g.user.name != user.name):
+        abort(404)
+    if is_support(user) and g.user and g.user.name == user.name:
+        return redirect(url_for("support_console"))
+    if g.user and g.user.name == user.name:
         # Private view: groups list + per-group pattern lists with the
         # full metadata the new UI needs (dimensions, rapport, author,
         # organisation, notes). The template renders the shell, JS
@@ -329,7 +336,7 @@ def edit_pattern(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == "superuser"
+    superuser = g.user and g.user.name == SUPPORT_USERNAME
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
@@ -406,7 +413,7 @@ def download_pattern(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == "superuser"
+    superuser = g.user and g.user.name == SUPPORT_USERNAME
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
@@ -439,7 +446,7 @@ def download_pattern_legacy(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == "superuser"
+    superuser = g.user and g.user.name == SUPPORT_USERNAME
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
@@ -513,7 +520,7 @@ def export_pattern(user_name, pattern_name, fmt):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == "superuser"
+    superuser = g.user and g.user.name == SUPPORT_USERNAME
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
     table = _export_table_for(pattern)
@@ -576,7 +583,7 @@ def print_pattern(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == "superuser"
+    superuser = g.user and g.user.name == SUPPORT_USERNAME
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
     if pattern.pattern_type not in ("DB-WEAVE Pattern", "JBead Pattern"):
@@ -645,7 +652,7 @@ def source_pattern(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == "superuser"
+    superuser = g.user and g.user.name == SUPPORT_USERNAME
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
@@ -932,8 +939,8 @@ def _delete_user_data(user):
 @login_required
 def profile_delete():
     user = g.user
-    if user.name == "superuser":
-        flash(gettext("The superuser account cannot be deleted."))
+    if user.name == SUPPORT_USERNAME:
+        flash(gettext("The support account cannot be deleted."))
         return redirect(url_for("profile"))
     password = request.form.get("password", "")
     confirm = request.form.get("confirm", "")
@@ -1344,7 +1351,7 @@ def invite_to_group(group_name):
     if not target or target.disabled or not target.verified:
         flash(gettext("User not found"))
         return redirect(url_for("edit_group", group_name=group.name))
-    if target.name == "superuser":
+    if target.name == SUPPORT_USERNAME:
         flash(gettext("User not found"))
         return redirect(url_for("edit_group", group_name=group.name))
     if target.block_invitations:
@@ -1501,15 +1508,14 @@ def api_users_search():
         .filter(User.name.ilike(f"%{q}%") | User.label.ilike(f"%{q}%"))
         .filter(User.verified.is_(True))
         .filter((User.disabled.is_(False)) | (User.disabled.is_(None)))
-        .filter(User.name != "superuser")
-        .filter(
-            (User.block_invitations.is_(False))
-            | (User.block_invitations.is_(None))
-        )
-        .order_by(User.label)
-        .limit(20)
-        .all()
     )
+    if group_name:
+        query = query.filter(User.name != SUPPORT_USERNAME)
+    query = query.filter(
+        (User.block_invitations.is_(False))
+        | (User.block_invitations.is_(None))
+        | (User.name == SUPPORT_USERNAME)
+    ).order_by(User.label).limit(20).all()
     exclude_ids = set()
     if group_name:
         group = Group.query.filter(Group.name == group_name).first()
@@ -1528,15 +1534,15 @@ def api_users_search():
 @app.route("/admin/impersonate/<string:user_name>", methods=("POST",))
 @login_required
 def impersonate(user_name):
-    if not is_real_superuser():
+    if not is_real_support():
         abort(403)
     target = User.query.filter(User.name == user_name.lower()).first()
-    if not target or target.name == "superuser":
+    if not target or target.name == SUPPORT_USERNAME:
         abort(404)
     if target.disabled:
         flash(gettext("Cannot impersonate a disabled user"))
         return redirect(url_for("users"))
-    session["impersonator"] = "superuser"
+    session["impersonator"] = SUPPORT_USERNAME
     session["user_name"] = target.name
     return redirect(url_for("user", user_name=target.name))
 
@@ -1607,7 +1613,7 @@ def add_group():
 
 @app.route("/admin/groups")
 @login_required
-@superuser_required
+@support_required
 def groups():
     try:
         all_groups = Group.query.order_by(Group.name).all()
@@ -1621,7 +1627,7 @@ def groups():
 
 @app.route("/admin/users")
 @login_required
-@superuser_required
+@support_required
 def users():
     try:
         all_users = User.query.order_by(User.name).all()
@@ -1635,7 +1641,7 @@ def users():
 
 @app.route("/admin/patterns")
 @login_required
-@superuser_required
+@support_required
 def patterns():
     try:
         all_users = User.query.order_by(User.name).all()
@@ -1649,7 +1655,7 @@ def patterns():
 
 @app.route("/admin/users/<string:user_name>")
 @login_required
-@superuser_required
+@support_required
 def edit_user(user_name):
     try:
         user = User.query.filter(User.name == user_name).first()
@@ -1666,6 +1672,101 @@ def edit_user(user_name):
     except Exception:
         logging.exception("failed to get user")
         abort(500, description="Failed to get user")
+
+
+@app.route("/admin")
+@login_required
+@support_required
+def support_console():
+    investigations = (
+        Pattern.query
+        .filter(Pattern.owner_id == g.user.id)
+        .filter(Pattern.investigation_origin_user_id.isnot(None))
+        .order_by(Pattern.modified.desc())
+        .all()
+    )
+    return render_template(
+        "support_console.html",
+        investigations=investigations,
+    )
+
+
+@app.route(
+    "/admin/investigate/<string:owner_name>/<string:pattern_name>",
+    methods=("POST",),
+)
+@login_required
+@support_required
+def investigate_pattern(owner_name, pattern_name):
+    owner = User.query.filter(User.name == owner_name).first()
+    if not owner:
+        abort(404, description="Owner not found")
+    src = (
+        Pattern.query
+        .filter(Pattern.owner_id == owner.id)
+        .filter(Pattern.name == pattern_name)
+        .first()
+    )
+    if not src:
+        abort(404, description="Pattern not found")
+    support_user = g.user
+    suffix = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
+    base_label = f"{src.label} [{owner.label}]"
+    label = f"{base_label} {suffix}"
+    name = from_label(label)
+    group = Group.query.filter(Group.name == support_user.name).one_or_none()
+    if not group:
+        abort(500, description="Support has no primary group")
+    now = datetime.datetime.now(datetime.timezone.utc)
+    copy = Pattern(
+        name=name,
+        label=label,
+        description=src.description,
+        pattern_type=src.pattern_type,
+        contents=src.contents,
+        preview_image=src.preview_image,
+        thumbnail_image=src.thumbnail_image,
+        created=now,
+        modified=now,
+        public=False,
+        owner=support_user,
+        author=src.author,
+        organization=src.organization,
+        notes=src.notes,
+        pattern_width=src.pattern_width,
+        pattern_height=src.pattern_height,
+        rapport_width=src.rapport_width,
+        rapport_height=src.rapport_height,
+        investigation_origin_user_id=owner.id,
+        investigation_origin_pattern_id=src.id,
+        investigation_origin_label=f"{owner.name}/{src.name}",
+    )
+    db.session.add(copy)
+    db.session.add(Assignment(pattern=copy, group=group))
+    db.session.commit()
+    flash(gettext("Investigation copy created"))
+    return redirect(url_for("support_console"))
+
+
+@app.route(
+    "/admin/investigate/<int:pattern_id>/delete", methods=("POST",),
+)
+@login_required
+@support_required
+def delete_investigation(pattern_id):
+    pattern = Pattern.query.get(pattern_id)
+    if (
+        not pattern
+        or pattern.owner_id != g.user.id
+        or pattern.investigation_origin_user_id is None
+    ):
+        abort(404)
+    for a in list(pattern.assignments):
+        db.session.delete(a)
+    db.session.delete(pattern)
+    db.session.commit()
+    flash(gettext("Investigation copy deleted"))
+    return redirect(url_for("support_console"))
 
 
 @app.route("/auth/register", methods=("GET", "POST"))
@@ -1928,7 +2029,7 @@ def get_pattern(user_name, pattern_name):
         )
         if not pattern:
             return respond("NOK", "Pattern not found", 404)
-        superuser = g.user and g.user.name == "superuser"
+        superuser = g.user and g.user.name == SUPPORT_USERNAME
         if (
             not superuser
             and not pattern.public
@@ -1962,7 +2063,7 @@ def update_pattern(user_name, pattern_name):
         )
         if not pattern:
             return respond("NOK", "Pattern not found", 404)
-        superuser = g.user and g.user.name == "superuser"
+        superuser = g.user and g.user.name == SUPPORT_USERNAME
         if not superuser and not pattern.public and (not g.user or user.name != g.user.name):
             return respond("NOK", "Invalid user", 403)
         data = request.get_json()
@@ -2085,7 +2186,7 @@ def _serve_pattern_image(user_name, pattern_name, attr):
     )
     if not pattern:
         abort(404)
-    superuser = g.user and g.user.name == "superuser"
+    superuser = g.user and g.user.name == SUPPORT_USERNAME
     if (
         not superuser
         and not pattern.public
@@ -2236,14 +2337,10 @@ def api_direct_conversation(user_name):
         if target.disabled:
             return respond("NOK", "Cannot message this user", 403)
         # Sending a new message: enforce block_invitations only when
-        # *starting* a new conversation. Normal users may not initiate
-        # a direct chat with superuser, but they may reply if superuser
-        # already started one.
-        if (conv is None
-                and target.name == "superuser"
-                and g.user.name != "superuser"):
-            return respond("NOK", "Cannot message superuser", 403)
-        if conv is None and target.block_invitations:
+        # *starting* a new conversation. The support user always accepts
+        # incoming DMs regardless of block_invitations.
+        if (conv is None and target.block_invitations
+                and not is_support(target)):
             return respond("NOK", "User does not accept messages", 403)
         if conv is None:
             conv = get_or_create_direct_conversation(g.user, target)
@@ -2253,6 +2350,20 @@ def api_direct_conversation(user_name):
         if msg is None:
             return respond("NOK", "Empty message", 400)
         db.session.commit()
+        if is_support(target) and not is_support(g.user):
+            try:
+                send_support_dm_mail(
+                    g.user,
+                    msg.body,
+                    url_for(
+                        "messages_direct",
+                        user_name=g.user.name,
+                        _external=True,
+                        _scheme="https",
+                    ),
+                )
+            except Exception:
+                logging.exception("support DM notification failed")
         return jsonify({
             "status": "OK",
             "conversation_id": conv.id,

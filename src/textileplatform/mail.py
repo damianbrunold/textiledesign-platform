@@ -67,3 +67,17 @@ def send_admin_notification_mail(user, message):
         "Textile-Platform admin notification",
         f"{user.name} <{user.email}>: {message}",
     )
+
+
+def send_support_dm_mail(sender, message_body, conversation_url):
+    body = "\r\n".join([
+        f"From: {sender.label} ({sender.name}) <{sender.email}>",
+        f"Conversation: {conversation_url}",
+        "",
+        message_body,
+    ])
+    send_mail(
+        "support@textil-plattform.ch",
+        f"Support message from {sender.label}",
+        body,
+    )

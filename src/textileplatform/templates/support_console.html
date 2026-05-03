@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ gettext('Support Console') }}</h1>
+{% endblock %}
+
+{% block content %}
+<div class="card card-wide">
+  <h2>{{ gettext('Administration') }}</h2>
+  <ul class="plain">
+    <li><a class="btn" href="{{ url_for('users') }}">{{ gettext('Users') }}</a></li>
+    <li><a class="btn" href="{{ url_for('groups') }}">{{ gettext('Groups') }}</a></li>
+    <li><a class="btn" href="{{ url_for('patterns') }}">{{ gettext('All Patterns') }}</a></li>
+    <li><a class="btn" href="{{ url_for('messages') }}">{{ gettext('Messages') }}</a></li>
+  </ul>
+</div>
+
+<div class="card card-wide">
+  <h2>{{ gettext('Investigation Copies') }}</h2>
+  <p class="muted">{{ gettext('Working copies of user patterns for debugging. Originals are not modified. Delete copies once you are done.') }}</p>
+  {% if investigations %}
+  <table class="plain">
+    <thead>
+      <tr>
+        <th>{{ gettext('Pattern') }}</th>
+        <th>{{ gettext('Origin') }}</th>
+        <th>{{ gettext('Type') }}</th>
+        <th>{{ gettext('Modified') }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in investigations %}
+      <tr>
+        <td>{{ p.label }}</td>
+        <td>
+          {% if p.investigation_origin_user and p.investigation_origin_pattern %}
+            <a href="{{ url_for('user', user_name=p.investigation_origin_user.name) }}">{{ p.investigation_origin_user.label }}</a>
+            / {{ p.investigation_origin_pattern.label }}
+          {% else %}
+            {{ p.investigation_origin_label or gettext('(origin gone)') }}
+          {% endif %}
+        </td>
+        <td>{{ p.pattern_type }}</td>
+        <td>{{ p.modified|datetimeformat('short') }}</td>
+        <td>
+          <a class="btn small" href="{{ url_for('user', user_name=g.user.name) }}?group={{ g.user.name }}">{{ gettext('Open') }}</a>
+          <form method="post" action="{{ url_for('delete_investigation', pattern_id=p.id) }}" style="display:inline;"
+                onsubmit="return confirm('{{ gettext('Delete this investigation copy?') }}');">
+            <button type="submit" class="btn small danger">{{ gettext('Delete') }}</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">{{ gettext('No investigation copies. Use "Investigate" on a user pattern to create one.') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

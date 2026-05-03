@@ -3,7 +3,7 @@
 {% block body_class %}view-thumb no-page-header{% endblock %}
 
 {% block nav_extra %}
-{% if g.user and g.user.id != user.id and not user.block_invitations and user.name != 'superuser' %}
+{% if g.user and g.user.id != user.id and not user.block_invitations and user.name != SUPPORT_USERNAME %}
 <li><a href="{{ url_for('messages_direct', user_name=user.name) }}">{{ gettext('Send message') }}</a>
 {% endif %}
 {% endblock %}

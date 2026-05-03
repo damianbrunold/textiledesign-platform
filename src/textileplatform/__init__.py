@@ -61,6 +61,15 @@ def get_timezone():
 
 babel = Babel(app, locale_selector=get_locale, timezone_selector=get_timezone)
 
+
+from textileplatform.support import SUPPORT_USERNAME  # noqa: E402
+
+
+@app.context_processor
+def inject_support_username():
+    return {"SUPPORT_USERNAME": SUPPORT_USERNAME}
+
+
 db.init_app(app)
 Migrate(app, db)
 

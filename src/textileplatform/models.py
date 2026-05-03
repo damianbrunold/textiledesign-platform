@@ -303,8 +303,27 @@ class Pattern(db.Model):
     pattern_height = db.Column(db.Integer)
     rapport_width = db.Column(db.Integer)
     rapport_height = db.Column(db.Integer)
+    investigation_origin_user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txuser.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    investigation_origin_pattern_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txpattern.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    investigation_origin_label = db.Column(db.String(255), nullable=True)
 
     db.UniqueConstraint(owner_id, name)
 
     owner = db.relationship("User", back_populates="mypatterns")
     assignments = db.relationship("Assignment", back_populates="pattern")
+    investigation_origin_user = db.relationship(
+        "User", foreign_keys=[investigation_origin_user_id]
+    )
+    investigation_origin_pattern = db.relationship(
+        "Pattern",
+        remote_side="Pattern.id",
+        foreign_keys=[investigation_origin_pattern_id],
+    )

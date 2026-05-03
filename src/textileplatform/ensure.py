@@ -13,8 +13,8 @@ def ensure_db_contents(app):
         now = datetime.datetime.now(datetime.timezone.utc)
         if User.query.count() == 0:
             db.session.add(User(
-                name="superuser",
-                label="Superuser",
+                name="support",
+                label="Support",
                 email="admin@textileplatform.ch",
                 email_lower="admin@textileplatform.ch",
                 darkmode=True,
@@ -59,13 +59,13 @@ def ensure_db_contents(app):
                 state="accepted",
             )
             db.session.add(membership)
-            superuser = (
-                User.query.filter(User.name == "superuser").one_or_none()
+            support = (
+                User.query.filter(User.name == "support").one_or_none()
             )
-            if superuser:
+            if support:
                 membership = Membership(
                     group=group,
-                    user=superuser,
+                    user=support,
                     role="owner",
                     state="accepted",
                 )
@@ -102,13 +102,13 @@ def ensure_db_contents(app):
                 state="accepted",
             )
             db.session.add(membership)
-            superuser = (
-                User.query.filter(User.name == "superuser").one_or_none()
+            support = (
+                User.query.filter(User.name == "support").one_or_none()
             )
-            if superuser:
+            if support:
                 membership = Membership(
                     group=group,
-                    user=superuser,
+                    user=support,
                     role="owner",
                     state="accepted",
                 )

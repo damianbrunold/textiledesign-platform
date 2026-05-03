@@ -136,7 +136,7 @@
 {% endfor %}
 </div>
 
-{% if g.user and g.user.name == 'superuser' %}
+{% if g.user and g.user.name == SUPPORT_USERNAME %}
 <div id="admin-row">
     <span>{{ gettext('Administration:') }}</span>
     <a href="{{ url_for('groups') }}">{{ gettext('Groups') }}</a>

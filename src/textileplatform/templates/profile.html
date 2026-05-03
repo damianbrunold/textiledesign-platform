@@ -89,7 +89,7 @@
     </div>
   </div>
 
-  {% if user.name != 'superuser' %}
+  {% if user.name != SUPPORT_USERNAME %}
   <div class="profile-section danger-zone">
     <h2>{{ gettext('Delete Account') }}</h2>
     <p>{{ gettext('Deleting your account will permanently remove your patterns, your group memberships, and your messages. This cannot be undone.') }}</p>

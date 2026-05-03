@@ -35,6 +35,6 @@ def is_valid(name, max_len=100):
         "patterns",
         "auth",
         "profile",
-        "superuser",  # reserved name for administrator
+        "support",    # reserved name for administrator (Support)
         "examples",   # reserved name for examples
     ]

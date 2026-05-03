@@ -27,6 +27,7 @@
                 <th>{{ gettext('Created') }}</th>
                 <th>{{ gettext('Modified') }}</th>
                 <th>{{ gettext('Public') }}</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -37,6 +38,11 @@
                 <td>{{ pattern.created|datetimeformat('short') }}</td>
                 <td>{{ pattern.modified|datetimeformat('short') }}</td>
                 <td>{{ pattern.public }}</td>
+                <td>
+                    <form method="post" action="{{ url_for('investigate_pattern', owner_name=user.name, pattern_name=pattern.name) }}" style="display:inline;">
+                        <button type="submit" class="btn small">{{ gettext('Investigate') }}</button>
+                    </form>
+                </td>
             </tr>
         {% endfor %}
         </tbody>
