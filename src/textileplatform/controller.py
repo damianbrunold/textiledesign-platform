@@ -1955,7 +1955,7 @@ def _conversation_history(conv, before_id, limit):
 @login_required
 def api_direct_conversation(user_name):
     target = User.query.filter(User.name == user_name.lower()).first()
-    if not target or target.disabled or target.name == "superuser":
+    if not target or target.disabled:
         return respond("NOK", "User not found", 404)
     if target.id == g.user.id:
         return respond("NOK", "Cannot message yourself", 400)
@@ -1977,7 +1977,13 @@ def api_direct_conversation(user_name):
 
     if request.method == "POST":
         # Sending a new message: enforce block_invitations only when
-        # *starting* a new conversation.
+        # *starting* a new conversation. Normal users may not initiate
+        # a direct chat with superuser, but they may reply if superuser
+        # already started one.
+        if (conv is None
+                and target.name == "superuser"
+                and g.user.name != "superuser"):
+            return respond("NOK", "Cannot message superuser", 403)
         if conv is None and target.block_invitations:
             return respond("NOK", "User does not accept messages", 403)
         if conv is None:
@@ -2111,7 +2117,7 @@ def messages_inbox():
 @login_required
 def messages_direct(user_name):
     target = User.query.filter(User.name == user_name.lower()).first()
-    if not target or target.disabled or target.name == "superuser":
+    if not target or target.disabled:
         return redirect(url_for("messages_inbox"))
     if target.id == g.user.id:
         return redirect(url_for("messages_inbox"))
