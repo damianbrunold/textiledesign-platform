@@ -75,6 +75,7 @@
         sorted.forEach(c => {
             const li = document.createElement('li');
             li.className = 'row';
+            li.dataset.url = c.url;
             const tag = document.createElement('span');
             tag.className = 'tag kind';
             tag.textContent = c.kind === 'group' ? KIND_GROUP : KIND_DIRECT;
@@ -135,6 +136,17 @@
             updateNavBadge(total);
         } catch (e) { /* ignore transient errors */ }
     }
+
+    list.addEventListener('click', e => {
+        if (e.target.closest('a')) return;
+        const li = e.target.closest('li.row');
+        if (!li || !li.dataset.url) return;
+        if (e.metaKey || e.ctrlKey || e.button === 1) {
+            window.open(li.dataset.url, '_blank');
+        } else {
+            window.location = li.dataset.url;
+        }
+    });
 
     btnRecent.addEventListener('click', () => setSort('recent'));
     btnName.addEventListener('click', () => setSort('name'));

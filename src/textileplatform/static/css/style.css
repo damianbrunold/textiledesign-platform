@@ -887,6 +887,8 @@ ul.inbox li {
     align-items: center;
     gap: 0.75rem;
 }
+ul.inbox li.row { cursor: pointer; }
+ul.inbox li.row:hover { background: #f5f9fc; }
 ul.inbox li:last-child { border-bottom: none; }
 ul.inbox .meta { flex-grow: 1; min-width: 0; }
 ul.inbox .preview {
