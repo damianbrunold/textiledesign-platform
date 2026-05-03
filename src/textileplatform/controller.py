@@ -1952,9 +1952,11 @@ def verify(user_name, verification_code):
             return render_template("verification_failed.html")
         if user.verified:
             return render_template("verification_successful.html")
-        if user.verification_code != verification_code:
+        if not user.verification_code or not secrets.compare_digest(
+            user.verification_code, verification_code
+        ):
             logging.error(
-                f"verification, expected {user.verification_ocde} "
+                f"verification, expected {user.verification_code} "
                 f"but got {verification_code}"
             )
             return render_template("verification_failed.html")
@@ -1990,12 +1992,18 @@ def recover():
             user = User.query.filter(User.email_lower == email.lower()).first()
             if not user:
                 error = gettext("E-Mail is unknown.")
+            elif not user.verified:
+                error = gettext("E-Mail is unknown.")
         except Exception:
             error = gettext("System error")
 
         if error is None:
             try:
-                user.verification_code = secrets.token_urlsafe(30)
+                user.password_reset_code = secrets.token_urlsafe(30)
+                user.password_reset_expires = (
+                    datetime.datetime.now(datetime.timezone.utc)
+                    + datetime.timedelta(hours=1)
+                )
                 db.session.commit()
                 send_recover_mail(user)
                 send_admin_notification_mail(
@@ -2028,7 +2036,19 @@ def reset_password(user_name, verification_code):
         user = User.query.filter(User.name == user_name).first()
         if not user:
             return render_template("recover_failed.html")
-        if user.verification_code != verification_code:
+        if not user.verified:
+            return render_template("recover_failed.html")
+        if not user.password_reset_code:
+            return render_template("recover_failed.html")
+        if not secrets.compare_digest(
+            user.password_reset_code, verification_code
+        ):
+            return render_template("recover_failed.html")
+        if (
+            user.password_reset_expires is None
+            or user.password_reset_expires
+            < datetime.datetime.now(datetime.timezone.utc)
+        ):
             return render_template("recover_failed.html")
 
         if request.method == "POST":
@@ -2040,6 +2060,8 @@ def reset_password(user_name, verification_code):
             if error is None:
                 try:
                     user.password = generate_password_hash(password)
+                    user.password_reset_code = None
+                    user.password_reset_expires = None
                     db.session.commit()
                     send_admin_notification_mail(
                         user,

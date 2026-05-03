@@ -49,7 +49,7 @@ def send_recover_mail(user):
         url_for(
             "reset_password",
             user_name=user.name,
-            verification_code=user.verification_code,
+            verification_code=user.password_reset_code,
             _external=True,
             _scheme="https",
         ),

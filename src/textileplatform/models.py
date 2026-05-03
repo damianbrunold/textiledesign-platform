@@ -17,6 +17,8 @@ class User(db.Model):
     locale = db.Column(db.String(20))
     timezone = db.Column(db.String(20))
     verification_code = db.Column(db.String(100))
+    password_reset_code = db.Column(db.String(100))
+    password_reset_expires = db.Column(db.DateTime(timezone=True))
     create_date = db.Column(db.DateTime(timezone=True))
     verify_date = db.Column(db.DateTime(timezone=True))
     access_date = db.Column(db.DateTime(timezone=True))
