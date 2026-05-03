@@ -5,38 +5,53 @@
 {% endblock %}
 
 {% block content %}
-    <div id="columns">
-        <form class="create_pattern" enctype="multipart/form-data" method="POST">
+<style>
+#columns { display: flex; flex-wrap: wrap; gap: 1rem; }
+#columns .card { flex: 1 1 22rem; max-width: 30rem; }
+</style>
+<div id="columns">
+    <div class="card">
+        <form enctype="multipart/form-data" method="POST">
             <h2>{{ gettext('Create DB-WEAVE Pattern') }}</h2>
-
-            <label for="weave_name">{{ gettext('Name') }}</label>
-            <input type="text" name="name" id="weave_name" value="{{ request['name'] }}">
-
-            <label for="weave_width">{{ gettext('Width') }}</label>
-            <input type="text" name="width" id="weave_width" value="{{ request['width'] or 300 }}">
-
-            <label for="weave_height">{{ gettext('Height') }}</label>
-            <input type="text" name="height" id="weave_height" value="{{ request['height'] or 300 }}">
-
+            <div class="field">
+                <label for="weave_name">{{ gettext('Name') }}</label>
+                <input type="text" name="name" id="weave_name" value="{{ request['name'] }}">
+            </div>
+            <div class="field">
+                <label for="weave_width">{{ gettext('Width') }}</label>
+                <input type="text" name="width" id="weave_width" value="{{ request['width'] or 300 }}">
+            </div>
+            <div class="field">
+                <label for="weave_height">{{ gettext('Height') }}</label>
+                <input type="text" name="height" id="weave_height" value="{{ request['height'] or 300 }}">
+            </div>
             <input type="hidden" name="pattern_type" value="DB-WEAVE Pattern"/>
-            <input type="submit" value="{{ gettext('Create') }}">
-        </form>
-
-        <form class="create_pattern" enctype="multipart/form-data" method="POST">
-            <h2>{{ gettext('Create JBead Pattern') }}</h2>
-
-            <label for="bead_name">{{ gettext('Name') }}</label>
-            <input type="text" name="name" id="bead_name" value="{{ request['name'] }}">
-
-            <label for="bead_width">{{ gettext('Circumference') }}</label>
-            <input type="text" name="width" id="bead_width" value="{{ request['width'] or 12 }}">
-
-            <label for="bead_height">{{ gettext('Height') }}</label>
-            <input type="text" name="height" id="bead_height" value="{{ request['height'] or 200 }}">
-
-            <input type="hidden" name="pattern_type" value="JBead Pattern"/>
-            <input type="submit" value="{{ gettext('Create') }}">
-
+            <div class="actions left">
+                <button type="submit" class="btn primary">{{ gettext('Create') }}</button>
+            </div>
         </form>
     </div>
+
+    <div class="card">
+        <form enctype="multipart/form-data" method="POST">
+            <h2>{{ gettext('Create JBead Pattern') }}</h2>
+            <div class="field">
+                <label for="bead_name">{{ gettext('Name') }}</label>
+                <input type="text" name="name" id="bead_name" value="{{ request['name'] }}">
+            </div>
+            <div class="field">
+                <label for="bead_width">{{ gettext('Circumference') }}</label>
+                <input type="text" name="width" id="bead_width" value="{{ request['width'] or 12 }}">
+            </div>
+            <div class="field">
+                <label for="bead_height">{{ gettext('Height') }}</label>
+                <input type="text" name="height" id="bead_height" value="{{ request['height'] or 200 }}">
+            </div>
+            <input type="hidden" name="pattern_type" value="JBead Pattern"/>
+            <div class="actions left">
+                <button type="submit" class="btn primary">{{ gettext('Create') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}

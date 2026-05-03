@@ -5,9 +5,13 @@
 {% endblock %}
 
 {% block content %}
+<div class="card card-form">
     <form enctype="multipart/form-data" method="POST">
-        {{ gettext('Do you really want to delete this pattern?')}}
-        <input type="submit" value="{{ gettext('Delete') }}">
+        <p>{{ gettext('Do you really want to delete this pattern?')}}</p>
+        <div class="actions left">
+            <button type="submit" class="btn danger">{{ gettext('Delete') }}</button>
+            <a class="btn" href="{{ url_for('user', user_name=g.user.name) }}">{{ gettext('Cancel') }}</a>
+        </div>
     </form>
-    <a class="action" href="{{ url_for('user', user_name=g.user.name) }}">{{ gettext('Cancel') }}</a>
+</div>
 {% endblock %}

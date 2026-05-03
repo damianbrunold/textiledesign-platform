@@ -5,5 +5,10 @@
 {% endblock %}
 
 {% block content %}
+<div class="card card-form">
     <p>{{ gettext('An error occurred while resetting your password') }}</p>
+    <div class="actions left">
+        <a class="btn" href="{{ url_for('recover') }}">{{ gettext('Reset Password') }}</a>
+    </div>
+</div>
 {% endblock %}

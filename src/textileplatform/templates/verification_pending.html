@@ -5,5 +5,7 @@
 {% endblock %}
 
 {% block content %}
-  <p>{{ gettext('We sent you an email for verifying your account to') }} {{ user.email }}</p>
+<div class="card card-form">
+    <p>{{ gettext('We sent you an email for verifying your account to') }} <strong>{{ user.email }}</strong></p>
+</div>
 {% endblock %}

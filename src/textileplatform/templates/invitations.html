@@ -5,43 +5,28 @@
 {% endblock %}
 
 {% block content %}
-<style>
-ul.invitations { list-style: none; padding-left: 0; }
-ul.invitations li {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #ddd;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-.role-tag {
-    display: inline-block;
-    padding: 0 0.4rem;
-    border-radius: 3px;
-    background: #eee;
-    font-size: 0.85em;
-}
-</style>
+<div class="card card-narrow">
 {% if invitations %}
-<ul class="invitations">
+<ul class="plain">
 {% for m in invitations %}
     <li>
-        <strong>{{ m.group.label }}</strong>
-        <span class="role-tag">{{ gettext(m.role|capitalize) }}</span>
+        <strong style="flex-grow:1;">{{ m.group.label }}</strong>
+        <span class="tag role">{{ gettext(m.role|capitalize) }}</span>
         <form method="post"
               action="{{ url_for('accept_invitation', membership_id=m.id) }}"
-              style="display:inline">
-            <button type="submit">{{ gettext('Accept') }}</button>
+              style="display:inline; margin:0;">
+            <button type="submit" class="btn small primary">{{ gettext('Accept') }}</button>
         </form>
         <form method="post"
               action="{{ url_for('decline_invitation', membership_id=m.id) }}"
-              style="display:inline">
-            <button type="submit">{{ gettext('Decline') }}</button>
+              style="display:inline; margin:0;">
+            <button type="submit" class="btn small">{{ gettext('Decline') }}</button>
         </form>
     </li>
 {% endfor %}
 </ul>
 {% else %}
-<p>{{ gettext('No pending invitations.') }}</p>
+<p class="muted">{{ gettext('No pending invitations.') }}</p>
 {% endif %}
+</div>
 {% endblock %}

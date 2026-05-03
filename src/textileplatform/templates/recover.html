@@ -5,13 +5,16 @@
 {% endblock %}
 
 {% block content %}
-<style>
-input[type=text] { width: 20rem; }
-</style>
-  <form method="post">
-      <p>{{ gettext('Please enter your e-mail address. We will send you an e-mail with instructions for resetting your password') }}</p>
-      <label for="email">{{ gettext('E-Mail') }}</label>
-    <input type="text" name="email" id="email" required value="{{ request.form['email'] }}">
-    <input type="submit" value="{{ gettext('Send') }}">
-  </form>
+<div class="card card-form">
+    <form method="post">
+        <p>{{ gettext('Please enter your e-mail address. We will send you an e-mail with instructions for resetting your password') }}</p>
+        <div class="field">
+            <label for="email">{{ gettext('E-Mail') }}</label>
+            <input type="text" name="email" id="email" required value="{{ request.form['email'] }}">
+        </div>
+        <div class="actions left">
+            <button type="submit" class="btn primary">{{ gettext('Send') }}</button>
+        </div>
+    </form>
+</div>
 {% endblock %}

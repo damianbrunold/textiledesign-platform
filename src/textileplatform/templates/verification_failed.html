@@ -5,7 +5,10 @@
 {% endblock %}
 
 {% block content %}
-  <p>{{ gettext('There was a problem with the verification link.') }}</p>
-
-  <p><a href="{{ url_for('login') }}">{{ gettext('Log in') }}</a></p>
+<div class="card card-form">
+    <p>{{ gettext('There was a problem with the verification link.') }}</p>
+    <div class="actions left">
+        <a class="btn primary" href="{{ url_for('login') }}">{{ gettext('Log in') }}</a>
+    </div>
+</div>
 {% endblock %}

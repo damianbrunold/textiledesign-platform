@@ -5,7 +5,9 @@
 {% endblock %}
 
 {% block content %}
+<div class="card card-form">
     <p>{{ gettext('We sent an email to') }}
-      {{ user.email }}
-      {{ gettext('with instructions on how to reset your password.') }}</p>
+       <strong>{{ user.email }}</strong>
+       {{ gettext('with instructions on how to reset your password.') }}</p>
+</div>
 {% endblock %}

@@ -302,11 +302,12 @@ img.icon.selected {
     background: #eee;
 }
 
-/* ---- Profile page ------------------------------------------- */
+/* ---- Cards (generic page sections / profile page) ----------- */
 .profile {
     max-width: 38rem;
     margin: 0 0 2rem 0;
 }
+.card,
 .profile-section {
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -315,22 +316,42 @@ img.icon.selected {
     background: #fafafa;
     color: #000;
 }
+.card h2,
 .profile-section h2 {
     margin: 0 0 0.75rem 0;
     font-size: 1.1rem;
     color: inherit;
 }
-.profile-section form { margin: 0; }
+.card h3 {
+    margin: 1rem 0 0.5rem 0;
+    font-size: 1rem;
+    font-weight: bold;
+    text-decoration: none;
+    color: inherit;
+}
+.card p { margin: 0 0 0.75rem 0; }
+.card p:last-child { margin-bottom: 0; }
+.card form,
+.profile-section form { margin: 0; display: flex; flex-direction: column; }
+.card .field,
 .profile-section .field {
     display: flex;
     flex-direction: column;
     margin-bottom: 0.75rem;
 }
+.card .field label,
 .profile-section .field label {
     font-weight: bold;
     margin-bottom: 0.25rem;
     color: inherit;
 }
+.card input[type=text],
+.card input[type=email],
+.card input[type=password],
+.card input[type=number],
+.card input[type=file],
+.card select,
+.card textarea,
 .profile-section input[type=text],
 .profile-section input[type=email],
 .profile-section input[type=password] {
@@ -342,17 +363,65 @@ img.icon.selected {
     background: #fff;
     color: #000;
 }
+.card textarea {
+    min-height: 6em;
+    resize: vertical;
+}
+.card .checkbox-field,
 .profile-section .checkbox-field {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 0.75rem;
 }
+.card .checkbox-field label,
 .profile-section .checkbox-field label {
     font-weight: normal;
     margin: 0;
     color: inherit;
 }
+.card .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+.card .actions.left { justify-content: flex-start; }
+.card .actions.between { justify-content: space-between; }
+.card-form { max-width: 28rem; }
+.card-narrow { max-width: 38rem; }
+.card-wide { max-width: 60rem; }
+.card hr { margin: 0.75rem 0; border-top: 1px solid #e0e0e0; }
+.card a { color: #08619d; }
+.card ul.plain { list-style: none; padding: 0; margin: 0; }
+.card ul.plain > li {
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.card ul.plain > li:last-child { border-bottom: none; }
+.card table { width: 100%; }
+.card table th, .card table td {
+    padding: 0.35rem 0.6rem;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #eee;
+}
+.card .muted { color: #666; font-size: 0.9em; }
+.tag {
+    display: inline-block;
+    padding: 0 0.4rem;
+    border-radius: 3px;
+    background: #e6e6e6;
+    color: #333;
+    font-size: 0.8em;
+    line-height: 1.5;
+    border: 1px solid #d0d0d0;
+}
+.tag.role { background: #eef3f8; border-color: #cfe0ee; color: #2a3f55; }
+.tag.kind { background: #eef3f8; border-color: #cfe0ee; color: #2a3f55; }
 .btn {
     display: inline-block;
     padding: 0.4rem 1rem;
@@ -378,11 +447,41 @@ img.icon.selected {
     color: #fff;
 }
 .btn.danger:hover { background: #d44637; }
+.btn.small { padding: 0.2rem 0.6rem; font-size: 0.9em; }
 .profile-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
 }
+/* Submit buttons & generic buttons inside .card adopt .btn look —
+   unless the element already has an explicit .btn class. */
+.card input[type=submit]:not(.btn),
+.card button[type=submit]:not(.btn) {
+    align-self: flex-start;
+    display: inline-block;
+    padding: 0.4rem 1rem;
+    border: 1px solid #08619d;
+    background: #08619d;
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1.4;
+}
+.card input[type=submit]:not(.btn):hover,
+.card button[type=submit]:not(.btn):hover { background: #0a76bf; }
+.card button:not([type=submit]):not(.btn) {
+    display: inline-block;
+    padding: 0.35rem 0.8rem;
+    border: 1px solid #ccc;
+    background: #ddd;
+    color: #000;
+    border-radius: 3px;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1.4;
+}
+.card button:not([type=submit]):not(.btn):hover { background: #eee; }
 
 .impersonation-banner {
     background: #fff3cd;

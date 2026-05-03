@@ -5,15 +5,19 @@
 {% endblock %}
 
 {% block content %}
-<style>
-input[type=text] { width: 30rem; }
-input[type=file] { width: 30rem; }
-</style>
+<div class="card card-narrow">
     <form enctype="multipart/form-data" method="POST">
-        <label for="name">{{ gettext('Name') }}</label>
-        <input type="text" name="name" id="name">
-        <label for="file">{{ gettext('Pattern File') }}</label>
-        <input id="file" name="file" type="file" multiple>
-        <input type="submit" value="{{ gettext('Upload') }}">
+        <div class="field">
+            <label for="name">{{ gettext('Name') }}</label>
+            <input type="text" name="name" id="name">
+        </div>
+        <div class="field">
+            <label for="file">{{ gettext('Pattern File') }}</label>
+            <input id="file" name="file" type="file" multiple>
+        </div>
+        <div class="actions left">
+            <button type="submit" class="btn primary">{{ gettext('Upload') }}</button>
+        </div>
     </form>
+</div>
 {% endblock %}

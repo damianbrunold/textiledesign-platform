@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="card card-narrow">
     <form enctype="multipart/form-data" method="POST">
         {% set has_any = namespace(value=false) %}
         {% for membership in g.user.memberships %}
@@ -12,21 +13,26 @@
               and membership.state == 'accepted'
               and membership.role in ('owner', 'writer') %}
         {% set has_any.value = true %}
-        <div>
+        <div class="checkbox-field">
             {% if membership.group.is_assigned(pattern) %}
-            <input type="checkbox" checked="checked" name="assignments" value="{{membership.group.id}}" />
+            <input type="checkbox" id="grp-{{membership.group.id}}" checked="checked" name="assignments" value="{{membership.group.id}}" />
             {% else %}
-            <input type="checkbox" name="assignments" value="{{membership.group.id}}"/>
+            <input type="checkbox" id="grp-{{membership.group.id}}" name="assignments" value="{{membership.group.id}}"/>
             {% endif %}
-            {{ membership.group.label }}
-            <span style="font-size: 0.85em; color: #666;">({{ gettext(membership.role|capitalize) }})</span>
+            <label for="grp-{{membership.group.id}}">
+                {{ membership.group.label }}
+                <span class="tag role">{{ gettext(membership.role|capitalize) }}</span>
+            </label>
         </div>
         {% endif %}
         {% endfor %}
         {% if not has_any.value %}
         <p><em>{{ gettext('You are not a writer or owner in any group yet.') }}</em></p>
         {% endif %}
-        <input type="submit" value="{{ gettext('Save') }}">
+        <div class="actions left">
+            <button type="submit" class="btn primary">{{ gettext('Save') }}</button>
+            <a class="btn" href="{{ url_for('user', user_name=g.user.name) }}">{{ gettext('Cancel') }}</a>
+        </div>
     </form>
-    <a class="action" href="{{ url_for('user', user_name=g.user.name) }}">{{ gettext('Cancel') }}</a>
+</div>
 {% endblock %}

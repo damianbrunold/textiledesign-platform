@@ -10,13 +10,16 @@
     display: flex;
     flex-direction: column;
     max-width: 50rem;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     border-radius: 4px;
+    background: #fafafa;
+    color: #000;
+    overflow: hidden;
 }
 .chat-toolbar {
-    padding: 0.4rem 0.75rem;
-    border-bottom: 1px solid #ddd;
-    background: #fafafa;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f0f0f0;
     font-size: 0.9em;
 }
 .chat-messages {
@@ -26,29 +29,34 @@
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    background: #fff;
 }
 .msg {
     max-width: 70%;
     padding: 0.4rem 0.6rem;
     border-radius: 6px;
-    background: #eef;
+    background: #e9eef7;
+    color: #1a1a1a;
     align-self: flex-start;
     word-wrap: break-word;
+    border: 1px solid #d6deeb;
 }
 .msg.mine {
     align-self: flex-end;
     background: #d4edda;
+    border-color: #b9dec3;
 }
 .msg .sender {
     font-size: 0.8em;
     color: #555;
     margin-bottom: 0.15rem;
+    font-weight: bold;
 }
 .msg .body { white-space: pre-wrap; }
 .msg.deleted .body { font-style: italic; color: #888; }
 .msg .time {
     font-size: 0.75em;
-    color: #888;
+    color: #777;
     margin-top: 0.15rem;
 }
 .msg .delete-btn {
@@ -57,7 +65,7 @@
     right: 0.25rem;
     cursor: pointer;
     color: #b94a48;
-    font-size: 0.8em;
+    font-size: 0.9em;
     background: none;
     border: none;
     padding: 0;
@@ -66,10 +74,11 @@
 .msg.mine { position: relative; padding-right: 1.4rem; }
 .msg.mine:hover .delete-btn { display: inline; }
 .chat-input {
-    border-top: 1px solid #ddd;
+    border-top: 1px solid #e0e0e0;
     padding: 0.5rem;
     display: flex;
     gap: 0.5rem;
+    background: #f0f0f0;
 }
 .chat-input textarea {
     flex-grow: 1;
@@ -80,15 +89,68 @@
     line-height: 1.4;
     font-family: inherit;
     font-size: inherit;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #fff;
+    color: #000;
+    margin: 0;
 }
+.chat-input button {
+    padding: 0.4rem 1rem;
+    border: 1px solid #08619d;
+    background: #08619d;
+    color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+    font: inherit;
+}
+.chat-input button:hover { background: #0a76bf; }
 .load-more {
     align-self: center;
     margin-bottom: 0.5rem;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid #ccc;
+    background: #ddd;
+    color: #000;
+    border-radius: 3px;
+    cursor: pointer;
+    font: inherit;
 }
+.load-more:hover { background: #eee; }
 .blocked-note {
     color: #b94a48;
-    padding: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #fdecea;
+    border-top: 1px solid #f5c6cb;
 }
+
+{% set dark_pref = g.user.darkmode if g.user else none %}
+{% macro _chat_dark() %}
+.chat { background: #1f1f1f; border-color: #444; color: #ddd; }
+.chat-toolbar { background: #2a2a2a; border-bottom-color: #333; }
+.chat-toolbar a { color: #67c3ff; }
+.chat-messages { background: #1a1a1a; }
+.msg { background: #2a3445; color: #e8e8e8; border-color: #3a4658; }
+.msg.mine { background: #2d4534; border-color: #3d5b46; }
+.msg .sender { color: #bbb; }
+.msg .time { color: #999; }
+.msg.deleted .body { color: #888; }
+.chat-input { background: #2a2a2a; border-top-color: #333; }
+.chat-input textarea { background: #1f1f1f; border-color: #555; color: #ddd; }
+.chat-input button { background: #0a76bf; border-color: #0a76bf; color: #fff; }
+.chat-input button:hover { background: #1389d9; }
+.load-more { background: #2a2a2a; border-color: #555; color: #ddd; }
+.load-more:hover { background: #3a3a3a; }
+.blocked-note { background: #3a1f1f; color: #ff9b97; border-top-color: #5a2a2a; }
+{% endmacro %}
+{% if dark_pref %}
+{{ _chat_dark() }}
+{% elif dark_pref is none %}
+@media (prefers-color-scheme: dark) {
+{{ _chat_dark() }}
+}
+{% endif %}
 </style>
 
 <div class="chat" data-api-url="{{ api_url }}"

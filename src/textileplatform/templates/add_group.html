@@ -5,11 +5,19 @@
 {% endblock %}
 
 {% block content %}
+<div class="card card-form">
     <form method="POST">
-        <label>{{ gettext('Group Name') }}</label>
-        <input type="text" name="name" value="{{ request.form.get('name', '') }}"/>
-        <label>{{ gettext('Group Description') }}</label>
-        <input type="text" name="description" value="{{ request.form.get('description', '') }}"/>
-        <input type="submit" value="{{ gettext('Save') }}"/>
+        <div class="field">
+            <label for="grp-name">{{ gettext('Group Name') }}</label>
+            <input type="text" id="grp-name" name="name" value="{{ request.form.get('name', '') }}"/>
+        </div>
+        <div class="field">
+            <label for="grp-desc">{{ gettext('Group Description') }}</label>
+            <input type="text" id="grp-desc" name="description" value="{{ request.form.get('description', '') }}"/>
+        </div>
+        <div class="actions left">
+            <button type="submit" class="btn primary">{{ gettext('Save') }}</button>
+        </div>
     </form>
+</div>
 {% endblock %}

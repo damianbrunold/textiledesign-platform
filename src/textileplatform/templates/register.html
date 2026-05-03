@@ -5,19 +5,27 @@
 {% endblock %}
 
 {% block content %}
-<style>
-input[type=text] { width: 20rem; }
-input[type=password] { width: 20rem; }
-</style>
-  <form method="post">
-    <label for="name">{{ gettext('Name') }}</label>
-    <input type="text" name="name" id="name" required value="{{ request.form['name'] }}">
-    <label for="email">{{ gettext('E-Mail') }}</label>
-    <input type="text" name="email" id="email" required value="{{ request.form['email'] }}">
-    <label for="password">{{ gettext('Password') }}</label>
-    <input type="password" name="password" id="password" required value="{{ request.form['password'] }}">
-    <div>{{ gettext("Please enter the result of the following calculation 3+4") }}</div>
-    <input type="text" name="x" value=""/>
-    <input type="submit" value="{{ gettext('Create') }}">
-  </form>
+<div class="card card-form">
+    <form method="post">
+        <div class="field">
+            <label for="name">{{ gettext('Name') }}</label>
+            <input type="text" name="name" id="name" required value="{{ request.form['name'] }}">
+        </div>
+        <div class="field">
+            <label for="email">{{ gettext('E-Mail') }}</label>
+            <input type="text" name="email" id="email" required value="{{ request.form['email'] }}">
+        </div>
+        <div class="field">
+            <label for="password">{{ gettext('Password') }}</label>
+            <input type="password" name="password" id="password" required value="{{ request.form['password'] }}">
+        </div>
+        <div class="field">
+            <label for="x">{{ gettext("Please enter the result of the following calculation 3+4") }}</label>
+            <input type="text" name="x" id="x" value=""/>
+        </div>
+        <div class="actions left">
+            <button type="submit" class="btn primary">{{ gettext('Create') }}</button>
+        </div>
+    </form>
+</div>
 {% endblock %}
