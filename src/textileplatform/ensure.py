@@ -3,6 +3,7 @@ from textileplatform.models import User
 from textileplatform.models import Group
 from textileplatform.models import Membership
 from textileplatform.models import Assignment
+from textileplatform.support import SUPPORT_USERNAME
 
 from werkzeug.security import generate_password_hash as gen_pw_hash
 
@@ -13,7 +14,7 @@ def ensure_db_contents(app):
         now = datetime.datetime.now(datetime.timezone.utc)
         if User.query.count() == 0:
             db.session.add(User(
-                name="support",
+                name=SUPPORT_USERNAME,
                 label="Support",
                 email="admin@textileplatform.ch",
                 email_lower="admin@textileplatform.ch",
@@ -59,17 +60,6 @@ def ensure_db_contents(app):
                 state="accepted",
             )
             db.session.add(membership)
-            support = (
-                User.query.filter(User.name == "support").one_or_none()
-            )
-            if support:
-                membership = Membership(
-                    group=group,
-                    user=support,
-                    role="owner",
-                    state="accepted",
-                )
-                db.session.add(membership)
             db.session.commit()
         beispiele = User.query.filter(User.name == "beispiele").one_or_none()
         if not beispiele:
@@ -102,19 +92,10 @@ def ensure_db_contents(app):
                 state="accepted",
             )
             db.session.add(membership)
-            support = (
-                User.query.filter(User.name == "support").one_or_none()
-            )
-            if support:
-                membership = Membership(
-                    group=group,
-                    user=support,
-                    role="owner",
-                    state="accepted",
-                )
-                db.session.add(membership)
             db.session.commit()
         for user in User.query.all():
+            if user.name == SUPPORT_USERNAME:
+                continue
             group = Group.query.filter(Group.name == user.name).one_or_none()
             if not group:
                 # Create default group for user and assign all owned

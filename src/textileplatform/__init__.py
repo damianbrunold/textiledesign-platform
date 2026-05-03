@@ -314,6 +314,8 @@ def ensure_primary_groups():
     with app.app_context():
         changed = False
         for user in User.query.order_by(User.id).all():
+            if user.name == SUPPORT_USERNAME:
+                continue
             group = Group.query.filter(Group.name == user.name).one_or_none()
             if group:
                 continue
