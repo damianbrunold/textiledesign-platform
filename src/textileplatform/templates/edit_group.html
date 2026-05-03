@@ -5,37 +5,6 @@
 {% endblock %}
 
 {% block content %}
-<style>
-.invite-form { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: end; position: relative; }
-.invite-form .field { margin-bottom: 0; }
-.invite-form input[type=text] { width: 16rem; }
-#user-suggestions {
-    position: absolute;
-    top: 100%; left: 0;
-    border: 1px solid #ccc;
-    width: 16rem;
-    background: #fff;
-    color: #000;
-    z-index: 10;
-    border-radius: 0 0 3px 3px;
-}
-#user-suggestions div { padding: 0.3rem 0.5rem; cursor: pointer; }
-#user-suggestions div:hover { background: #eef; }
-
-{% set dark_pref = g.user.darkmode if g.user else none %}
-{% macro _grp_dark() %}
-#user-suggestions { background: #2a2a2a; color: #ddd; border-color: #555; }
-#user-suggestions div:hover { background: #3a3a3a; }
-{% endmacro %}
-{% if dark_pref %}
-{{ _grp_dark() }}
-{% elif dark_pref is none %}
-@media (prefers-color-scheme: dark) {
-{{ _grp_dark() }}
-}
-{% endif %}
-</style>
-
 <div class="card card-wide">
     {% if group.description %}
     <p>{{ group.description }}</p>

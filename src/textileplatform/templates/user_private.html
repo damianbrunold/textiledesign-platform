@@ -3,37 +3,6 @@
 {% block body_class %}view-thumb{% endblock %}
 
 {% block header %}
-<style>
-#groups {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 0.5rem 1rem;
-    margin: 0;
-    padding-bottom: 0.4rem;
-    overflow-x: auto;
-    scrollbar-width: thin;
-}
-#groups::-webkit-scrollbar { height: 6px; }
-#groups::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
-.group-tab {
-    cursor: pointer;
-    padding: 0.15rem 0.5rem;
-    font-size: 1.1rem;
-    border-bottom: 2px solid transparent;
-    user-select: none;
-    white-space: nowrap;
-    flex: 0 0 auto;
-}
-.group-tab.active {
-    font-weight: bold;
-    border-bottom-color: #b94a48;
-}
-.group-tab .role-tag {
-    font-size: 0.7em;
-    color: #888;
-    padding-left: 0.25rem;
-}
-</style>
 <div id="groups" data-active-group="{{ active_group }}">
     {% for gr in groups %}
     <div class="group-tab{% if gr.name == active_group %} active{% endif %}"
@@ -47,76 +16,6 @@
 {% endblock %}
 
 {% block content %}
-{% include '_profile_toolbar.css.html' %}
-<style>
-#admin-row {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 1rem;
-    padding-top: 0.5rem;
-    border-top: 1px dashed #ccc;
-}
-.section-title { display: flex; align-items: center; gap: 0.4rem; }
-.section-action {
-    border: 1px solid #ccc;
-    background: #f6f6f6;
-    color: inherit;
-    cursor: pointer;
-    border-radius: 3px;
-    width: 1.5rem;
-    height: 1.5rem;
-    line-height: 1;
-    font-size: 1rem;
-    padding: 0;
-}
-.section-action:hover { background: #e8e8e8; }
-.inline-new-form {
-    display: none;
-    align-items: center;
-    gap: 0.4rem;
-    margin: 0.4rem 0;
-}
-.inline-new-form.open { display: flex; }
-.inline-new-form input[type=text] {
-    height: 1.7rem;
-    padding: 0 0.4rem;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    box-sizing: border-box;
-    font: inherit;
-    width: 18rem;
-}
-.inline-new-form button {
-    height: 1.7rem;
-    padding: 0 0.7rem;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    background: #f6f6f6;
-    cursor: pointer;
-    font: inherit;
-}
-{% set dark_pref = g.user.darkmode if g.user else none %}
-{% macro _dark_overrides() %}
-.section-action {
-    background: #2a2a2a; border-color: #555; color: #ddd;
-}
-.section-action:hover { background: #444; }
-.inline-new-form input[type=text],
-.inline-new-form button {
-    background: #1f1f1f; color: #ddd; border-color: #555;
-}
-.inline-new-form button { background: #2a2a2a; }
-.inline-new-form button:hover { background: #444; }
-{% endmacro %}
-{% if dark_pref %}
-{{ _dark_overrides() }}
-{% elif dark_pref is none %}
-@media (prefers-color-scheme: dark) {
-{{ _dark_overrides() }}
-}
-{% endif %}
-</style>
-
 <form id="hidden-create-form" method="post" action="{{ url_for('create_pattern') }}" style="display:none">
     <input type="hidden" name="pattern_type" id="hcf-type">
     <input type="hidden" name="name" id="hcf-name">

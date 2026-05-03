@@ -2,10 +2,6 @@
 
 {% block body_class %}view-thumb no-page-header{% endblock %}
 
-{% block headext %}
-<style>body.no-page-header .content > header { display: none; }</style>
-{% endblock %}
-
 {% block nav_extra %}
 {% if g.user and g.user.id != user.id and not user.block_invitations and user.name != 'superuser' %}
 <li><a href="{{ url_for('messages_direct', user_name=user.name) }}">{{ gettext('Send message') }}</a>
@@ -13,8 +9,6 @@
 {% endblock %}
 
 {% block content %}
-{% include '_profile_toolbar.css.html' %}
-
 <div id="profile-toolbar">
     <input type="text" id="filter-input" placeholder="{{ gettext('Filter…') }}">
     <div class="sort-modes" id="sort-modes">
