@@ -9,9 +9,12 @@
 {% if users %}
 <ul class="plain">
     {% for user in users %}
-    <li>
+    <li{% if user.disabled %} style="opacity:0.6;"{% endif %}>
         <span style="width:14rem; flex-shrink:0;">
-            <a href="{{ url_for('user', user_name=user.name) }}"><strong>{{ user.name }}</strong></a>
+            <a href="{{ url_for('user', user_name=user.name) }}"><strong>{% if user.disabled %}<s>{{ user.name }}</s>{% else %}{{ user.name }}{% endif %}</strong></a>
+            {% if user.disabled %}
+            <span class="badge" style="margin-left:0.4rem; padding:0.05rem 0.4rem; border:1px solid currentColor; border-radius:0.6rem; font-size:0.75rem; text-transform:uppercase;">{{ gettext('Disabled') }}</span>
+            {% endif %}
         </span>
         <span style="flex-grow:1;">{{ user.label }}</span>
         <span class="muted" style="margin-right:0.75rem;">
@@ -19,7 +22,7 @@
             · {{ gettext('Bead') }}: {{ user_counts[user.id].bead }}
         </span>
         <a class="btn small" href="{{ url_for('edit_user', user_name=user.name) }}">{{ gettext('Details') }}</a>
-        {% if user.name != SUPPORT_USERNAME %}
+        {% if user.name != SUPPORT_USERNAME and not user.disabled %}
         <form method="post" action="{{ url_for('impersonate', user_name=user.name) }}" style="display:inline; margin:0;">
             <button type="submit" class="btn small">{{ gettext('Impersonate') }}</button>
         </form>

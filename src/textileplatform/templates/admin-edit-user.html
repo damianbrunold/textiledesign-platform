@@ -12,6 +12,21 @@
             <tr><th>{{ gettext('Label') }}</th><td>{{ user.label }}</td></tr>
             <tr><th>{{ gettext('E-Mail') }}</th><td>{{ user.email }}</td></tr>
             <tr><th>{{ gettext('Locale') }}</th><td>{{ user.locale }}</td></tr>
+            <tr>
+                <th>{{ gettext('Status') }}</th>
+                <td>
+                    {% if user.disabled %}{{ gettext('Disabled') }}{% else %}{{ gettext('Active') }}{% endif %}
+                    {% if user.name != SUPPORT_USERNAME and (not g.user or g.user.id != user.id) %}
+                    <form method="post" action="{{ url_for('admin_set_user_disabled', user_name=user.name) }}" style="display:inline; margin-left:0.75rem;"
+                          onsubmit="return confirm('{% if user.disabled %}{{ gettext('Re-enable this account?') }}{% else %}{{ gettext('Disable this account? The user will be signed out and unable to log in.') }}{% endif %}');">
+                        <input type="hidden" name="disabled" value="{% if user.disabled %}0{% else %}1{% endif %}">
+                        <button type="submit" class="btn small">
+                            {% if user.disabled %}{{ gettext('Enable') }}{% else %}{{ gettext('Disable') }}{% endif %}
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
         </tbody>
     </table>
 </div>

@@ -1711,6 +1711,37 @@ def edit_user(user_name):
         abort(500, description="Failed to get user")
 
 
+@app.route("/admin/users/<string:user_name>/set-disabled", methods=("POST",))
+@login_required
+@support_required
+def admin_set_user_disabled(user_name):
+    target = User.query.filter(User.name == user_name).first()
+    if not target:
+        abort(404, description=f"User {user_name} not found")
+    if target.name == SUPPORT_USERNAME:
+        flash(gettext("The support account cannot be disabled."))
+        return redirect(url_for("edit_user", user_name=target.name))
+    if g.user and target.id == g.user.id:
+        flash(gettext("You cannot disable your own account."))
+        return redirect(url_for("edit_user", user_name=target.name))
+    desired = request.form.get("disabled") == "1"
+    if bool(target.disabled) == desired:
+        return redirect(url_for("edit_user", user_name=target.name))
+    try:
+        target.disabled = desired
+        db.session.commit()
+    except Exception:
+        logging.exception("Failed to update disabled state")
+        db.session.rollback()
+        flash(gettext("Could not update the account state."))
+        return redirect(url_for("edit_user", user_name=target.name))
+    if desired:
+        flash(gettext("Account disabled."))
+    else:
+        flash(gettext("Account enabled."))
+    return redirect(url_for("edit_user", user_name=target.name))
+
+
 @app.route("/admin/system")
 @login_required
 @support_required
@@ -1759,9 +1790,6 @@ def investigate_pattern(owner_name, pattern_name):
     base_label = f"{src.label} [{owner.label}]"
     label = f"{base_label} {suffix}"
     name = from_label(label)
-    group = Group.query.filter(Group.name == support_user.name).one_or_none()
-    if not group:
-        abort(500, description="Support has no primary group")
     now = datetime.datetime.now(datetime.timezone.utc)
     copy = Pattern(
         name=name,
@@ -1788,7 +1816,6 @@ def investigate_pattern(owner_name, pattern_name):
         investigation_origin_public=bool(src.public),
     )
     db.session.add(copy)
-    db.session.add(Assignment(pattern=copy, group=group))
     db.session.commit()
     flash(gettext("Investigation copy created"))
     return redirect(url_for("support_console"))
