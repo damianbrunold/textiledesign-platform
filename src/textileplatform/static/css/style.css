@@ -1118,3 +1118,22 @@ ul.inbox .unread {
     #profile-toolbar #filter-input { flex: 1 1 100%; width: auto; }
     #group-select { display: block; width: 100%; margin: 0.25rem 0 0.5rem 0; }
 }
+
+.inv-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
+.inv-card { display: flex; gap: 1rem; border: 1px solid #ddd; border-radius: 0.5rem; padding: 0.75rem 1rem; box-sizing: border-box; min-width: 0; }
+.inv-thumb { flex: 0 0 auto; }
+.inv-thumb img { display: block; max-width: 8rem; max-height: 8rem; width: auto; height: auto; border: 1px solid #eee; border-radius: 0.25rem; }
+.inv-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.inv-card-title { font-weight: 600; word-break: break-word; margin-bottom: 0.5rem; }
+.inv-card-meta { display: grid; grid-template-columns: max-content 1fr; column-gap: 0.75rem; row-gap: 0.25rem; margin: 0 0 0.75rem 0; font-size: 0.9em; }
+.inv-card-meta dt { color: #666; }
+.inv-card-meta dd { margin: 0; word-break: break-word; min-width: 0; }
+.inv-card-actions { margin-top: auto; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+table.kv { border-collapse: collapse; width: 100%; }
+table.kv th, table.kv td { padding: 0.25rem 0.75rem 0.25rem 0; text-align: left; vertical-align: top; white-space: normal; }
+table.kv th { width: 14rem; font-weight: normal; color: #666; }
+table.kv td code { font-family: monospace; font-size: 0.9em; word-break: break-all; }
+.ok { color: #197a1f; font-weight: 600; }
+.warn { color: #b87800; font-weight: 600; }
+.danger { color: #c0392b; font-weight: 600; }

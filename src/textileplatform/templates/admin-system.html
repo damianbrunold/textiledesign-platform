@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% macro pct(v) -%}
+  {% if v is none %}—{% else %}{{ '%.1f' % v }}%{% endif %}
+{%- endmacro %}
+
+{% macro val(v) -%}
+  {% if v is none %}—{% else %}{{ v }}{% endif %}
+{%- endmacro %}
+
+{% block header %}
+<h1>{{ gettext('System Status') }}</h1>
+{% endblock %}
+
+{% block content %}
+<meta http-equiv="refresh" content="30">
+
+<div class="card card-wide">
+  <h2>{{ gettext('Application') }}</h2>
+  <table class="kv">
+    <tr><th>{{ gettext('Version') }}</th><td>{{ val(info.app.version) }}</td></tr>
+    <tr><th>{{ gettext('Uptime') }}</th><td>{{ val(info.app.uptime) }}</td></tr>
+    <tr><th>{{ gettext('Started') }}</th><td>{{ info.app.startup|datetimeformat('short') if info.app.startup else '—' }}</td></tr>
+    <tr><th>{{ gettext('Python') }}</th><td>{{ val(info.app.python) }}</td></tr>
+    <tr><th>Flask</th><td>{{ val(info.app.flask) }}</td></tr>
+    <tr><th>PID</th><td>{{ val(info.app.pid) }}</td></tr>
+    <tr><th>{{ gettext('Resident memory') }}</th><td>{{ val(info.app.rss_h) }}</td></tr>
+    <tr><th>{{ gettext('Command line') }}</th><td><code>{{ val(info.app.cmdline) }}</code></td></tr>
+  </table>
+</div>
+
+<div class="card card-wide">
+  <h2>{{ gettext('Host') }}</h2>
+  <table class="kv">
+    <tr><th>{{ gettext('Hostname') }}</th><td>{{ val(info.host.hostname) }}</td></tr>
+    <tr><th>{{ gettext('Platform') }}</th><td>{{ val(info.host.platform) }}</td></tr>
+    <tr><th>{{ gettext('CPU count') }}</th><td>{{ val(info.host.cpu_count) }}</td></tr>
+    <tr><th>{{ gettext('CPU usage') }}</th><td>{{ pct(info.host.cpu_percent) }}</td></tr>
+    <tr><th>{{ gettext('Load average') }}</th><td>
+      {%- if info.host.load_1 is not none -%}
+        {{ '%.2f' % info.host.load_1 }} / {{ '%.2f' % info.host.load_5 }} / {{ '%.2f' % info.host.load_15 }}
+      {%- else -%}—{%- endif -%}
+    </td></tr>
+    <tr><th>{{ gettext('Memory') }}</th><td>
+      {{ val(info.host.mem_used_h) }} / {{ val(info.host.mem_total_h) }}
+      ({{ pct(info.host.mem_percent) }}, {{ gettext('available') }} {{ val(info.host.mem_avail_h) }})
+    </td></tr>
+    <tr><th>{{ gettext('Swap') }}</th><td>
+      {{ val(info.host.swap_used_h) }} ({{ pct(info.host.swap_percent) }})
+    </td></tr>
+  </table>
+  <h3 style="margin-top:1rem;">{{ gettext('Disks') }}</h3>
+  {% if info.host.disks %}
+  <table class="kv">
+    <thead><tr><th>{{ gettext('Mount') }}</th><th>{{ gettext('Used') }}</th><th>{{ gettext('Total') }}</th><th>{{ gettext('Free') }}</th><th>%</th></tr></thead>
+    {% for d in info.host.disks %}
+    <tr>
+      <td><code>{{ d.path }}</code></td>
+      <td>{{ d.used_h }}</td>
+      <td>{{ d.total_h }}</td>
+      <td>{{ d.free_h }}</td>
+      <td class="{% if d.percent and d.percent > 90 %}danger{% elif d.percent and d.percent > 75 %}warn{% endif %}">{{ '%.1f' % d.percent }}%</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">—</p>
+  {% endif %}
+</div>
+
+<div class="card card-wide">
+  <h2>{{ gettext('Database') }}</h2>
+  <table class="kv">
+    <tr><th>{{ gettext('Connection') }}</th><td>
+      {% if info.database.ok %}
+        <span class="ok">OK</span> ({{ val(info.database.ping_ms) }} ms)
+      {% else %}
+        <span class="danger">{{ gettext('Unreachable') }}</span>
+      {% endif %}
+    </td></tr>
+    <tr><th>{{ gettext('Database size') }}</th><td>{{ val(info.database.size_h) }}</td></tr>
+    <tr><th>{{ gettext('Active connections') }}</th><td>
+      {{ val(info.database.active_connections) }}
+      {% if info.database.max_connections %} / {{ info.database.max_connections }}{% endif %}
+    </td></tr>
+    <tr><th>{{ gettext('Longest running query') }}</th><td>
+      {% if info.database.longest_query_seconds is none %}—{% else %}{{ '%.1f' % info.database.longest_query_seconds }} s{% endif %}
+    </td></tr>
+  </table>
+</div>
+
+<div class="card card-wide">
+  <h2>{{ gettext('Application metrics') }}</h2>
+  <table class="kv">
+    <tr><th>{{ gettext('Users verified') }}</th><td>{{ val(info.metrics.users_verified) }}</td></tr>
+    <tr><th>{{ gettext('Users unverified') }}</th><td>{{ val(info.metrics.users_unverified) }}</td></tr>
+    <tr><th>{{ gettext('Users disabled') }}</th><td>{{ val(info.metrics.users_disabled) }}</td></tr>
+    <tr><th>{{ gettext('Weave patterns') }}</th><td>{{ val(info.metrics.patterns_weave) }}</td></tr>
+    <tr><th>{{ gettext('Bead patterns') }}</th><td>{{ val(info.metrics.patterns_bead) }}</td></tr>
+    <tr><th>{{ gettext('Other patterns') }}</th><td>{{ val(info.metrics.patterns_other) }}</td></tr>
+    <tr><th>{{ gettext('Investigation copies') }}</th><td>{{ val(info.metrics.investigations) }}</td></tr>
+    <tr><th>{{ gettext('Pending invitations') }}</th><td>{{ val(info.metrics.pending_invitations) }}</td></tr>
+    <tr><th>{{ gettext('Messages last 24h') }}</th><td>{{ val(info.metrics.messages_24h) }}</td></tr>
+  </table>
+</div>
+
+<div class="card card-wide">
+  <h2>{{ gettext('Mail (SMTP)') }}</h2>
+  <table class="kv">
+    <tr><th>{{ gettext('Host') }}</th><td>{{ info.smtp.host }}:{{ info.smtp.port }}</td></tr>
+    <tr><th>{{ gettext('Reachable') }}</th><td>
+      {% if info.smtp.reachable %}
+        <span class="ok">OK</span> ({{ info.smtp.ms }} ms)
+      {% else %}
+        <span class="danger">{{ gettext('No') }}</span>
+      {% endif %}
+    </td></tr>
+  </table>
+</div>
+{% endblock %}

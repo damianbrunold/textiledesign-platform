@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1>{{ gettext('Support Console') }}</h1>
+{% endblock %}
+
+{% block content %}
+<div class="card card-wide">
+  <h2>{{ gettext('Administration') }}</h2>
+  <ul class="plain">
+    <li><a class="btn" href="{{ url_for('users') }}">{{ gettext('Users') }}</a></li>
+    <li><a class="btn" href="{{ url_for('groups') }}">{{ gettext('Groups') }}</a></li>
+    <li><a class="btn" href="{{ url_for('patterns') }}">{{ gettext('All Patterns') }}</a></li>
+    <li><a class="btn" href="{{ url_for('messages_inbox') }}">{{ gettext('Messages') }}</a></li>
+    <li><a class="btn" href="{{ url_for('admin_system') }}">{{ gettext('System Status') }}</a></li>
+  </ul>
+</div>
+
+<div class="card card-wide">
+  <h2>{{ gettext('Investigation Copies') }}</h2>
+  <p class="muted">{{ gettext('Working copies of user patterns for debugging. Originals are not modified. Delete copies once you are done.') }}</p>
+  {% if investigations %}
+  <div class="inv-list">
+    {% for p in investigations %}
+    <div class="inv-card">
+      <div class="inv-thumb">
+        <img src="{{ url_for('pattern_thumbnail', user_name=g.user.name, pattern_name=p.name) }}" alt="">
+      </div>
+      <div class="inv-body">
+        <div class="inv-card-title">{{ p.label }}</div>
+        <dl class="inv-card-meta">
+          <dt>{{ gettext('Origin') }}</dt>
+          <dd>
+            {% if p.investigation_origin_user and p.investigation_origin_pattern %}
+              <a href="{{ url_for('user', user_name=p.investigation_origin_user.name) }}">{{ p.investigation_origin_user.label }}</a>
+              / {{ p.investigation_origin_pattern.label }}
+            {% else %}
+              {{ p.investigation_origin_label or gettext('(origin gone)') }}
+            {% endif %}
+          </dd>
+          <dt>{{ gettext('Origin visibility') }}</dt>
+          <dd>
+            {% if p.investigation_origin_public is sameas true %}
+              {{ gettext('Public') }}
+            {% elif p.investigation_origin_public is sameas false %}
+              {{ gettext('Private') }}
+            {% else %}
+              {{ gettext('Unknown') }}
+            {% endif %}
+          </dd>
+          <dt>{{ gettext('Type') }}</dt>
+          <dd>{{ p.pattern_type }}</dd>
+          <dt>{{ gettext('Modified') }}</dt>
+          <dd>{{ p.modified|datetimeformat('short') }}</dd>
+        </dl>
+        <div class="inv-card-actions">
+          <a class="btn small" href="{{ url_for('edit_pattern', user_name=g.user.name, pattern_name=p.name) }}">{{ gettext('Open') }}</a>
+          <a class="btn small" href="{{ url_for('source_pattern', user_name=g.user.name, pattern_name=p.name) }}">{{ gettext('Source') }}</a>
+          <form method="post" action="{{ url_for('delete_investigation', pattern_id=p.id) }}" style="display:inline;"
+                onsubmit="return confirm('{{ gettext('Delete this investigation copy?') }}');">
+            <button type="submit" class="btn small danger">{{ gettext('Delete') }}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">{{ gettext('No investigation copies. Use "Investigate" on a user pattern to create one.') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

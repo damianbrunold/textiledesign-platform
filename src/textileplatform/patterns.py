@@ -209,6 +209,75 @@ def get_patterns_for_user(user, only_public=False):
         )
 
 
+def format_pattern_source(obj, step=2, max_width=100):
+    """Pretty-print a pattern JSON tree.
+
+    A subtree is rendered compactly on a single line if it fits within
+    ``max_width`` columns at the current indent; otherwise it is
+    expanded. Long flat lists (rows of numbers in weave/bead data) are
+    wrapped onto multiple lines instead of one element per line.
+    """
+    return _fmt(obj, 0, step, max_width, column=0)
+
+
+def _fmt(obj, indent, step, max_width, column):
+    compact = json.dumps(obj, ensure_ascii=False, separators=(", ", ": "))
+    if column + len(compact) <= max_width:
+        return compact
+    pad = " " * indent
+    inner_pad = " " * (indent + step)
+    if isinstance(obj, dict):
+        if not obj:
+            return "{}"
+        items = []
+        for k, v in obj.items():
+            prefix = (
+                f"{inner_pad}{json.dumps(k, ensure_ascii=False)}: "
+            )
+            items.append(
+                prefix
+                + _fmt(v, indent + step, step, max_width, column=len(prefix))
+            )
+        return "{\n" + ",\n".join(items) + "\n" + pad + "}"
+    if isinstance(obj, list):
+        if not obj:
+            return "[]"
+        if all(not isinstance(x, (dict, list)) for x in obj):
+            return _fmt_flat_list(obj, indent + step, max_width) + (
+                "\n" + pad + "]"
+            )
+        items = []
+        for x in obj:
+            items.append(
+                inner_pad
+                + _fmt(
+                    x, indent + step, step, max_width,
+                    column=len(inner_pad),
+                )
+            )
+        return "[\n" + ",\n".join(items) + "\n" + pad + "]"
+    return json.dumps(obj, ensure_ascii=False)
+
+
+def _fmt_flat_list(lst, indent, max_width):
+    pad = " " * indent
+    parts = [json.dumps(x, ensure_ascii=False) for x in lst]
+    lines = []
+    line = pad
+    for i, p in enumerate(parts):
+        sep = "," if i < len(parts) - 1 else ""
+        candidate = line + p + sep
+        if len(candidate) > max_width and line != pad:
+            lines.append(line.rstrip())
+            line = pad + p + sep + " "
+        else:
+            line += p + sep + " "
+    line = line.rstrip()
+    if line:
+        lines.append(line)
+    return "[\n" + "\n".join(lines)
+
+
 def clone_pattern(user, pattern, contents):
     group = Group.query.filter(Group.name == user.name).one_or_none()
     if not group:

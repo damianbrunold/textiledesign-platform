@@ -24,6 +24,8 @@ from werkzeug.security import generate_password_hash
 
 load_dotenv()
 
+app.startup_time = datetime.datetime.now(datetime.timezone.utc)
+
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,

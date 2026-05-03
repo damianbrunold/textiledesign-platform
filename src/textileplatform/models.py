@@ -26,6 +26,7 @@ class User(db.Model):
         "Pattern",
         back_populates="owner",
         order_by="Pattern.name",
+        foreign_keys="Pattern.owner_id",
     )
 
     def is_in_group(self, group_id):
@@ -314,10 +315,13 @@ class Pattern(db.Model):
         nullable=True,
     )
     investigation_origin_label = db.Column(db.String(255), nullable=True)
+    investigation_origin_public = db.Column(db.Boolean, nullable=True)
 
     db.UniqueConstraint(owner_id, name)
 
-    owner = db.relationship("User", back_populates="mypatterns")
+    owner = db.relationship(
+        "User", back_populates="mypatterns", foreign_keys=[owner_id],
+    )
     assignments = db.relationship("Assignment", back_populates="pattern")
     investigation_origin_user = db.relationship(
         "User", foreign_keys=[investigation_origin_user_id]

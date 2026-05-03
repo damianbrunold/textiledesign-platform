@@ -23,6 +23,7 @@ from textileplatform.patterns import add_bead_pattern
 from textileplatform.patterns import apply_pattern_metadata
 from textileplatform.patterns import get_patterns_for_user
 from textileplatform.patterns import clone_pattern
+from textileplatform.patterns import format_pattern_source
 from textileplatform.name import from_label
 from textileplatform.name import is_valid
 from textileplatform.mail import send_verification_mail
@@ -328,7 +329,7 @@ def edit_pattern(user_name, pattern_name):
         return redirect(url_for("index"))
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == user_name.lower())
         .first()
@@ -405,7 +406,7 @@ def download_pattern(user_name, pattern_name):
         return redirect(url_for("index"))
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == user_name.lower())
         .first()
@@ -438,7 +439,7 @@ def download_pattern_legacy(user_name, pattern_name):
         return redirect(url_for("index"))
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == user_name.lower())
         .first()
@@ -512,7 +513,7 @@ def export_pattern(user_name, pattern_name, fmt):
         return redirect(url_for("index"))
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == user_name.lower())
         .first()
@@ -575,7 +576,7 @@ def print_pattern(user_name, pattern_name):
         return redirect(url_for("index"))
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == user_name.lower())
         .first()
@@ -644,7 +645,7 @@ def source_pattern(user_name, pattern_name):
         return redirect(url_for("index"))
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == user_name.lower())
         .first()
@@ -660,7 +661,7 @@ def source_pattern(user_name, pattern_name):
         "source-pattern.html",
         user=user,
         pattern=pattern,
-        contents=json.dumps(pattern.pattern, ensure_ascii=False, indent=2),
+        contents=format_pattern_source(pattern.pattern),
     )
 
 
@@ -1204,7 +1205,7 @@ def create_pattern():
 def delete(pattern_name):
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == g.user.name)
         .first()
@@ -1236,7 +1237,7 @@ def delete(pattern_name):
 def assignments(pattern_name):
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == g.user.name)
         .first()
@@ -1616,8 +1617,13 @@ def add_group():
 @support_required
 def groups():
     try:
-        all_groups = Group.query.order_by(Group.name).all()
-        return render_template("groups.html", groups=all_groups)
+        all_groups = (
+            Group.query
+            .filter(Group.name != SUPPORT_USERNAME)
+            .order_by(Group.name)
+            .all()
+        )
+        return render_template("admin-groups.html", groups=all_groups)
     except HTTPException:
         raise
     except Exception:
@@ -1630,8 +1636,34 @@ def groups():
 @support_required
 def users():
     try:
-        all_users = User.query.order_by(User.name).all()
-        return render_template("users.html", users=all_users)
+        all_users = (
+            User.query
+            .filter(User.name != SUPPORT_USERNAME)
+            .order_by(User.name)
+            .all()
+        )
+        rows = (
+            db.session.query(
+                Pattern.owner_id,
+                Pattern.pattern_type,
+                db.func.count(Pattern.id),
+            )
+            .group_by(Pattern.owner_id, Pattern.pattern_type)
+            .all()
+        )
+        counts = {}
+        for owner_id, ptype, n in rows:
+            counts.setdefault(owner_id, {})[ptype] = n
+        user_counts = {
+            u.id: {
+                "weave": counts.get(u.id, {}).get("DB-WEAVE Pattern", 0),
+                "bead": counts.get(u.id, {}).get("JBead Pattern", 0),
+            }
+            for u in all_users
+        }
+        return render_template(
+            "admin-users.html", users=all_users, user_counts=user_counts,
+        )
     except HTTPException:
         raise
     except Exception:
@@ -1644,8 +1676,13 @@ def users():
 @support_required
 def patterns():
     try:
-        all_users = User.query.order_by(User.name).all()
-        return render_template("patterns.html", users=all_users)
+        all_users = (
+            User.query
+            .filter(User.name != SUPPORT_USERNAME)
+            .order_by(User.name)
+            .all()
+        )
+        return render_template("admin-patterns.html", users=all_users)
     except HTTPException:
         raise
     except Exception:
@@ -1663,7 +1700,7 @@ def edit_user(user_name):
             abort(404, description=f"User {user_name} not found")
         patterns = get_patterns_for_user(user)
         return render_template(
-            "edit_user.html",
+            "admin-edit-user.html",
             user=user,
             patterns=patterns,
         )
@@ -1672,6 +1709,14 @@ def edit_user(user_name):
     except Exception:
         logging.exception("failed to get user")
         abort(500, description="Failed to get user")
+
+
+@app.route("/admin/system")
+@login_required
+@support_required
+def admin_system():
+    from textileplatform.sysinfo import collect
+    return render_template("admin-system.html", info=collect())
 
 
 @app.route("/admin")
@@ -1686,7 +1731,7 @@ def support_console():
         .all()
     )
     return render_template(
-        "support_console.html",
+        "admin-console.html",
         investigations=investigations,
     )
 
@@ -1740,6 +1785,7 @@ def investigate_pattern(owner_name, pattern_name):
         investigation_origin_user_id=owner.id,
         investigation_origin_pattern_id=src.id,
         investigation_origin_label=f"{owner.name}/{src.name}",
+        investigation_origin_public=bool(src.public),
     )
     db.session.add(copy)
     db.session.add(Assignment(pattern=copy, group=group))
@@ -2022,7 +2068,7 @@ def get_pattern(user_name, pattern_name):
             return respond("NOK", "User not found", 404)
         pattern = (
             Pattern.query
-            .join(User)
+            .join(User, Pattern.owner_id == User.id)
             .filter(Pattern.name == pattern_name)
             .filter(User.name == user_name)
             .first()
@@ -2056,7 +2102,7 @@ def update_pattern(user_name, pattern_name):
             return respond("NOK", "User not found", 404)
         pattern = (
             Pattern.query
-            .join(User)
+            .join(User, Pattern.owner_id == User.id)
             .filter(Pattern.name == pattern_name)
             .filter(User.name == user_name)
             .first()
@@ -2179,7 +2225,7 @@ def _serve_pattern_image(user_name, pattern_name, attr):
         abort(404)
     pattern = (
         Pattern.query
-        .join(User)
+        .join(User, Pattern.owner_id == User.id)
         .filter(Pattern.name == pattern_name)
         .filter(User.name == user_name.lower())
         .first()

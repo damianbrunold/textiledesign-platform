@@ -34,7 +34,7 @@
         {% for pattern in patterns %}
             <tr>
                 <td>{{ pattern.name }}</td>
-                <td>{{ pattern.pattern_type.pattern_type }}</td>
+                <td>{{ pattern.pattern_type }}</td>
                 <td>{{ pattern.created|datetimeformat('short') }}</td>
                 <td>{{ pattern.modified|datetimeformat('short') }}</td>
                 <td>{{ pattern.public }}</td>

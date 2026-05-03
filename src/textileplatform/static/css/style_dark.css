@@ -292,3 +292,7 @@ ul.inbox .preview { color: #aaa; }
 .load-more:hover { background: #3a3a3a; }
 .blocked-note { background: #3a1f1f; color: #ff9b97; border-top-color: #5a2a2a; }
 
+
+.inv-card { border-color: #555; }
+.inv-card-meta dt { color: #aaa; }
+.inv-thumb img { border-color: #444; }
