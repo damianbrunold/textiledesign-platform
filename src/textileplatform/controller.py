@@ -1780,7 +1780,7 @@ def login():
 @app.route("/auth/logout")
 def logout():
     session.clear()
-    return redirect(url_for("login"))
+    return redirect(url_for("index"))
 
 
 @app.route("/auth/verify/<string:user_name>/<string:verification_code>")
