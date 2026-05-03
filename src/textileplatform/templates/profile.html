@@ -60,9 +60,38 @@
   <div class="profile-section">
     <h2>{{ gettext('Session') }}</h2>
     <div class="profile-actions">
-      <a class="btn danger" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a>
+      <a class="btn" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a>
     </div>
   </div>
+
+  <div class="profile-section">
+    <h2>{{ gettext('Export Account Data') }}</h2>
+    <p>{{ gettext('Download a ZIP archive containing your profile, all your patterns, group memberships, and conversation history.') }}</p>
+    <div class="profile-actions">
+      <a class="btn primary" href="{{ url_for('profile_export') }}">{{ gettext('Download ZIP') }}</a>
+    </div>
+  </div>
+
+  {% if user.name != 'superuser' %}
+  <div class="profile-section danger-zone">
+    <h2>{{ gettext('Delete Account') }}</h2>
+    <p>{{ gettext('Deleting your account will permanently remove your patterns, your group memberships, and your messages. This cannot be undone.') }}</p>
+    <form method="post" action="{{ url_for('profile_delete') }}"
+          onsubmit="return confirm('{{ gettext('Permanently delete your account? This cannot be undone.') }}');">
+      <div class="field">
+        <label for="delete_password">{{ gettext('Current Password') }}</label>
+        <input name="password" id="delete_password" type="password" required autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="delete_confirm">{{ gettext('Type DELETE to confirm') }}</label>
+        <input name="confirm" id="delete_confirm" type="text" required autocomplete="off" pattern="DELETE" placeholder="DELETE">
+      </div>
+      <div class="profile-actions">
+        <button type="submit" class="btn danger">{{ gettext('Delete my account') }}</button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
 
 </div>
 

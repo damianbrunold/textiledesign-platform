@@ -494,6 +494,11 @@ img.icon.selected {
     justify-content: flex-end;
     gap: 0.5rem;
 }
+.profile-section.danger-zone {
+    border-color: #c0392b;
+    background: #fdecea;
+}
+.profile-section.danger-zone h2 { color: #a93226; }
 /* Submit buttons & generic buttons inside .card adopt .btn look —
    unless the element already has an explicit .btn class. */
 .card input[type=submit]:not(.btn),

@@ -198,6 +198,11 @@ img.icon.selected { outline: 2px solid #999; }
     color: #fff;
 }
 .btn.danger:hover { background: #c0392b; }
+.profile-section.danger-zone {
+    background: #2a1414;
+    border-color: #6b2820;
+}
+.profile-section.danger-zone h2 { color: #ff9b97; }
 
 
 

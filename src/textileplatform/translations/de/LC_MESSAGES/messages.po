@@ -2743,3 +2743,42 @@ msgstr "Datenschutz"
 
 msgid "Imprint"
 msgstr "Impressum"
+
+msgid "Export Account Data"
+msgstr "Kontodaten exportieren"
+
+msgid "Download a ZIP archive containing your profile, all your patterns, group memberships, and conversation history."
+msgstr "Lade ein ZIP-Archiv herunter, das dein Profil, alle deine Muster, Gruppenmitgliedschaften und den Nachrichtenverlauf enthält."
+
+msgid "Download ZIP"
+msgstr "ZIP herunterladen"
+
+msgid "Delete Account"
+msgstr "Konto löschen"
+
+msgid "Deleting your account will permanently remove your patterns, your group memberships, and your messages. This cannot be undone."
+msgstr "Beim Löschen des Kontos werden deine Muster, Gruppenmitgliedschaften und Nachrichten unwiderruflich entfernt. Dies kann nicht rückgängig gemacht werden."
+
+msgid "Type DELETE to confirm"
+msgstr "Tippe DELETE ein, um zu bestätigen"
+
+msgid "Delete my account"
+msgstr "Mein Konto löschen"
+
+msgid "Permanently delete your account? This cannot be undone."
+msgstr "Konto endgültig löschen? Dies kann nicht rückgängig gemacht werden."
+
+msgid "The superuser account cannot be deleted."
+msgstr "Das Superuser-Konto kann nicht gelöscht werden."
+
+msgid "Please type \"DELETE\" to confirm."
+msgstr "Bitte tippe \"DELETE\" ein, um zu bestätigen."
+
+msgid "Incorrect password."
+msgstr "Falsches Passwort."
+
+msgid "The account could not be deleted."
+msgstr "Das Konto konnte nicht gelöscht werden."
+
+msgid "Your account and all related data have been deleted."
+msgstr "Dein Konto und alle zugehörigen Daten wurden gelöscht."

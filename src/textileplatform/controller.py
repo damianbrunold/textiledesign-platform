@@ -39,6 +39,7 @@ import datetime
 import io
 import json
 import logging
+import zipfile
 import os
 import functools
 import secrets
@@ -705,6 +706,240 @@ def profile():
         return redirect(url_for("profile"))
 
     return render_template("profile.html", user=user)
+
+
+@app.route("/profile/export")
+@login_required
+def profile_export():
+    user = g.user
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("profile.json", json.dumps({
+            "name": user.name,
+            "label": user.label,
+            "email": user.email,
+            "locale": user.locale,
+            "timezone": user.timezone,
+            "darkmode": user.darkmode,
+            "block_invitations": user.block_invitations,
+            "verified": bool(user.verified),
+            "create_date":
+                user.create_date.isoformat() if user.create_date else None,
+            "verify_date":
+                user.verify_date.isoformat() if user.verify_date else None,
+            "access_date":
+                user.access_date.isoformat() if user.access_date else None,
+        }, indent=2, ensure_ascii=False))
+
+        for p in user.mypatterns:
+            base = f"patterns/{p.name}"
+            meta = {
+                "name": p.name,
+                "label": p.label,
+                "pattern_type": p.pattern_type,
+                "description": p.description,
+                "created": p.created.isoformat() if p.created else None,
+                "modified": p.modified.isoformat() if p.modified else None,
+                "public": bool(p.public),
+                "author": p.author,
+                "organization": p.organization,
+                "notes": p.notes,
+                "pattern_width": p.pattern_width,
+                "pattern_height": p.pattern_height,
+                "rapport_width": p.rapport_width,
+                "rapport_height": p.rapport_height,
+                "groups": [
+                    a.group.name for a in p.assignments if a.group
+                ],
+            }
+            zf.writestr(
+                f"{base}.meta.json",
+                json.dumps(meta, indent=2, ensure_ascii=False),
+            )
+            if p.contents:
+                zf.writestr(f"{base}.json", p.contents)
+            if p.preview_image:
+                zf.writestr(f"{base}.preview.png", p.preview_image)
+
+        zf.writestr("groups.json", json.dumps([
+            {
+                "group_name": m.group.name,
+                "group_label": m.group.label,
+                "description": m.group.description,
+                "role": m.role,
+                "state": m.state,
+            }
+            for m in user.memberships
+        ], indent=2, ensure_ascii=False))
+
+        for c in conversations_for_user(user):
+            if c.kind == "group" and c.group is not None:
+                fname = f"messages/group-{c.group.name}.json"
+                header = {"group": c.group.name, "label": c.group.label}
+            else:
+                other = c.other_user(user.id)
+                partner = other.name if other else f"unknown-{c.id}"
+                fname = f"messages/direct-{partner}.json"
+                header = {
+                    "partner": partner,
+                    "partner_label": other.label if other else None,
+                }
+            payload = {
+                "kind": c.kind,
+                **header,
+                "messages": [
+                    {
+                        "id": msg.id,
+                        "sender":
+                            msg.sender.name if msg.sender else None,
+                        "body": "" if msg.deleted else msg.body,
+                        "deleted": bool(msg.deleted),
+                        "created":
+                            msg.created.isoformat() if msg.created else None,
+                    }
+                    for msg in c.messages
+                ],
+            }
+            zf.writestr(
+                fname, json.dumps(payload, indent=2, ensure_ascii=False),
+            )
+
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"{user.name}-export.zip",
+    )
+
+
+def _create_deleted_user_placeholder(deleted_user):
+    """Create a per-account sentinel User row that takes over the
+    deleted account's place in surviving conversations. One placeholder
+    is created per deletion so surviving partners see distinct inbox
+    rows even when several of their chat partners delete their accounts.
+    The sentinel is disabled+unverified so it never shows up in searches
+    or admin lists outside of the chats it inherits.
+    """
+    name = f"_deleted_{deleted_user.id}"
+    placeholder = User(
+        name=name,
+        label="[deleted user]",
+        email=f"{name}@invalid.local",
+        email_lower=f"{name}@invalid.local",
+        password="!",
+        disabled=True,
+        verified=False,
+    )
+    db.session.add(placeholder)
+    db.session.flush()
+    return placeholder
+
+
+def _delete_user_data(user):
+    # Patterns owned by user (and their group assignments).
+    for p in list(user.mypatterns):
+        for a in list(p.assignments):
+            db.session.delete(a)
+        db.session.delete(p)
+
+    placeholder = None
+
+    # Direct conversations: preserve the chat history for the surviving
+    # partner. Reassign the deleted user's participant row to a fresh
+    # placeholder. If every other participant has already been deleted
+    # (i.e. only placeholders are left) the conversation is dropped.
+    direct_cps = (
+        ConversationParticipant.query
+        .join(
+            Conversation,
+            Conversation.id == ConversationParticipant.conversation_id,
+        )
+        .filter(
+            Conversation.kind == "direct",
+            ConversationParticipant.user_id == user.id,
+        )
+        .all()
+    )
+    for cp in direct_cps:
+        others = [
+            p for p in cp.conversation.participants
+            if p.user_id != user.id
+        ]
+        all_disabled = bool(others) and all(
+            (p.user.disabled if p.user is not None else True)
+            for p in others
+        )
+        if not others or all_disabled:
+            db.session.delete(cp.conversation)
+        else:
+            if placeholder is None:
+                placeholder = _create_deleted_user_placeholder(user)
+            cp.user_id = placeholder.id
+
+    # Group conversations: drop the user's participation row.
+    ConversationParticipant.query.filter_by(user_id=user.id).delete(
+        synchronize_session=False,
+    )
+
+    # Reattribute every remaining message authored by the user to the
+    # placeholder, mark it deleted, and wipe its body — so chat history
+    # stays readable structurally but no original content remains in
+    # the database.
+    remaining_messages = Message.query.filter_by(sender_id=user.id).all()
+    if remaining_messages:
+        if placeholder is None:
+            placeholder = _create_deleted_user_placeholder(user)
+        for msg in remaining_messages:
+            msg.sender_id = placeholder.id
+            msg.deleted = True
+            msg.body = ""
+
+    # Memberships in groups.
+    for m in list(user.memberships):
+        db.session.delete(m)
+
+    # Personal group (same name as user) — remove if present.
+    pg = Group.query.filter(Group.name == user.name).first()
+    if pg is not None:
+        gc = Conversation.query.filter_by(group_id=pg.id).first()
+        if gc is not None:
+            db.session.delete(gc)
+        for m in list(pg.memberships):
+            db.session.delete(m)
+        for a in list(pg.assignments):
+            db.session.delete(a)
+        db.session.delete(pg)
+
+    db.session.delete(user)
+
+
+@app.route("/profile/delete", methods=("POST",))
+@login_required
+def profile_delete():
+    user = g.user
+    if user.name == "superuser":
+        flash(gettext("The superuser account cannot be deleted."))
+        return redirect(url_for("profile"))
+    password = request.form.get("password", "")
+    confirm = request.form.get("confirm", "")
+    if confirm.strip().upper() != "DELETE":
+        flash(gettext('Please type "DELETE" to confirm.'))
+        return redirect(url_for("profile"))
+    if not check_password_hash(user.password, password):
+        flash(gettext("Incorrect password."))
+        return redirect(url_for("profile"))
+    try:
+        _delete_user_data(user)
+        db.session.commit()
+    except Exception:
+        logging.exception("Account deletion failed")
+        db.session.rollback()
+        flash(gettext("The account could not be deleted."))
+        return redirect(url_for("profile"))
+    session.clear()
+    flash(gettext("Your account and all related data have been deleted."))
+    return redirect(url_for("index"))
 
 
 @app.route("/patterns/upload", methods=("GET", "POST"))
@@ -1950,32 +2185,42 @@ def _conversation_history(conv, before_id, limit):
     return msgs
 
 
+def _find_direct_conversation(user_a, user_b):
+    convs = (
+        Conversation.query
+        .filter(Conversation.kind == "direct")
+        .join(
+            ConversationParticipant,
+            Conversation.id == ConversationParticipant.conversation_id,
+        )
+        .filter(ConversationParticipant.user_id == user_a.id)
+        .all()
+    )
+    for c in convs:
+        ids = {p.user_id for p in c.participants}
+        if ids == {user_a.id, user_b.id}:
+            return c
+    return None
+
+
 @app.route("/api/conversations/direct/<string:user_name>",
            methods=("GET", "POST"))
 @login_required
 def api_direct_conversation(user_name):
     target = User.query.filter(User.name == user_name.lower()).first()
-    if not target or target.disabled:
+    if not target:
         return respond("NOK", "User not found", 404)
     if target.id == g.user.id:
         return respond("NOK", "Cannot message yourself", 400)
-
-    existing = (
-        Conversation.query
-        .filter(Conversation.kind == "direct")
-        .join(ConversationParticipant,
-              Conversation.id == ConversationParticipant.conversation_id)
-        .filter(ConversationParticipant.user_id == g.user.id)
-        .all()
-    )
-    conv = None
-    for c in existing:
-        ids = {p.user_id for p in c.participants}
-        if ids == {g.user.id, target.id}:
-            conv = c
-            break
+    conv = _find_direct_conversation(g.user, target)
+    # Disabled accounts (incl. the deleted-user placeholder) are read-only:
+    # the existing chat history is viewable but no new messages may be sent.
+    if target.disabled and conv is None:
+        return respond("NOK", "User not found", 404)
 
     if request.method == "POST":
+        if target.disabled:
+            return respond("NOK", "Cannot message this user", 403)
         # Sending a new message: enforce block_invitations only when
         # *starting* a new conversation. Normal users may not initiate
         # a direct chat with superuser, but they may reply if superuser
@@ -2117,9 +2362,13 @@ def messages_inbox():
 @login_required
 def messages_direct(user_name):
     target = User.query.filter(User.name == user_name.lower()).first()
-    if not target or target.disabled:
+    if not target:
         return redirect(url_for("messages_inbox"))
     if target.id == g.user.id:
+        return redirect(url_for("messages_inbox"))
+    # Disabled targets (e.g. the deleted-user placeholder) are read-only
+    # and only reachable if a conversation already exists.
+    if target.disabled and _find_direct_conversation(g.user, target) is None:
         return redirect(url_for("messages_inbox"))
     return render_template(
         "conversation.html",
@@ -2128,7 +2377,7 @@ def messages_direct(user_name):
         group=None,
         api_url=url_for("api_direct_conversation", user_name=target.name),
         title=target.label,
-        is_blocked=bool(target.block_invitations),
+        is_blocked=bool(target.block_invitations) or bool(target.disabled),
     )
 
 
