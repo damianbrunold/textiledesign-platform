@@ -7,7 +7,7 @@ nav { background: #555; }
 nav h1 { color: white; }
 nav h1 a { color: white; }
 nav ul li span { color: white; }
-.flash { background: #cae6f6; border: 1px solid #377ba8; }
+.flash { background: #1c3a52; border: 1px solid #67c3ff; color: #e6f3ff; }
 .content label { color: white; }
 .content input, .content textarea { background-color: #555; color: white;}
 .content { color: white; }

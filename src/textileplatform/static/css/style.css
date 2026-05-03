@@ -82,7 +82,10 @@ nav ul li a, nav ul li span, header .action { display: block; padding: 0.5rem; t
 .content { width: calc(100% - 2rem); height: calc(100vh - 3rem); margin: 0 1rem 0.5rem 1rem; box-sizing: border-box; }
 .content > header { display: flex; align-items: flex-end; height: 2.5rem; }
 .content > header h1 { flex: auto; margin: 0; }
-.flash { margin: 1em 0; padding: 1em; background: #cae6f6; border: 1px solid #377ba8; }
+.flash { margin: 1em 0; padding: 1em; background: #cae6f6; border: 1px solid #377ba8; color: #1a1a1a; animation: flash-fade 0.6s ease-in 5s forwards; }
+@keyframes flash-fade {
+    to { opacity: 0; margin: 0; padding: 0 1em; max-height: 0; border-width: 0; overflow: hidden; }
+}
 .content:last-child { margin-bottom: 0; }
 .content form { margin: 1em 0; display: flex; flex-direction: column; }
 .content label { font-weight: bold; margin-bottom: 0.5em; }

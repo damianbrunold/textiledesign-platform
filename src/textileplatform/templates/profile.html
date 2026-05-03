@@ -24,6 +24,23 @@
           <input type="hidden" name="darkmode" id="darkmode-value" value="{% if user.darkmode is sameas true %}1{% elif user.darkmode is sameas false %}0{% else %}auto{% endif %}">
         </div>
       </div>
+      <div class="field">
+        <label for="locale">{{ gettext('Language') }}</label>
+        <select name="locale" id="locale">
+          <option value="" {% if not user.locale %}selected{% endif %}>{{ gettext('System default') }}</option>
+          <option value="de" {% if user.locale == 'de' %}selected{% endif %}>Deutsch</option>
+          <option value="en" {% if user.locale == 'en' %}selected{% endif %}>English</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="timezone">{{ gettext('Timezone') }}</label>
+        <select name="timezone" id="timezone">
+          <option value="" {% if not user.timezone %}selected{% endif %}>{{ gettext('System default') }}</option>
+          {% for tz in timezones %}
+          <option value="{{ tz }}" {% if user.timezone == tz %}selected{% endif %}>{{ tz }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="checkbox-field">
         <input type="checkbox" name="block_invitations" id="block-invitations" value="1"
                {% if user.block_invitations %}checked{% endif %}>

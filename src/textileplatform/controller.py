@@ -142,7 +142,7 @@ def respond(status, message, status_code=500):
 def index():
     if g.user:
         return redirect(url_for("user", user_name=g.user.name))
-    elif request.accept_languages.best_match(["de", "en"]) == "de":
+    elif str(get_locale() or "en") == "de":
         return redirect(url_for("group", group_name="beispiele"))
     else:
         return redirect(url_for("group", group_name="examples"))
@@ -692,11 +692,21 @@ def profile():
         else:
             darkmode = None
         block_invitations = request.form.get("block_invitations") == "1"
+        locale = request.form.get("locale", "").strip()
+        if locale not in ("de", "en"):
+            locale = None
+        timezone = request.form.get("timezone", "").strip()
+        if timezone and timezone not in pytz.all_timezones_set:
+            timezone = None
+        elif not timezone:
+            timezone = None
         user.email = email
         user.email_lower = email.lower()
         # TODO reset verified?!
         user.darkmode = darkmode
         user.block_invitations = block_invitations
+        user.locale = locale
+        user.timezone = timezone
         try:
             db.session.commit()
             flash(gettext("Profile updated"))
@@ -705,7 +715,11 @@ def profile():
             flash(gettext("Changes could not be saved"))
         return redirect(url_for("profile"))
 
-    return render_template("profile.html", user=user)
+    return render_template(
+        "profile.html",
+        user=user,
+        timezones=pytz.common_timezones,
+    )
 
 
 @app.route("/profile/export")

@@ -35,11 +35,18 @@ app.config.update(
 )
 
 
+SUPPORTED_LOCALES = ["de", "en"]
+
+
 def get_locale():
     user = getattr(g, "user", None)
     if user is not None and user.locale:
         return user.locale
-    return request.accept_languages.best_match(["de", "en"])
+    for lang, _ in request.accept_languages:
+        primary = lang.split("-")[0].lower()
+        if primary in SUPPORTED_LOCALES:
+            return primary
+    return "en"
 
 
 def get_timezone():
