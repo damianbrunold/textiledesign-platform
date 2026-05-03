@@ -11325,6 +11325,10 @@ function setupEditorActions() {
     R("file.properties",  null, () => showPropertiesDialog(),
         { enabledWhen: () => !readonly });
     R("file.info",        null, () => showPatternInfoDialog());
+
+    R("legal.terms",   null, () => LegalDialog.open("/terms",   L("legal.terms")   || "Terms",          L("btn.ok") || "OK"));
+    R("legal.privacy", null, () => LegalDialog.open("/privacy", L("legal.privacy") || "Privacy Policy", L("btn.ok") || "OK"));
+    R("legal.imprint", null, () => LegalDialog.open("/imprint", L("legal.imprint") || "Imprint",        L("btn.ok") || "OK"));
     R("file.close", null, _closePatternGuarded);
 
     // Edit
@@ -12036,6 +12040,11 @@ function setupEditorActions() {
                     { action: "opt.pattern" },
                     { action: "opt.global" },
                 ]},
+            ]},
+            { label: i18n.menus.help || "?", align: "right", items: [
+                { action: "legal.terms" },
+                { action: "legal.privacy" },
+                { action: "legal.imprint" },
             ]},
         ];
         Menu.render(menuMount, tree);

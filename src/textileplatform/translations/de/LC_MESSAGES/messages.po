@@ -2734,3 +2734,12 @@ msgstr "Ihr Konto ist nun verifiziert. Bitte melden Sie sich an."
 #~ msgid "V:"
 #~ msgstr "V:"
 
+
+msgid "Terms"
+msgstr "AGB"
+
+msgid "Privacy Policy"
+msgstr "Datenschutz"
+
+msgid "Imprint"
+msgstr "Impressum"

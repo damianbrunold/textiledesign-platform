@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h2>{% if locale == 'de' %}Datenschutzerklärung{% else %}Privacy Policy{% endif %}</h2>
+{% endblock %}
+
+{% block content %}
+<article class="legal">
+{% if locale == 'de' %}
+    <p><em>Stand: Mai 2026</em></p>
+
+    <h3>1. Verantwortlicher</h3>
+    <p>
+        Verantwortlich für die Bearbeitung personenbezogener Daten ist:<br>
+        Brunold Software, Damian Brunold, Säntisrain 11, 8820 Wädenswil,
+        Schweiz.<br>
+        Kontakt: <a href="mailto:info@brunoldsoftware.ch">info@brunoldsoftware.ch</a>
+    </p>
+
+    <h3>2. Grundsatz</h3>
+    <p>
+        Wir betreiben diese Plattform als nicht-kommerzielles Angebot für
+        die Community. Datenschutz ist uns wichtig. Wir verkaufen keine
+        Daten, geben keine Daten an Dritte weiter und schalten keine
+        Werbung. Wir verarbeiten nur diejenigen Daten, die für den Betrieb
+        der Plattform notwendig sind.
+    </p>
+
+    <h3>3. Bearbeitete Daten</h3>
+    <p>Im Rahmen Ihres Nutzerkontos verarbeiten wir folgende Daten:</p>
+    <ul>
+        <li>Benutzername und Anzeigename</li>
+        <li>E-Mail-Adresse</li>
+        <li>Passwort (ausschliesslich als kryptographischer Hash gespeichert)</li>
+        <li>Spracheinstellung, Zeitzone, Darstellungspräferenz (Dark Mode)</li>
+        <li>Verifikationscode, Erstellungs-, Verifikations- und letztes Zugriffsdatum</li>
+        <li>Von Ihnen erstellte oder hochgeladene Muster und deren Inhalte</li>
+        <li>Gruppen-Mitgliedschaften, Einladungen und Nachrichten</li>
+    </ul>
+    <p>
+        Beim Aufruf der Website werden vom Webserver technisch notwendige
+        Verbindungsdaten (z.B. IP-Adresse, Zeitstempel, aufgerufene Seite,
+        User-Agent) in Server-Logs verarbeitet. Diese werden ausschliesslich
+        zum Betrieb, zur Sicherheit und zur Fehleranalyse verwendet und
+        nach kurzer Zeit gelöscht.
+    </p>
+
+    <h3>4. Cookies</h3>
+    <p>
+        Wir verwenden ausschliesslich technisch notwendige Session-Cookies,
+        um Sie nach dem Login wiederzuerkennen. Es werden keine Tracking-
+        oder Werbe-Cookies und keine Drittanbieter-Cookies eingesetzt.
+    </p>
+
+    <h3>5. Zwecke und Rechtsgrundlagen</h3>
+    <p>
+        Wir bearbeiten Ihre Daten zur Bereitstellung des Dienstes (Vertrag),
+        zur Authentifizierung, zur Kommunikation mit Ihnen (z.B. E-Mail-
+        Verifikation, Passwortwiederherstellung) und zur Wahrung unserer
+        berechtigten Interessen am sicheren und stabilen Betrieb der
+        Plattform. Massgebend sind das Schweizer Datenschutzgesetz (DSG)
+        sowie, soweit anwendbar, die EU-Datenschutz-Grundverordnung (DSGVO).
+    </p>
+
+    <h3>6. Speicherort</h3>
+    <p>
+        Die Daten werden auf Servern innerhalb der Europäischen Union
+        gespeichert.
+    </p>
+
+    <h3>7. Weitergabe an Dritte</h3>
+    <p>
+        Wir geben Ihre persönlichen Daten nicht an Dritte weiter und
+        verkaufen sie nicht. Eine Weitergabe erfolgt nur, soweit dies
+        gesetzlich vorgeschrieben ist oder zur Durchsetzung unserer Rechte
+        erforderlich wird. Auftragsbearbeiter (z.B. Hosting-Anbieter)
+        werden sorgfältig ausgewählt und vertraglich verpflichtet.
+    </p>
+
+    <h3>8. Aufbewahrungsdauer</h3>
+    <p>
+        Wir speichern Ihre Daten so lange, wie Ihr Konto besteht. Nicht
+        verifizierte Konten werden automatisch nach kurzer Zeit gelöscht.
+        Bei Löschung Ihres Kontos werden Ihre persönlichen Daten gelöscht;
+        gewisse Daten können aus technischen oder rechtlichen Gründen für
+        eine begrenzte Zeit in Backups verbleiben.
+    </p>
+
+    <h3>9. Ihre Rechte</h3>
+    <p>
+        Sie haben das Recht auf Auskunft, Berichtigung, Löschung und – im
+        Rahmen der gesetzlichen Voraussetzungen – auf Einschränkung der
+        Bearbeitung sowie auf Datenübertragbarkeit. Zudem können Sie der
+        Bearbeitung widersprechen. Wenden Sie sich dazu an
+        <a href="mailto:info@brunoldsoftware.ch">info@brunoldsoftware.ch</a>.
+        Sie haben ferner das Recht, sich bei der zuständigen
+        Datenschutzbehörde zu beschweren (in der Schweiz: EDÖB).
+    </p>
+
+    <h3>10. Datensicherheit</h3>
+    <p>
+        Wir treffen angemessene technische und organisatorische Massnahmen,
+        um Ihre Daten zu schützen. Eine vollständige Sicherheit der
+        Datenübertragung im Internet kann jedoch nicht garantiert werden.
+    </p>
+
+    <h3>11. Änderungen</h3>
+    <p>
+        Wir können diese Datenschutzerklärung anpassen. Es gilt jeweils die
+        auf dieser Seite veröffentlichte aktuelle Fassung.
+    </p>
+{% else %}
+    <p><em>Last updated: May 2026</em></p>
+
+    <h3>1. Controller</h3>
+    <p>
+        Controller responsible for processing personal data:<br>
+        Brunold Software, Damian Brunold, Säntisrain 11, 8820 Wädenswil,
+        Switzerland.<br>
+        Contact: <a href="mailto:info@brunoldsoftware.ch">info@brunoldsoftware.ch</a>
+    </p>
+
+    <h3>2. Principles</h3>
+    <p>
+        We operate this platform as a non-commercial service for the
+        community. Privacy matters to us. We do not sell data, do not share
+        data with third parties and do not run any advertising. We process
+        only the data needed to operate the platform.
+    </p>
+
+    <h3>3. Data Processed</h3>
+    <p>As part of your user account we process the following data:</p>
+    <ul>
+        <li>Username and display name</li>
+        <li>Email address</li>
+        <li>Password (stored only as a cryptographic hash)</li>
+        <li>Language preference, time zone, display preference (dark mode)</li>
+        <li>Verification code, creation, verification and last-access timestamps</li>
+        <li>Patterns you create or upload and their contents</li>
+        <li>Group memberships, invitations and messages</li>
+    </ul>
+    <p>
+        When you visit the site, the web server processes technically
+        necessary connection data (e.g. IP address, timestamp, requested
+        page, user agent) in server logs. These are used only for
+        operation, security and troubleshooting and are deleted after a
+        short period.
+    </p>
+
+    <h3>4. Cookies</h3>
+    <p>
+        We use only technically necessary session cookies to recognise you
+        after login. We do not use any tracking or advertising cookies, and
+        no third-party cookies.
+    </p>
+
+    <h3>5. Purposes and Legal Bases</h3>
+    <p>
+        We process your data to provide the service (contract), for
+        authentication, for communication with you (e.g. email
+        verification, password recovery) and to safeguard our legitimate
+        interests in the secure and stable operation of the platform.
+        Applicable laws are the Swiss Federal Act on Data Protection (FADP)
+        and, where applicable, the EU General Data Protection Regulation
+        (GDPR).
+    </p>
+
+    <h3>6. Storage Location</h3>
+    <p>
+        Data is stored on servers located within the European Union.
+    </p>
+
+    <h3>7. Disclosure to Third Parties</h3>
+    <p>
+        We do not sell your personal data and do not disclose it to third
+        parties. Disclosure occurs only where required by law or necessary
+        to enforce our rights. Processors (e.g. hosting providers) are
+        carefully selected and contractually bound.
+    </p>
+
+    <h3>8. Retention</h3>
+    <p>
+        We store your data for as long as your account exists. Unverified
+        accounts are automatically deleted after a short period. When you
+        delete your account, your personal data is deleted; for technical
+        or legal reasons, some data may remain in backups for a limited
+        time.
+    </p>
+
+    <h3>9. Your Rights</h3>
+    <p>
+        You have the right to access, rectify and erase your data and –
+        within the legal requirements – to restrict processing and to data
+        portability. You may also object to processing. Please contact
+        <a href="mailto:info@brunoldsoftware.ch">info@brunoldsoftware.ch</a>.
+        You also have the right to lodge a complaint with the competent
+        data protection authority (in Switzerland: FDPIC).
+    </p>
+
+    <h3>10. Data Security</h3>
+    <p>
+        We take reasonable technical and organisational measures to
+        protect your data. However, complete security of data transmission
+        over the internet cannot be guaranteed.
+    </p>
+
+    <h3>11. Changes</h3>
+    <p>
+        We may update this privacy policy. The current version published
+        on this page applies.
+    </p>
+{% endif %}
+</article>
+{% endblock %}

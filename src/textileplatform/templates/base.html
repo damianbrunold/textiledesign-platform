@@ -18,7 +18,7 @@
         <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
         {% block headext %}{% endblock %}
     </head>
-    <body class="{% if impersonating %}impersonating {% endif %}{% block body_class %}{% endblock %}">
+    <body class="{% if impersonating %}impersonating {% endif %}{% block body_class %}{% endblock %} {% block footer_class %}with-footer{% endblock %}">
         <nav>
             <h1>
                 <a href="{{ url_for('index') }}">
@@ -67,5 +67,14 @@
 
             {% block content %}{% endblock %}
         </section>
+        {% block footer %}
+        <footer class="site-footer">
+            <ul>
+                <li><a href="{{ url_for('terms') }}">{{ gettext('Terms') }}</a></li>
+                <li><a href="{{ url_for('privacy') }}">{{ gettext('Privacy Policy') }}</a></li>
+                <li><a href="{{ url_for('imprint') }}">{{ gettext('Imprint') }}</a></li>
+            </ul>
+        </footer>
+        {% endblock %}
     </body>
 </html>

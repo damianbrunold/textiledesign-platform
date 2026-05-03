@@ -157,3 +157,8 @@ img.icon.selected { outline: 2px solid #999; }
 }
 .btn.danger:hover { background: #c0392b; }
 
+
+
+.site-footer { background: #1f1f1f; border-top-color: #333; }
+.site-footer a { color: #999; }
+

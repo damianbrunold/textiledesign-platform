@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
 
+{% block footer %}{% endblock %}
+{% block footer_class %}{% endblock %}
+
 {% block headext %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/jbead.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/editor-menu.css') }}">
@@ -15,6 +18,7 @@
     <script src="{{ url_for('static', filename='js/shortcuts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/legal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/colorpicker.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jbead.js') }}"></script>
 {% endblock %}
@@ -111,7 +115,10 @@
             "sb.repeat":         {"label": {{ gettext('Repeat') | tojson }}},
             "sb.beads":          {"label": {{ gettext('beads') | tojson }}},
             "sb.selection":      {"label": {{ gettext('Sel') | tojson }}},
-            "info.tech":     {"label": {{ gettext('Technical info…') | tojson }}}
+            "info.tech":     {"label": {{ gettext('Technical info…') | tojson }}},
+            "legal.terms":   {"label": {{ gettext('Terms') | tojson }}},
+            "legal.privacy": {"label": {{ gettext('Privacy Policy') | tojson }}},
+            "legal.imprint": {"label": {{ gettext('Imprint') | tojson }}}
         },
         "menus": {
             "file":   {{ gettext('File') | tojson }},
@@ -121,7 +128,8 @@
             "info":   {{ gettext('Info') | tojson }},
             "export": {{ gettext('Export') | tojson }},
             "colors": {{ gettext('Colors') | tojson }},
-            "pattern": {{ gettext('Pattern') | tojson }}
+            "pattern": {{ gettext('Pattern') | tojson }},
+            "help":   "?"
         }
     }</script>
 

@@ -22,6 +22,29 @@
 
 const Modal = (function () {
     let _stack = [];
+    let _savedBodyOverflow = null;
+    let _savedBodyPaddingRight = null;
+
+    function _lockScroll() {
+        if (_stack.length !== 0) return;
+        const body = document.body;
+        const sbw = window.innerWidth - document.documentElement.clientWidth;
+        _savedBodyOverflow = body.style.overflow;
+        _savedBodyPaddingRight = body.style.paddingRight;
+        if (sbw > 0) {
+            const cur = parseFloat(getComputedStyle(body).paddingRight) || 0;
+            body.style.paddingRight = (cur + sbw) + "px";
+        }
+        body.style.overflow = "hidden";
+    }
+
+    function _unlockScroll() {
+        if (_stack.length !== 0) return;
+        document.body.style.overflow = _savedBodyOverflow || "";
+        document.body.style.paddingRight = _savedBodyPaddingRight || "";
+        _savedBodyOverflow = null;
+        _savedBodyPaddingRight = null;
+    }
 
     function _trapFocus(root, e) {
         if (e.key !== "Tab") return;
@@ -125,6 +148,7 @@ const Modal = (function () {
             }
         });
 
+        _lockScroll();
         document.body.appendChild(backdrop);
 
         const api = {
@@ -138,6 +162,7 @@ const Modal = (function () {
                 backdrop.remove();
                 const idx = _stack.indexOf(api);
                 if (idx >= 0) _stack.splice(idx, 1);
+                _unlockScroll();
                 if (prevActive && prevActive.focus) {
                     try { prevActive.focus(); } catch (e) { /* ignore */ }
                 }

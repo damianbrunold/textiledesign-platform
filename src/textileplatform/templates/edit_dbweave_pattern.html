@@ -1,5 +1,8 @@
 {% extends 'base.html' %}
 
+{% block footer %}{% endblock %}
+{% block footer_class %}{% endblock %}
+
 {% block headext %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dbweave.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/editor-menu.css') }}">
@@ -15,6 +18,7 @@
     <script src="{{ url_for('static', filename='js/shortcuts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/legal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/selection.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tools.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dbweave.js') }}"></script>
@@ -394,7 +398,10 @@
             "range.range-9":   {"label": {{ gettext('Range 9') | tojson }}},
             "range.aushebung": {"label": {{ gettext('Lift out') | tojson }}},
             "range.anbindung": {"label": {{ gettext('Binding') | tojson }}},
-            "range.abbindung": {"label": {{ gettext('Unbinding') | tojson }}}
+            "range.abbindung": {"label": {{ gettext('Unbinding') | tojson }}},
+            "legal.terms":   {"label": {{ gettext('Terms') | tojson }}},
+            "legal.privacy": {"label": {{ gettext('Privacy Policy') | tojson }}},
+            "legal.imprint": {"label": {{ gettext('Imprint') | tojson }}}
         },
         "menus": {
             "file": {{ gettext('File') | tojson }},
@@ -429,7 +436,8 @@
             "colors":             {{ gettext('Colors') | tojson }},
             "baseSettings":       {{ gettext('Base settings') | tojson }},
             "options":            {{ gettext('Options') | tojson }},
-            "export":             {{ gettext('Export') | tojson }}
+            "export":             {{ gettext('Export') | tojson }},
+            "help":               "?"
         }
     }</script>
 

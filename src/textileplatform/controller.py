@@ -365,6 +365,21 @@ def edit_pattern(user_name, pattern_name):
         return redirect(url_for("user", user_name=user.name))
 
 
+@app.route("/terms")
+def terms():
+    return render_template("terms.html", locale=str(get_locale() or "en"))
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html", locale=str(get_locale() or "en"))
+
+
+@app.route("/imprint")
+def imprint():
+    return render_template("imprint.html", locale=str(get_locale() or "en"))
+
+
 @app.route("/admin/status")
 def status():
     try:

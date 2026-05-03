@@ -2203,6 +2203,11 @@ function setupEditorActions() {
     });
     reg("info.tech",    { handler: () => _openTechInfoDialog() });
 
+    const _okLabel = _actionLabel("btn.ok", "OK");
+    reg("legal.terms",   { handler: () => LegalDialog.open("/terms",   _actionLabel("legal.terms",   "Terms"),          _okLabel) });
+    reg("legal.privacy", { handler: () => LegalDialog.open("/privacy", _actionLabel("legal.privacy", "Privacy Policy"), _okLabel) });
+    reg("legal.imprint", { handler: () => LegalDialog.open("/imprint", _actionLabel("legal.imprint", "Imprint"),        _okLabel) });
+
     // ---- Edit actions ----
     reg("edit.undo", {
         shortcut: "Ctrl+Z",
@@ -2353,6 +2358,11 @@ function setupEditorActions() {
         ], visibleWhen: () => !readonly },
         { label: _menuLabel("info", "Info"),  items: [
             { action: "info.tech" },
+        ]},
+        { label: _menuLabel("help", "?"), align: "right", items: [
+            { action: "legal.terms" },
+            { action: "legal.privacy" },
+            { action: "legal.imprint" },
         ]},
     ];
     Menu.render(document.getElementById("tx-menubar"), tree);

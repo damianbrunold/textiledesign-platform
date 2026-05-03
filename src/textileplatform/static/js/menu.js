@@ -143,6 +143,7 @@ const Menu = (function () {
         tree.forEach(topItem => {
             const top = document.createElement("div");
             top.className = "tx-menu-top";
+            if (topItem.align === "right") top.classList.add("tx-menu-right");
             const lbl = document.createElement("span");
             lbl.textContent = topItem.label;
             top.appendChild(lbl);

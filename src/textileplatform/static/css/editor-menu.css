@@ -107,6 +107,26 @@
     margin: 0.25rem 0.3rem;
 }
 
+.tx-menubar .tx-menu-top.tx-menu-right {
+    margin-left: auto;
+    border-left: 1px solid #bbb;
+}
+
+.tx-menubar .tx-menu-top.tx-menu-right > .tx-menu-dropdown {
+    left: auto;
+    right: 0;
+}
+
+.tx-menu-legal-body {
+    max-width: 50rem;
+    line-height: 1.5;
+    font-size: 0.9rem;
+}
+.tx-menu-legal-body h3 { margin-top: 1.2rem; font-size: 1rem; }
+.tx-menu-legal-body address { font-style: normal; margin: 0.5rem 0; }
+.tx-menu-legal-body p { margin: 0.5rem 0; }
+.tx-menu-legal-body ul { margin: 0.5rem 0 0.5rem 1.2rem; }
+
 /* ---- Modal ---- */
 .tx-modal-backdrop {
     position: fixed;

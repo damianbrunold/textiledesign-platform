@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h2>{% if locale == 'de' %}Allgemeine Geschäftsbedingungen (AGB){% else %}Terms of Service{% endif %}</h2>
+{% endblock %}
+
+{% block content %}
+<article class="legal">
+{% if locale == 'de' %}
+    <p><em>Stand: Mai 2026</em></p>
+
+    <h3>1. Geltungsbereich und Anbieter</h3>
+    <p>
+        Diese Allgemeinen Geschäftsbedingungen regeln die Nutzung der
+        Webplattform „Textile Platform“ (nachfolgend „Plattform“), betrieben
+        von Brunold Software, Damian Brunold, Säntisrain 11, 8820 Wädenswil,
+        Schweiz (nachfolgend „Anbieter“). Mit der Registrierung oder
+        Nutzung der Plattform akzeptiert der Nutzer diese Bedingungen.
+    </p>
+
+    <h3>2. Leistung</h3>
+    <p>
+        Die Plattform ermöglicht das Erstellen, Hochladen, Bearbeiten und
+        Teilen von Webe- und Bead-Mustern (DB-WEAVE und JBead). Die Nutzung
+        ist kostenlos. Es besteht kein Anspruch auf Verfügbarkeit, bestimmte
+        Funktionen oder den Fortbestand der Plattform. Der Anbieter kann den
+        Dienst jederzeit ohne Vorankündigung anpassen, einschränken oder
+        einstellen.
+    </p>
+
+    <h3>3. Registrierung und Nutzerkonto</h3>
+    <p>
+        Für die Nutzung wesentlicher Funktionen ist ein Nutzerkonto
+        erforderlich. Die angegebenen Daten müssen wahrheitsgemäss sein. Der
+        Nutzer ist für die Geheimhaltung seines Passworts und für sämtliche
+        unter seinem Konto vorgenommenen Handlungen verantwortlich. Der
+        Anbieter kann Konten ohne Angabe von Gründen sperren oder löschen,
+        insbesondere bei Verstoss gegen diese AGB.
+    </p>
+
+    <h3>4. Pflichten des Nutzers</h3>
+    <p>
+        Der Nutzer verpflichtet sich, keine Inhalte hochzuladen oder zu
+        veröffentlichen, die gegen geltendes Recht, Rechte Dritter
+        (insbesondere Urheber-, Persönlichkeits- und Markenrechte) oder die
+        guten Sitten verstossen. Der Nutzer trägt die alleinige
+        Verantwortung für seine Inhalte.
+    </p>
+
+    <h3>5. Nutzungsrechte an Inhalten</h3>
+    <p>
+        Der Nutzer behält sämtliche Rechte an den von ihm hochgeladenen
+        Inhalten. Er räumt dem Anbieter ein einfaches, nicht
+        ausschliessliches, weltweites und unentgeltliches Recht ein, diese
+        Inhalte im Rahmen des Betriebs der Plattform zu speichern,
+        anzuzeigen und – soweit vom Nutzer freigegeben – anderen Nutzern
+        zugänglich zu machen.
+    </p>
+
+    <h3>6. Gewährleistung und Haftung</h3>
+    <p>
+        Die Plattform wird „wie sie ist“ und ohne jegliche Gewährleistung
+        zur Verfügung gestellt. Soweit gesetzlich zulässig, schliesst der
+        Anbieter jede Gewährleistung – insbesondere für Verfügbarkeit,
+        Fehlerfreiheit, Datenintegrität, Eignung für einen bestimmten Zweck
+        und Datenverlust – aus.
+    </p>
+    <p>
+        Die Haftung des Anbieters ist, soweit gesetzlich zulässig, in jedem
+        Fall ausgeschlossen, einschliesslich für mittelbare Schäden,
+        Folgeschäden, entgangenen Gewinn und Datenverlust. Eine zwingende
+        gesetzliche Haftung (insbesondere für grobe Fahrlässigkeit oder
+        Vorsatz) bleibt unberührt. Der Nutzer ist selbst dafür
+        verantwortlich, eigene Sicherungskopien seiner Muster zu erstellen.
+    </p>
+
+    <h3>7. Datenschutz</h3>
+    <p>
+        Es gilt die <a href="{{ url_for('privacy') }}">Datenschutzerklärung</a>.
+    </p>
+
+    <h3>8. Änderungen</h3>
+    <p>
+        Der Anbieter kann diese AGB jederzeit anpassen. Die jeweils aktuelle
+        Fassung gilt für die weitere Nutzung der Plattform.
+    </p>
+
+    <h3>9. Anwendbares Recht und Gerichtsstand</h3>
+    <p>
+        Es gilt schweizerisches Recht unter Ausschluss kollisionsrechtlicher
+        Bestimmungen und des UN-Kaufrechts. Ausschliesslicher Gerichtsstand
+        ist, soweit gesetzlich zulässig, Wädenswil, Schweiz.
+    </p>
+
+    <h3>10. Salvatorische Klausel</h3>
+    <p>
+        Sollten einzelne Bestimmungen unwirksam sein, bleibt die Gültigkeit
+        der übrigen Bestimmungen unberührt.
+    </p>
+{% else %}
+    <p><em>Last updated: May 2026</em></p>
+
+    <h3>1. Scope and Provider</h3>
+    <p>
+        These Terms of Service govern the use of the “Textile Platform” web
+        application (the “Platform”), operated by Brunold Software, Damian
+        Brunold, Säntisrain 11, 8820 Wädenswil, Switzerland (the “Provider”).
+        By registering for or using the Platform, the user accepts these
+        terms.
+    </p>
+
+    <h3>2. Service</h3>
+    <p>
+        The Platform allows users to create, upload, edit and share weaving
+        and bead patterns (DB-WEAVE and JBead). Use is free of charge.
+        There is no entitlement to availability, specific features or the
+        continued operation of the Platform. The Provider may modify,
+        restrict or discontinue the service at any time without prior
+        notice.
+    </p>
+
+    <h3>3. Registration and User Account</h3>
+    <p>
+        A user account is required for most features. The information
+        provided must be truthful. The user is responsible for keeping the
+        password confidential and for all activity under the account. The
+        Provider may suspend or delete accounts at any time without giving
+        reasons, in particular in case of breach of these terms.
+    </p>
+
+    <h3>4. User Obligations</h3>
+    <p>
+        The user undertakes not to upload or publish content that infringes
+        applicable law, third-party rights (in particular copyright,
+        personality and trademark rights) or public morals. The user is
+        solely responsible for their content.
+    </p>
+
+    <h3>5. Rights to Content</h3>
+    <p>
+        The user retains all rights to content they upload. The user grants
+        the Provider a non-exclusive, worldwide, royalty-free licence to
+        store, display and – to the extent released by the user – make this
+        content available to other users, solely for the purpose of
+        operating the Platform.
+    </p>
+
+    <h3>6. Warranty and Liability</h3>
+    <p>
+        The Platform is provided “as is”, without any warranty. To the
+        maximum extent permitted by law, the Provider disclaims all
+        warranties, in particular with regard to availability, absence of
+        errors, data integrity, fitness for a particular purpose and data
+        loss.
+    </p>
+    <p>
+        To the maximum extent permitted by law, the Provider's liability is
+        excluded in any case, including for indirect damages, consequential
+        damages, lost profits and loss of data. Mandatory statutory
+        liability (in particular for gross negligence or wilful misconduct)
+        remains unaffected. Users are responsible for keeping their own
+        backups of their patterns.
+    </p>
+
+    <h3>7. Privacy</h3>
+    <p>
+        The <a href="{{ url_for('privacy') }}">Privacy Policy</a> applies.
+    </p>
+
+    <h3>8. Changes</h3>
+    <p>
+        The Provider may amend these terms at any time. The current version
+        applies to continued use of the Platform.
+    </p>
+
+    <h3>9. Governing Law and Jurisdiction</h3>
+    <p>
+        Swiss law applies, excluding its conflict-of-laws rules and the UN
+        Convention on Contracts for the International Sale of Goods. To the
+        extent permitted by law, the exclusive place of jurisdiction is
+        Wädenswil, Switzerland.
+    </p>
+
+    <h3>10. Severability</h3>
+    <p>
+        If any provision is found to be invalid, the validity of the
+        remaining provisions remains unaffected.
+    </p>
+{% endif %}
+</article>
+{% endblock %}

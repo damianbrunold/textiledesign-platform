@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h2>{% if locale == 'de' %}Impressum{% else %}Imprint{% endif %}</h2>
+{% endblock %}
+
+{% block content %}
+<article class="legal">
+{% if locale == 'de' %}
+    <p>Verantwortlich für den Betrieb dieser Website:</p>
+    <address>
+        Brunold Software<br>
+        Damian Brunold<br>
+        Säntisrain 11<br>
+        8820 Wädenswil<br>
+        Schweiz
+    </address>
+    <p>Kontakt: <a href="mailto:info@brunoldsoftware.ch">info@brunoldsoftware.ch</a></p>
+    <p>
+        Diese Plattform wird als nicht-kommerzielles Angebot für die Webe- und
+        Bead-Community betrieben. Es werden keine Werbeeinnahmen erzielt und
+        keine Daten an Dritte verkauft.
+    </p>
+{% else %}
+    <p>Responsible for the operation of this website:</p>
+    <address>
+        Brunold Software<br>
+        Damian Brunold<br>
+        Säntisrain 11<br>
+        8820 Wädenswil<br>
+        Switzerland
+    </address>
+    <p>Contact: <a href="mailto:info@brunoldsoftware.ch">info@brunoldsoftware.ch</a></p>
+    <p>
+        This platform is operated as a non-commercial service for the weaving
+        and beading community. No advertising revenue is generated and no data
+        is sold to third parties.
+    </p>
+{% endif %}
+</article>
+{% endblock %}
