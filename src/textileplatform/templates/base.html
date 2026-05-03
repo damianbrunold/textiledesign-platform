@@ -19,19 +19,24 @@
         {% block headext %}{% endblock %}
     </head>
     <body class="{% if impersonating %}impersonating {% endif %}{% block body_class %}{% endblock %} {% block footer_class %}with-footer{% endblock %}">
+        {% if g.user %}
+            {% set _parts = (g.user.label or g.user.name).split() %}
+            {% set _initials = ((_parts[0][:1] if _parts else '') ~ (_parts[1][:1] if _parts|length > 1 else ''))|upper %}
+            {% if not _initials %}{% set _initials = (g.user.name[:1])|upper %}{% endif %}
+        {% endif %}
         <nav>
             <h1>
-                <a href="{{ url_for('index') }}">
+                <a class="nav-logo" href="{{ url_for('index') }}">
                     <img src="{{ url_for('static', filename='img/icons/icon.png') }}">
                 </a>
+                <span class="nav-title">
                 {% if user %}
-                <a href="{{ url_for('user', user_name=user.name) }}">
-                    {{ user.label }}
-                </a>
+                    <a href="{{ url_for('user', user_name=user.name) }}">{{ user.label }}</a>
                 {% else %}
                     {{ gettext('Textile Platform') }}
                 {% endif %}
                 {% block context %}{% endblock %}
+                </span>
             </h1>
             <ul>
             {% if g.user %}
@@ -39,8 +44,8 @@
                 {% if invitation_count and invitation_count > 0 %}
                 <li><a href="{{ url_for('invitations') }}" class="invitation-badge">{{ gettext('Invitations') }} ({{ invitation_count }})</a>
                 {% endif %}
-                <li><a id="nav-messages" href="{{ url_for('messages_inbox') }}"{% if unread_message_count and unread_message_count > 0 %} class="invitation-badge"{% endif %} data-base-label="{{ gettext('Messages') }}">{{ gettext('Messages') }}{% if unread_message_count and unread_message_count > 0 %} <span class="nav-count">({{ unread_message_count }})</span>{% endif %}</a>
-                <li><a href="{{ url_for('profile') }}">{{ g.user.label }}</a>
+                <li><a id="nav-messages" href="{{ url_for('messages_inbox') }}"{% if unread_message_count and unread_message_count > 0 %} class="invitation-badge"{% endif %} data-base-label="{{ gettext('Messages') }}" title="{{ gettext('Messages') }}"><span class="nav-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span><span class="nav-text">{{ gettext('Messages') }}</span>{% if unread_message_count and unread_message_count > 0 %} <span class="nav-count">({{ unread_message_count }})</span>{% endif %}</a>
+                <li><a class="nav-profile" href="{{ url_for('profile') }}" title="{{ g.user.label }}"><span class="nav-text">{{ g.user.label }}</span><span class="nav-initials" aria-hidden="true">{{ _initials }}</span></a>
             {% else %}
                 <li><a href="{{ url_for('register') }}">{{ gettext('Register') }}</a>
                 <li><a href="{{ url_for('login') }}">{{ gettext('Log in') }}</a>

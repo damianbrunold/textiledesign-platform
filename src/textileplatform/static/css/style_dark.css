@@ -204,3 +204,8 @@ img.icon.selected { outline: 2px solid #999; }
 .site-footer { background: #1f1f1f; border-top-color: #333; }
 .site-footer a { color: #999; }
 
+.nav-profile .nav-initials {
+    background: #0a76bf;
+    color: #fff;
+}
+

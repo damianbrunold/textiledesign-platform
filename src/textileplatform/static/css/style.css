@@ -32,10 +32,51 @@ h1 { font-size: 1.5rem; color: black; margin: 1rem 0; }
 a { color: #08619d; font-weight: bold; }
 hr { border: none; border-top: 1px solid lightgray; }
 nav { background: lightgray; display: flex; align-items: center; padding: 0 0.5rem; height: 3rem; }
-nav h1 { flex: auto; margin: 0; font-size: 1.7rem; color: black; }
+nav h1 {
+    flex: 1 1 auto;
+    margin: 0;
+    font-size: 1.7rem;
+    color: black;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+}
 nav h1 a { text-decoration: none; padding: 0.25rem 0.5rem; color: black; }
-nav ul  { display: flex; list-style: none; margin: 0; padding: 0; }
+nav h1 a.nav-logo { flex-shrink: 0; padding-right: 0.25rem; }
+nav h1 .nav-title {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+nav ul  { display: flex; align-items: center; list-style: none; margin: 0; padding: 0; flex-shrink: 0; }
 nav h1 a img { position: relative; top: 0.3rem; }
+/* Default: show icon + initials, hide their text labels. */
+#nav-messages .nav-text,
+.nav-profile .nav-text { display: none; }
+#nav-messages .nav-icon {
+    display: inline-block;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+#nav-messages .nav-count { margin-left: 0.15rem; }
+.nav-profile .nav-initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: #08619d;
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+.nav-profile { padding: 0.25rem 0.35rem; }
 a { text-decoration: none; }
 nav ul li a, nav ul li span, header .action { display: block; padding: 0.5rem; text-decoration: none; }
 .content { width: calc(100% - 2rem); height: calc(100vh - 3rem); margin: 0 1rem 0.5rem 1rem; box-sizing: border-box; }
@@ -535,6 +576,13 @@ nav ul li a, #nav-messages {
     .mode-btn { padding: 0.5rem 1rem; }
     /* Slight spacing increase between items so taps don't collide. */
     nav ul li { margin: 0 0.1rem; }
+}
+
+/* ---- Narrow viewport: compact nav ---------------------------- */
+@media (max-width: 600px) {
+    nav { padding: 0 0.35rem; }
+    nav h1 { font-size: 1.3rem; }
+    nav ul li a, nav ul li span { padding: 0.5rem 0.35rem; }
 }
 
 body.with-footer { display: flex; flex-direction: column; min-height: 100vh; }
