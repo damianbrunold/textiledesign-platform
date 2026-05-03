@@ -578,13 +578,6 @@ nav ul li a, #nav-messages {
     nav ul li { margin: 0 0.1rem; }
 }
 
-/* ---- Narrow viewport: compact nav ---------------------------- */
-@media (max-width: 600px) {
-    nav { padding: 0 0.35rem; }
-    nav h1 { font-size: 1.3rem; }
-    nav ul li a, nav ul li span { padding: 0.5rem 0.35rem; }
-}
-
 body.with-footer { display: flex; flex-direction: column; min-height: 100vh; }
 body.with-footer > .content { height: auto; flex: 1 0 auto; }
 body.with-footer > .site-footer { flex: 0 0 auto; }
@@ -787,6 +780,9 @@ body.no-page-header .content > header { display: none; }
     font: inherit;
 }
 .empty-note { color: #888; padding: 0.5rem; }
+
+/* Toolbar select fallbacks (mobile only — see media query below). */
+.toolbar-select { display: none; }
 
 /* ---- Group tabs (user_private header) ----------------------- */
 #groups {
@@ -1083,4 +1079,32 @@ ul.inbox .unread {
     padding: 0.5rem 0.75rem;
     background: #fdecea;
     border-top: 1px solid #f5c6cb;
+}
+
+/* ---- Narrow viewport: compact nav + collapse toolbar --------- */
+/* This media query lives at the end of the file so that its rules
+   override the default-layout rules above when active. */
+@media (max-width: 600px) {
+    nav { padding: 0 0.35rem; }
+    nav h1 { font-size: 1.3rem; }
+    nav ul li a, nav ul li span { padding: 0.5rem 0.35rem; }
+
+    /* Replace toolbar button-groups & group-tab strip with selects. */
+    #profile-toolbar .sort-modes,
+    #profile-toolbar .view-modes,
+    #groups { display: none; }
+    .toolbar-select {
+        display: inline-block;
+        height: 1.9rem;
+        padding: 0 0.4rem;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        box-sizing: border-box;
+        background: #fff;
+        color: inherit;
+        font: inherit;
+        margin: 0;
+    }
+    #profile-toolbar #filter-input { flex: 1 1 100%; width: auto; }
+    #group-select { display: block; width: 100%; margin: 0.25rem 0 0.5rem 0; }
 }

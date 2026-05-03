@@ -13,6 +13,11 @@
     </div>
     {% endfor %}
 </div>
+<select id="group-select" class="toolbar-select" aria-label="{{ gettext('Group') }}">
+    {% for gr in groups %}
+    <option value="{{ gr.name }}" {% if gr.name == active_group %}selected{% endif %}>{{ gr.label }}{% if not gr.is_personal %} ({{ gettext(gr.role|capitalize) }}){% endif %}</option>
+    {% endfor %}
+</select>
 {% endblock %}
 
 {% block content %}
@@ -36,10 +41,20 @@
         <button type="button" data-sort="modified-desc">{{ gettext('Newest') }}</button>
         <button type="button" data-sort="modified-asc">{{ gettext('Oldest') }}</button>
     </div>
+    <select class="sort-select toolbar-select" id="sort-select" aria-label="{{ gettext('Sort by') }}">
+        <option value="name-asc">{{ gettext('Name ↑') }}</option>
+        <option value="name-desc">{{ gettext('Name ↓') }}</option>
+        <option value="modified-desc">{{ gettext('Newest') }}</option>
+        <option value="modified-asc">{{ gettext('Oldest') }}</option>
+    </select>
     <div class="view-modes" id="view-modes">
         <button type="button" data-view="thumb" class="active">{{ gettext('Thumbnails') }}</button>
         <button type="button" data-view="detail">{{ gettext('Detail') }}</button>
     </div>
+    <select class="view-select toolbar-select" id="view-select" aria-label="{{ gettext('View') }}">
+        <option value="thumb">{{ gettext('Thumbnails') }}</option>
+        <option value="detail">{{ gettext('Detail') }}</option>
+    </select>
     <span class="toolbar-spacer"></span>
     <span class="button"><a href="{{ url_for('edit_groups') }}">{{ gettext('Groups') }}</a></span>
 </div>
@@ -141,6 +156,10 @@
     const userName = "{{ user.name }}";
     const isOwner = {{ 'true' if is_owner else 'false' }};
 
+    const sortSelect = document.getElementById('sort-select');
+    const viewSelect = document.getElementById('view-select');
+    const groupSelect = document.getElementById('group-select');
+
     // ---- Persistent prefs ------------------------------------------
     let viewMode = localStorage.getItem('profileViewMode') || 'thumb';
     if (viewMode === 'compact') viewMode = 'thumb';
@@ -156,6 +175,7 @@
         Array.from(viewModes.querySelectorAll('button')).forEach(b => {
             b.classList.toggle('active', b.dataset.view === mode);
         });
+        if (viewSelect) viewSelect.value = mode;
     }
 
     function setSort(mode) {
@@ -164,6 +184,7 @@
         Array.from(sortModes.querySelectorAll('button')).forEach(b => {
             b.classList.toggle('active', b.dataset.sort === mode);
         });
+        if (sortSelect) sortSelect.value = mode;
         applySort();
     }
 
@@ -221,6 +242,7 @@
         if (activeTab && activeTab.scrollIntoView) {
             activeTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         }
+        if (groupSelect) groupSelect.value = name;
         const url = new URL(window.location);
         url.searchParams.set('group', name);
         history.replaceState(null, '', url);
@@ -232,14 +254,17 @@
         const tab = e.target.closest('.group-tab');
         if (tab) switchGroup(tab.dataset.groupName);
     });
+    if (groupSelect) groupSelect.addEventListener('change', () => switchGroup(groupSelect.value));
     viewModes.addEventListener('click', e => {
         const btn = e.target.closest('button[data-view]');
         if (btn) setView(btn.dataset.view);
     });
+    if (viewSelect) viewSelect.addEventListener('change', () => setView(viewSelect.value));
     sortModes.addEventListener('click', e => {
         const btn = e.target.closest('button[data-sort]');
         if (btn) setSort(btn.dataset.sort);
     });
+    if (sortSelect) sortSelect.addEventListener('change', () => setSort(sortSelect.value));
     filterInput.addEventListener('input', applyFilter);
 
     // ---- Per-row actions -------------------------------------------

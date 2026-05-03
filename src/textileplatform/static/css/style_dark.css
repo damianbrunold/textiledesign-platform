@@ -225,6 +225,7 @@ img.icon.selected { outline: 2px solid #999; }
     color: #fff;
 }
 #filter-input { background: #1f1f1f; color: #ddd; }
+.toolbar-select { background: #1f1f1f; color: #ddd; border-color: #555; }
 .pattern-row { border-bottom-color: #333; }
 .pattern-row:hover { background: #2a2a2a; }
 .view-thumb .pattern-row { background: #1f1f1f; border-color: #444; }

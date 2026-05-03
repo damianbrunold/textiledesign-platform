@@ -17,10 +17,20 @@
         <button type="button" data-sort="modified-desc">{{ gettext('Newest') }}</button>
         <button type="button" data-sort="modified-asc">{{ gettext('Oldest') }}</button>
     </div>
+    <select class="sort-select toolbar-select" id="sort-select" aria-label="{{ gettext('Sort by') }}">
+        <option value="name-asc">{{ gettext('Name ↑') }}</option>
+        <option value="name-desc">{{ gettext('Name ↓') }}</option>
+        <option value="modified-desc">{{ gettext('Newest') }}</option>
+        <option value="modified-asc">{{ gettext('Oldest') }}</option>
+    </select>
     <div class="view-modes" id="view-modes">
         <button type="button" data-view="thumb" class="active">{{ gettext('Thumbnails') }}</button>
         <button type="button" data-view="detail">{{ gettext('Detail') }}</button>
     </div>
+    <select class="view-select toolbar-select" id="view-select" aria-label="{{ gettext('View') }}">
+        <option value="thumb">{{ gettext('Thumbnails') }}</option>
+        <option value="detail">{{ gettext('Detail') }}</option>
+    </select>
 </div>
 
 {% set weave  = patterns | selectattr('pattern_type', 'equalto', 'DB-WEAVE Pattern') | list %}
@@ -81,6 +91,8 @@
     const filterInput = document.getElementById('filter-input');
     const viewModes = document.getElementById('view-modes');
     const sortModes = document.getElementById('sort-modes');
+    const sortSelect = document.getElementById('sort-select');
+    const viewSelect = document.getElementById('view-select');
 
     let viewMode = localStorage.getItem('profileViewMode') || 'thumb';
     if (viewMode === 'compact') viewMode = 'thumb';
@@ -119,6 +131,7 @@
         Array.from(viewModes.querySelectorAll('button')).forEach(b => {
             b.classList.toggle('active', b.dataset.view === mode);
         });
+        if (viewSelect) viewSelect.value = mode;
     }
     function setSort(mode) {
         sortMode = mode;
@@ -126,6 +139,7 @@
         Array.from(sortModes.querySelectorAll('button')).forEach(b => {
             b.classList.toggle('active', b.dataset.sort === mode);
         });
+        if (sortSelect) sortSelect.value = mode;
         applySort();
     }
     function applySort() {
@@ -170,6 +184,8 @@
         const btn = e.target.closest('button[data-sort]');
         if (btn) setSort(btn.dataset.sort);
     });
+    if (sortSelect) sortSelect.addEventListener('change', () => setSort(sortSelect.value));
+    if (viewSelect) viewSelect.addEventListener('change', () => setView(viewSelect.value));
     filterInput.addEventListener('input', applyFilter);
     applyFilter();
     applySort();
