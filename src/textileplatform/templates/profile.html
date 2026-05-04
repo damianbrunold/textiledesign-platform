@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Profile') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
 <h1>{{ gettext('Profile') }}</h1>
 {% endblock %}
@@ -13,17 +15,17 @@
       <input type="hidden" name="action" value="settings">
       <div class="field">
         <label for="email">{{ gettext('E-Mail') }}</label>
-        <input name="email" id="email" type="email" required value="{{ user.email }}">
+        <input name="email" id="email" type="email" required aria-required="true" value="{{ user.email }}">
       </div>
-      <div class="field">
-        <label>{{ gettext('Appearance') }}</label>
-        <div class="mode-toggle">
-          <button type="button" id="btn-light" class="mode-btn {% if user.darkmode is sameas false %}active{% endif %}">{{ gettext('Light') }}</button>
-          <button type="button" id="btn-dark" class="mode-btn {% if user.darkmode is sameas true %}active{% endif %}">{{ gettext('Dark') }}</button>
-          <button type="button" id="btn-system" class="mode-btn {% if user.darkmode is none %}active{% endif %}">{{ gettext('System') }}</button>
+      <fieldset class="field appearance-field">
+        <legend>{{ gettext('Appearance') }}</legend>
+        <div class="mode-toggle" role="group" aria-label="{{ gettext('Appearance') }}">
+          <button type="button" id="btn-light" class="mode-btn {% if user.darkmode is sameas false %}active{% endif %}" aria-pressed="{{ 'true' if user.darkmode is sameas false else 'false' }}">{{ gettext('Light') }}</button>
+          <button type="button" id="btn-dark" class="mode-btn {% if user.darkmode is sameas true %}active{% endif %}" aria-pressed="{{ 'true' if user.darkmode is sameas true else 'false' }}">{{ gettext('Dark') }}</button>
+          <button type="button" id="btn-system" class="mode-btn {% if user.darkmode is none %}active{% endif %}" aria-pressed="{{ 'true' if user.darkmode is none else 'false' }}">{{ gettext('System') }}</button>
           <input type="hidden" name="darkmode" id="darkmode-value" value="{% if user.darkmode is sameas true %}1{% elif user.darkmode is sameas false %}0{% else %}auto{% endif %}">
         </div>
-      </div>
+      </fieldset>
       <div class="field">
         <label for="locale">{{ gettext('Language') }}</label>
         <select name="locale" id="locale">
@@ -58,15 +60,15 @@
       <input type="hidden" name="action" value="password">
       <div class="field">
         <label for="current_password">{{ gettext('Current Password') }}</label>
-        <input name="current_password" id="current_password" type="password" required autocomplete="current-password">
+        <input name="current_password" id="current_password" type="password" required aria-required="true" autocomplete="current-password">
       </div>
       <div class="field">
         <label for="new_password">{{ gettext('New Password') }}</label>
-        <input name="new_password" id="new_password" type="password" required autocomplete="new-password">
+        <input name="new_password" id="new_password" type="password" required aria-required="true" autocomplete="new-password">
       </div>
       <div class="field">
         <label for="confirm_password">{{ gettext('Confirm New Password') }}</label>
-        <input name="confirm_password" id="confirm_password" type="password" required autocomplete="new-password">
+        <input name="confirm_password" id="confirm_password" type="password" required aria-required="true" autocomplete="new-password">
       </div>
       <div class="profile-actions">
         <button type="submit" class="btn primary">{{ gettext('Change Password') }}</button>
@@ -97,11 +99,11 @@
           onsubmit="return confirm('{{ gettext('Permanently delete your account? This cannot be undone.') }}');">
       <div class="field">
         <label for="delete_password">{{ gettext('Current Password') }}</label>
-        <input name="password" id="delete_password" type="password" required autocomplete="current-password">
+        <input name="password" id="delete_password" type="password" required aria-required="true" autocomplete="current-password">
       </div>
       <div class="field">
         <label for="delete_confirm">{{ gettext('Type DELETE to confirm') }}</label>
-        <input name="confirm" id="delete_confirm" type="text" required autocomplete="off" pattern="DELETE" placeholder="DELETE">
+        <input name="confirm" id="delete_confirm" type="text" required aria-required="true" autocomplete="off" pattern="DELETE" placeholder="DELETE">
       </div>
       <div class="profile-actions">
         <button type="submit" class="btn danger">{{ gettext('Delete my account') }}</button>
@@ -134,9 +136,14 @@
         }
         const value = mode === 'dark' ? '1' : (mode === 'light' ? '0' : 'auto');
         document.getElementById('darkmode-value').value = value;
-        document.getElementById('btn-light').classList.toggle('active', mode === 'light');
-        document.getElementById('btn-dark').classList.toggle('active', mode === 'dark');
-        document.getElementById('btn-system').classList.toggle('active', mode === 'system');
+        const setBtn = (id, on) => {
+            const el = document.getElementById(id);
+            el.classList.toggle('active', on);
+            el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        };
+        setBtn('btn-light', mode === 'light');
+        setBtn('btn-dark', mode === 'dark');
+        setBtn('btn-system', mode === 'system');
     }
     document.getElementById('btn-light').addEventListener('click', () => setDarkMode('light'));
     document.getElementById('btn-dark').addEventListener('click', () => setDarkMode('dark'));

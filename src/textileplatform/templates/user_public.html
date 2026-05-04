@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ user.label }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block body_class %}view-thumb no-page-header{% endblock %}
 
 {% block nav_extra %}
@@ -9,13 +11,14 @@
 {% endblock %}
 
 {% block content %}
+<h1 class="visually-hidden">{{ user.label }} &mdash; {{ gettext('Public patterns') }}</h1>
 <div id="profile-toolbar">
     <input type="text" id="filter-input" placeholder="{{ gettext('Filter…') }}">
-    <div class="sort-modes" id="sort-modes">
-        <button type="button" data-sort="name-asc" class="active">{{ gettext('Name ↑') }}</button>
-        <button type="button" data-sort="name-desc">{{ gettext('Name ↓') }}</button>
-        <button type="button" data-sort="modified-desc">{{ gettext('Newest') }}</button>
-        <button type="button" data-sort="modified-asc">{{ gettext('Oldest') }}</button>
+    <div class="sort-modes" id="sort-modes" role="group" aria-label="{{ gettext('Sort by') }}">
+        <button type="button" data-sort="name-asc" class="active" aria-pressed="true">{{ gettext('Name ↑') }}</button>
+        <button type="button" data-sort="name-desc" aria-pressed="false">{{ gettext('Name ↓') }}</button>
+        <button type="button" data-sort="modified-desc" aria-pressed="false">{{ gettext('Newest') }}</button>
+        <button type="button" data-sort="modified-asc" aria-pressed="false">{{ gettext('Oldest') }}</button>
     </div>
     <select class="sort-select toolbar-select" id="sort-select" aria-label="{{ gettext('Sort by') }}">
         <option value="name-asc">{{ gettext('Name ↑') }}</option>
@@ -23,9 +26,9 @@
         <option value="modified-desc">{{ gettext('Newest') }}</option>
         <option value="modified-asc">{{ gettext('Oldest') }}</option>
     </select>
-    <div class="view-modes" id="view-modes">
-        <button type="button" data-view="thumb" class="active">{{ gettext('Thumbnails') }}</button>
-        <button type="button" data-view="detail">{{ gettext('Detail') }}</button>
+    <div class="view-modes" id="view-modes" role="group" aria-label="{{ gettext('View') }}">
+        <button type="button" data-view="thumb" class="active" aria-pressed="true">{{ gettext('Thumbnails') }}</button>
+        <button type="button" data-view="detail" aria-pressed="false">{{ gettext('Detail') }}</button>
     </div>
     <select class="view-select toolbar-select" id="view-select" aria-label="{{ gettext('View') }}">
         <option value="thumb">{{ gettext('Thumbnails') }}</option>
@@ -55,7 +58,7 @@
          data-modified="{{ p.modified or '' }}"
          data-search="{{ (p.label ~ ' ' ~ p.author ~ ' ' ~ p.organization ~ ' ' ~ p.notes) | lower }}">
         {% set edit_url = url_for('edit_pattern', user_name=p.owner_name, pattern_name=p.name) %}
-        <a class="thumb-link" href="{{ edit_url }}">
+        <a class="thumb-link" href="{{ edit_url }}" aria-label="{{ gettext('Open pattern') }} {{ p.label }}">
             <img class="thumb" loading="lazy"
                  src="{{ url_for('pattern_preview', user_name=p.owner_name, pattern_name=p.name, v=p.modified or '') }}"
                  alt="">
@@ -71,7 +74,7 @@
         </div>
         {% if show_clone %}
         <div class="row-actions">
-            <button type="button" class="act-clone" title="{{ gettext('Clone to my patterns') }}">⎘</button>
+            <button type="button" class="act-clone" aria-label="{{ gettext('Clone to my patterns') }}: {{ p.label }}" title="{{ gettext('Clone to my patterns') }}">⎘</button>
         </div>
         {% endif %}
     </div>
@@ -129,7 +132,9 @@
         root.classList.remove('view-compact', 'view-detail', 'view-thumb');
         root.classList.add('view-' + mode);
         Array.from(viewModes.querySelectorAll('button')).forEach(b => {
-            b.classList.toggle('active', b.dataset.view === mode);
+            const on = b.dataset.view === mode;
+            b.classList.toggle('active', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
         if (viewSelect) viewSelect.value = mode;
     }
@@ -137,7 +142,9 @@
         sortMode = mode;
         localStorage.setItem('profileSortMode', mode);
         Array.from(sortModes.querySelectorAll('button')).forEach(b => {
-            b.classList.toggle('active', b.dataset.sort === mode);
+            const on = b.dataset.sort === mode;
+            b.classList.toggle('active', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
         });
         if (sortSelect) sortSelect.value = mode;
         applySort();

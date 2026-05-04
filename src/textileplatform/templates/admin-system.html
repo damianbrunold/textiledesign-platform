@@ -8,6 +8,8 @@
   {% if v is none %}—{% else %}{{ v }}{% endif %}
 {%- endmacro %}
 
+{% block title %}{{ gettext('System Status') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
 <h1>{{ gettext('System Status') }}</h1>
 {% endblock %}

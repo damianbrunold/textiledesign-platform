@@ -4,10 +4,12 @@ h1 { color: white; }
 a { color: #67c3ff; }
 hr { border-top: 1px solid lightgray; }
 nav { background: #555; }
-nav h1 { color: white; }
-nav h1 a { color: white; }
+nav .nav-brand { color: white; }
+nav .nav-brand a { color: white; }
 nav ul li span { color: white; }
 .flash { background: #1c3a52; border: 1px solid #67c3ff; color: #e6f3ff; }
+.flash-error, .flash-warning, .flash-danger { background: #4a1a1a; border-color: #ff6b6b; color: #ffe2e0; }
+.field-help { color: #bbb; }
 .content label { color: white; }
 .content input, .content textarea { background-color: #555; color: white;}
 .content { color: white; }

@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Create pattern') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
     <h1>{{ gettext('Create pattern') }}</h1>
 {% endblock %}
@@ -11,15 +13,15 @@
             <h2>{{ gettext('Create DB-WEAVE Pattern') }}</h2>
             <div class="field">
                 <label for="weave_name">{{ gettext('Name') }}</label>
-                <input type="text" name="name" id="weave_name" value="{{ request['name'] }}">
+                <input type="text" name="name" id="weave_name" required aria-required="true" value="{{ request['name'] }}">
             </div>
             <div class="field">
                 <label for="weave_width">{{ gettext('Width') }}</label>
-                <input type="text" name="width" id="weave_width" value="{{ request['width'] or 300 }}">
+                <input type="number" min="1" name="width" required aria-required="true" id="weave_width" value="{{ request['width'] or 300 }}">
             </div>
             <div class="field">
                 <label for="weave_height">{{ gettext('Height') }}</label>
-                <input type="text" name="height" id="weave_height" value="{{ request['height'] or 300 }}">
+                <input type="number" min="1" name="height" required aria-required="true" id="weave_height" value="{{ request['height'] or 300 }}">
             </div>
             <input type="hidden" name="pattern_type" value="DB-WEAVE Pattern"/>
             <div class="actions left">
@@ -33,15 +35,15 @@
             <h2>{{ gettext('Create JBead Pattern') }}</h2>
             <div class="field">
                 <label for="bead_name">{{ gettext('Name') }}</label>
-                <input type="text" name="name" id="bead_name" value="{{ request['name'] }}">
+                <input type="text" name="name" id="bead_name" required aria-required="true" value="{{ request['name'] }}">
             </div>
             <div class="field">
                 <label for="bead_width">{{ gettext('Circumference') }}</label>
-                <input type="text" name="width" id="bead_width" value="{{ request['width'] or 12 }}">
+                <input type="number" min="1" name="width" required aria-required="true" id="bead_width" value="{{ request['width'] or 12 }}">
             </div>
             <div class="field">
                 <label for="bead_height">{{ gettext('Height') }}</label>
-                <input type="text" name="height" id="bead_height" value="{{ request['height'] or 200 }}">
+                <input type="number" min="1" name="height" required aria-required="true" id="bead_height" value="{{ request['height'] or 200 }}">
             </div>
             <input type="hidden" name="pattern_type" value="JBead Pattern"/>
             <div class="actions left">

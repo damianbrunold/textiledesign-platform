@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ user.name }}-{{ pattern.name }} {{ gettext('Source') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
 <h1>{{ user.name}}-{{ pattern.name }} {{ gettext('Source') }}</h1>
 {% endblock %}

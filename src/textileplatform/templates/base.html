@@ -1,12 +1,8 @@
 <!doctype html>
-<html>
+<html lang="{{ (g.user.locale if g.user and g.user.locale else locale) or 'en' }}">
     <head>
         <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">
-        {% if pattern and pattern.name %}
-            <title>{{ pattern.name }}</title>
-        {% else %}
-            <title>{{ gettext('Textile Platform') }}</title>
-        {% endif %}
+        <title>{% block title %}{% if pattern and pattern.name %}{{ pattern.name }} &mdash; {{ gettext('Textile Platform') }}{% else %}{{ gettext('Textile Platform') }}{% endif %}{% endblock %}</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
         {% set dark_pref = g.user.darkmode if g.user else none %}
         {% if dark_pref %}
@@ -24,10 +20,11 @@
             {% set _initials = ((_parts[0][:1] if _parts else '') ~ (_parts[1][:1] if _parts|length > 1 else ''))|upper %}
             {% if not _initials %}{% set _initials = (g.user.name[:1])|upper %}{% endif %}
         {% endif %}
-        <nav>
-            <h1>
-                <a class="nav-logo" href="{{ url_for('index') }}">
-                    <img src="{{ url_for('static', filename='img/icons/icon.png') }}">
+        <a class="skip-link" href="#main-content">{{ gettext('Skip to content') }}</a>
+        <nav aria-label="{{ gettext('Main') }}">
+            <div class="nav-brand">
+                <a class="nav-logo" href="{{ url_for('index') }}" aria-label="{{ gettext('Textile Platform home') }}">
+                    <img src="{{ url_for('static', filename='img/icons/icon.png') }}" alt="">
                 </a>
                 <span class="nav-title">
                 {% if user %}
@@ -37,15 +34,15 @@
                 {% endif %}
                 {% block context %}{% endblock %}
                 </span>
-            </h1>
+            </div>
             <ul>
             {% if g.user %}
                 {% block nav_extra %}{% endblock %}
                 {% if invitation_count and invitation_count > 0 %}
                 <li><a href="{{ url_for('invitations') }}" class="invitation-badge">{{ gettext('Invitations') }} ({{ invitation_count }})</a>
                 {% endif %}
-                <li><a id="nav-messages" href="{{ url_for('messages_inbox') }}"{% if unread_message_count and unread_message_count > 0 %} class="invitation-badge"{% endif %} data-base-label="{{ gettext('Messages') }}" title="{{ gettext('Messages') }}"><span class="nav-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span><span class="nav-text">{{ gettext('Messages') }}</span>{% if unread_message_count and unread_message_count > 0 %} <span class="nav-count">({{ unread_message_count }})</span>{% endif %}</a>
-                <li><a class="nav-profile" href="{{ url_for('profile') }}" title="{{ g.user.label }}"><span class="nav-text">{{ g.user.label }}</span><span class="nav-initials" aria-hidden="true">{{ _initials }}</span></a>
+                <li><a id="nav-messages" href="{{ url_for('messages_inbox') }}"{% if unread_message_count and unread_message_count > 0 %} class="invitation-badge"{% endif %} data-base-label="{{ gettext('Messages') }}" title="{{ gettext('Messages') }}" aria-label="{{ gettext('Messages') }}{% if unread_message_count and unread_message_count > 0 %} ({{ unread_message_count }} {{ gettext('unread') }}){% endif %}"><span class="nav-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span><span class="nav-text">{{ gettext('Messages') }}</span>{% if unread_message_count and unread_message_count > 0 %} <span class="nav-count" aria-hidden="true">({{ unread_message_count }})</span>{% endif %}</a>
+                <li><a class="nav-profile" href="{{ url_for('profile') }}" title="{{ g.user.label }}" aria-label="{{ gettext('Profile') }}: {{ g.user.label }}"><span class="nav-text">{{ g.user.label }}</span><span class="nav-initials" aria-hidden="true">{{ _initials }}</span></a>
             {% else %}
                 <li><a href="{{ url_for('register') }}">{{ gettext('Register') }}</a>
                 <li><a href="{{ url_for('login') }}">{{ gettext('Log in') }}</a>
@@ -61,19 +58,19 @@
             </form>
         </div>
         {% endif %}
-        <section class="content">
+        <main id="main-content" class="content">
             <header>
                 {% block header %}{% endblock %}
             </header>
 
-            {% for message in get_flashed_messages() %}
-                <div class="flash">{{ message }}</div>
+            {% for category, message in get_flashed_messages(with_categories=true) %}
+                <div class="flash flash-{{ category }}" role="{{ 'alert' if category in ('error', 'warning', 'danger') else 'status' }}">{{ message }}</div>
             {% endfor %}
 
             {% block content %}{% endblock %}
-        </section>
+        </main>
         {% block footer %}
-        <footer class="site-footer">
+        <footer class="site-footer" aria-label="{{ gettext('Site') }}">
             <ul>
                 <li><a href="{{ url_for('terms') }}">{{ gettext('Terms') }}</a></li>
                 <li><a href="{{ url_for('privacy') }}">{{ gettext('Privacy Policy') }}</a></li>

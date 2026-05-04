@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 
+{% block title %}{% if locale == 'de' %}Datenschutz{% else %}Privacy Policy{% endif %} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
-<h2>{% if locale == 'de' %}Datenschutzerklärung{% else %}Privacy Policy{% endif %}</h2>
+<h1>{% if locale == 'de' %}Datenschutzerklärung{% else %}Privacy Policy{% endif %}</h1>
 {% endblock %}
 
 {% block content %}

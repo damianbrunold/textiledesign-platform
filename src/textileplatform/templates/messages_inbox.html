@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Messages') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
 <h1>{{ gettext('Messages') }}</h1>
 {% endblock %}
@@ -100,6 +102,7 @@
                 const u = document.createElement('span');
                 u.className = 'unread';
                 u.textContent = c.unread;
+                u.setAttribute('aria-label', c.unread + " {{ gettext('unread messages') }}");
                 li.appendChild(u);
             }
             list.appendChild(li);

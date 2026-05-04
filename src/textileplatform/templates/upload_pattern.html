@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Upload pattern') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
     <h1>{{ gettext('Upload pattern') }}</h1>
 {% endblock %}
@@ -13,7 +15,10 @@
         </div>
         <div class="field">
             <label for="file">{{ gettext('Pattern File') }}</label>
-            <input id="file" name="file" type="file" multiple>
+            <input id="file" name="file" type="file" multiple required aria-required="true"
+                   accept=".dbw,.jbb,.json,application/json"
+                   aria-describedby="file-help">
+            <small id="file-help" class="field-help">{{ gettext('Accepted formats: .dbw, .jbb, .json') }}</small>
         </div>
         <div class="actions left">
             <button type="submit" class="btn primary">{{ gettext('Upload') }}</button>

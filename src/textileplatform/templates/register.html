@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Create Account') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
 <h1>{{ gettext('Create Account') }}</h1>
 {% endblock %}
@@ -9,19 +11,19 @@
     <form method="post">
         <div class="field">
             <label for="name">{{ gettext('Name') }}</label>
-            <input type="text" name="name" id="name" required value="{{ request.form['name'] }}">
+            <input type="text" name="name" id="name" required aria-required="true" autocomplete="username" value="{{ request.form['name'] }}">
         </div>
         <div class="field">
             <label for="email">{{ gettext('E-Mail') }}</label>
-            <input type="text" name="email" id="email" required value="{{ request.form['email'] }}">
+            <input type="email" name="email" id="email" required aria-required="true" autocomplete="email" value="{{ request.form['email'] }}">
         </div>
         <div class="field">
             <label for="password">{{ gettext('Password') }}</label>
-            <input type="password" name="password" id="password" required value="{{ request.form['password'] }}">
+            <input type="password" name="password" id="password" required aria-required="true" autocomplete="new-password" value="{{ request.form['password'] }}">
         </div>
         <div class="field">
             <label for="x">{{ gettext("Please enter the result of the following calculation 3+4") }}</label>
-            <input type="text" name="x" id="x" value=""/>
+            <input type="text" name="x" id="x" required aria-required="true" autocomplete="off" inputmode="numeric" value=""/>
         </div>
         <div class="actions left">
             <button type="submit" class="btn primary">{{ gettext('Create') }}</button>

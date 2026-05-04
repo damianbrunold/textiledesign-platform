@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ group.label }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
     <h1>{{ group.label }}</h1>
 {% endblock %}
@@ -43,11 +45,13 @@
                           action="{{ url_for('update_membership', group_name=group.name, user_name=m.user.name) }}"
                           style="display:inline; margin:0;">
                         <input type="hidden" name="action" value="set_role">
-                        <select name="role" onchange="this.form.submit()">
+                        <label class="visually-hidden" for="role-{{ m.user.id }}">{{ gettext('Role for') }} {{ m.user.label }}</label>
+                        <select name="role" id="role-{{ m.user.id }}" onchange="this.form.submit()">
                             <option value="owner" {% if m.role == 'owner' %}selected{% endif %}>{{ gettext('Owner') }}</option>
                             <option value="writer" {% if m.role == 'writer' %}selected{% endif %}>{{ gettext('Writer') }}</option>
                             <option value="reader" {% if m.role == 'reader' %}selected{% endif %}>{{ gettext('Reader') }}</option>
                         </select>
+                        <noscript><button type="submit">{{ gettext('Update') }}</button></noscript>
                     </form>
                 </td>
                 <td>

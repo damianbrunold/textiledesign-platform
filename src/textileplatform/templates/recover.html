@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Reset Password') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
 <h1>{{ gettext('Reset Passwort') }}</h1>
 {% endblock %}
@@ -10,7 +12,7 @@
         <p>{{ gettext('Please enter your e-mail address. We will send you an e-mail with instructions for resetting your password') }}</p>
         <div class="field">
             <label for="email">{{ gettext('E-Mail') }}</label>
-            <input type="text" name="email" id="email" required value="{{ request.form['email'] }}">
+            <input type="email" name="email" id="email" required aria-required="true" autocomplete="email" value="{{ request.form['email'] }}">
         </div>
         <div class="actions left">
             <button type="submit" class="btn primary">{{ gettext('Send') }}</button>

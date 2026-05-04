@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Log in') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
 <h1>{{ gettext('Log in') }}</h1>
 {% endblock %}
@@ -9,11 +11,11 @@
     <form method="post">
         <div class="field">
             <label for="email">{{ gettext('E-Mail') }}</label>
-            <input type="text" name="email" id="email" required>
+            <input type="text" name="email" id="email" required aria-required="true" autocomplete="email">
         </div>
         <div class="field">
             <label for="password">{{ gettext('Password') }}</label>
-            <input type="password" name="password" id="password" required>
+            <input type="password" name="password" id="password" required aria-required="true" autocomplete="current-password">
         </div>
         <div class="actions left">
             <button type="submit" class="btn primary">{{ gettext('Log in') }}</button>

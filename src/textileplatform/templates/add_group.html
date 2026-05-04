@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Add Group') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
     <h1>{{ gettext('Add Group') }}</h1>
 {% endblock %}
@@ -9,7 +11,7 @@
     <form method="POST">
         <div class="field">
             <label for="grp-name">{{ gettext('Group Name') }}</label>
-            <input type="text" id="grp-name" name="name" value="{{ request.form.get('name', '') }}"/>
+            <input type="text" id="grp-name" name="name" required aria-required="true" value="{{ request.form.get('name', '') }}"/>
         </div>
         <div class="field">
             <label for="grp-desc">{{ gettext('Group Description') }}</label>

@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Group assignments for') }} {{ pattern.label }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
     <h1>{{ gettext('Group assignments for') }} {{ pattern.label }}</h1>
 {% endblock %}

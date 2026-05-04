@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 
+{% block title %}{% if locale == 'de' %}AGB{% else %}Terms of Service{% endif %} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
-<h2>{% if locale == 'de' %}Allgemeine Geschäftsbedingungen (AGB){% else %}Terms of Service{% endif %}</h2>
+<h1>{% if locale == 'de' %}Allgemeine Geschäftsbedingungen (AGB){% else %}Terms of Service{% endif %}</h1>
 {% endblock %}
 
 {% block content %}

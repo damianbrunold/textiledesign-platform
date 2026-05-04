@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ group.label }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
-<h2>{{ group.label }}</h2>
+<h1>{{ group.label }}</h1>
 {% endblock %}
 
 {% block body_class %}view-thumb{% endblock %}
@@ -20,7 +22,7 @@
                                   user_name=p.owner_name,
                                   pattern_name=p.name,
                                   origin='group-' + group.name) %}
-        <a class="thumb-link" href="{{ edit_url }}">
+        <a class="thumb-link" href="{{ edit_url }}" aria-label="{{ gettext('Open pattern') }} {{ p.label }}">
             <img class="thumb" loading="lazy"
                  src="{{ url_for('pattern_preview', user_name=p.owner_name, pattern_name=p.name, v=p.modified or '') }}"
                  alt="">

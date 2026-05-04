@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ gettext('Delete pattern') }} {{ pattern.label }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
 {% block header %}
     <h1>{{ gettext('Delete pattern') }} {{ pattern.label }}</h1>
 {% endblock %}
