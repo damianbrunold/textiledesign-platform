@@ -1330,6 +1330,24 @@ def edit_group(group_name):
     )
 
 
+@app.route("/groups/<group_name>/update", methods=("POST",))
+@login_required
+def update_group(group_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group:
+        abort(404)
+    if not g.user.is_owner_of(group):
+        abort(403)
+    if group.name == g.user.name:
+        flash(gettext("Cannot edit a personal group"))
+        return redirect(url_for("edit_group", group_name=group.name))
+    description = (request.form.get("description") or "").strip()
+    group.description = description
+    db.session.commit()
+    flash(gettext("Group updated"))
+    return redirect(url_for("edit_group", group_name=group.name))
+
+
 @app.route("/groups/<group_name>/invite", methods=("POST",))
 @login_required
 def invite_to_group(group_name):

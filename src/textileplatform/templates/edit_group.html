@@ -8,8 +8,53 @@
 
 {% block content %}
 <div class="card card-wide">
-    {% if group.description %}
-    <p>{{ group.description }}</p>
+    <div class="group-description" id="group-description-view">
+        {% if group.description %}
+        <p class="group-description-text">{{ group.description }}</p>
+        {% else %}
+        <p class="group-description-text muted">{{ gettext('No description.') }}</p>
+        {% endif %}
+        {% if is_owner and not is_personal %}
+        <button type="button" class="btn small" id="edit-description-btn" aria-label="{{ gettext('Edit description') }}">{{ gettext('Edit') }}</button>
+        {% endif %}
+    </div>
+    {% if is_owner and not is_personal %}
+    <form method="post" action="{{ url_for('update_group', group_name=group.name) }}"
+          id="group-description-form" hidden>
+        <div class="field">
+            <label for="group-description">{{ gettext('Group Description') }}</label>
+            <textarea id="group-description" name="description" rows="2" class="group-description-input">{{ group.description or '' }}</textarea>
+        </div>
+        <div class="actions left">
+            <button type="submit" class="btn primary">{{ gettext('Save') }}</button>
+            <button type="button" class="btn" id="cancel-description-btn">{{ gettext('Cancel') }}</button>
+        </div>
+    </form>
+    <script>
+    (function() {
+        const view = document.getElementById('group-description-view');
+        const form = document.getElementById('group-description-form');
+        const editBtn = document.getElementById('edit-description-btn');
+        const cancelBtn = document.getElementById('cancel-description-btn');
+        const textarea = form.querySelector('textarea');
+        function autosize() {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+        textarea.addEventListener('input', autosize);
+        editBtn.addEventListener('click', () => {
+            view.hidden = true;
+            form.hidden = false;
+            autosize();
+            textarea.focus();
+        });
+        cancelBtn.addEventListener('click', () => {
+            form.hidden = true;
+            view.hidden = false;
+            editBtn.focus();
+        });
+    })();
+    </script>
     {% endif %}
 
     <p>
@@ -83,11 +128,11 @@
     <h3>{{ gettext('Invite a user') }}</h3>
     <form class="invite-form" method="post"
           action="{{ url_for('invite_to_group', group_name=group.name) }}">
-        <div class="field">
+        <div class="field invite-user-field">
             <label for="invite-user">{{ gettext('User') }}</label>
-            <input type="text" id="invite-user" name="user_name" autocomplete="off" required>
+            <input type="text" id="invite-user" name="user_name" autocomplete="off" required aria-required="true" aria-autocomplete="list" aria-controls="user-suggestions">
+            <div id="user-suggestions" role="listbox" style="display:none"></div>
         </div>
-        <div id="user-suggestions" style="display:none"></div>
         <div class="field">
             <label for="invite-role">{{ gettext('Role') }}</label>
             <select id="invite-role" name="role">

@@ -557,7 +557,7 @@ img.icon.selected {
 }
 .card input[type=submit]:not(.btn):hover,
 .card button[type=submit]:not(.btn):hover { background: #0a76bf; }
-.card button:not([type=submit]):not(.btn) {
+.card button:not([type=submit]):not(.btn):not(.btn-link) {
     display: inline-block;
     padding: 0.35rem 0.8rem;
     border: 1px solid #ccc;
@@ -568,7 +568,7 @@ img.icon.selected {
     font: inherit;
     line-height: 1.4;
 }
-.card button:not([type=submit]):not(.btn):hover { background: #eee; }
+.card button:not([type=submit]):not(.btn):not(.btn-link):hover { background: #eee; }
 
 .impersonation-banner {
     background: #fff3cd;
@@ -901,15 +901,52 @@ body.no-page-header .content > header { display: none; }
 #columns { display: flex; flex-wrap: wrap; gap: 1rem; }
 #columns .card { flex: 1 1 22rem; max-width: 30rem; }
 
-/* ---- Edit group: invite form -------------------------------- */
-.invite-form {
+/* ---- Edit group: description -------------------------------- */
+.group-description {
     display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    max-width: 40rem;
+    margin-bottom: 0.75rem;
+}
+.group-description-text {
+    flex: 1 1 auto;
+    margin: 0;
+    white-space: pre-wrap;
+}
+.card textarea.group-description-input {
+    min-height: 0;
+    height: auto;
+    max-width: 40rem;
+    max-height: 20rem;
+    resize: none;
+    overflow-y: auto;
+}
+#group-description-form { max-width: 40rem; margin-bottom: 0.75rem; }
+.btn-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: #08619d;
+    cursor: pointer;
+    font: inherit;
+    text-decoration: underline;
+    flex-shrink: 0;
+}
+.btn-link:hover { color: #094a78; }
+[hidden] { display: none !important; }
+
+/* ---- Edit group: invite form -------------------------------- */
+.card form.invite-form,
+form.invite-form {
+    display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: end;
-    position: relative;
 }
 .invite-form .field { margin-bottom: 0; }
+.invite-form .invite-user-field { position: relative; }
 .invite-form input[type=text] { width: 16rem; }
 #user-suggestions {
     position: absolute;
