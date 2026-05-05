@@ -59,6 +59,11 @@ class BeadModel:
     used_height: int = 0
     repeat: int = 0
     bead_list: List[Tuple[int, int]] = field(default_factory=list)
+    # View-only rotation of the simulated rope. Mirrors desktop's
+    # Model.shift / SimulationPanel.getShift — only the simulation
+    # printer reads it; bead-list / draft / corrected / repeat are
+    # unaffected.
+    shift: int = 0
 
     def get(self, x, y):
         if 0 <= y < self.height and 0 <= x < self.width:
@@ -92,6 +97,14 @@ def load_model(data) -> BeadModel:
     palette = [_to_rgb(c) for c in (data.get("colors") or [])]
     if not palette:
         palette = [WHITE]
+    view = data.get("view") or {}
+    shift = 0
+    try:
+        shift = int(view.get("shift", 0))
+    except (TypeError, ValueError):
+        shift = 0
+    if width > 0:
+        shift = ((shift % width) + width) % width
     m = BeadModel(
         width=width,
         height=height,
@@ -101,6 +114,7 @@ def load_model(data) -> BeadModel:
         author=str(data.get("author") or ""),
         organization=str(data.get("organization") or ""),
         notes=str(data.get("notes") or ""),
+        shift=shift,
     )
     _compute_used_height(m)
     _compute_repeat(m)
@@ -362,7 +376,9 @@ class SimulationPart(_GridPart):
         n = self._printable_rows(page_h) * self.m.width
         if n <= 0:
             return []
-        _, last_y = _correct_y_for_index(self.m.width, n - 1)
+        # The shift pushes the last bead onto a later corrected row, so
+        # account for it when computing how many rows we need.
+        _, last_y = _correct_y_for_index(self.m.width, n - 1 + self.m.shift)
         corrected_rows = last_y + 1
         rpc = self._rows_per_column(page_h)
         cols = max(1, (corrected_rows + rpc - 1) // rpc)
@@ -378,8 +394,12 @@ class SimulationPart(_GridPart):
         n = self._printable_rows(page_h) * self.m.width
         vw = self._visible_width()
         x_grid = x + _BORDER
+        # `shift` rotates the simulated rope by sliding beads along the
+        # linear index before the spiral fold, mirroring desktop's
+        # SimulationPanel + BeadPoint::shifted. The colour stays with
+        # the bead, the position moves diagonally with the seam.
         for idx in range(n):
-            xi, yj = _correct_y_for_index(self.m.width, idx)
+            xi, yj = _correct_y_for_index(self.m.width, idx + self.m.shift)
             if yj < start or yj >= end:
                 continue
             if yj % 2 == 0 and xi >= vw:
@@ -722,6 +742,40 @@ def _draw_page_header(c, title, page_idx, total_pages, page_w, top,
     c.drawString(_BORDER, top - _HEADER_FONT_SIZE, "    ".join(parts))
 
 
+# Default jbead header mirrors the weave default but with the JBead
+# brand. Tokens (&Pattern / &Author / &Page / ...) are expanded by
+# ``expand_header_tokens`` (shared with the weave printer).
+DEFAULT_HEADER_TEXT = "JBead - &Pattern (&Author)"
+DEFAULT_FOOTER_TEXT = ""
+
+
+def _draw_print_header_footer(c, data, title, page_idx, total_pages,
+                              page_w, page_h, margin):
+    """Print-mode header (top-left) + page count (top-right, only when
+    multi-page) + optional footer (bottom-left). Mirrors the weave
+    printer's layout in :func:`textileplatform.export.print_pdf`."""
+    from textileplatform.export import expand_header_tokens
+    header_tpl = data.get("header_text")
+    if header_tpl is None:
+        header_tpl = DEFAULT_HEADER_TEXT
+    footer_tpl = data.get("footer_text") or ""
+    header = expand_header_tokens(
+        header_tpl, data, title, page_idx + 1, total_pages,
+    )
+    footer = expand_header_tokens(
+        footer_tpl, data, title, page_idx + 1, total_pages,
+    )
+    c.setFont("Helvetica", _HEADER_FONT_SIZE)
+    c.setFillColorRGB(0, 0, 0)
+    if header:
+        c.drawString(margin, page_h - margin / 2, header)
+    if total_pages > 1:
+        c.drawRightString(page_w - margin, page_h - margin / 2,
+                          f"{page_idx + 1} / {total_pages}")
+    if footer:
+        c.drawString(margin, margin / 2, footer)
+
+
 def _paginated_pdf(data, title, full_pattern, fit_single_page):
     """Common renderer for :func:`print_pdf` and :func:`export_pdf`.
     Lays out parts column-major on landscape pages. When
@@ -785,9 +839,17 @@ def _paginated_pdf(data, title, full_pattern, fit_single_page):
     else:
         for pi, page in enumerate(pages):
             c.saveState()
-            _draw_page_header(c, title or m.title, pi, len(pages),
-                              page_w, page_h - margin,
-                              include_title=not have_report)
+            if fit_single_page:
+                _draw_page_header(c, title or m.title, pi, len(pages),
+                                  page_w, page_h - margin,
+                                  include_title=not have_report)
+            else:
+                # Print mode: configurable header / footer with token
+                # expansion, mirroring the weave printer.
+                _draw_print_header_footer(
+                    c, data, title or m.title, pi, len(pages),
+                    page_w, page_h, margin,
+                )
             c.translate(margin, page_h - margin - header_h)
             c.scale(1, -1)
             target = PDFTargetNoFlip(c)

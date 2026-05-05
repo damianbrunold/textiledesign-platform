@@ -61,6 +61,70 @@ ANBINDUNG = 11
 ABBINDUNG = 12
 
 
+# ---------- Header / footer token expansion ----------------------
+#
+# Direct port of dbweave's expandTokens (print.cpp). Recognises both
+# English and German token names and the paren-wrapped form (e.g.
+# ``(&Author)`` collapses to nothing when the author is empty).
+#
+# Default header matches dbweave's PAGE_HEADER_DEFAULT; default footer
+# is empty.
+
+DEFAULT_HEADER_TEXT = "DB-WEAVE - &Pattern (&Author)"
+DEFAULT_FOOTER_TEXT = ""
+
+_HEADER_TOKENS = [
+    # Paren forms first so they win over the bare-name match.
+    ("(&Pattern)",      "muster",   True),
+    ("(&Muster)",       "muster",   True),
+    ("(&File)",         "datei",    True),
+    ("(&Datei)",        "datei",    True),
+    ("(&Author)",       "autor",    True),
+    ("(&Autor)",        "autor",    True),
+    ("(&Autorin)",      "autor",    True),
+    ("(&Organisation)", "org",      True),
+    ("&Pattern",        "muster",   False),
+    ("&Muster",         "muster",   False),
+    ("&File",           "datei",    False),
+    ("&Datei",          "datei",    False),
+    ("&Author",         "autor",    False),
+    ("&Autor",          "autor",    False),
+    ("&Autorin",        "autor",    False),
+    ("&Organisation",   "org",      False),
+    ("&Page",           "seite",    False),
+    ("&Seite",          "seite",    False),
+]
+
+
+def expand_header_tokens(text, data, pattern_label, page_idx, total_pages):
+    """Substitute header/footer tokens. Mirrors dbweave's expandTokens
+    + replacePattern: paren-wrapped tokens collapse to nothing when
+    their value is empty; bare tokens are replaced verbatim. Tokens
+    are matched anywhere in the string and all occurrences replaced
+    (the desktop replaces only the first; the difference is only
+    visible when the user repeats a token, which is rare)."""
+    if not text:
+        return ""
+    values = {
+        "muster": (pattern_label or "").strip(),
+        "datei":  (pattern_label or "").strip(),
+        "autor":  (data.get("author") or "").strip(),
+        "org":    (data.get("organization") or "").strip(),
+        "seite":  str(page_idx),
+    }
+    out = text
+    for token, key, paren in _HEADER_TOKENS:
+        if token not in out:
+            continue
+        v = values.get(key, "")
+        if paren:
+            replacement = f"({v})" if v else ""
+        else:
+            replacement = v
+        out = out.replace(token, replacement)
+    return out
+
+
 # ---------- Layout / extent helpers ------------------------------
 
 @dataclass
@@ -330,26 +394,64 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
     for j in range(dy + 1):
         t.line(x0, y0 + j * gh, x0 + dx * gw, y0 + j * gh, GRID_LINE)
     style = data.get("weave_style", "draft")
-    if style != "empty" and style != "invisible":
+    sinking_shed = bool(data.get("sinking_shed"))
+    warp_colors = data.get("colors_warp") or [0]
+    weft_colors = data.get("colors_weft") or [0]
+
+    def _warp_col(i_abs):
+        idx = warp_colors[min(i_abs, len(warp_colors) - 1)] if warp_colors else 0
+        return _palette_color(data, idx)
+
+    def _weft_col(j_abs):
+        idx = weft_colors[min(j_abs, len(weft_colors) - 1)] if weft_colors else 0
+        return _palette_color(data, idx)
+
+    if style not in ("empty", "invisible"):
         for i in range(dx):
             for j in range(dy):
-                s = _calc_weave(data, layout.kette_a + i, layout.schuesse_a + j)
-                if s <= 0:
-                    continue
+                i_abs = layout.kette_a + i
+                j_abs = layout.schuesse_a + j
+                s = _calc_weave(data, i_abs, j_abs)
                 x = x0 + (dx - i - 1) * gw if rtl else x0 + i * gw
                 y = y0 + (dy - j - 1) * gh
                 if style == "color":
-                    # Farbeffekt: cell coloured from kettfarben if "up",
-                    # schussfarben if "down". s>0 means warp on top.
-                    is_up = s > 0 and s != ABBINDUNG
-                    if is_up:
-                        col = _palette_color(data, (data.get("colors_warp") or [0])[
-                            min(layout.kette_a + i, len(data.get("colors_warp") or []) - 1)])
-                    else:
-                        col = _palette_color(data, (data.get("colors_weft") or [0])[
-                            min(layout.schuesse_a + j, len(data.get("colors_weft") or []) - 1)])
+                    # Farbeffekt: every cell filled edge-to-edge in
+                    # warp colour ("hebung") or weft colour. Mirrors
+                    # exportbitmap.cpp PrintGewebeFarbeffekt.
+                    hebung = s > 0
+                    if sinking_shed:
+                        hebung = not hebung
+                    col = _warp_col(i_abs) if hebung else _weft_col(j_abs)
                     t.fill_rect(x, y, gw, gh, col)
-                elif s == AUSHEBUNG and aus_darst != DARST_FILLED:
+                    continue
+                if style == "simulation":
+                    # Simulated thread render: warp/weft on top with
+                    # the other peeking out, plus a 1-px shadow line.
+                    # Mirrors exportbitmap.cpp PrintGewebeSimulation.
+                    hebung = s > 0 and s != ABBINDUNG
+                    if sinking_shed:
+                        hebung = not hebung
+                    kc = _warp_col(i_abs)
+                    sc = _weft_col(j_abs)
+                    sw = max(1, gw // 5)
+                    sh = max(1, gh // 5)
+                    if hebung:
+                        t.fill_rect(x + sw, y, gw - 2 * sw, gh, kc)
+                        t.fill_rect(x, y + sh, sw, gh - 2 * sh, sc)
+                        t.fill_rect(x + gw - sw, y + sh, sw, gh - 2 * sh, sc)
+                        t.line(x + gw - sw, y + sh,
+                               x + gw - sw, y + gh - sh, BLACK)
+                    else:
+                        t.fill_rect(x, y + sh, gw, gh - 2 * sh, sc)
+                        t.fill_rect(x + sw, y, gw - 2 * sw, sh, kc)
+                        t.fill_rect(x + sw, y + gh - sh, gw - 2 * sw, sh, kc)
+                        t.line(x + sw, y + gh - sh,
+                               x + gw - sw, y + gh - sh, BLACK)
+                    continue
+                # draft (default): symbol/range-coloured cells.
+                if s <= 0:
+                    continue
+                if s == AUSHEBUNG and aus_darst != DARST_FILLED:
                     _paint_cell(t, aus_darst, x, y, gw, gh, BLACK)
                 elif s == ANBINDUNG and anb_darst != DARST_FILLED:
                     t.fill_rect(x, y, gw, gh, RANGE_COLORS[ANBINDUNG])
@@ -361,6 +463,63 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
                     col = RANGE_COLORS[s] if 1 <= s <= 12 else BLACK
                     t.fill_rect(x, y, gw, gh, col)
     t.stroke_rect(x0, y0, dx * gw, dy * gh, BLACK)
+
+    # ---- Rapport overlay --------------------------------------------
+    # Mirrors the on-screen _drawRapport in dbweave.js: cells inside the
+    # rapport (or outside, with inverse_repeat) are repainted as a red
+    # patrone on white; vertical red boundary lines span the einzug
+    # strip at the warp rapport edges; horizontal red lines span the
+    # treadling/pegplan strip at the weft rapport edges.
+    if data.get("display_repeat"):
+        ka = int(data.get("rapport_k_a", 0))
+        kb = int(data.get("rapport_k_b", -1))
+        sa = int(data.get("rapport_s_a", 0))
+        sb = int(data.get("rapport_s_b", -1))
+        if kb >= ka and sb >= sa:
+            inv = bool(data.get("inverse_repeat"))
+            red = (0xdd, 0, 0)
+            # Gewebe overlay
+            for i in range(dx):
+                i_abs = layout.kette_a + i
+                in_kette = (ka <= i_abs <= kb)
+                for j in range(dy):
+                    j_abs = layout.schuesse_a + j
+                    in_rap = in_kette and (sa <= j_abs <= sb)
+                    if (not in_rap) if inv else in_rap:
+                        s = _calc_weave(data, i_abs, j_abs)
+                        x = x0 + (dx - i - 1) * gw if rtl else x0 + i * gw
+                        y = y0 + (dy - j - 1) * gh
+                        # Clear cell (covers farbeffekt/simulation fill)
+                        # then redraw cell edges in grid grey, then
+                        # paint inset red patrone for warp-on-top cells.
+                        t.fill_rect(x, y, gw, gh, (255, 255, 255))
+                        t.stroke_rect(x, y, gw, gh, GRID_LINE)
+                        if s > 0 and s != ABBINDUNG:
+                            bx = max(1, gw * 15 // 100)
+                            by = max(1, gh * 15 // 100)
+                            t.fill_rect(x + bx, y + by,
+                                        gw - 2 * bx, gh - 2 * by, red)
+            # Vertical boundary lines in einzug strip.
+            if shafts != 0:
+                ez_x_left  = (ka - layout.kette_a) * gw if not rtl \
+                    else (dx - (ka - layout.kette_a)) * gw
+                ez_x_right = (kb + 1 - layout.kette_a) * gw if not rtl \
+                    else (dx - (kb + 1 - layout.kette_a)) * gw
+                ez_top    = einzug_y0
+                ez_bottom = einzug_y0 + shafts * gh
+                t.line(ez_x_left,  ez_top, ez_x_left,  ez_bottom, red, width=2)
+                t.line(ez_x_right, ez_top, ez_x_right, ez_bottom, red, width=2)
+            # Horizontal boundary lines in trittfolge strip.
+            if treadles != 0:
+                tf_x_left  = (dx + tdx) * gw
+                tf_x_right = (dx + tdx + treadles) * gw
+                tf_y_top    = tritt_y0 + (dy - (sb + 1 - layout.schuesse_a)) * gh
+                tf_y_bottom = tritt_y0 + (dy - (sa - layout.schuesse_a)) * gh
+                t.line(tf_x_left,  tf_y_top,    tf_x_right, tf_y_top,    red, width=2)
+                t.line(tf_x_left,  tf_y_bottom, tf_x_right, tf_y_bottom, red, width=2)
+            # Re-stroke the gewebe outline so the red overlay doesn't
+            # leave a gap where it covered the existing border.
+            t.stroke_rect(x0, y0, dx * gw, dy * gh, BLACK)
 
 
 # ---------- Raster (PNG / JPEG) ----------------------------------
@@ -507,6 +666,14 @@ def print_pdf(data, title=None,
     if title:
         c.setTitle(title)
 
+    # Header / footer text, with dbweave-style token expansion.
+    # Defaults mirror dbweave's PAGE_HEADER_DEFAULT.
+    header_tpl = data.get("header_text")
+    if header_tpl is None:
+        header_tpl = DEFAULT_HEADER_TEXT
+    footer_tpl = data.get("footer_text") or ""
+    total_pages = cols * rows
+
     for row in range(rows):
         for col in range(cols):
             # Page (col, row): clip the painter's logical-coord output
@@ -515,11 +682,22 @@ def print_pdf(data, title=None,
             page_x_pt = col * paint_w
             page_y_pt = row * paint_h
             c.saveState()
-            if title and (cols * rows) > 1:
-                c.setFont("Helvetica", 8)
-                c.setFillColorRGB(0, 0, 0)
-                hdr = f"{title}    {col + 1 + row * cols} / {cols * rows}"
-                c.drawString(margin, page_h - margin / 2, hdr)
+            c.setFont("Helvetica", 8)
+            c.setFillColorRGB(0, 0, 0)
+            page_idx = col + 1 + row * cols
+            header = expand_header_tokens(
+                header_tpl, data, title, page_idx, total_pages,
+            )
+            footer = expand_header_tokens(
+                footer_tpl, data, title, page_idx, total_pages,
+            )
+            if header:
+                c.drawString(margin, page_h - margin / 2, header)
+            if total_pages > 1:
+                page_str = f"{page_idx} / {total_pages}"
+                c.drawRightString(page_w - margin, page_h - margin / 2, page_str)
+            if footer:
+                c.drawString(margin, margin / 2, footer)
             p = c.beginPath()
             p.rect(margin, margin, paint_w, paint_h)
             c.clipPath(p, stroke=0, fill=0)

@@ -4285,6 +4285,73 @@ function showPropertiesDialog() {
 }
 
 
+// Page setup — port of dbweave's PageSetupDialog. Lets the user edit
+// the header / footer template strings used when printing. Tokens
+// (&Pattern / &Author / &Page / &Organisation / &File and the German
+// equivalents &Muster / &Autor / &Seite / &Datei) are substituted
+// server-side at print time. Defaults match dbweave's
+// PAGE_HEADER_DEFAULT.
+const _DEFAULT_HEADER_TEXT = "DB-WEAVE - &Pattern (&Author)";
+const _DEFAULT_FOOTER_TEXT = "";
+
+function showPageSetupDialog() {
+    if (readonly) return;
+    const i18n = _getI18n();
+    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
+    const curHeader = (data && typeof data.header_text === "string")
+        ? data.header_text : _DEFAULT_HEADER_TEXT;
+    const curFooter = (data && typeof data.footer_text === "string")
+        ? data.footer_text : _DEFAULT_FOOTER_TEXT;
+    const tokenHelp = L("page-setup.tokens",
+        "Tokens: &Pattern, &Author, &Organisation, &File, &Page");
+    const body = document.createElement("div");
+    body.style.minWidth = "460px";
+    body.innerHTML = `
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:0.4rem 1rem;align-items:center">
+            <label>${L("page-setup.header", "Header:")}</label>
+            <input id="tx-ps-header" type="text" style="width:100%">
+            <label>${L("page-setup.footer", "Footer:")}</label>
+            <input id="tx-ps-footer" type="text" style="width:100%">
+        </div>
+        <p style="margin-top:0.6rem;font-size:0.85em;color:#666">${tokenHelp}</p>`;
+    const $ = (sel) => body.querySelector(sel);
+    $("#tx-ps-header").value = curHeader;
+    $("#tx-ps-footer").value = curFooter;
+    setTimeout(() => { $("#tx-ps-header").focus(); $("#tx-ps-header").select(); }, 0);
+
+    let modal;
+    const accept = () => {
+        const newHeader = $("#tx-ps-header").value;
+        const newFooter = $("#tx-ps-footer").value;
+        if (newHeader !== curHeader || newFooter !== curFooter) {
+            _snapshotCommand("edit page setup",
+                () => ({
+                    header_text: data.header_text,
+                    footer_text: data.footer_text,
+                }),
+                (s) => {
+                    data.header_text = s.header_text;
+                    data.footer_text = s.footer_text;
+                },
+                () => {
+                    data.header_text = newHeader;
+                    data.footer_text = newFooter;
+                },
+            );
+        }
+        modal.close();
+    };
+    modal = Modal.open({
+        title: L("page-setup.title", "Page setup"),
+        body,
+        buttons: [
+            { label: L("btn.cancel", "Cancel"), role: "cancel" },
+            { label: L("btn.ok",     "OK"),     role: "primary", onClick: accept },
+        ],
+    });
+}
+
+
 // Pattern info — direct port of EntwurfsinfoDialog. Builds 4 sections
 // of computed report text from the in-memory pattern.
 
@@ -11522,6 +11589,8 @@ function setupEditorActions() {
     R("file.print-part",  "Ctrl+L", () => showPrintPartDialog());
     R("file.properties",  null, () => showPropertiesDialog(),
         { enabledWhen: () => !readonly });
+    R("file.page-setup",  null, () => showPageSetupDialog(),
+        { enabledWhen: () => !readonly });
     R("file.info",        null, () => showPatternInfoDialog());
 
     R("legal.terms",   null, () => LegalDialog.open("/terms",   L("legal.terms")   || "Terms",          L("btn.ok") || "OK"));
@@ -12004,6 +12073,7 @@ function setupEditorActions() {
         fileItems.push({ action: "file.print-part" });
         fileItems.push({ separator: true });
         if (!readonly) fileItems.push({ action: "file.properties" });
+        if (!readonly) fileItems.push({ action: "file.page-setup" });
         fileItems.push({ action: "file.info" });
         fileItems.push({ separator: true });
         fileItems.push({ action: "file.close" });

@@ -433,20 +433,55 @@ class ViewSimulated {
     }
 
     contains(i, j) {
-        return this.x <= i && i < this.x + this.width &&
+        // Half-cells extend dx/2 to the left of this.x and to the
+        // right of this.x + this.width on odd rows, so the floor()-
+        // derived `i` may land one cell outside the nominal range
+        // and still hit a bead. Match ViewCorrected's tolerance.
+        return this.x - 1 <= i && i < this.x + this.width + 1 &&
                this.y <= j && j < this.y + this.height;
     }
 
     pixelToDataCoord(x, y) {
-        let i = Math.floor((x - 0.5) / settings.dx);
-        let j = this.height - 1 - Math.floor((y - 0.5) / settings.dy);
-        // TODO use equivalent technique with coord->idx as in corrected view
-        // return [i - this.x, j - this.y + this.offset];
-        return [undefined, undefined];
+        // Inverse of the spiral fold + shift in draw(): pixel ->
+        // (i_view, j_view) in simulation space -> linear rope index ->
+        // (data_x, data_y) in the pattern. Mirrors desktop
+        // SimulationPanel::mouseToField + Model::correctedIndex.
+        const dx = settings.dx;
+        const dy = settings.dy;
+        const W = this.data.width;
+        if (W <= 0) return [undefined, undefined];
+        const j_view = this.height - 1 - Math.floor((y - 0.5) / dy);
+        if (j_view < 0 || j_view >= this.height) {
+            return [undefined, undefined];
+        }
+        const j_abs = j_view + this.offset;
+        const x_rel = x - this.x * dx;
+        let i;
+        if (j_abs % 2 === 0) {
+            // Even rows: W full-width cells centred on the column grid;
+            // cell i spans [(i-1)*dx + dx/2, i*dx + dx/2).
+            i = Math.floor((x_rel + dx / 2) / dx);
+            if (i < 0 || i >= W) return [undefined, undefined];
+        } else {
+            // Odd rows: W+1 cells, with i=0 and i=W as half-width
+            // edges. Cell i (1..W-1) spans [(i-1)*dx, i*dx).
+            i = Math.floor((x_rel + dx) / dx);
+            if (i < 0 || i > W) return [undefined, undefined];
+        }
+        const pairs = Math.trunc(j_abs / 2);
+        const linearPos = pairs * (2 * W + 1)
+            + ((j_abs % 2 === 1) ? W : 0) + i;
+        const idx = linearPos - (this.data.shift | 0);
+        if (idx < 0) return [undefined, undefined];
+        const data_x = idx % W;
+        const data_y = Math.trunc(idx / W);
+        if (data_y >= this.data.height) return [undefined, undefined];
+        return [data_x, data_y];
     }
 
     pixelToViewCoord(x, y) {
         const [i, j] = this.pixelToDataCoord(x, y);
+        if (i === undefined || j === undefined) return [undefined, undefined];
         return [i, j - this.offset];
     }
 
@@ -466,7 +501,13 @@ class ViewSimulated {
 
         for (let jj = 0; jj < this.data.height; jj++) {
             for (let ii = 0; ii < this.data.width; ii++) {
-                let idx = ii + jj * this.data.width;
+                // Apply pattern.shift to the linear index *before* the
+                // spiral fold — mirrors desktop SimulationPanel's
+                // `raw.shifted(shift, W)`. Shifting the source lookup
+                // instead (the previous approach) breaks diagonal
+                // patterns because the visual seam wrap doesn't move
+                // with the colours.
+                let idx = ii + jj * this.data.width + (this.data.shift | 0);
                 let j = 0;
                 let w = this.data.width;
                 while (idx >= w) {
@@ -484,11 +525,7 @@ class ViewSimulated {
 
                 const xoff = j % 2 == 0 ? 0 : -dx/2;
 
-                // Apply pattern.shift to rotate the simulated tube.
-                // Desktop reads `model.getShift()` only here.
-                const W = this.data.width;
-                const sii = ((ii - (this.data.shift | 0)) % W + W) % W;
-                const state = this.data.get(sii, jj);
+                const state = this.data.get(ii, jj);
 
                 let x = 0;
                 let d = dx;
@@ -1074,11 +1111,35 @@ function _onMouseDown(event) {
     case "fill":
         _bucketFill(i, j);
         return;
-    case "select":
-        _drag = { i0: i, j0: j };
+    case "select": {
+        // Click *inside* an existing selection starts a "move group"
+        // gesture: lift every tile in the pattern that has the same
+        // content as the selection and drag them all together. Click
+        // *outside* (or with no current selection) starts a fresh
+        // rectangular selection — and a no-drag click on that fresh
+        // selection still falls through to the pencil-style toggle.
+        const sel = pattern.selection;
+        const inside = sel
+            && i >= sel.i1 && i <= sel.i2
+            && j >= sel.j1 && j <= sel.j2;
+        if (inside) {
+            const group = _captureSelectionGroup();
+            if (group) {
+                _drag = {
+                    kind: "move",
+                    i0: i, j0: j,
+                    lastDx: 0, lastDy: 0,
+                    group,
+                    sel0: { ...sel },
+                };
+                return;
+            }
+        }
+        _drag = { kind: "select", i0: i, j0: j, leftStart: false };
         pattern.selection = { i1: i, j1: j, i2: i, j2: j };
         view.draw();
         return;
+    }
     case "pencil":
     default:
         // Pencil is line-mode (matches the desktop's "stift draws
@@ -1116,7 +1177,24 @@ function _onMouseMove(event) {
     const [i, j] = hit.coord;
     if (i === undefined || j === undefined) return;
     if (_drag) {
+        if (_drag.kind === "move") {
+            const dx = i - _drag.i0;
+            const dy = j - _drag.j0;
+            if (dx !== _drag.lastDx || dy !== _drag.lastDy) {
+                _drag.lastDx = dx;
+                _drag.lastDy = dy;
+                _stampSelectionGroup(_drag.group, dx, dy);
+                beadlist.update();
+                view.draw();
+                _updateStatusbar();
+            }
+            return;
+        }
         // Drag rectangle for the select tool — recompute on every move.
+        // Latch `leftStart` once the pointer ever leaves the origin
+        // cell so a click-without-drag can be detected on mouseup
+        // even if the pointer wanders out and back in.
+        if (i !== _drag.i0 || j !== _drag.j0) _drag.leftStart = true;
         const i1 = Math.min(_drag.i0, i);
         const i2 = Math.max(_drag.i0, i);
         const j1 = Math.min(_drag.j0, j);
@@ -1153,9 +1231,46 @@ function _onMouseMove(event) {
 
 function _onMouseUp(event) {
     if (_drag) {
+        const drag = _drag;
         _drag = null;
+        if (drag.kind === "move") {
+            // Commit the dragged group through the command bus. The
+            // live preview already mutated pattern.data; we roll back
+            // to the baseline first so the snapshot captures the
+            // original state, then commandBus.execute re-applies.
+            _finalizeSelectionGroupMove(drag.group, drag.sel0,
+                                        drag.lastDx, drag.lastDy);
+            return;
+        }
+        if (!drag.leftStart && !readonly) {
+            // Click-without-drag on the select tool: treat as a
+            // pencil-toggle so quick clicks still feel productive.
+            // Selection collapses (so it doesn't visually linger as a
+            // 1-cell box around the toggled cell). Goes through the
+            // pencil command-bus path so it's a single undoable step.
+            pattern.selection = null;
+            _pencil_stroke = {
+                mode: "click",
+                startI: drag.i0, startJ: drag.j0,
+                endI:   drag.i0, endJ:   drag.j0,
+                previewCells: [],
+                changes: [],
+                visited: new Set(),
+            };
+            _pencilSetCell(drag.i0, drag.j0, "toggle");
+            beadlist.update();
+            view.draw();
+            setModified();
+            _commitPencilStroke();
+            ActionRegistry.notify();
+            return;
+        }
         view.draw();
         _updateStatusbar();
+        // Selection just finalised — refresh toolbar/menu so the
+        // selection-dependent actions (Anordnen / Mirror / …) flip
+        // their enabled state.
+        ActionRegistry.notify();
     }
     if (_pencil_stroke) {
         if (_pencil_stroke.mode === "click") {
@@ -1614,6 +1729,79 @@ function _openPropertiesDialog() {
 }
 
 
+// Page setup — header / footer template strings for printing. Tokens
+// (&Pattern / &Author / &Organisation / &File / &Page and the German
+// &Muster / &Autor / &Seite / &Datei) are expanded server-side. Mirrors
+// dbweave's PageSetupDialog.
+const _DEFAULT_HEADER_TEXT = "JBead - &Pattern (&Author)";
+const _DEFAULT_FOOTER_TEXT = "";
+
+function _openPageSetupDialog() {
+    if (readonly) return;
+    const curHeader = (data && typeof data.header_text === "string")
+        ? data.header_text : _DEFAULT_HEADER_TEXT;
+    const curFooter = (data && typeof data.footer_text === "string")
+        ? data.footer_text : _DEFAULT_FOOTER_TEXT;
+    const tokenHelp = _actionLabel("page-setup.tokens",
+        "Tokens: &Pattern, &Author, &Organisation, &File, &Page");
+    const body = document.createElement("div");
+    body.style.minWidth = "460px";
+    body.innerHTML = `
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:0.4rem 1rem;align-items:center">
+            <label>${_actionLabel("page-setup.header", "Header:")}</label>
+            <input id="tx-ps-header" type="text" style="width:100%">
+            <label>${_actionLabel("page-setup.footer", "Footer:")}</label>
+            <input id="tx-ps-footer" type="text" style="width:100%">
+        </div>
+        <p style="margin-top:0.6rem;font-size:0.85em;color:#666">${tokenHelp}</p>`;
+    const $ = (sel) => body.querySelector(sel);
+    $("#tx-ps-header").value = curHeader;
+    $("#tx-ps-footer").value = curFooter;
+    setTimeout(() => {
+        $("#tx-ps-header").focus();
+        $("#tx-ps-header").select();
+    }, 0);
+
+    let modal;
+    const accept = () => {
+        const newHeader = $("#tx-ps-header").value;
+        const newFooter = $("#tx-ps-footer").value;
+        if (newHeader === curHeader && newFooter === curFooter) {
+            modal.close();
+            return;
+        }
+        const before = { header_text: data.header_text, footer_text: data.footer_text };
+        const after  = { header_text: newHeader,        footer_text: newFooter };
+        let firstApply = true;
+        commandBus.execute({
+            label: "page-setup",
+            apply: () => {
+                data.header_text = after.header_text;
+                data.footer_text = after.footer_text;
+                if (!firstApply) setModified();
+                firstApply = false;
+            },
+            revert: () => {
+                data.header_text = before.header_text;
+                data.footer_text = before.footer_text;
+                setModified();
+            },
+        });
+        setModified();
+        modal.close();
+    };
+    modal = Modal.open({
+        title: _actionLabel("page-setup.title", "Page setup"),
+        body,
+        buttons: [
+            { label: _actionLabel("btn.cancel", "Cancel"), role: "cancel" },
+            { label: _actionLabel("btn.ok", "OK"), role: "primary",
+              onClick: accept },
+        ],
+    });
+}
+
+
 // ---- Technical info dialog --------------------------------------
 
 function _openTechInfoDialog() {
@@ -1778,6 +1966,33 @@ function _openArrangeDialog() {
     const sel = pattern.selection;
     const W = sel.i2 - sel.i1 + 1;
     const H = sel.j2 - sel.j1 + 1;
+    const PW = pattern.width;
+    const PH = pattern.height;
+
+    // Snapshot the full pattern data at dialog open. Live preview
+    // mutates pattern.data in place; on every input change (and on
+    // Cancel) we restore this baseline before re-running the
+    // arrangement, so previews don't pile up.
+    const baseline = pattern.data.slice();
+    // Capture the source cells once — they don't change while the
+    // dialog is open and they reference pattern coords inside the
+    // selection (which the preview won't overwrite for k=0).
+    const src = [];
+    for (let j = 0; j < H; j++) {
+        const row = [];
+        for (let i = 0; i < W; i++) row.push(pattern.get(sel.i1 + i, sel.j1 + j));
+        src.push(row);
+    }
+
+    const restore = () => {
+        for (let i = 0; i < baseline.length; i++) pattern.data[i] = baseline[i];
+    };
+    const renderPreview = (dx, dy, copies) => {
+        restore();
+        _applyArrangeMutation(sel, src, W, H, PW, PH, dx, dy, copies);
+        beadlist.update();
+        view.draw();
+    };
 
     const wrap = document.createElement("div");
     const mk = (id, labelKey, label, def) => {
@@ -1802,6 +2017,19 @@ function _openArrangeDialog() {
     const inDy = mk("arr-dy", "arrange.dy", "Vertical offset:", H);
     const inN  = mk("arr-n",  "arrange.copies", "Number of copies:", 1);
 
+    const refresh = () => {
+        const dx = parseInt(inDx.value, 10) || 0;
+        const dy = parseInt(inDy.value, 10) || 0;
+        const n  = Math.max(1, parseInt(inN.value, 10) || 1);
+        renderPreview(dx, dy, n);
+    };
+    for (const inp of [inDx, inDy, inN]) {
+        inp.addEventListener("input", refresh);
+    }
+    // Initial preview matches the dialog's defaults.
+    refresh();
+
+    let committing = false;
     Modal.open({
         title: _actionLabel("arrange.title", "Arrange selection"),
         body: wrap,
@@ -1810,15 +2038,222 @@ function _openArrangeDialog() {
             {
                 label: _actionLabel("btn.ok", "OK"), role: "primary",
                 onClick: (m) => {
+                    committing = true;
                     const dx = parseInt(inDx.value, 10) || 0;
                     const dy = parseInt(inDy.value, 10) || 0;
                     const n  = Math.max(1, parseInt(inN.value, 10) || 1);
+                    // Roll back the preview before the real apply so
+                    // _arrangeSelection's snapshot captures the
+                    // original baseline (otherwise undo would only
+                    // revert to a previewed state).
+                    restore();
+                    beadlist.update();
+                    view.draw();
                     _arrangeSelection(dx, dy, n);
                     m.close();
                 },
             },
         ],
+        onClose: () => {
+            // ESC / cancel / backdrop click — discard the preview.
+            if (!committing) {
+                restore();
+                beadlist.update();
+                view.draw();
+            }
+        },
     });
+}
+
+// ---- Selection group move ---------------------------------------
+//
+// "Pick up" everything in the pattern that matches the current
+// selection's content and drag it as a group. Anchored on three
+// gestures: mouse drag of an existing selection, Shift+Arrow on a
+// keyboard, and the toolbar arrow buttons (TODO).
+
+function _captureSelectionGroup() {
+    if (!pattern.selection) return null;
+    const sel = pattern.selection;
+    const W = sel.i2 - sel.i1 + 1;
+    const H = sel.j2 - sel.j1 + 1;
+    const PW = pattern.width;
+    const PH = pattern.height;
+    const total = PW * PH;
+    // The selection's "shape" is a set of linear offsets relative to
+    // the top-left bead's linear index. Working linearly (instead of
+    // in 2D x/y coordinates) means a 2x2 selection at the seam — say
+    // (W-1, j) wrapping into (0, j+1) — is still recognised as the
+    // same shape, so all symmetric copies move together when the
+    // group is dragged.
+    const offsets = [];
+    const values = [];
+    for (let m = 0; m < H; m++) {
+        for (let k = 0; k < W; k++) {
+            offsets.push(k + m * PW);
+            values.push(pattern.get(sel.i1 + k, sel.j1 + m));
+        }
+    }
+    const maxOffset = offsets[offsets.length - 1];
+    // Scan every linear base where the full shape stays in-bounds.
+    const matches = [];
+    for (let L = 0; L + maxOffset < total; L++) {
+        let ok = true;
+        for (let n = 0; n < offsets.length; n++) {
+            if (pattern.data[L + offsets[n]] !== values[n]) { ok = false; break; }
+        }
+        if (ok) matches.push(L);
+    }
+    return {
+        sel: { ...sel },
+        W, H, PW, PH, total,
+        offsets,
+        values,
+        matches,  // array of linear base positions
+        baseline: pattern.data.slice(),
+    };
+}
+
+// Render `group` translated by linear offset `dy * PW + dx`: restore
+// baseline, lift every match (paint background_color), stamp the
+// captured shape at the linearly-offset positions. Selection rect
+// moves by the (dx, dy) the user gestured; if that pushes it past the
+// seam the visual rect may extend outside the pattern (and won't be
+// drawn there) but the underlying data has wrapped correctly.
+function _stampSelectionGroup(group, dx, dy) {
+    const { sel, PW, total, offsets, values, matches, baseline } = group;
+    for (let k = 0; k < baseline.length; k++) pattern.data[k] = baseline[k];
+    for (const L of matches) {
+        for (const off of offsets) {
+            const tl = L + off;
+            if (tl < 0 || tl >= total) continue;
+            pattern.data[tl] = background_color;
+        }
+    }
+    const deltaLin = dy * PW + dx;
+    for (const L of matches) {
+        for (let n = 0; n < offsets.length; n++) {
+            const tl = L + offsets[n] + deltaLin;
+            if (tl < 0 || tl >= total) continue;
+            pattern.data[tl] = values[n];
+        }
+    }
+    pattern.selection = {
+        i1: sel.i1 + dx, j1: sel.j1 + dy,
+        i2: sel.i2 + dx, j2: sel.j2 + dy,
+    };
+}
+
+// Bounding rect over every linear position that the group either
+// lifts from or stamps into. Used by the snapshot for undo — it
+// over-captures (rect covers whole rows when cells are scattered),
+// but that's correct for `snapshotGridRegion`'s rectangular API.
+function _affectedRectForGroupMove(group, dx, dy) {
+    const { offsets, matches, PW, total } = group;
+    const deltaLin = dy * PW + dx;
+    let i1 = PW, j1 = group.PH, i2 = -1, j2 = -1;
+    const expand = (lin) => {
+        if (lin < 0 || lin >= total) return;
+        const x = lin % PW;
+        const y = Math.trunc(lin / PW);
+        if (x < i1) i1 = x;
+        if (y < j1) j1 = y;
+        if (x > i2) i2 = x;
+        if (y > j2) j2 = y;
+    };
+    for (const L of matches) {
+        for (const off of offsets) {
+            expand(L + off);
+            expand(L + off + deltaLin);
+        }
+    }
+    if (i2 < i1 || j2 < j1) return null;
+    return { i1, j1, i2, j2 };
+}
+
+// Single-arrow / toolbar entry point: capture, commit, push one undo
+// step. Called once per Shift+Arrow press / button click.
+function _moveSelectionGroup(dx, dy) {
+    if (!pattern.selection || readonly) return;
+    if (dx === 0 && dy === 0) return;
+    const group = _captureSelectionGroup();
+    if (!group) return;
+    _finalizeSelectionGroupMove(group, group.sel, dx, dy);
+}
+
+// Roll the live-preview mutation back to the baseline, snapshot the
+// affected region, then commandBus.execute the actual move so undo
+// reverts to the original state in one step.
+function _finalizeSelectionGroupMove(group, sel0, dx, dy) {
+    if (dx === 0 && dy === 0) {
+        // No-op drag — restore baseline and selection just in case
+        // the live preview drifted, but don't push an undo entry.
+        for (let k = 0; k < group.baseline.length; k++) {
+            pattern.data[k] = group.baseline[k];
+        }
+        pattern.selection = { ...sel0 };
+        beadlist.update();
+        view.draw();
+        _updateStatusbar();
+        return;
+    }
+    const affected = _affectedRectForGroupMove(group, dx, dy);
+    // Roll back any preview mutations before snapshotting.
+    for (let k = 0; k < group.baseline.length; k++) {
+        pattern.data[k] = group.baseline[k];
+    }
+    pattern.selection = { ...sel0 };
+    if (!affected) {
+        beadlist.update();
+        view.draw();
+        return;
+    }
+    const before = snapshotGridRegion(pattern, affected.i1, affected.j1,
+                                      affected.i2, affected.j2);
+    let firstApply = true;
+    commandBus.execute({
+        label: "selection.move",
+        apply: () => {
+            _stampSelectionGroup(group, dx, dy);
+            beadlist.update();
+            view.draw();
+            if (!firstApply) setModified();
+            firstApply = false;
+            _updateStatusbar();
+            ActionRegistry.notify();
+        },
+        revert: () => {
+            restoreGridRegion(pattern, before);
+            pattern.selection = { ...sel0 };
+            beadlist.update();
+            view.draw();
+            _updateStatusbar();
+            ActionRegistry.notify();
+        },
+    });
+    setModified();
+}
+
+
+// Pure mutation helper shared between the live-preview path in
+// _openArrangeDialog and the committed apply in _arrangeSelection.
+// Writes copies of `src` into pattern.data at linear-bead offsets
+// `k * (dy * PW + dx)` for k = 1..copies; out-of-bounds linear
+// indices are skipped.
+function _applyArrangeMutation(sel, src, W, H, PW, PH, dx, dy, copies) {
+    const linearOffset = dy * PW + dx;
+    if (copies < 1 || linearOffset === 0) return;
+    const total = PW * PH;
+    for (let k = 1; k <= copies; k++) {
+        for (let j = 0; j < H; j++) {
+            for (let i = 0; i < W; i++) {
+                const srcLin = (sel.j1 + j) * PW + (sel.i1 + i);
+                const tl = srcLin + k * linearOffset;
+                if (tl < 0 || tl >= total) continue;
+                pattern.set(tl % PW, Math.trunc(tl / PW), src[j][i]);
+            }
+        }
+    }
 }
 
 function _arrangeSelection(dx, dy, copies) {
@@ -1826,21 +2261,16 @@ function _arrangeSelection(dx, dy, copies) {
     const sel = pattern.selection;
     const W = sel.i2 - sel.i1 + 1;
     const H = sel.j2 - sel.j1 + 1;
-    // Snapshot the affected destination region (selection itself + all
-    // copy targets) so undo restores everything in one go.
-    let i1 = sel.i1, i2 = sel.i2, j1 = sel.j1, j2 = sel.j2;
-    for (let k = 1; k <= copies; k++) {
-        i1 = Math.min(i1, sel.i1 + dx * k);
-        i2 = Math.max(i2, sel.i2 + dx * k);
-        j1 = Math.min(j1, sel.j1 + dy * k);
-        j2 = Math.max(j2, sel.j2 + dy * k);
-    }
-    i1 = Math.max(0, i1);
-    j1 = Math.max(0, j1);
-    i2 = Math.min(pattern.width - 1, i2);
-    j2 = Math.min(pattern.height - 1, j2);
-    if (i1 > i2 || j1 > j2) return;
-    const before = snapshotGridRegion(pattern, i1, j1, i2, j2);
+    const PW = pattern.width;
+    const PH = pattern.height;
+    // (dx, dy) is interpreted as a *linear* bead offset: each successive
+    // copy is shifted by `dy * PW + dx` beads in the row-major linear
+    // order. So overflowing the right edge wraps to the next row up,
+    // matching how a beaded rope is arranged. (The desktop jbead's
+    // single-offset version is the same idea, just with dx folded into
+    // dy implicitly.)
+    const linearOffset = dy * PW + dx;
+    if (copies < 1 || linearOffset === 0) return;
     // Capture source cells before any writes (in case copies overlap).
     const src = [];
     for (let j = 0; j < H; j++) {
@@ -1848,20 +2278,28 @@ function _arrangeSelection(dx, dy, copies) {
         for (let i = 0; i < W; i++) row.push(pattern.get(sel.i1 + i, sel.j1 + j));
         src.push(row);
     }
+    // Snapshot region: the linear range from min to max target index
+    // is contiguous; for a rectangular snapshot we cover whole rows.
+    const total = PW * PH;
+    const sourceFirst = sel.j1 * PW + sel.i1;
+    const sourceLast  = sel.j2 * PW + sel.i2;
+    const targets = [
+        sourceFirst, sourceLast,
+        sourceFirst + copies * linearOffset,
+        sourceLast  + copies * linearOffset,
+    ];
+    let minLin = Math.min(...targets);
+    let maxLin = Math.max(...targets);
+    if (minLin < 0) minLin = 0;
+    if (maxLin >= total) maxLin = total - 1;
+    if (minLin > maxLin) return;
+    const i1 = 0;
+    const i2 = PW - 1;
+    const j1 = Math.trunc(minLin / PW);
+    const j2 = Math.trunc(maxLin / PW);
+    const before = snapshotGridRegion(pattern, i1, j1, i2, j2);
     const apply = () => {
-        for (let k = 1; k <= copies; k++) {
-            const ox = sel.i1 + dx * k;
-            const oy = sel.j1 + dy * k;
-            for (let j = 0; j < H; j++) {
-                const ty = oy + j;
-                if (ty < 0 || ty >= pattern.height) continue;
-                for (let i = 0; i < W; i++) {
-                    const tx = ox + i;
-                    if (tx < 0 || tx >= pattern.width) continue;
-                    pattern.set(tx, ty, src[j][i]);
-                }
-            }
-        }
+        _applyArrangeMutation(sel, src, W, H, PW, PH, dx, dy, copies);
         beadlist.update();
         view.draw();
         setModified();
@@ -1888,25 +2326,16 @@ function _shiftPattern(delta) {
     // repeat, draft and corrected views are unaffected — matching
     // desktop's Model.shift / SimulationPanel.getShift behaviour
     // (only ch.jbead.view.SimulationPanel reads the shift value).
+    //
+    // The shift is *not* part of the undo stack (a single keystroke
+    // reverses it) and does not mark the pattern modified — but it is
+    // persisted via savePatternData so save/load round-trips it.
     const W = pattern.width;
     const before = pattern.shift | 0;
     const after = (((before + delta) % W) + W) % W;
     if (after === before) return;
-    let applied = false;
-    commandBus.execute({
-        label: "shift",
-        apply: () => {
-            pattern.shift = after;
-            view.draw();
-            setModified();
-            applied = true;
-        },
-        revert: () => {
-            pattern.shift = before;
-            view.draw();
-            setModified();
-        },
-    });
+    pattern.shift = after;
+    view.draw();
 }
 
 
@@ -2029,6 +2458,63 @@ function _updateStatusbar() {
     }
 }
 
+// Discard in-memory edits and reload the pattern from the server.
+// Mirrors weave's _revertChanges in dbweave.js.
+async function _revertChanges() {
+    if (readonly || !modified) return;
+    if (!window.confirm(_actionLabel("file.revert-confirm",
+        "Discard all unsaved changes and reload the pattern from the server?"))) {
+        return;
+    }
+    await getPattern();
+
+    // Rebuild the in-memory model from the freshly-loaded `data`.
+    pattern = new Pattern(data.model[0].length, data.model.length);
+    beadlist = new BeadList(pattern);
+    initPattern(data, pattern);
+
+    // Re-apply persisted view state (kept in sync with init()).
+    const v = data['view'] || {};
+    if (v['selected-color'] != null) selected_color = v['selected-color'] | 0;
+    pattern.shift  = (v['shift']  != null) ? (v['shift']  | 0) : 0;
+    pattern.scroll = (v['scroll'] != null) ? (v['scroll'] | 0) : 0;
+    pattern.selection = null;
+    if (v['zoom'] != null) {
+        const z = v['zoom'] | 0;
+        if (z >= 4 && z <= 48) { settings.dx = z; settings.dy = z; }
+    }
+    if (v['draft-visible']      != null) show_draft      = !!v['draft-visible'];
+    if (v['corrected-visible']  != null) show_corrected  = !!v['corrected-visible'];
+    if (v['simulation-visible'] != null) show_simulation = !!v['simulation-visible'];
+    if (v['report-visible']     != null) show_report     = !!v['report-visible'];
+    if (typeof v['selected-tool'] === "string"
+        && ["pencil", "select", "fill", "pipette"].indexOf(v['selected-tool']) >= 0) {
+        current_tool = v['selected-tool'];
+    }
+    if (typeof v['symbols'] === "string" && v['symbols'].length > 0) {
+        pattern_symbols = v['symbols'];
+    }
+    if (v['draw-colors']  != null) draw_colors  = !!v['draw-colors'];
+    if (v['draw-symbols'] != null) draw_symbols = !!v['draw-symbols'];
+
+    // Wire the new pattern through the existing view; layout()
+    // re-creates the sub-views with the fresh pattern reference.
+    view.pattern  = pattern;
+    view.beadlist = beadlist;
+    view.layout();
+    beadlist.update();
+
+    if (commandBus) {
+        commandBus.undoStack.length = 0;
+        commandBus.redoStack.length = 0;
+    }
+    await clearModified();
+    _refreshScrollbar();
+    view.draw();
+    _updateStatusbar();
+    ActionRegistry.notify();
+}
+
 async function _printPattern() {
     if (!readonly) {
         saveSettings(data, settings);
@@ -2113,6 +2599,10 @@ function setupEditorActions() {
             savePattern();
         },
     });
+    reg("file.revert", {
+        enabledWhen: () => !readonly && modified,
+        handler: () => _revertChanges(),
+    });
     reg("file.print", {
         shortcut: "Ctrl+P",
         handler: () => _printPattern(),
@@ -2120,6 +2610,10 @@ function setupEditorActions() {
     reg("file.properties", {
         enabledWhen: () => !readonly,
         handler: () => _openPropertiesDialog(),
+    });
+    reg("file.page-setup", {
+        enabledWhen: () => !readonly,
+        handler: () => _openPageSetupDialog(),
     });
     reg("file.export-png",  { handler: () => _exportPattern("png")  });
     reg("file.export-jpeg", { handler: () => _exportPattern("jpeg") });
@@ -2256,6 +2750,29 @@ function setupEditorActions() {
         shortcut: "ArrowRight",
         handler: () => _shiftPattern(1),
     });
+    // Selection group move — Shift+Arrow on the keyboard. The same
+    // logic also runs from mouse drag (see _onMouseDown for select
+    // tool) so tablet users can drag the selection without a keyboard.
+    reg("selection.move-left", {
+        shortcut: "Shift+ArrowLeft",
+        enabledWhen: hasSelection,
+        handler: () => _moveSelectionGroup(-1, 0),
+    });
+    reg("selection.move-right", {
+        shortcut: "Shift+ArrowRight",
+        enabledWhen: hasSelection,
+        handler: () => _moveSelectionGroup(1, 0),
+    });
+    reg("selection.move-up", {
+        shortcut: "Shift+ArrowUp",
+        enabledWhen: hasSelection,
+        handler: () => _moveSelectionGroup(0, 1),
+    });
+    reg("selection.move-down", {
+        shortcut: "Shift+ArrowDown",
+        enabledWhen: hasSelection,
+        handler: () => _moveSelectionGroup(0, -1),
+    });
     reg("edit.arrange", {
         enabledWhen: hasSelection,
         handler: () => _openArrangeDialog(),
@@ -2301,6 +2818,7 @@ function setupEditorActions() {
     // Render menubar.
     const fileItems = [];
     if (!readonly) fileItems.push({ action: "file.save" });
+    if (!readonly) fileItems.push({ action: "file.revert" });
     fileItems.push({ action: "file.print" });
     fileItems.push({ label: _menuLabel("export", "Export"), items: [
         { action: "file.export-png" },
@@ -2310,6 +2828,7 @@ function setupEditorActions() {
     ]});
     fileItems.push({ separator: true });
     if (!readonly) fileItems.push({ action: "file.properties" });
+    if (!readonly) fileItems.push({ action: "file.page-setup" });
     fileItems.push({ action: "file.close" });
 
     const tree = [

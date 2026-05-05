@@ -44,6 +44,8 @@
     <script type="application/json" id="tx-i18n">{
         "actions": {
             "file.save":          {"label": {{ gettext('Save') | tojson }}},
+            "file.revert":        {"label": {{ gettext('Discard changes') | tojson }}},
+            "file.revert-confirm": {"label": {{ gettext('Discard all unsaved changes and reload the pattern from the server?') | tojson }}},
             "file.close":         {"label": {{ gettext('Close') | tojson }}},
             "file.print":         {"label": {{ gettext('Print…') | tojson }}},
             "file.export-png":    {"label": {{ gettext('PNG image…') | tojson }}},
@@ -96,6 +98,11 @@
             "btn.ok":            {"label": {{ gettext('OK') | tojson }}},
             "btn.cancel":        {"label": {{ gettext('Cancel') | tojson }}},
             "file.properties":     {"label": {{ gettext('Properties…') | tojson }}},
+            "file.page-setup":     {"label": {{ gettext('Page setup…') | tojson }}},
+            "page-setup.title":    {"label": {{ gettext('Page setup') | tojson }}},
+            "page-setup.header":   {"label": {{ gettext('Header:') | tojson }}},
+            "page-setup.footer":   {"label": {{ gettext('Footer:') | tojson }}},
+            "page-setup.tokens":   {"label": {{ gettext('Tokens: &Pattern, &Author, &Organisation, &File, &Page') | tojson }}},
             "props.title":         {"label": {{ gettext('Properties') | tojson }}},
             "props.author":        {"label": {{ gettext('Author:') | tojson }}},
             "props.organization":  {"label": {{ gettext('Organization:') | tojson }}},
