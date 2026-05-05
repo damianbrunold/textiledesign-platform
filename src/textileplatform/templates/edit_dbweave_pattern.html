@@ -41,6 +41,11 @@
     <input type="hidden" id="darkmode" value="{% if g.user and g.user.darkmode is sameas true %}True{% elif g.user and g.user.darkmode is sameas false %}False{% else %}auto{% endif %}"/>
     <input type="hidden" id="readonly" value="{{readonly}}"/>
 
+    {# Server-side per-user editor preferences. Replaces the legacy
+       localStorage prefs; the dbweave editor reads it on load and
+       PUTs updates back via /api/user/settings. #}
+    <script type="application/json" id="tx-user-settings">{{ (user_settings or {}) | tojson }}</script>
+
     {# Translated labels for actions and menus (JS cannot call gettext). #}
     <script type="application/json" id="tx-i18n">{
         "actions": {

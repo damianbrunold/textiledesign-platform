@@ -2641,6 +2641,21 @@ function _renderBeadThumbnail(currentData, w, h) {
 
 
 window.captureThumbnails = function (currentData) {
+    // Empty patterns (no painted cells) get explicit nulls so the
+    // server clears any prior thumbnail. Mirrors the dbweave editor.
+    const model = currentData && currentData.model;
+    let hasContent = false;
+    if (Array.isArray(model)) {
+        outer: for (const row of model) {
+            if (!Array.isArray(row)) continue;
+            for (const c of row) {
+                if (c) { hasContent = true; break outer; }
+            }
+        }
+    }
+    if (!hasContent) {
+        return { thumbnail: null, preview: null };
+    }
     try {
         // Wider than the weave editor's 192×96 / 512×256 — bead
         // patterns need horizontal room because the rendered draft

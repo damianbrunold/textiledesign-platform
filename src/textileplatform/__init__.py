@@ -250,7 +250,7 @@ def create_weave_pattern(user_name, pattern_name):
         pattern["direction_righttoleft"] = False
         pattern["directon_toptobottom"] = False
         pattern["direction_entering_at_bottom"] = False
-        pattern["entering_style"] = "dash"
+        pattern["entering_style"] = "vdash"
         pattern["treadling_style"] = "dot"
         pattern["tieup_style"] = "cross"
         pattern["weave_style"] = "draft"

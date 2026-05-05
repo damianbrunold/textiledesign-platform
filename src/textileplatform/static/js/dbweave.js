@@ -819,6 +819,23 @@ class Grid {
         for (let j = 0; j < this.height; j++) this.set(this.width - 1, j, 0);
     }
 
+    // Grow or shrink the grid in place, preserving values in the overlap
+    // and zero-filling new cells. Used by the Optionen dialog when the
+    // user changes warp/weft/shaft/treadle counts on an existing pattern.
+    resize(newW, newH) {
+        const w = Math.min(this.width, newW);
+        const h = Math.min(this.height, newH);
+        const nd = new Array(newW * newH).fill(0);
+        for (let j = 0; j < h; j++) {
+            for (let i = 0; i < w; i++) {
+                nd[i + j * newW] = this.data[i + j * this.width];
+            }
+        }
+        this.width = newW;
+        this.height = newH;
+        this.data = nd;
+    }
+
     swapRows(a, b) {
         if (a === b) return;
         for (let i = 0; i < this.width; i++) {
@@ -1065,6 +1082,20 @@ class Entering {
         if (shaft !== j + 1) {
             this.set_shaft(i, j + 1);
         }
+    }
+
+    // Resize. width is the warp count; height is max_shafts. Shafts that
+    // would point past the new max are reset to 0.
+    resize(newW, newH) {
+        const w = Math.min(this.width, newW);
+        const nd = new Array(newW).fill(0);
+        for (let i = 0; i < w; i++) {
+            const s = this.data[i];
+            nd[i] = (s > 0 && s <= newH) ? s : 0;
+        }
+        this.width = newW;
+        this.height = newH;
+        this.data = nd;
     }
 
     // Insert empty slot at index `at`; shift right; last slot dropped.
@@ -1891,6 +1922,33 @@ class Pattern {
         // the 0-based pattern index. Direct port of Hilfslinien class
         // (hilfslinien.cpp / .h).
         this.hlines = [];
+    }
+
+    // Resize all constituent grids to the new warp/weft/shaft/treadle
+    // counts, preserving overlapping cells. Used by the Optionen dialog
+    // (For this pattern… / Global…) so the user can grow or shrink an
+    // existing pattern. Caller is responsible for rebuilding the flat
+    // arrays in `data` and triggering view.layout() / recalc_weave().
+    resize(newW, newH, newMS, newMT) {
+        this.color_warp.resize(newW, 1);
+        this.empty_warp.resize(newW, 1);
+        this.color_weft.resize(1, newH);
+        this.empty_weft.resize(1, newH);
+        this.reed.resize(newW, 1);
+        this.entering.resize(newW, newMS);
+        this.tieup.resize(newMT, newMS);
+        this.treadling.resize(newMT, newH);
+        this.pegplan.resize(newMS, newH);
+        this.weave.resize(newW, newH);
+        const fw = Math.min(this.fixeinzug.length, newW);
+        const newFix = new Array(newW).fill(0);
+        for (let i = 0; i < fw; i++) {
+            const v = this.fixeinzug[i] | 0;
+            newFix[i] = (v > 0 && v <= newMS) ? v : 0;
+        }
+        this.fixeinzug = newFix;
+        if (this.fixsize    > newW) this.fixsize    = newW;
+        if (this.firstfree  > newW) this.firstfree  = newW;
     }
 
     recalc_weave() {
@@ -4836,7 +4894,8 @@ function get_current_layout(settings) {
         && settings.direction_toptobottom === false
         && settings.entering_at_bottom === false) {
         return "US";
-    } else if (settings.entering_style === "dash"
+    } else if ((settings.entering_style === "vdash"
+                || settings.entering_style === "dash")
         && settings.tieup_style === "cross"
         && settings.treadling_style === "dot"
         && settings.direction_righttoleft === false
@@ -4858,7 +4917,7 @@ function get_current_layout(settings) {
 
 function set_current_layout(layout) {
     if (layout === "DE") {
-        settings.entering_style = "dash";
+        settings.entering_style = "vdash";
         settings.treadling_style = "dot";
         settings.tieup_style = "cross";
         settings.entering_at_bottom = false;
@@ -5964,6 +6023,101 @@ function _restoreFullPatternSnapshot(s) {
     if (typeof s.firstfree === "number") pattern.firstfree = s.firstfree;
     pattern.min_x = s.min_x; pattern.max_x = s.max_x;
     pattern.min_y = s.min_y; pattern.max_y = s.max_y;
+}
+
+// Snapshot variant that also captures dimensions and the per-grid sizes,
+// for resize commands. _restoreDimsSnapshot rebuilds each grid at the
+// stored dims and refills its data, then mirrors the dims into `data` so
+// savePatternData iterates over the right ranges.
+function _patternDimsSnapshot() {
+    return {
+        width:        pattern.weave.width,
+        height:       pattern.weave.height,
+        max_shafts:   pattern.tieup.height,
+        max_treadles: pattern.tieup.width,
+        entering:     pattern.entering.data.slice(),
+        weave:        pattern.weave.data.slice(),
+        treadling:    pattern.treadling.data.slice(),
+        tieup:        pattern.tieup.data.slice(),
+        pegplan:      pattern.pegplan.data.slice(),
+        color_warp:   pattern.color_warp.data.slice(),
+        color_weft:   pattern.color_weft.data.slice(),
+        empty_warp:   pattern.empty_warp.data.slice(),
+        empty_weft:   pattern.empty_weft.data.slice(),
+        reed:         pattern.reed.data.slice(),
+        fixeinzug:    pattern.fixeinzug.slice(),
+        fixsize:      pattern.fixsize,
+        firstfree:    pattern.firstfree,
+        min_x: pattern.min_x, max_x: pattern.max_x,
+        min_y: pattern.min_y, max_y: pattern.max_y,
+    };
+}
+
+function _restorePatternDims(s) {
+    pattern.weave.width      = s.width;       pattern.weave.height      = s.height;       pattern.weave.data      = s.weave.slice();
+    pattern.color_warp.width = s.width;       pattern.color_warp.height = 1;              pattern.color_warp.data = s.color_warp.slice();
+    pattern.empty_warp.width = s.width;       pattern.empty_warp.height = 1;              pattern.empty_warp.data = s.empty_warp.slice();
+    pattern.color_weft.width = 1;             pattern.color_weft.height = s.height;       pattern.color_weft.data = s.color_weft.slice();
+    pattern.empty_weft.width = 1;             pattern.empty_weft.height = s.height;       pattern.empty_weft.data = s.empty_weft.slice();
+    pattern.reed.width       = s.width;       pattern.reed.height       = 1;              pattern.reed.data       = s.reed.slice();
+    pattern.entering.width   = s.width;       pattern.entering.height   = s.max_shafts;   pattern.entering.data   = s.entering.slice();
+    pattern.tieup.width      = s.max_treadles; pattern.tieup.height     = s.max_shafts;   pattern.tieup.data      = s.tieup.slice();
+    pattern.treadling.width  = s.max_treadles; pattern.treadling.height = s.height;       pattern.treadling.data  = s.treadling.slice();
+    pattern.pegplan.width    = s.max_shafts;  pattern.pegplan.height    = s.height;       pattern.pegplan.data    = s.pegplan.slice();
+    pattern.fixeinzug = s.fixeinzug.slice();
+    pattern.fixsize   = s.fixsize;
+    pattern.firstfree = s.firstfree;
+    pattern.min_x = s.min_x; pattern.max_x = s.max_x;
+    pattern.min_y = s.min_y; pattern.max_y = s.max_y;
+    if (typeof data !== "undefined" && data) {
+        data.width        = s.width;
+        data.height       = s.height;
+        data.max_shafts   = s.max_shafts;
+        data.max_treadles = s.max_treadles;
+        // Resize the flat arrays so savePatternData's index-based writes
+        // never run off the end. Their contents are rebuilt from the
+        // pattern grids on save, so zero-fill is fine here.
+        data.data_entering  = new Array(s.width).fill(0);
+        data.data_reed      = new Array(s.width).fill(0);
+        data.colors_warp    = new Array(s.width).fill(0);
+        data.colors_weft    = new Array(s.height).fill(0);
+        data.data_treadling = new Array(s.max_treadles * s.height).fill(0);
+        data.data_tieup     = new Array(s.max_treadles * s.max_shafts).fill(0);
+        data.data_pegplan   = new Array(s.max_shafts * s.height).fill(0);
+    }
+}
+
+// Resize the active pattern. Wrapped as one undoable command; layout is
+// re-run on apply/revert so scrollbars + visible-extent caps update.
+function _resizePatternCommand(newW, newH, newMS, newMT) {
+    if (readonly) return false;
+    const cw  = pattern.weave.width;
+    const ch  = pattern.weave.height;
+    const cms = pattern.tieup.height;
+    const cmt = pattern.tieup.width;
+    if (newW === cw && newH === ch && newMS === cms && newMT === cmt) {
+        return false;
+    }
+    const before = _patternDimsSnapshot();
+    pattern.resize(newW, newH, newMS, newMT);
+    pattern.recalc_weave();
+    const after = _patternDimsSnapshot();
+    _restorePatternDims(before);
+    const finalize = () => {
+        setModified();
+        if (typeof view !== "undefined" && view) {
+            view.layout();
+            view.draw();
+        }
+    };
+    const cmd = {
+        label: "resize pattern",
+        apply()  { _restorePatternDims(after);  finalize(); },
+        revert() { _restorePatternDims(before); finalize(); },
+    };
+    if (commandBus) commandBus.execute(cmd);
+    else cmd.apply();
+    return true;
 }
 
 // Wrap a mutation that changes pattern structure as one undoable command.
@@ -10344,7 +10498,6 @@ function _colorsWeftFromWarp() {
 // and persisted, but their value has no in-app effect yet — they
 // graduate to actual behaviour as those features land.
 
-const _PREFS_KEY = "tx_dbweave_prefs_v1";
 const _PREFS_DEFAULTS = {
     // Symbols
     entering_style:    "vdash",
@@ -10364,14 +10517,14 @@ const _PREFS_DEFAULTS = {
     // Einstellungen
     single_treadling: true,
     sinking_shed:     false,
-    // Grössen — desktop allows resizing; web pattern dimensions are
-    // fixed at create time, so these are display-only / no-op.
+    // Grössen — used as defaults for new patterns and seed values for
+    // the editor's Optionen dialog.
     max_shafts:       16,
     max_treadles:     16,
     visible_shafts:   16,
     visible_treadles: 16,
-    warp_threads:     400,
-    weft_threads:     400,
+    warp_threads:     300,
+    weft_threads:     300,
     // Raster (== unit_width / unit_height in the existing setting)
     unit_width:  4,
     unit_height: 4,
@@ -10380,22 +10533,46 @@ const _PREFS_DEFAULTS = {
     weft_factor: 1.0,
 };
 
-function _prefsLoad() {
+// Per-user editor prefs are stored on the server (User.settings, JSON).
+// The editor template embeds the current document under
+// <script id="tx-user-settings">, and we cache the dbweave subtree here
+// so dialogs can read/write synchronously. Saves PUT to the API in the
+// background; failures are logged but don't block the UI.
+let _prefsCache = null;
+
+function _prefsRead() {
+    if (_prefsCache) return _prefsCache;
+    let dbw = {};
     try {
-        const raw = window.localStorage.getItem(_PREFS_KEY);
-        if (!raw) return Object.assign({}, _PREFS_DEFAULTS);
-        const obj = JSON.parse(raw);
-        return Object.assign({}, _PREFS_DEFAULTS, obj);
-    } catch (e) {
-        return Object.assign({}, _PREFS_DEFAULTS);
-    }
+        const el = document.getElementById("tx-user-settings");
+        if (el && el.textContent) {
+            const all = JSON.parse(el.textContent);
+            if (all && typeof all === "object" && all.dbweave
+                && typeof all.dbweave === "object") {
+                dbw = all.dbweave;
+            }
+        }
+    } catch (e) { /* fall through to defaults */ }
+    _prefsCache = Object.assign({}, _PREFS_DEFAULTS, dbw);
+    return _prefsCache;
+}
+
+function _prefsLoad() {
+    return Object.assign({}, _prefsRead());
 }
 
 function _prefsSave(prefs) {
+    _prefsCache = Object.assign({}, _PREFS_DEFAULTS, prefs);
+    if (readonly) return;
     try {
-        window.localStorage.setItem(_PREFS_KEY, JSON.stringify(prefs));
+        fetch("/api/user/settings", {
+            method: "PUT",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dbweave: _prefsCache }),
+        }).catch((e) => console.warn("settings save failed", e));
     } catch (e) {
-        // Quota / private mode — silently ignore. Prefs are best-effort.
+        console.warn("settings save failed", e);
     }
 }
 
@@ -10551,12 +10728,19 @@ function showOptionsDialog(global) {
         alt_pegplan: !!(settings.alt_pegplan ?? prefs.alt_pegplan),
         single_treadling: settings.single_treadling !== false,
         sinking_shed: !!(settings.sinking_shed ?? prefs.sinking_shed),
-        max_shafts:       (pattern && pattern.tieup) ? pattern.tieup.height : prefs.max_shafts,
-        max_treadles:     (pattern && pattern.tieup) ? pattern.tieup.width  : prefs.max_treadles,
+        // For "Global…" the sizes are the defaults for *future* patterns,
+        // so seed from prefs. For "For this pattern…" they reflect the
+        // active pattern's actual dimensions.
+        max_shafts:       global ? prefs.max_shafts
+            : ((pattern && pattern.tieup)  ? pattern.tieup.height : prefs.max_shafts),
+        max_treadles:     global ? prefs.max_treadles
+            : ((pattern && pattern.tieup)  ? pattern.tieup.width  : prefs.max_treadles),
         visible_shafts:   prefs.visible_shafts,
         visible_treadles: prefs.visible_treadles,
-        warp_threads:     (pattern && pattern.weave) ? pattern.weave.width  : prefs.warp_threads,
-        weft_threads:     (pattern && pattern.weave) ? pattern.weave.height : prefs.weft_threads,
+        warp_threads:     global ? prefs.warp_threads
+            : ((pattern && pattern.weave)  ? pattern.weave.width  : prefs.warp_threads),
+        weft_threads:     global ? prefs.weft_threads
+            : ((pattern && pattern.weave)  ? pattern.weave.height : prefs.weft_threads),
         unit_width:  settings.unit_width  | 0 || prefs.unit_width,
         unit_height: settings.unit_height | 0 || prefs.unit_height,
         warp_factor: +settings.warp_factor || prefs.warp_factor,
@@ -10602,10 +10786,6 @@ function showOptionsDialog(global) {
                     <input id="tx-opt-vtreadles" type="number" min="0" max="100" step="1">
                 </div>
             </fieldset>
-            <div style="margin-top:0.4rem;font-size:0.85em;color:#888">
-                ${L("opt.size-note",
-                    "Pattern dimensions are fixed at create time in the web editor; the values are kept for forward compatibility.")}
-            </div>
         </div>
         <div class="tx-tab-pane" data-pane="view" style="display:none;padding:0.6rem 0">
             <div style="display:flex;flex-direction:column;gap:0.3rem">
@@ -10683,13 +10863,22 @@ function showOptionsDialog(global) {
     $("#tx-opt-fewr").checked    = cur.color_effect_with_grid;
     $("#tx-opt-altpal").checked  = cur.alt_palette;
     $("#tx-opt-altpeg").checked  = cur.alt_pegplan;
-    $("#tx-opt-sym-ez").value      = cur.entering_style;
-    $("#tx-opt-sym-tf").value      = cur.treadling_style;
-    $("#tx-opt-sym-au").value      = cur.tieup_style;
-    $("#tx-opt-sym-sp").value      = cur.pegplan_style;
-    $("#tx-opt-sym-au-lift").value = cur.aushebung_style;
-    $("#tx-opt-sym-anb").value     = cur.anbindung_style;
-    $("#tx-opt-sym-abb").value     = cur.abbindung_style;
+    // Normalise style keys to the closest entry in _SYMBOL_OPTS. Legacy
+    // patterns may carry painter aliases (e.g. "dash" → "vdash") that
+    // render correctly via cellPainters but aren't listed in the dialog,
+    // which would otherwise leave the <select> displaying blank.
+    const _SYMBOL_KEYS = new Set(_SYMBOL_OPTS.map(([k]) => k));
+    const _normSym = (v, fallback) => {
+        if (v === "dash") return "vdash";
+        return _SYMBOL_KEYS.has(v) ? v : fallback;
+    };
+    $("#tx-opt-sym-ez").value      = _normSym(cur.entering_style,  "vdash");
+    $("#tx-opt-sym-tf").value      = _normSym(cur.treadling_style, "dot");
+    $("#tx-opt-sym-au").value      = _normSym(cur.tieup_style,     "cross");
+    $("#tx-opt-sym-sp").value      = _normSym(cur.pegplan_style,   "filled");
+    $("#tx-opt-sym-au-lift").value = _normSym(cur.aushebung_style, "rising");
+    $("#tx-opt-sym-anb").value     = _normSym(cur.anbindung_style, "cross");
+    $("#tx-opt-sym-abb").value     = _normSym(cur.abbindung_style, "circle");
     $$("input[name='tx-opt-tt']").forEach(r => r.checked = (r.value === (cur.single_treadling ? "single" : "multi")));
     $$("input[name='tx-opt-shed']").forEach(r => r.checked = (r.value === (cur.sinking_shed ? "sinking" : "rising")));
     $("#tx-opt-uw").value = cur.unit_width;
@@ -10732,6 +10921,15 @@ function showOptionsDialog(global) {
     let modal;
     const accept = () => {
         const opts = collect();
+        // Resize the pattern grids if any of warp/weft/shafts/treadles
+        // changed. _resizePatternCommand is a no-op when dims are equal,
+        // so it's safe to call unconditionally; it pushes its own undo
+        // entry separate from the settings change below.
+        const nw  = Math.max(1, opts.warp_threads     | 0);
+        const nh  = Math.max(1, opts.weft_threads     | 0);
+        const nms = Math.max(1, opts.max_shafts       | 0);
+        const nmt = Math.max(1, opts.max_treadles     | 0);
+        _resizePatternCommand(nw, nh, nms, nmt);
         _optionsApplyToSettings(opts);
         if (global) {
             const prefs = _prefsLoad();
@@ -12440,6 +12638,18 @@ function _renderTwoPaneToCanvas(data, pat, w, h) {
 
 window.captureThumbnails = function(currentData) {
     if (typeof pattern === "undefined" || !pattern) return null;
+    // Empty patterns (no warp threads entered, no woven cells) get no
+    // thumbnail. Returning explicit nulls instead of skipping capture
+    // lets the server clear any prior thumbnail when a pattern is
+    // erased back to empty.
+    const hasContent =
+        (pattern.weave && pattern.weave.data
+            && pattern.weave.data.some(v => v > 0))
+        || (pattern.entering && pattern.entering.data
+            && pattern.entering.data.some(v => v > 0));
+    if (!hasContent) {
+        return { thumbnail: null, preview: null };
+    }
     try {
         const tCanvas = _renderTwoPaneToCanvas(currentData, pattern, 192, 96);
         const pCanvas = _renderTwoPaneToCanvas(currentData, pattern, 512, 256);

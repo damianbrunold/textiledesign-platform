@@ -423,9 +423,19 @@
     applySort();
 
     // ---- Section actions: + new, ↑ upload --------------------------
+    // Defaults seeded from the user's server-side editor settings so
+    // changes via the dbweave Optionen ▸ Global… dialog flow through to
+    // the inline "+ new" form. Falls back to per-editor sensible
+    // defaults when no preference is set.
+    {%- set dbw = (user_settings or {}).get('dbweave', {}) %}
+    {%- set bead = (user_settings or {}).get('jbead', {}) %}
+    {%- set dbw_w = dbw.get('warp_threads') if dbw.get('warp_threads', 0) > 0 else 300 %}
+    {%- set dbw_h = dbw.get('weft_threads') if dbw.get('weft_threads', 0) > 0 else 300 %}
+    {%- set bead_w = bead.get('width') if bead.get('width', 0) > 0 else 12 %}
+    {%- set bead_h = bead.get('height') if bead.get('height', 0) > 0 else 200 %}
     const PATTERN_DEFAULTS = {
-        weave: { type: 'DB-WEAVE Pattern', width: 50, height: 50 },
-        bead:  { type: 'JBead Pattern',     width: 12, height: 300 },
+        weave: { type: 'DB-WEAVE Pattern', width: {{ dbw_w }}, height: {{ dbw_h }} },
+        bead:  { type: 'JBead Pattern',     width: {{ bead_w }}, height: {{ bead_h }} },
     };
     const uploadInput = document.getElementById('hidden-upload-input');
     const uploadForm  = document.getElementById('hidden-upload-form');

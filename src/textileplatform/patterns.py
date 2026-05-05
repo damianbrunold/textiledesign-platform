@@ -56,39 +56,46 @@ def extract_pattern_metadata(pattern_dict, pattern_type):
                         for v in treadling[base:base + max_treadles]
                     ):
                         used_h = j + 1
-            md["pattern_width"] = used_w if used_w > 0 else (
-                int(pattern_dict.get("width") or 0) or None
-            )
-            md["pattern_height"] = used_h if used_h > 0 else (
-                int(pattern_dict.get("height") or 0) or None
-            )
-            ka = pattern_dict.get("rapport_k_a")
-            kb = pattern_dict.get("rapport_k_b")
-            sa = pattern_dict.get("rapport_s_a")
-            sb = pattern_dict.get("rapport_s_b")
-            if (
-                isinstance(ka, int) and isinstance(kb, int)
-                and kb >= ka and ka >= 0
-            ):
-                md["rapport_width"] = kb - ka + 1
-            if (
-                isinstance(sa, int) and isinstance(sb, int)
-                and sb >= sa and sa >= 0
-            ):
-                md["rapport_height"] = sb - sa + 1
+            # Empty patterns (no entering / no treadling) report no size
+            # rather than the full canvas dimensions — those would be
+            # misleading ("how big is the pattern actually" → nothing).
+            md["pattern_width"] = used_w if used_w > 0 else None
+            md["pattern_height"] = used_h if used_h > 0 else None
+            # Empty patterns get no rapport either: the editor's
+            # calcRapport collapses min_x=max_x=0 / min_y=max_y=0 into a
+            # 1×1 rapport, which would render as "r:1×1" in the listing
+            # and confuse the user.
+            if used_w > 0 and used_h > 0:
+                ka = pattern_dict.get("rapport_k_a")
+                kb = pattern_dict.get("rapport_k_b")
+                sa = pattern_dict.get("rapport_s_a")
+                sb = pattern_dict.get("rapport_s_b")
+                if (
+                    isinstance(ka, int) and isinstance(kb, int)
+                    and kb >= ka and ka >= 0
+                ):
+                    md["rapport_width"] = kb - ka + 1
+                if (
+                    isinstance(sa, int) and isinstance(sb, int)
+                    and sb >= sa and sa >= 0
+                ):
+                    md["rapport_height"] = sb - sa + 1
         elif pattern_type == "JBead Pattern":
             model = pattern_dict.get("model")
             if isinstance(model, list) and model:
-                first = model[0]
-                if isinstance(first, list):
-                    md["pattern_width"] = len(first)
                 # Used height: highest row index containing a non-zero
-                # cell (matches the editor's runtime usedHeight).
+                # cell (matches the editor's runtime usedHeight). For
+                # empty patterns (every row blank) report no size — the
+                # full canvas height would be misleading.
                 used_h = 0
                 for j, row in enumerate(model):
                     if isinstance(row, list) and any(c for c in row):
                         used_h = j + 1
-                md["pattern_height"] = used_h or len(model)
+                if used_h > 0:
+                    first = model[0]
+                    if isinstance(first, list):
+                        md["pattern_width"] = len(first)
+                    md["pattern_height"] = used_h
             repeat = pattern_dict.get("repeat")
             if isinstance(repeat, int) and repeat > 0:
                 md["rapport_height"] = repeat

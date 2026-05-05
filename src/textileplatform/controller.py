@@ -272,6 +272,16 @@ def user(user_name):
             active = user.name if user.name in patterns_by_group else (
                 groups[0]["name"] if groups else user.name
             )
+        try:
+            user_settings = (
+                json.loads(g.user.settings)
+                if g.user and g.user.settings
+                else {}
+            )
+            if not isinstance(user_settings, dict):
+                user_settings = {}
+        except Exception:
+            user_settings = {}
         return render_template(
             "user_private.html",
             user=user,
@@ -279,6 +289,7 @@ def user(user_name):
             groups=groups,
             patterns_by_group=patterns_by_group,
             active_group=active,
+            user_settings=user_settings,
         )
     else:
         # Public view: same metadata shape as the private view so the
@@ -355,12 +366,24 @@ def edit_pattern(user_name, pattern_name):
         for idx, value in enumerate(pattern.pattern["data_reed"]):
             if value is None:
                 pattern.pattern["data_reed"][idx] = 0
+        viewer = g.user
+        try:
+            user_settings = (
+                json.loads(viewer.settings)
+                if viewer and viewer.settings
+                else {}
+            )
+            if not isinstance(user_settings, dict):
+                user_settings = {}
+        except Exception:
+            user_settings = {}
         return render_template(
             "edit_dbweave_pattern.html",
             user=user,
             pattern=pattern,
             readonly=readonly,
             origin=origin,
+            user_settings=user_settings,
         )
     elif pattern.pattern_type == "JBead Pattern":
         return render_template(
@@ -1014,190 +1037,193 @@ def upload_pattern():
     return render_template("upload_pattern.html", user=g.user)
 
 
-@app.route("/patterns/create", methods=("GET", "POST"))
+@app.route("/patterns/create", methods=("POST",))
 @login_required
 def create_pattern():
-    if request.method == "POST":
-        if request.form["pattern_type"] == "DB-WEAVE Pattern":
-            name = request.form["name"]
-            width = request.form["width"]
-            height = request.form["height"]
+    # POST-only: invoked exclusively by the inline "+ new" button on the
+    # user listing page. There is no GET form — defaults are seeded from
+    # the user's server-side editor settings on the listing template.
+    pattern_type = request.form.get("pattern_type")
+    if pattern_type == "DB-WEAVE Pattern":
+        name = request.form["name"]
+        width = request.form["width"]
+        height = request.form["height"]
 
-            errors = False
+        errors = False
 
-            if not name:
-                flash(gettext("Please provide a name for the pattern"))
-                errors = True
+        if not name:
+            flash(gettext("Please provide a name for the pattern"))
+            errors = True
 
-            try:
-                width = int(width)
-                print(width)
-                if width < 10 or 1000 < width:
-                    flash(gettext("Width must be between 10 and 1000"))
-                    errors = True
-            except ValueError:
+        try:
+            width = int(width)
+            if width < 10 or 1000 < width:
                 flash(gettext("Width must be between 10 and 1000"))
                 errors = True
+        except ValueError:
+            flash(gettext("Width must be between 10 and 1000"))
+            errors = True
 
-            try:
-                height = int(height)
-                print(height)
-                if height < 10 or 1000 < height:
-                    flash(gettext("Height must be between 10 and 1000"))
-                    errors = True
-            except ValueError:
+        try:
+            height = int(height)
+            if height < 10 or 1000 < height:
                 flash(gettext("Height must be between 10 and 1000"))
                 errors = True
+        except ValueError:
+            flash(gettext("Height must be between 10 and 1000"))
+            errors = True
 
-            pattern = dict()
-            pattern["name"] = name
-            pattern["author"] = g.user.label
-            pattern["organization"] = ""
-            pattern["notes"] = ""
+        pattern = dict()
+        pattern["name"] = name
+        pattern["author"] = g.user.label
+        pattern["organization"] = ""
+        pattern["notes"] = ""
 
-            pattern["width"] = width
-            pattern["height"] = height
-            pattern["max_shafts"] = 32
-            pattern["max_treadles"] = 32
+        pattern["width"] = width
+        pattern["height"] = height
+        pattern["max_shafts"] = 32
+        pattern["max_treadles"] = 32
 
-            pattern["data_entering"] = [0] * width
-            pattern["data_tieup"] = (
-                [0] * (pattern["max_shafts"] * pattern["max_treadles"])
-            )
-            pattern["data_treadling"] = (
-                [0] * (pattern["max_treadles"] * height)
-            )
-            pattern["data_reed"] = (
-                ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
-            )
+        pattern["data_entering"] = [0] * width
+        pattern["data_tieup"] = (
+            [0] * (pattern["max_shafts"] * pattern["max_treadles"])
+        )
+        pattern["data_treadling"] = (
+            [0] * (pattern["max_treadles"] * height)
+        )
+        pattern["data_reed"] = (
+            ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
+        )
 
-            # TODO use user default color
-            pattern["colors_warp"] = [55] * width
-            # TODO use user default color
-            pattern["colors_weft"] = [49] * height
+        # TODO use user default color
+        pattern["colors_warp"] = [55] * width
+        # TODO use user default color
+        pattern["colors_weft"] = [49] * height
 
-            # TODO use user default palette?
-            pattern["palette"] = default_weave_palette[:]
+        # TODO use user default palette?
+        pattern["palette"] = default_weave_palette[:]
 
-            pattern["visible_shafts"] = 12
-            pattern["visible_treadles"] = 12
-            pattern["warp_lifting"] = True
-            pattern["zoom"] = 3
-            pattern["single_treadling"] = True
+        pattern["visible_shafts"] = 12
+        pattern["visible_treadles"] = 12
+        pattern["warp_lifting"] = True
+        pattern["zoom"] = 3
+        pattern["single_treadling"] = True
 
-            pattern["display_repeat"] = False
-            pattern["display_reed"] = True
-            pattern["display_colors_warp"] = True
-            pattern["display_colors_weft"] = True
-            pattern["display_entering"] = True
-            pattern["display_threading"] = True
+        pattern["display_repeat"] = False
+        pattern["display_reed"] = True
+        pattern["display_colors_warp"] = True
+        pattern["display_colors_weft"] = True
+        pattern["display_entering"] = True
+        pattern["display_threading"] = True
 
-            # TODO use user defaults
-            pattern["direction_righttoleft"] = False
-            pattern["directon_toptobottom"] = False
-            pattern["direction_entering_at_bottom"] = False
-            pattern["entering_style"] = "dash"
-            pattern["treadling_style"] = "dot"
-            pattern["tieup_style"] = "cross"
+        # TODO use user defaults
+        pattern["direction_righttoleft"] = False
+        pattern["directon_toptobottom"] = False
+        pattern["direction_entering_at_bottom"] = False
+        pattern["entering_style"] = "vdash"
+        pattern["treadling_style"] = "dot"
+        pattern["tieup_style"] = "cross"
 
-            pattern["weave_style"] = "draft"
+        pattern["weave_style"] = "draft"
 
-            if not errors:
-                try:
-                    name = add_weave_pattern(pattern, g.user)
-                    return redirect(url_for("edit_pattern",
-                                            user_name=g.user.name,
-                                            pattern_name=name))
-                except HTTPException:
-                    raise
-                except Exception:
-                    logging.exception("Failed to create pattern")
-                    flash(gettext("Failed to create pattern"))
-
-        elif request.form["pattern_type"] == "JBead Pattern":
-            label = request.form["name"]
-            width = request.form["width"]
-            height = request.form["height"]
-
-            errors = False
-
-            if not label:
-                flash(gettext("Please provide a name for the pattern"))
-                errors = True
-
+        if not errors:
             try:
-                width = int(width)
-                if width < 6 or 100 < width:
-                    flash(gettext("Width must be between 6 and 100"))
-                    errors = True
-            except ValueError:
+                name = add_weave_pattern(pattern, g.user)
+                return redirect(url_for("edit_pattern",
+                                        user_name=g.user.name,
+                                        pattern_name=name))
+            except HTTPException:
+                raise
+            except Exception:
+                logging.exception("Failed to create pattern")
+                flash(gettext("Failed to create pattern"))
+
+    elif pattern_type == "JBead Pattern":
+        label = request.form["name"]
+        width = request.form["width"]
+        height = request.form["height"]
+
+        errors = False
+
+        if not label:
+            flash(gettext("Please provide a name for the pattern"))
+            errors = True
+
+        try:
+            width = int(width)
+            if width < 6 or 100 < width:
                 flash(gettext("Width must be between 6 and 100"))
                 errors = True
+        except ValueError:
+            flash(gettext("Width must be between 6 and 100"))
+            errors = True
 
-            try:
-                height = int(height)
-                if height < 5 or 5000 < height:
-                    flash(gettext("Height must be between 5 and 5000"))
-                    errors = True
-            except ValueError:
+        try:
+            height = int(height)
+            if height < 5 or 5000 < height:
                 flash(gettext("Height must be between 5 and 5000"))
                 errors = True
+        except ValueError:
+            flash(gettext("Height must be between 5 and 5000"))
+            errors = True
 
-            pattern = dict()
-            pattern["name"] = label
-            pattern["author"] = g.user.label
-            pattern["organization"] = ""
-            pattern["notes"] = ""
+        pattern = dict()
+        pattern["name"] = label
+        pattern["author"] = g.user.label
+        pattern["organization"] = ""
+        pattern["notes"] = ""
 
-            # Each row must be a fresh list — `[[0]*width]*height`
-            # produces `height` references to the *same* inner list,
-            # so editing one row would mutate every row when the
-            # editor serializes the pattern back to JSON.
-            pattern["model"] = [[0] * width for _ in range(height)]
+        # Each row must be a fresh list — `[[0]*width]*height`
+        # produces `height` references to the *same* inner list,
+        # so editing one row would mutate every row when the
+        # editor serializes the pattern back to JSON.
+        pattern["model"] = [[0] * width for _ in range(height)]
 
-            # TODO use user default palette?
-            pattern["colors"] = [list(c) for c in default_bead_palette]
+        # TODO use user default palette?
+        pattern["colors"] = [list(c) for c in default_bead_palette]
 
-            view = dict()
-            view["draft-visible"] = True
-            view["corrected-visible"] = True
-            view["simulation-visible"] = True
-            view["report-visible"] = True
-            view["draw-colors"] = True
-            view["draw-symbols"] = False
-            # Zoom is the cell size in pixels — must be in [4, 48] or
-            # the editor falls back to its default. 12 matches the
-            # editor's ViewSettings() default (dx=12).
-            view["zoom"] = 12
-            view["shift"] = 0
-            view["scroll"] = 0
-            # Open new patterns in the pencil tool so the user can
-            # immediately click-and-paint. Saving "select" would put
-            # the editor into rectangular-selection mode on load,
-            # which makes clicks just create a 1×1 selection rather
-            # than draw.
-            view["selected-tool"] = "pencil"
-            view["selected-color"] = 1
-            # Default per-colour symbol glyphs (matches the desktop's
-            # BeadSymbols.DEFAULT_SYMBOLS). Slot 0 is the background
-            # and never drawn; the rest cycle through middle-dot +
-            # a..z + a few punctuation marks.
-            view["symbols"] = "·abcdefghijklmnopqrstuvwxyz+-/\\*"
-            pattern["view"] = view
+        view = dict()
+        view["draft-visible"] = True
+        view["corrected-visible"] = True
+        view["simulation-visible"] = True
+        view["report-visible"] = True
+        view["draw-colors"] = True
+        view["draw-symbols"] = False
+        # Zoom is the cell size in pixels — must be in [4, 48] or
+        # the editor falls back to its default. 12 matches the
+        # editor's ViewSettings() default (dx=12).
+        view["zoom"] = 12
+        view["shift"] = 0
+        view["scroll"] = 0
+        # Open new patterns in the pencil tool so the user can
+        # immediately click-and-paint. Saving "select" would put
+        # the editor into rectangular-selection mode on load,
+        # which makes clicks just create a 1×1 selection rather
+        # than draw.
+        view["selected-tool"] = "pencil"
+        view["selected-color"] = 1
+        # Default per-colour symbol glyphs (matches the desktop's
+        # BeadSymbols.DEFAULT_SYMBOLS). Slot 0 is the background
+        # and never drawn; the rest cycle through middle-dot +
+        # a..z + a few punctuation marks.
+        view["symbols"] = "·abcdefghijklmnopqrstuvwxyz+-/\\*"
+        pattern["view"] = view
 
-            if not errors:
-                try:
-                    name = add_bead_pattern(pattern, g.user)
-                    return redirect(url_for("edit_pattern",
-                                            user_name=g.user.name,
-                                            pattern_name=name))
-                except HTTPException:
-                    raise
-                except Exception:
-                    logging.exception("Failed to create pattern")
-                    flash(gettext("Failed to create pattern"))
+        if not errors:
+            try:
+                name = add_bead_pattern(pattern, g.user)
+                return redirect(url_for("edit_pattern",
+                                        user_name=g.user.name,
+                                        pattern_name=name))
+            except HTTPException:
+                raise
+            except Exception:
+                logging.exception("Failed to create pattern")
+                flash(gettext("Failed to create pattern"))
 
-    return render_template("create_pattern.html", user=g.user)
+    # Validation failed or pattern_type was unknown. Send the user back
+    # to their listing; the flash message explains what to fix.
+    return redirect(url_for("user", user_name=g.user.name))
 
 
 @app.route("/patterns/delete/<string:pattern_name>", methods=("GET", "POST"))
@@ -1513,6 +1539,36 @@ def leave_group(group_name):
     db.session.commit()
     flash(gettext("You left the group"))
     return redirect(url_for("edit_groups"))
+
+
+@app.route("/api/user/settings", methods=("GET", "PUT"))
+@login_required
+def api_user_settings():
+    if request.method == "GET":
+        try:
+            obj = json.loads(g.user.settings) if g.user.settings else {}
+        except Exception:
+            obj = {}
+        return jsonify({"status": "OK", "settings": obj}), 200
+    try:
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return respond("NOK", "Invalid payload", 400)
+        # Merge with existing so callers can do partial updates without
+        # round-tripping the full document.
+        try:
+            existing = json.loads(g.user.settings) if g.user.settings else {}
+            if not isinstance(existing, dict):
+                existing = {}
+        except Exception:
+            existing = {}
+        existing.update(payload)
+        g.user.settings = json.dumps(existing)
+        db.session.commit()
+        return jsonify({"status": "OK", "settings": existing}), 200
+    except Exception:
+        logging.exception("Failed to save user settings")
+        return respond("NOK", "Failed to save user settings", 500)
 
 
 @app.route("/api/users/search")
@@ -2194,12 +2250,16 @@ def update_pattern(user_name, pattern_name):
             pattern.contents = json.dumps(contents)
             pattern.modified = datetime.datetime.now(datetime.timezone.utc)
             apply_pattern_metadata(pattern, contents)
-            thumb_bytes = _decode_data_url_png(data.get("thumbnail"))
-            if thumb_bytes is not None:
-                pattern.thumbnail_image = thumb_bytes
-            preview_bytes = _decode_data_url_png(data.get("preview"))
-            if preview_bytes is not None:
-                pattern.preview_image = preview_bytes
+            # Distinguish "absent" (don't touch) from "explicit null"
+            # (clear). The dbweave editor sends explicit nulls when the
+            # pattern is empty, so the listing falls back to the no-image
+            # placeholder instead of keeping a stale render.
+            if "thumbnail" in data:
+                pattern.thumbnail_image = _decode_data_url_png(
+                    data.get("thumbnail"))
+            if "preview" in data:
+                pattern.preview_image = _decode_data_url_png(
+                    data.get("preview"))
             db.session.commit()
             return jsonify({"status": "OK"}), 200
         elif action == "clone-pattern":

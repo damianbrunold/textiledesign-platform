@@ -22,6 +22,7 @@ class User(db.Model):
     create_date = db.Column(db.DateTime(timezone=True))
     verify_date = db.Column(db.DateTime(timezone=True))
     access_date = db.Column(db.DateTime(timezone=True))
+    settings = db.Column(db.Text, nullable=True)
 
     memberships = db.relationship("Membership", back_populates="user")
     mypatterns = db.relationship(
