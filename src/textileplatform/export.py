@@ -216,6 +216,29 @@ def _pattern_layout(data, base=16):
     weft_factor = float(data.get("weft_factor") or 1.0)
     gw, gh = _apply_ratio(base, warp_factor, weft_factor)
 
+    # Pegplan mode: the side strip shows pegplan (shafts × wefts)
+    # instead of treadling (treadles × wefts), so its column count is
+    # the number of shafts. Mirrors the editor's layout in dbweave.js
+    # (sidePaneWidth = visible_shafts when display_pegplan).
+    if bool(data.get("display_pegplan")):
+        treadles = shafts
+        # Recompute active weft range from data_pegplan rather than
+        # treadling, since treadling is unused in pegplan mode.
+        peg = data.get("data_pegplan") or []
+        if max_shafts > 0 and peg:
+            schuesse_a, schuesse_b = 0, -1
+            for j in range(height):
+                row_used = False
+                for i in range(max_shafts):
+                    idx = i + j * max_shafts
+                    if idx < len(peg) and peg[idx] != 0:
+                        row_used = True
+                        break
+                if row_used:
+                    if schuesse_b < 0:
+                        schuesse_a = j
+                    schuesse_b = j
+
     sdy = 1 if shafts != 0 else 0
     tdx = 1 if treadles != 0 else 0
     dx = max(0, kette_b - kette_a + 1)
@@ -268,12 +291,25 @@ def _get_treadling(data, i, j):
     return int(arr[idx]) if 0 <= idx < len(arr) else 0
 
 
+def _get_pegplan(data, i, j):
+    arr = data.get("data_pegplan") or []
+    ms = int(data.get("max_shafts", 0))
+    if ms <= 0:
+        return 0
+    idx = i + j * ms
+    return int(arr[idx]) if 0 <= idx < len(arr) else 0
+
+
 def _calc_weave(data, i, j):
     """Recompute weave[i,j] from entering+treadling+tieup. Direct
-    port of _recalc_weave_from_treadling in dbweave.js."""
+    port of _recalc_weave_from_treadling in dbweave.js. In pegplan
+    mode the weave is derived from entering+pegplan instead, mirroring
+    _recalc_weave_from_pegplan."""
     shaft = _get_entering(data, i)
     if shaft <= 0:
         return 0
+    if bool(data.get("display_pegplan")):
+        return _get_pegplan(data, shaft - 1, j)
     mt = int(data.get("max_treadles", 0))
     value = 0
     for k in range(mt):
@@ -332,7 +368,8 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
         t.stroke_rect(x0, y0, dx * gw, shafts * gh, BLACK)
 
     # Aufknuepfung — top-right in standard layout, bottom-right when
-    # einzugunten.
+    # einzugunten. In pegplan mode this pane shows the implicit
+    # diagonal (treadle i ↔ shaft i) instead of the tie-up data.
     if treadles != 0 and shafts != 0:
         x0 = (dx + tdx) * gw
         y0 = auf_y0
@@ -340,23 +377,28 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
             t.line(x0 + i * gw, y0, x0 + i * gw, y0 + shafts * gh, GRID_LINE)
         for j in range(shafts + 1):
             t.line(x0, y0 + j * gh, x0 + treadles * gw, y0 + j * gh, GRID_LINE)
-        darst = DARST_FILLED if pegplan else au_darst
-        for j in range(shafts):
-            for i in range(treadles):
-                s = _get_tieup(data, i, j)
-                if s <= 0:
-                    continue
-                x = x0 + i * gw
-                y = y0 + j * gh if ttb else y0 + (shafts - j - 1) * gh
-                if not pegplan and s == AUSHEBUNG:
-                    _paint_cell(t, aus_darst, x, y, gw, gh, BLACK)
-                elif not pegplan and s == ANBINDUNG:
-                    _paint_cell(t, anb_darst, x, y, gw, gh, BLACK)
-                elif not pegplan and s == ABBINDUNG:
-                    _paint_cell(t, abb_darst, x, y, gw, gh, BLACK)
-                else:
-                    col = RANGE_COLORS[s] if 1 <= s <= 9 else BLACK
-                    _paint_cell(t, darst, x, y, gw, gh, col)
+        if pegplan:
+            for k in range(min(treadles, shafts)):
+                x = x0 + k * gw
+                y = y0 + k * gh if ttb else y0 + (shafts - k - 1) * gh
+                _paint_cell(t, DARST_FILLED, x, y, gw, gh, GRID_LINE)
+        else:
+            for j in range(shafts):
+                for i in range(treadles):
+                    s = _get_tieup(data, i, j)
+                    if s <= 0:
+                        continue
+                    x = x0 + i * gw
+                    y = y0 + j * gh if ttb else y0 + (shafts - j - 1) * gh
+                    if s == AUSHEBUNG:
+                        _paint_cell(t, aus_darst, x, y, gw, gh, BLACK)
+                    elif s == ANBINDUNG:
+                        _paint_cell(t, anb_darst, x, y, gw, gh, BLACK)
+                    elif s == ABBINDUNG:
+                        _paint_cell(t, abb_darst, x, y, gw, gh, BLACK)
+                    else:
+                        col = RANGE_COLORS[s] if 1 <= s <= 9 else BLACK
+                        _paint_cell(t, au_darst, x, y, gw, gh, col)
         t.stroke_rect(x0, y0, treadles * gw, shafts * gh, BLACK)
 
     # Trittfolge — bottom-right in standard layout, top-right when
@@ -371,7 +413,10 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
         darst = sp_darst if pegplan else tf_darst
         for j in range(dy):
             for i in range(treadles):
-                s = _get_treadling(data, i, layout.schuesse_a + j)
+                if pegplan:
+                    s = _get_pegplan(data, i, layout.schuesse_a + j)
+                else:
+                    s = _get_treadling(data, i, layout.schuesse_a + j)
                 if s <= 0:
                     continue
                 x = x0 + i * gw
