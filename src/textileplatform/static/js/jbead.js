@@ -51,9 +51,12 @@ const _DEFAULT_SYMBOLS = "·abcdefghijklmnopqrstuvwxyz+-/\\*";
 let pattern_symbols = _DEFAULT_SYMBOLS;
 
 function _symbolFor(colorIdx) {
-    if (colorIdx <= 0) return "";
+    if (colorIdx < 0) return "";
     const s = pattern_symbols || _DEFAULT_SYMBOLS;
-    if (colorIdx < s.length) return s.charAt(colorIdx);
+    if (colorIdx < s.length) {
+        const ch = s.charAt(colorIdx);
+        return ch === " " ? "" : ch;
+    }
     return "";
 }
 
@@ -295,7 +298,7 @@ class ViewDraft {
                 }
                 ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
                 ctx.strokeRect(x, y, dx, dy);
-                if (drawSymbol && state > 0) {
+                if (drawSymbol) {
                     const sym = _symbolFor(state);
                     if (sym) {
                         ctx.fillStyle = draw_colors
@@ -391,6 +394,12 @@ class ViewCorrected {
     draw(ctx, settings) {
         const dx = settings.dx;
         const dy = settings.dy;
+        const drawSymbol = draw_symbols && dx >= 8;
+        if (drawSymbol) {
+            ctx.font = `${Math.round(dx * 0.8)}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+        }
 
         for (let jj = 0; jj < this.data.height; jj++) {
             for (let ii = 0; ii < this.data.width; ii++) {
@@ -412,10 +421,24 @@ class ViewCorrected {
                 const x = 0.5 + xoff + (this.x + i) * dx;
                 const y = 0.5 + (this.y + this.height - j - 1) * dy;
 
-                ctx.fillStyle = colors[state];
-                ctx.fillRect(x, y, dx, dy);
+                if (draw_colors) {
+                    ctx.fillStyle = colors[state];
+                    ctx.fillRect(x, y, dx, dy);
+                } else {
+                    ctx.fillStyle = settings.darcula ? "#444" : "#fff";
+                    ctx.fillRect(x, y, dx, dy);
+                }
                 ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
                 ctx.strokeRect(x, y, dx, dy);
+                if (drawSymbol) {
+                    const sym = _symbolFor(state);
+                    if (sym) {
+                        ctx.fillStyle = draw_colors
+                            ? contrastingColor(colors[state])
+                            : (settings.darcula ? "#eee" : "#222");
+                        ctx.fillText(sym, x + dx / 2, y + dy / 2);
+                    }
+                }
             }
         }
     }
@@ -554,10 +577,28 @@ class ViewSimulated {
 
                 const y = 0.5 + (this.y + this.height - j - 1) * dy;
 
-                ctx.fillStyle = colors[state];
+                ctx.fillStyle = draw_colors
+                    ? colors[state]
+                    : (settings.darcula ? "#444" : "#fff");
                 ctx.beginPath();
                 ctx.ellipse(x + d / 2, y + dy / 2, d / 2, dy / 2, 0, 0, 2 * Math.PI);
                 ctx.fill();
+                if (!draw_colors) {
+                    ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
+                    ctx.stroke();
+                }
+                if (draw_symbols && d >= 8) {
+                    const sym = _symbolFor(state);
+                    if (sym) {
+                        ctx.font = `${Math.round(Math.min(d, dy) * 0.8)}px sans-serif`;
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillStyle = draw_colors
+                            ? contrastingColor(colors[state])
+                            : (settings.darcula ? "#eee" : "#222");
+                        ctx.fillText(sym, x + d / 2, y + dy / 2);
+                    }
+                }
             }
         }
     }
@@ -580,16 +621,36 @@ class ViewColors {
 
     draw(ctx, settings) {
         const d = 25; // TODO adapt on hdpi screens?
+        const showSymbols = !!draw_symbols;
+        if (showSymbols) {
+            ctx.font = `${Math.round(d * 0.7)}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+        }
 
         let i = 0;
         let j = 0;
         for (let idx = 0; idx < this.palette.length; idx++) {
             const x = 0.5 + this.x + i * d;
             const y = 0.5 + this.y + j * d;
-            ctx.fillStyle = this.palette[idx];
-            ctx.fillRect(x, y, d, d);
+            if (draw_colors) {
+                ctx.fillStyle = this.palette[idx];
+                ctx.fillRect(x, y, d, d);
+            } else {
+                ctx.fillStyle = settings.darcula ? "#444" : "#fff";
+                ctx.fillRect(x, y, d, d);
+            }
             ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
             ctx.strokeRect(x, y, d, d);
+            if (showSymbols) {
+                const sym = _symbolFor(idx);
+                if (sym) {
+                    ctx.fillStyle = draw_colors
+                        ? contrastingColor(this.palette[idx])
+                        : (settings.darcula ? "#eee" : "#222");
+                    ctx.fillText(sym, x + d / 2, y + d / 2);
+                }
+            }
             j++;
             if (j == 16) {
                 j = 0;
@@ -652,14 +713,20 @@ class ViewBeadList {
 	let x = this.x + 2*b;
 	let y = this.y;
 	for (let [color, count] of beadlist.list) {
-	    ctx.fillStyle = colors[color];
+	    ctx.fillStyle = draw_colors
+	        ? colors[color]
+	        : (settings.darcula ? "#444" : "#fff");
 	    ctx.beginPath();
             ctx.roundRect(x, y, dx, dy, dx / 3);
             ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
 	    ctx.fill();
 	    ctx.stroke();
-	    ctx.fillStyle = contrastingColor(colors[color]);
-	    ctx.fillText(`${count}`, x + dx / 2, y + dy / 2 + 5);
+	    ctx.fillStyle = draw_colors
+	        ? contrastingColor(colors[color])
+	        : (settings.darcula ? "#eee" : "#222");
+	    const sym = draw_symbols ? _symbolFor(color) : "";
+	    const label = sym ? `${count} ${sym}` : `${count}`;
+	    ctx.fillText(label, x + dx / 2, y + dy / 2 + 5);
 	    y += dy + b;
 	    if (y + dy > this.y + this.height * settings.dy) {
 		x += dx + b;
@@ -769,6 +836,49 @@ class PatternView {
 }
 
 
+// ---- Per-user preferences (jbead subtree) -----------------------
+//
+// Server-rendered <script id="tx-user-settings"> JSON is the source of
+// truth at page load; toggling a remembered view option updates the
+// cache and PUTs the change back so new patterns inherit it. Existing
+// patterns still load their own data.view first — prefs only fill in
+// keys that aren't already specified.
+
+let _jbeadPrefsCache = null;
+
+function _jbeadPrefsRead() {
+    if (_jbeadPrefsCache) return _jbeadPrefsCache;
+    let jb = {};
+    try {
+        const el = document.getElementById("tx-user-settings");
+        if (el && el.textContent) {
+            const all = JSON.parse(el.textContent);
+            if (all && typeof all === "object" && all.jbead
+                && typeof all.jbead === "object") {
+                jb = all.jbead;
+            }
+        }
+    } catch (e) { /* fall through */ }
+    _jbeadPrefsCache = jb;
+    return _jbeadPrefsCache;
+}
+
+function _jbeadPrefsSave(partial) {
+    _jbeadPrefsCache = Object.assign({}, _jbeadPrefsRead(), partial);
+    if (typeof readonly !== "undefined" && readonly) return;
+    try {
+        fetch("/api/user/settings", {
+            method: "PUT",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jbead: _jbeadPrefsCache }),
+        }).catch((e) => console.warn("settings save failed", e));
+    } catch (e) {
+        console.warn("settings save failed", e);
+    }
+}
+
+
 function init() {
     const darkmodeRaw = document.getElementById("darkmode").value;
     const darkmode = darkmodeRaw === "True"
@@ -800,7 +910,11 @@ function init() {
     view = new PatternView(pattern, beadlist, settings, ctx);
 
     initPattern(data, pattern);
-    const v = data['view'] || {};
+    // Existing patterns ship a data.view; new patterns get filled in
+    // from the user's prefs so the user's last toggled state carries
+    // over. data.view always wins when set.
+    const prefs = _jbeadPrefsRead();
+    const v = Object.assign({}, prefs, data['view'] || {});
     if (v['selected-color'] != null) selected_color = v['selected-color'] | 0;
     if (v['shift']  != null) pattern.shift  = v['shift']  | 0;
     if (v['scroll'] != null) pattern.scroll = v['scroll'] | 0;
@@ -826,7 +940,15 @@ function init() {
     beadlist.update();
 
     commandBus = new CommandBus();
-    commandBus.subscribe(() => {
+    // Track which command represents the last saved state so undo /
+    // redo back to that point can clear the modified flag. null =
+    // empty stack is the saved baseline (initial pristine load, or
+    // freshly reverted).
+    commandBus.savedMark = null;
+    commandBus.subscribe((bus) => {
+        const top = bus.undoStack[bus.undoStack.length - 1] || null;
+        if (top === bus.savedMark) clearModified();
+        else                       setModified();
         if (typeof ActionRegistry !== "undefined") ActionRegistry.notify();
     });
 
@@ -1838,12 +1960,12 @@ function _openTechInfoDialog() {
     }
     root.appendChild(tbl);
 
-    // Per-colour totals.
+    // Per-colour totals — include the background colour, those
+    // beads have to be bought too.
     const counts = new Map();
     for (let j = 0; j < used; j++) {
         for (let i = 0; i < pattern.width; i++) {
             const c = pattern.get(i, j);
-            if (c <= 0) continue;
             counts.set(c, (counts.get(c) || 0) + 1);
         }
     }
@@ -1871,7 +1993,8 @@ function _openTechInfoDialog() {
             sw.style.background = colors[c];
             cell.appendChild(sw);
             const label = document.createElement("span");
-            label.textContent = `${n}×`;
+            const sym = draw_symbols ? _symbolFor(c) : "";
+            label.textContent = sym ? `${n}× ${sym}` : `${n}×`;
             label.style.fontFamily = "monospace";
             cell.appendChild(label);
             grid.appendChild(cell);
@@ -1931,9 +2054,10 @@ function _openPaletteDialog() {
         // Cancel rolls colour state back; the onPreview hook also
         // restores it when ColorPicker calls `onPreview(before)`.
         onCancel: () => { /* preview hook already reverted */ },
-        // OK commits the change as one undoable command. apply() is
-        // a no-op on first call (state is already live), but applies
-        // on redo.
+        // OK commits as one undoable palette command. The first
+        // apply is a no-op (state is already live from the preview);
+        // subsequent applies (redo) re-install the new palette. The
+        // commandBus subscriber drives the modified flag via savedMark.
         onCommit: (after, currentIdx) => {
             selected_color = currentIdx | 0;
             const beforeSnap = before.map(c => c.slice());
@@ -1945,15 +2069,155 @@ function _openPaletteDialog() {
                     if (firstApply) { firstApply = false; return; }
                     _applyPalette(afterSnap);
                     if (view) view.draw();
-                    setModified();
                 },
                 revert: () => {
                     _applyPalette(beforeSnap);
                     if (view) view.draw();
-                    setModified();
                 },
             });
-            setModified();
+        },
+    });
+}
+
+
+// ---- Symbol palette editor --------------------------------------
+//
+// Per-colour glyph string edited as one row per palette index. Same
+// data model as desktop's BeadSymbols.SAVED_SYMBOLS — single string
+// where character N is the glyph for palette colour N. Index 0 is
+// the background and isn't drawn, so its slot is shown but optional.
+
+function _padSymbols(s) {
+    const target = Math.max(_DEFAULT_SYMBOLS.length, (colors || []).length);
+    let out = (s || "");
+    if (out.length < target) {
+        out += _DEFAULT_SYMBOLS.slice(out.length, target);
+    }
+    return out;
+}
+
+function _setCharAt(s, idx, ch) {
+    const safeCh = (ch && ch.length > 0) ? ch.charAt(0) : " ";
+    if (idx >= s.length) {
+        s = s + " ".repeat(idx - s.length);
+        return s + safeCh;
+    }
+    return s.slice(0, idx) + safeCh + s.slice(idx + 1);
+}
+
+function _applySymbols(s) {
+    pattern_symbols = _padSymbols(s);
+    if (data && data.view) data.view["symbols"] = pattern_symbols;
+}
+
+function _openSymbolsDialog() {
+    const before = _padSymbols(pattern_symbols);
+    let draft = before;
+
+    const wrap = document.createElement("div");
+    wrap.style.minWidth = "260px";
+
+    const grid = document.createElement("div");
+    grid.style.display = "grid";
+    grid.style.gridTemplateColumns = "auto auto auto";
+    grid.style.gap = "4px 8px";
+    grid.style.alignItems = "center";
+    wrap.appendChild(grid);
+
+    const inputs = [];
+    const n = Math.max(_DEFAULT_SYMBOLS.length, (colors || []).length);
+    for (let i = 0; i < n; i++) {
+        const idxLabel = document.createElement("span");
+        idxLabel.textContent = String(i);
+        idxLabel.style.fontFamily = "monospace";
+        idxLabel.style.textAlign = "right";
+        idxLabel.style.minWidth = "1.5rem";
+        const sw = document.createElement("span");
+        sw.style.display = "inline-block";
+        sw.style.width = "20px";
+        sw.style.height = "20px";
+        sw.style.border = "1px solid #888";
+        sw.style.background = colors[i] || "#ccc";
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.maxLength = 1;
+        inp.value = draft.charAt(i) || "";
+        inp.style.width = "2.5rem";
+        inp.style.textAlign = "center";
+        inp.style.fontFamily = "monospace";
+        inp.addEventListener("input", () => {
+            const ch = inp.value.length > 0 ? inp.value.charAt(0) : " ";
+            inp.value = ch === " " ? "" : ch;
+            draft = _setCharAt(draft, i, ch);
+            _applySymbols(draft);
+            if (view) view.draw();
+        });
+        grid.appendChild(idxLabel);
+        grid.appendChild(sw);
+        grid.appendChild(inp);
+        inputs.push(inp);
+    }
+
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.textContent = _actionLabel("symbols.reset", "Reset to default");
+    reset.style.marginTop = "10px";
+    reset.addEventListener("click", () => {
+        draft = _DEFAULT_SYMBOLS;
+        for (let i = 0; i < inputs.length; i++) {
+            const ch = draft.charAt(i) || "";
+            inputs[i].value = ch === " " ? "" : ch;
+        }
+        _applySymbols(draft);
+        if (view) view.draw();
+    });
+    wrap.appendChild(reset);
+
+    let committing = false;
+    Modal.open({
+        title: _actionLabel("symbols.title", "Edit symbols"),
+        body: wrap,
+        buttons: [
+            { label: _actionLabel("btn.cancel", "Cancel"), role: "cancel" },
+            {
+                label: _actionLabel("btn.ok", "OK"), role: "primary",
+                onClick: (m) => {
+                    committing = true;
+                    const beforeSnap = before;
+                    const afterSnap  = _padSymbols(draft);
+                    if (afterSnap === beforeSnap) {
+                        m.close();
+                        return;
+                    }
+                    // Reset to pre-dialog state, then push a single
+                    // undoable command that flips between before /
+                    // after. The commandBus subscriber drives the
+                    // modified flag via savedMark so undo/redo back to
+                    // the saved baseline correctly clears it.
+                    _applySymbols(beforeSnap);
+                    if (view) view.draw();
+                    commandBus.execute({
+                        label: "symbols",
+                        apply: () => {
+                            _applySymbols(afterSnap);
+                            _jbeadPrefsSave({ symbols: afterSnap });
+                            if (view) view.draw();
+                        },
+                        revert: () => {
+                            _applySymbols(beforeSnap);
+                            _jbeadPrefsSave({ symbols: beforeSnap });
+                            if (view) view.draw();
+                        },
+                    });
+                    m.close();
+                },
+            },
+        ],
+        onClose: () => {
+            if (!committing) {
+                _applySymbols(before);
+                if (view) view.draw();
+            }
         },
     });
 }
@@ -1995,27 +2259,72 @@ function _openArrangeDialog() {
     };
 
     const wrap = document.createElement("div");
-    const mk = (id, labelKey, label, def) => {
+    // Stepper rows instead of number inputs: tablets would otherwise
+    // pop the virtual keyboard and obscure the live preview. Each row
+    // exposes −/+ buttons plus arrow-key handling on the value field.
+    const mk = (id, labelKey, label, def, min) => {
         const row = document.createElement("div");
         row.style.margin = "6px 0";
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.gap = "0.4rem";
         const lbl = document.createElement("label");
         lbl.textContent = _actionLabel(labelKey, label);
-        lbl.style.display = "inline-block";
+        lbl.style.flex = "1 1 auto";
         lbl.style.minWidth = "9rem";
         lbl.htmlFor = id;
+        const dec = document.createElement("button");
+        dec.type = "button";
+        dec.textContent = "−";
+        dec.setAttribute("aria-label", "−");
         const inp = document.createElement("input");
-        inp.type = "number";
+        inp.type = "text";
         inp.id = id;
-        inp.value = def;
-        inp.style.width = "5rem";
+        inp.value = String(def);
+        inp.readOnly = true;
+        inp.inputMode = "none";
+        inp.setAttribute("inputmode", "none");
+        inp.style.width = "4rem";
+        inp.style.textAlign = "center";
+        const inc = document.createElement("button");
+        inc.type = "button";
+        inc.textContent = "+";
+        inc.setAttribute("aria-label", "+");
+        for (const b of [dec, inc]) {
+            b.style.minWidth = "2.4rem";
+            b.style.minHeight = "2.4rem";
+            b.style.fontSize = "1.1rem";
+        }
+        const lo = (typeof min === "number") ? min : null;
+        const step = (delta) => {
+            let v = parseInt(inp.value, 10);
+            if (!Number.isFinite(v)) v = 0;
+            v += delta;
+            if (lo !== null && v < lo) v = lo;
+            inp.value = String(v);
+            inp.dispatchEvent(new Event("input", { bubbles: true }));
+        };
+        dec.addEventListener("click", () => step(-1));
+        inc.addEventListener("click", () => step(+1));
+        inp.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp" || e.key === "ArrowRight") {
+                e.preventDefault();
+                step(+1);
+            } else if (e.key === "ArrowDown" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                step(-1);
+            }
+        });
         row.appendChild(lbl);
+        row.appendChild(dec);
         row.appendChild(inp);
+        row.appendChild(inc);
         wrap.appendChild(row);
         return inp;
     };
     const inDx = mk("arr-dx", "arrange.dx", "Horizontal offset:", W);
     const inDy = mk("arr-dy", "arrange.dy", "Vertical offset:", H);
-    const inN  = mk("arr-n",  "arrange.copies", "Number of copies:", 1);
+    const inN  = mk("arr-n",  "arrange.copies", "Number of copies:", 1, 1);
 
     const refresh = () => {
         const dx = parseInt(inDx.value, 10) || 0;
@@ -2458,6 +2767,16 @@ function _updateStatusbar() {
     }
 }
 
+// Mark the current top of the undo stack as the saved baseline so
+// undo/redo back to this exact point clears the modified flag.
+function _markSaved() {
+    if (!commandBus) { clearModified(); return; }
+    const top = commandBus.undoStack[commandBus.undoStack.length - 1] || null;
+    commandBus.savedMark = top;
+    clearModified();
+}
+
+
 // Discard in-memory edits and reload the pattern from the server.
 // Mirrors weave's _revertChanges in dbweave.js.
 async function _revertChanges() {
@@ -2471,6 +2790,9 @@ async function _revertChanges() {
     // Rebuild the in-memory model from the freshly-loaded `data`.
     pattern = new Pattern(data.model[0].length, data.model.length);
     beadlist = new BeadList(pattern);
+    // initPattern pushes onto the existing colors[] — reset first so
+    // a revert doesn't leave duplicated palette entries behind.
+    colors.length = 0;
     initPattern(data, pattern);
 
     // Re-apply persisted view state (kept in sync with init()).
@@ -2507,6 +2829,7 @@ async function _revertChanges() {
     if (commandBus) {
         commandBus.undoStack.length = 0;
         commandBus.redoStack.length = 0;
+        commandBus.savedMark = null;
     }
     await clearModified();
     _refreshScrollbar();
@@ -2574,6 +2897,7 @@ function _setZoom(dx) {
         view.draw();
     }
     _updateStatusbar();
+    _jbeadPrefsSave({ zoom: dx });
 }
 
 function setupEditorActions() {
@@ -2593,10 +2917,11 @@ function setupEditorActions() {
     reg("file.save", {
         shortcut: "Ctrl+S",
         enabledWhen: () => !readonly,
-        handler: () => {
+        handler: async () => {
             saveSettings(data, settings);
             savePatternData(data, pattern);
-            savePattern();
+            await savePattern();
+            _markSaved();
         },
     });
     reg("file.revert", {
@@ -2627,46 +2952,91 @@ function setupEditorActions() {
         handler: () => _setZoom(settings.dx - 2) });
     reg("view.zoom-normal", { handler: () => _setZoom(12) });
 
-    const toggleView = (varName, getter, setter) => () => {
-        setter(!getter());
-        if (view) { view.layout(); view.draw(); }
-        ActionRegistry.notify();
+    // Toggle a boolean view-state variable as a single undoable
+    // command. The `prefKey` (when given) is the data.view key the
+    // toggle persists to and the user-prefs key it remembers across
+    // patterns: redo / undo flip the value just like the original
+    // click. The savedMark subscriber drives the modified flag.
+    const toggleView = (label, getter, setter, prefKey) => () => {
+        const before = getter();
+        const after = !before;
+        const refresh = (val) => {
+            if (prefKey) _jbeadPrefsSave({ [prefKey]: val });
+            if (view) { view.layout(); view.draw(); }
+            ActionRegistry.notify();
+        };
+        commandBus.execute({
+            label,
+            apply: () => { setter(after); refresh(after); },
+            revert: () => { setter(before); refresh(before); },
+        });
     };
     reg("view.show-draft", {
         checkedWhen: () => show_draft,
-        handler: toggleView("draft",
-            () => show_draft, v => { show_draft = v; }),
+        handler: toggleView("show-draft",
+            () => show_draft, v => { show_draft = v; },
+            "draft-visible"),
     });
     reg("view.show-corrected", {
         checkedWhen: () => show_corrected,
-        handler: toggleView("corrected",
-            () => show_corrected, v => { show_corrected = v; }),
+        handler: toggleView("show-corrected",
+            () => show_corrected, v => { show_corrected = v; },
+            "corrected-visible"),
     });
     reg("view.show-simulation", {
         checkedWhen: () => show_simulation,
-        handler: toggleView("simulation",
-            () => show_simulation, v => { show_simulation = v; }),
+        handler: toggleView("show-simulation",
+            () => show_simulation, v => { show_simulation = v; },
+            "simulation-visible"),
     });
     reg("view.show-report", {
         checkedWhen: () => show_report,
-        handler: toggleView("report",
-            () => show_report, v => { show_report = v; }),
+        handler: toggleView("show-report",
+            () => show_report, v => { show_report = v; },
+            "report-visible"),
     });
+    // Colours and symbols can't both be off — turning the last one
+    // off auto-turns the other on so beads stay distinguishable.
+    // The auto-flip is part of the same undoable command.
+    const toggleColorsOrSymbols = (label, primaryGetter, primarySetter,
+                                   primaryKey, otherGetter, otherSetter,
+                                   otherKey) => () => {
+        const beforeP = primaryGetter();
+        const beforeO = otherGetter();
+        const afterP = !beforeP;
+        const afterO = (!afterP && !beforeO) ? true : beforeO;
+        const refresh = (p, o) => {
+            const partial = { [primaryKey]: p };
+            if (o !== beforeO || p !== afterP) partial[otherKey] = o;
+            _jbeadPrefsSave(partial);
+            if (view) { view.layout(); view.draw(); }
+            ActionRegistry.notify();
+        };
+        commandBus.execute({
+            label,
+            apply: () => {
+                primarySetter(afterP);
+                otherSetter(afterO);
+                refresh(afterP, afterO);
+            },
+            revert: () => {
+                primarySetter(beforeP);
+                otherSetter(beforeO);
+                refresh(beforeP, beforeO);
+            },
+        });
+    };
     reg("view.draw-colors", {
         checkedWhen: () => draw_colors,
-        handler: () => {
-            draw_colors = !draw_colors;
-            if (view) view.draw();
-            ActionRegistry.notify();
-        },
+        handler: toggleColorsOrSymbols("draw-colors",
+            () => draw_colors, v => { draw_colors = v; }, "draw-colors",
+            () => draw_symbols, v => { draw_symbols = v; }, "draw-symbols"),
     });
     reg("view.draw-symbols", {
         checkedWhen: () => draw_symbols,
-        handler: () => {
-            draw_symbols = !draw_symbols;
-            if (view) view.draw();
-            ActionRegistry.notify();
-        },
+        handler: toggleColorsOrSymbols("draw-symbols",
+            () => draw_symbols, v => { draw_symbols = v; }, "draw-symbols",
+            () => draw_colors, v => { draw_colors = v; }, "draw-colors"),
     });
 
     // ---- Tool selection ----
@@ -2706,16 +3076,12 @@ function setupEditorActions() {
     reg("edit.undo", {
         shortcut: "Ctrl+Z",
         enabledWhen: () => commandBus && commandBus.canUndo(),
-        handler: () => {
-            if (commandBus.undo()) { setModified(); }
-        },
+        handler: () => { commandBus.undo(); },
     });
     reg("edit.redo", {
         shortcut: "Ctrl+Y",
         enabledWhen: () => commandBus && commandBus.canRedo(),
-        handler: () => {
-            if (commandBus.redo()) { setModified(); }
-        },
+        handler: () => { commandBus.redo(); },
     });
     const hasSelection = () => pattern && pattern.selection != null;
     reg("edit.delete", {
@@ -2788,6 +3154,9 @@ function setupEditorActions() {
     reg("pattern.height", { handler: () => _openSizeDialog("height") });
     reg("colors.palette", {
         handler: () => _openPaletteDialog(),
+    });
+    reg("colors.symbols", {
+        handler: () => _openSymbolsDialog(),
     });
 
     // Bind shortcuts.
@@ -2874,6 +3243,7 @@ function setupEditorActions() {
         ]},
         { label: _menuLabel("colors", "Colors"), items: [
             { action: "colors.palette" },
+            { action: "colors.symbols" },
         ], visibleWhen: () => !readonly },
         { label: _menuLabel("info", "Info"),  items: [
             { action: "info.tech" },
@@ -2989,6 +3359,22 @@ function _renderBeadThumbnail(currentData, w, h) {
     const pw = (rows[0] || []).length;
     if (pw <= 0 || ph <= 0) return canvas;
 
+    // Mirror the on-screen view-state so the thumbnail matches whatever
+    // the user sees in the editor. Defaults match the controller's
+    // pattern-creation defaults.
+    const view = currentData.view || {};
+    const tDrawColors = view["draw-colors"] != null
+        ? !!view["draw-colors"] : true;
+    const tDrawSymbols = !!view["draw-symbols"];
+    const tSymbols = (typeof view["symbols"] === "string"
+                     && view["symbols"].length > 0)
+        ? view["symbols"] : _DEFAULT_SYMBOLS;
+    const symbolAt = (idx) => {
+        if (idx < 0 || idx >= tSymbols.length) return "";
+        const ch = tSymbols.charAt(idx);
+        return ch === " " ? "" : ch;
+    };
+
     // Used-height: prefer the live beadlist (already up to date during
     // save). Fall back to a manual scan for cold callers.
     let usedH = 0;
@@ -3040,17 +3426,33 @@ function _renderBeadThumbnail(currentData, w, h) {
     ctx.beginPath();
     ctx.rect(0, 0, halfW, h);
     ctx.clip();
+    const symbolFontPx = Math.max(4, Math.round(Math.min(dCellW, dCellH) * 0.8));
+    if (tDrawSymbols) {
+        ctx.font = `${symbolFontPx}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+    }
     for (let j = 0; j < visRows; j++) {
         for (let i = 0; i < pw; i++) {
             const c = rows[j][i] | 0;
-            const fill = _thumbColor(palette, c);
-            if (!fill) continue;
+            const fill = tDrawColors ? _thumbColor(palette, c) : null;
             const px = Math.floor(draftX0 + i * dCellW);
             const py = Math.floor(draftY1 - (j + 1) * dCellH);
             const cw = Math.max(1, Math.ceil(draftX0 + (i + 1) * dCellW) - px);
             const ch = Math.max(1, Math.ceil(draftY1 - j * dCellH) - py);
-            ctx.fillStyle = fill;
-            ctx.fillRect(px, py, cw, ch);
+            if (fill) {
+                ctx.fillStyle = fill;
+                ctx.fillRect(px, py, cw, ch);
+            }
+            if (tDrawSymbols && dCellW >= 4) {
+                const sym = symbolAt(c);
+                if (sym) {
+                    ctx.fillStyle = fill
+                        ? contrastingColor(fill)
+                        : "#222";
+                    ctx.fillText(sym, px + cw / 2, py + ch / 2);
+                }
+            }
         }
     }
     // Light grid on top, only when cells are big enough to be worth it.
@@ -3120,7 +3522,7 @@ function _renderBeadThumbnail(currentData, w, h) {
         const dataI = idx % pw;
         const dataJ = Math.floor(idx / pw);
         const c = rows[dataJ][dataI] | 0;
-        const fill = _thumbColor(palette, c);
+        const fill = tDrawColors ? _thumbColor(palette, c) : "#fff";
         if (!fill) continue;
 
         // Compute the bead's centre and radii. Even rows: beads at
@@ -3148,6 +3550,15 @@ function _renderBeadThumbnail(currentData, w, h) {
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.fill();
+        if (tDrawSymbols && dCellW >= 4) {
+            const sym = symbolAt(c);
+            if (sym) {
+                ctx.fillStyle = tDrawColors
+                    ? contrastingColor(fill)
+                    : "#222";
+                ctx.fillText(sym, cx, cy);
+            }
+        }
     }
     ctx.restore();
 

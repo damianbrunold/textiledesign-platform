@@ -1341,6 +1341,18 @@ msgstr "Benutzerdefiniert…"
 msgid "Edit palette…"
 msgstr "Palette bearbeiten…"
 
+#: src/textileplatform/templates/edit_jbead_pattern.html:94
+msgid "Edit symbols…"
+msgstr "Symbole bearbeiten…"
+
+#: src/textileplatform/templates/edit_jbead_pattern.html:95
+msgid "Edit symbols"
+msgstr "Symbole bearbeiten"
+
+#: src/textileplatform/templates/edit_jbead_pattern.html:96
+msgid "Reset to default"
+msgstr "Auf Standard zurücksetzen"
+
 #: src/textileplatform/templates/edit_dbweave_pattern.html:137
 msgid "Color blending…"
 msgstr "Farbverlauf erstellen…"

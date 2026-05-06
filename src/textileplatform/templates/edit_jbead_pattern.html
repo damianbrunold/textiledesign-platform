@@ -40,6 +40,11 @@
     <input type="hidden" id="darkmode" value="{% if g.user and g.user.darkmode is sameas true %}True{% elif g.user and g.user.darkmode is sameas false %}False{% else %}auto{% endif %}"/>
     <input type="hidden" id="readonly" value="{{readonly}}"/>
 
+    {# Per-user preferences (jbead subtree). Editor reads these as
+       fall-back defaults when data.view doesn't already specify a key,
+       and writes back when the user toggles a remembered option. #}
+    <script type="application/json" id="tx-user-settings">{{ (user_settings or {}) | tojson }}</script>
+
     {# Translated labels for actions and menus (JS cannot call gettext). #}
     <script type="application/json" id="tx-i18n">{
         "actions": {
@@ -91,6 +96,9 @@
             "info.bead-runs":       {"label": {{ gettext('Colour runs:') | tojson }}},
             "info.per-color":       {"label": {{ gettext('Beads per colour:') | tojson }}},
             "colors.palette":    {"label": {{ gettext('Edit palette…') | tojson }}},
+            "colors.symbols":    {"label": {{ gettext('Edit symbols…') | tojson }}},
+            "symbols.title":     {"label": {{ gettext('Edit symbols') | tojson }}},
+            "symbols.reset":     {"label": {{ gettext('Reset to default') | tojson }}},
             "arrange.title":     {"label": {{ gettext('Arrange selection') | tojson }}},
             "arrange.dx":        {"label": {{ gettext('Horizontal offset:') | tojson }}},
             "arrange.dy":        {"label": {{ gettext('Vertical offset:') | tojson }}},

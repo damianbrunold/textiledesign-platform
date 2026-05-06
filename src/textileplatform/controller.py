@@ -386,12 +386,24 @@ def edit_pattern(user_name, pattern_name):
             user_settings=user_settings,
         )
     elif pattern.pattern_type == "JBead Pattern":
+        viewer = g.user
+        try:
+            user_settings = (
+                json.loads(viewer.settings)
+                if viewer and viewer.settings
+                else {}
+            )
+            if not isinstance(user_settings, dict):
+                user_settings = {}
+        except Exception:
+            user_settings = {}
         return render_template(
             "edit_jbead_pattern.html",
             user=user,
             pattern=pattern,
             readonly=readonly,
             origin=origin,
+            user_settings=user_settings,
         )
     else:
         return redirect(url_for("user", user_name=user.name))
@@ -1182,17 +1194,40 @@ def create_pattern():
         # TODO use user default palette?
         pattern["colors"] = [list(c) for c in default_bead_palette]
 
+        # Pull the user's last toggled view-state choices in as
+        # defaults; explicit keys below still win.
+        try:
+            jb_prefs = (
+                json.loads(g.user.settings) if g.user and g.user.settings
+                else {}
+            )
+            jb_prefs = jb_prefs.get("jbead") if isinstance(
+                jb_prefs, dict) else {}
+            if not isinstance(jb_prefs, dict):
+                jb_prefs = {}
+        except Exception:
+            jb_prefs = {}
+
+        def _pref_bool(key, default):
+            v = jb_prefs.get(key)
+            return bool(v) if v is not None else default
+
         view = dict()
-        view["draft-visible"] = True
-        view["corrected-visible"] = True
-        view["simulation-visible"] = True
-        view["report-visible"] = True
-        view["draw-colors"] = True
-        view["draw-symbols"] = False
+        view["draft-visible"]      = _pref_bool("draft-visible", True)
+        view["corrected-visible"]  = _pref_bool("corrected-visible", True)
+        view["simulation-visible"] = _pref_bool("simulation-visible", True)
+        view["report-visible"]     = _pref_bool("report-visible", True)
+        view["draw-colors"]        = _pref_bool("draw-colors", True)
+        view["draw-symbols"]       = _pref_bool("draw-symbols", False)
         # Zoom is the cell size in pixels — must be in [4, 48] or
         # the editor falls back to its default. 12 matches the
         # editor's ViewSettings() default (dx=12).
-        view["zoom"] = 12
+        pref_zoom = jb_prefs.get("zoom")
+        view["zoom"] = (
+            int(pref_zoom)
+            if isinstance(pref_zoom, (int, float))
+            and 4 <= int(pref_zoom) <= 48
+            else 12)
         view["shift"] = 0
         view["scroll"] = 0
         # Open new patterns in the pencil tool so the user can
@@ -1206,7 +1241,11 @@ def create_pattern():
         # BeadSymbols.DEFAULT_SYMBOLS). Slot 0 is the background
         # and never drawn; the rest cycle through middle-dot +
         # a..z + a few punctuation marks.
-        view["symbols"] = "·abcdefghijklmnopqrstuvwxyz+-/\\*"
+        pref_symbols = jb_prefs.get("symbols")
+        view["symbols"] = (
+            pref_symbols
+            if isinstance(pref_symbols, str) and pref_symbols
+            else "·abcdefghijklmnopqrstuvwxyz+-/\\*")
         pattern["view"] = view
 
         if not errors:

@@ -64,6 +64,12 @@ class BeadModel:
     # printer reads it; bead-list / draft / corrected / repeat are
     # unaffected.
     shift: int = 0
+    # Per-colour glyph string + on/off flag, mirroring the editor's
+    # pattern_symbols and draw_symbols. Position N is the glyph for
+    # palette index N; index 0 (background) is never drawn.
+    symbols: str = ""
+    draw_symbols: bool = False
+    draw_colors: bool = True
 
     def get(self, x, y):
         if 0 <= y < self.height and 0 <= x < self.width:
@@ -71,9 +77,19 @@ class BeadModel:
         return 0
 
     def color(self, idx):
+        if not self.draw_colors:
+            return WHITE
         if 0 <= idx < len(self.palette):
             return self.palette[idx]
         return BLACK
+
+    def symbol(self, idx):
+        if not self.draw_symbols or idx < 0:
+            return ""
+        if 0 <= idx < len(self.symbols):
+            ch = self.symbols[idx]
+            return "" if ch == " " else ch
+        return ""
 
 
 def _contrast(rgb):
@@ -105,6 +121,12 @@ def load_model(data) -> BeadModel:
         shift = 0
     if width > 0:
         shift = ((shift % width) + width) % width
+    symbols = view.get("symbols")
+    if not isinstance(symbols, str):
+        symbols = ""
+    draw_symbols = bool(view.get("draw-symbols"))
+    draw_colors_v = view.get("draw-colors")
+    draw_colors = True if draw_colors_v is None else bool(draw_colors_v)
     m = BeadModel(
         width=width,
         height=height,
@@ -115,6 +137,9 @@ def load_model(data) -> BeadModel:
         organization=str(data.get("organization") or ""),
         notes=str(data.get("notes") or ""),
         shift=shift,
+        symbols=symbols,
+        draw_symbols=draw_symbols,
+        draw_colors=draw_colors,
     )
     _compute_used_height(m)
     _compute_repeat(m)
@@ -293,6 +318,10 @@ class DraftPart(_GridPart):
                 col = self.m.color(c)
                 t.fill_rect(x_grid + i * _GX, yj, _GX, _GY, col)
                 t.stroke_rect(x_grid + i * _GX, yj, _GX, _GY, BLACK)
+                sym = self.m.symbol(c)
+                if sym:
+                    t.text_centered(x_grid + i * _GX, yj, _GX, _GY,
+                                    sym, _contrast(col))
         # Row-number labels every 10 rows. Label sits fully above the
         # marker line so the digits don't overlap the rule (PIL's
         # default bitmap font is taller than _GY, so a label box of
@@ -355,8 +384,12 @@ class CorrectedPart(_GridPart):
             xoff = 0 if (yj % 2 == 0) else -_GX / 2
             xx = x_grid + xi * _GX + xoff
             yy = y + (rpc - (yj - start) - 1) * _GY
-            t.fill_rect(xx, yy, _GX, _GY, self.m.color(c))
+            col = self.m.color(c)
+            t.fill_rect(xx, yy, _GX, _GY, col)
             t.stroke_rect(xx, yy, _GX, _GY, BLACK)
+            sym = self.m.symbol(c)
+            if sym:
+                t.text_centered(xx, yy, _GX, _GY, sym, _contrast(col))
 
 
 # ---- Simulation printer ----------------------------------------
@@ -426,8 +459,12 @@ class SimulationPart(_GridPart):
                     xx = x_grid + (xi - 1) * _GX + _GX / 2
                     w = _GX
             yy = y + (rpc - (yj - start) - 1) * _GY
-            t.fill_rect(xx, yy, w, _GY, self.m.color(c))
+            col = self.m.color(c)
+            t.fill_rect(xx, yy, w, _GY, col)
             t.stroke_rect(xx, yy, w, _GY, BLACK)
+            sym = self.m.symbol(c)
+            if sym:
+                t.text_centered(xx, yy, w, _GY, sym, _contrast(col))
 
 
 # ---- Bead-list printer -----------------------------------------
@@ -449,12 +486,18 @@ class BeadListPart(PartPrinter):
     def __init__(self, m: BeadModel):
         self.m = m
 
+    def _pill_label(self, color, count) -> str:
+        sym = self.m.symbol(color)
+        return f"{count} {sym}" if sym else str(count)
+
     def _pill_w(self) -> float:
         if not self.m.bead_list:
             return self.PILL_H * 1.6
-        max_count = max((c for _, c in self.m.bead_list), default=0)
-        text_w = len(str(max_count)) * _CHAR_W_BODY
-        # Minimum: a near-circle. Maximum: whatever fits the digits
+        max_text = max(
+            (len(self._pill_label(c, n)) for c, n in self.m.bead_list),
+            default=0)
+        text_w = max_text * _CHAR_W_BODY
+        # Minimum: a near-circle. Maximum: whatever fits the label
         # plus inner padding so the count doesn't kiss the rim.
         return max(self.PILL_H * 1.6, text_w + 14)
 
@@ -510,7 +553,8 @@ class BeadListPart(PartPrinter):
             cy = yy + ph / 2
             t.ellipse_filled(cx, cy, pw / 2, ph / 2, col)
             t.ellipse_outlined(cx, cy, pw / 2, ph / 2, BLACK)
-            t.text_centered(x0, yy, pw, ph, str(count), _contrast(col))
+            t.text_centered(x0, yy, pw, ph,
+                            self._pill_label(color, count), _contrast(col))
 
 
 # ---- Report-info printer ---------------------------------------
@@ -573,15 +617,12 @@ class ReportInfoPart(PartPrinter):
         return items
 
     def _build_counts(self) -> List[Tuple[int, int]]:
-        """Per-colour totals across the entire used pattern (desktop's
-        BeadCounts). Skips colour 0 (background) and any colour that
-        doesn't actually appear."""
+        """Per-colour totals across the entire used pattern, including
+        the background colour — those beads have to be bought too."""
         counts = {}
         for j in range(self.m.used_height):
             for i in range(self.m.width):
                 c = self.m.get(i, j)
-                if c <= 0:
-                    continue
                 counts[c] = counts.get(c, 0) + 1
         # Sort by palette index for stable output.
         return sorted(counts.items())
@@ -603,11 +644,17 @@ class ReportInfoPart(PartPrinter):
     _PILL_GAP_H = 4
     _PILL_GAP_V = 3
 
+    def _pill_label(self, color, count) -> str:
+        sym = self.m.symbol(color)
+        return f"{count} {sym}" if sym else str(count)
+
     def _pill_w(self) -> float:
         if not self._counts:
             return self._PILL_H * 1.6
-        max_count = max(c for _, c in self._counts)
-        text_w = len(str(max_count)) * _CHAR_W_BODY
+        max_text = max(
+            (len(self._pill_label(c, n)) for c, n in self._counts),
+            default=0)
+        text_w = max_text * _CHAR_W_BODY
         return max(self._PILL_H * 1.6, text_w + 14)
 
     def _count_cell_w(self) -> float:
@@ -656,7 +703,8 @@ class ReportInfoPart(PartPrinter):
                 t.ellipse_filled(pcx, pcy, pw / 2, ph / 2, col_rgb)
                 t.ellipse_outlined(pcx, pcy, pw / 2, ph / 2, BLACK)
                 t.text_centered(cx0, cy0, pw, ph,
-                                str(count), _contrast(col_rgb))
+                                self._pill_label(color, count),
+                                _contrast(col_rgb))
 
 
 # ---------- Page packing -----------------------------------------
