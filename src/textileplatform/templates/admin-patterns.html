@@ -7,29 +7,109 @@
 {% endblock %}
 
 {% block content %}
-<div class="card card-wide" style="max-width: 65rem;">
-<table>
-<thead>
-    <tr>
-        <th>{{ gettext('User') }}</th>
-        <th>{{ gettext('Pattern') }}</th>
-        <th></th>
-    </tr>
-</thead>
-<tbody>
-{% for user in users %}
-    {% for pattern in user.mypatterns %}
-    <tr>
-        <td>{{ user.name }}</td>
-        <td><a href="{{ url_for('edit_pattern', user_name=user.name, pattern_name=pattern.name) }}">{{ pattern.name }}</a></td>
-        <td>
-            <a class="btn small" href="{{ url_for('source_pattern', user_name=user.name, pattern_name=pattern.name) }}">{{ gettext('Source') }}</a>
-            <a class="btn small" href="{{ url_for('download_pattern', user_name=user.name, pattern_name=pattern.name) }}">{{ gettext('Download') }}</a>
-        </td>
-    </tr>
-    {% endfor %}
-{% endfor %}
-</tbody>
-</table>
+{% if patterns %}
+<div class="users-toolbar">
+    <input id="pattern-filter" type="search" placeholder="{{ gettext('Filter by name or owner…') }}" autocomplete="off">
+    <span class="sort-group">
+        <label for="pattern-sort">{{ gettext('Sort:') }}</label>
+        <select id="pattern-sort">
+            <option value="name-asc">{{ gettext('Name (A→Z)') }}</option>
+            <option value="modified-desc">{{ gettext('Modified (newest first)') }}</option>
+            <option value="owner-asc">{{ gettext('Owner (A→Z)') }}</option>
+        </select>
+    </span>
+    <span class="count" id="pattern-count">{{ patterns|length }} {{ gettext('patterns') }}</span>
 </div>
+
+<table id="pattern-table">
+    <thead>
+        <tr>
+            <th>{{ gettext('Name') }}</th>
+            <th>{{ gettext('Owner') }}</th>
+            <th>{{ gettext('Type') }}</th>
+            <th>{{ gettext('Created') }}</th>
+            <th>{{ gettext('Modified') }}</th>
+            <th>{{ gettext('Public') }}</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="pattern-rows">
+    {% for pattern in patterns %}
+        <tr data-name="{{ pattern.name|lower }}"
+            data-owner="{{ pattern.owner.name|lower }}"
+            data-modified="{{ pattern.modified.timestamp() if pattern.modified else 0 }}">
+            <td>
+                <form method="post" action="{{ url_for('impersonate', user_name=pattern.owner.name) }}" style="display:inline; margin:0;">
+                    <input type="hidden" name="next_url" value="{{ url_for('edit_pattern', user_name=pattern.owner.name, pattern_name=pattern.name) }}">
+                    <button type="submit" class="btn-link link-as-a" title="{{ gettext('Impersonate owner and open in editor') }}">{{ pattern.name }}</button>
+                </form>
+            </td>
+            <td><a href="{{ url_for('edit_user', user_name=pattern.owner.name) }}">{{ pattern.owner.name }}</a></td>
+            <td>{{ pattern.pattern_type }}</td>
+            <td>{{ pattern.created|datetimeformat('short') }}</td>
+            <td>{{ pattern.modified|datetimeformat('short') }}</td>
+            <td title="{{ gettext('Public') if pattern.public else gettext('Private') }}">{% if pattern.public %}🌐{% else %}🔒{% endif %}</td>
+            <td>
+                <form method="post" action="{{ url_for('investigate_pattern', owner_name=pattern.owner.name, pattern_name=pattern.name) }}" style="display:inline;">
+                    <button type="submit" class="btn small">{{ gettext('Investigate') }}</button>
+                </form>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<script>
+(function () {
+    const tbody = document.getElementById('pattern-rows');
+    const filter = document.getElementById('pattern-filter');
+    const sort = document.getElementById('pattern-sort');
+    const count = document.getElementById('pattern-count');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const totalLabel = count.textContent.replace(/^\d+\s*/, '');
+
+    function applyFilter() {
+        const q = filter.value.trim().toLowerCase();
+        let visible = 0;
+        for (const r of rows) {
+            const match = !q
+                || r.dataset.name.includes(q)
+                || r.dataset.owner.includes(q);
+            r.style.display = match ? '' : 'none';
+            if (match) visible++;
+        }
+        count.textContent = visible + ' ' + totalLabel;
+    }
+
+    function applySort() {
+        const mode = sort.value;
+        const sorted = rows.slice().sort((a, b) => {
+            if (mode === 'modified-desc') {
+                return parseFloat(b.dataset.modified) - parseFloat(a.dataset.modified)
+                    || a.dataset.name.localeCompare(b.dataset.name);
+            }
+            if (mode === 'owner-asc') {
+                return a.dataset.owner.localeCompare(b.dataset.owner)
+                    || a.dataset.name.localeCompare(b.dataset.name);
+            }
+            return a.dataset.name.localeCompare(b.dataset.name);
+        });
+        for (const r of sorted) tbody.appendChild(r);
+    }
+
+    filter.addEventListener('input', applyFilter);
+    sort.addEventListener('change', applySort);
+
+    try {
+        const saved = localStorage.getItem('admin-patterns-sort');
+        if (saved) { sort.value = saved; applySort(); }
+        sort.addEventListener('change', () => localStorage.setItem('admin-patterns-sort', sort.value));
+    } catch (e) {}
+})();
+</script>
+{% else %}
+<div class="card card-wide">
+<p class="muted">{{ gettext('No patterns.') }}</p>
+</div>
+{% endif %}
 {% endblock %}

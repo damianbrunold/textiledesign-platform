@@ -1758,6 +1758,16 @@ def impersonate(user_name):
         return redirect(url_for("users"))
     session["impersonator"] = SUPPORT_USERNAME
     session["user_name"] = target.name
+    # Optional next_url so admin links can drop straight into a specific
+    # page (e.g. the editor for a given pattern). Accept only relative,
+    # same-origin paths to prevent open-redirect.
+    next_url = request.form.get("next_url") or ""
+    if (
+        next_url.startswith("/")
+        and not next_url.startswith("//")
+        and "\\" not in next_url
+    ):
+        return redirect(next_url)
     return redirect(url_for("user", user_name=target.name))
 
 
@@ -1953,18 +1963,21 @@ def users():
 @support_required
 def patterns():
     try:
-        all_users = (
-            User.query
+        all_patterns = (
+            Pattern.query
+            .join(User, Pattern.owner_id == User.id)
             .filter(User.name != SUPPORT_USERNAME)
-            .order_by(User.name)
+            .order_by(Pattern.name)
             .all()
         )
-        return render_template("admin-patterns.html", users=all_users)
+        return render_template(
+            "admin-patterns.html", patterns=all_patterns,
+        )
     except HTTPException:
         raise
     except Exception:
-        logging.exception("failed to get all users")
-        abort(500, description="Failed to get all users")
+        logging.exception("failed to get all patterns")
+        abort(500, description="Failed to get all patterns")
 
 
 @app.route("/admin/users/<string:user_name>")
