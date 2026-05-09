@@ -1212,3 +1212,85 @@ table.kv td code { font-family: monospace; font-size: 0.9em; word-break: break-a
 .ok { color: #197a1f; font-weight: 600; }
 .warn { color: #b87800; font-weight: 600; }
 .danger { color: #c0392b; font-weight: 600; }
+
+/* ---- Admin users page (card grid + toolbar) ---------------- */
+.users-toolbar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+.users-toolbar input[type=search],
+.users-toolbar select {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font: inherit;
+    line-height: 1.4;
+    height: 2rem;
+    box-sizing: border-box;
+    background: #fff;
+    color: #000;
+    vertical-align: middle;
+    margin: 0;
+}
+.users-toolbar input[type=search] { min-width: 16rem; flex: 0 1 20rem; }
+.users-toolbar .sort-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.users-toolbar .sort-group label { color: #555; font-size: 0.9em; margin: 0; }
+.users-toolbar .count { color: #666; font-size: 0.9em; margin-left: auto; }
+.user-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    gap: 0.75rem;
+}
+.user-card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.75rem 0.9rem;
+    background: #fafafa;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.user-card.disabled { opacity: 0.55; }
+.user-card .head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.user-card .name { font-weight: bold; }
+.user-card .label { color: #444; }
+.user-card .meta {
+    font-size: 0.8rem;
+    color: #555;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.9rem;
+}
+.user-card .meta strong { color: #222; font-weight: 600; }
+.user-card .breakdown {
+    font-size: 0.75rem;
+    color: #555;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.user-card .actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+}
+.user-card .badge {
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid currentColor;
+    border-radius: 0.6rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+}

@@ -159,6 +159,26 @@ img.icon.selected { outline: 2px solid #999; }
 .card ul.plain > li { border-bottom-color: #333; }
 .card table th, .card table td { border-bottom-color: #333; }
 .card .muted { color: #aaa; }
+
+/* ---- Admin users page (card grid + toolbar) ---------------- */
+.users-toolbar input[type=search],
+.users-toolbar select {
+    background: #2a2a2a;
+    border-color: #555;
+    color: #ddd;
+}
+.users-toolbar .sort-group label { color: #bbb; }
+.users-toolbar .count { color: #aaa; }
+.user-card {
+    background: #1f1f1f;
+    border-color: #444;
+    color: #ddd;
+}
+.user-card .label { color: #bbb; }
+.user-card .meta { color: #bbb; }
+.user-card .meta strong { color: #eee; }
+.user-card .breakdown { color: #bbb; }
+.user-card a.name { color: #67c3ff; }
 .tag {
     background: #333;
     color: #ddd;

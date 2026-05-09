@@ -71,6 +71,7 @@ from werkzeug.security import check_password_hash
 
 @app.before_request
 def load_logged_in_user():
+    g.usage_pending = False
     user_name = session.get("user_name")
     if user_name is None:
         g.user = None
@@ -95,20 +96,72 @@ def load_logged_in_user():
                     session.clear()
                     return redirect(url_for("login"))
 
-                # we update access date every 10 minutes in the database
-                # this gives us reasonably accurrate usage info without
-                # writing to the database with each click. Don't update
-                # access_date while impersonating, so we don't disturb
-                # the real user's last-seen timestamp.
-                if (
-                    not impersonating
-                    and g.user.access_date
-                    and (now - g.user.access_date).total_seconds() > 600
-                ):
-                    g.user.access_date = now
-                    db.session.commit()
+                # Flush access_date + day counters when either:
+                #   - it's the first access of a new day (so day counters
+                #     are accurate), or
+                #   - more than 10 minutes have passed since the last
+                #     access_date write (cheap "still here" heartbeat).
+                # When the day rolls over we always write — otherwise the
+                # next request would see the same stale date and bump the
+                # day counter a second time.
+                if not impersonating:
+                    last = g.user.access_date
+                    if (
+                        last is None
+                        or last.date() != now.date()
+                        or (now - last).total_seconds() > 600
+                    ):
+                        g.usage_pending = True
+                        g.usage_now = now
         except Exception:
             g.user = None
+
+
+def _bump_pattern_edit(pattern_type):
+    """Unthrottled edit-count bump used by save / create / upload / delete
+    routes."""
+    if not g.user or session.get("impersonator"):
+        return
+    if pattern_type == "DB-WEAVE Pattern":
+        g.user.bump_category("weave_edit")
+    elif pattern_type == "JBead Pattern":
+        g.user.bump_category("bead_edit")
+
+
+def _bump_pattern_view(pattern_type):
+    """Unthrottled view-count bump. Only called when the user explicitly
+    opens a pattern in the editor (edit_pattern route)."""
+    if not g.user or session.get("impersonator"):
+        return
+    if pattern_type == "DB-WEAVE Pattern":
+        g.user.bump_category("weave_view")
+    elif pattern_type == "JBead Pattern":
+        g.user.bump_category("bead_view")
+
+
+def _bump_messaging():
+    """Unthrottled bump for each message the user sends (direct or group)."""
+    if not g.user or session.get("impersonator"):
+        return
+    g.user.bump_category("messaging")
+
+
+@app.after_request
+def flush_usage_stats(response):
+    if not getattr(g, "usage_pending", False):
+        return response
+    user = getattr(g, "user", None)
+    if user is None:
+        return response
+    try:
+        now = g.usage_now
+        user.bump_usage_day(now)
+        user.access_date = now
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logging.exception("failed to flush usage stats")
+    return response
 
 
 def login_required(view):
@@ -351,6 +404,13 @@ def edit_pattern(user_name, pattern_name):
     superuser = g.user and g.user.name == SUPPORT_USERNAME
     if not superuser and readonly and not pattern.public:
         return redirect(url_for("user", user_name=user_name))
+    if not readonly:
+        _bump_pattern_view(pattern.pattern_type)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logging.exception("failed to bump view count")
     pattern.pattern = json.loads(pattern.contents)
     if pattern.pattern_type == "DB-WEAVE Pattern":
         # fix None in data
@@ -1019,10 +1079,13 @@ def upload_pattern():
             bytedata = file.read()
             data = bytedata.decode("latin-1", "ignore")
             saved = None
+            saved_kind = None
             if data.startswith("@dbw3:"):
                 saved = add_weave_pattern(parse_dbw_data(data, name), g.user)
+                saved_kind = "DB-WEAVE Pattern"
             elif data.startswith("(jbb"):
                 saved = add_bead_pattern(parse_jbb_data(data, name), g.user)
+                saved_kind = "JBead Pattern"
             else:
                 try:
                     jsondata = json.loads(bytedata.decode("utf-8", "ignore"))
@@ -1030,14 +1093,19 @@ def upload_pattern():
                         if "name" not in jsondata:
                             jsondata["name"] = name
                         saved = add_weave_pattern(jsondata, g.user)
+                        saved_kind = "DB-WEAVE Pattern"
                     else:
                         if "name" not in jsondata:
                             jsondata["name"] = name
                         saved = add_bead_pattern(jsondata, g.user)
+                        saved_kind = "JBead Pattern"
                 except Exception:
                     pass  # TODO handle errors
             if saved:
                 imported.append(saved)
+                _bump_pattern_edit(saved_kind)
+        if imported:
+            db.session.commit()
         if len(imported) == 1:
             return redirect(url_for(
                 "edit_pattern",
@@ -1141,6 +1209,8 @@ def create_pattern():
         if not errors:
             try:
                 name = add_weave_pattern(pattern, g.user)
+                _bump_pattern_edit("DB-WEAVE Pattern")
+                db.session.commit()
                 return redirect(url_for("edit_pattern",
                                         user_name=g.user.name,
                                         pattern_name=name))
@@ -1251,6 +1321,8 @@ def create_pattern():
         if not errors:
             try:
                 name = add_bead_pattern(pattern, g.user)
+                _bump_pattern_edit("JBead Pattern")
+                db.session.commit()
                 return redirect(url_for("edit_pattern",
                                         user_name=g.user.name,
                                         pattern_name=name))
@@ -1282,6 +1354,7 @@ def delete(pattern_name):
         error = None
 
         try:
+            _bump_pattern_edit(pattern.pattern_type)
             for assignment in pattern.assignments:
                 db.session.delete(assignment)
             db.session.delete(pattern)
@@ -2068,7 +2141,9 @@ def login():
             session["user_name"] = user.name
             session.permanent = True
 
-            user.access_date = datetime.datetime.now(datetime.timezone.utc)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            user.bump_usage_day(now)
+            user.access_date = now
             db.session.commit()
 
             return redirect(url_for("user", user_name=user.name))
@@ -2299,6 +2374,7 @@ def update_pattern(user_name, pattern_name):
             if "preview" in data:
                 pattern.preview_image = _decode_data_url_png(
                     data.get("preview"))
+            _bump_pattern_edit(pattern.pattern_type)
             db.session.commit()
             return jsonify({"status": "OK"}), 200
         elif action == "clone-pattern":
@@ -2312,6 +2388,8 @@ def update_pattern(user_name, pattern_name):
                 else pattern.contents
             )
             clone_pattern(g.user, pattern, contents)
+            _bump_pattern_edit(pattern.pattern_type)
+            db.session.commit()
             return jsonify({"status": "OK"}), 200
         elif action == "rename-pattern":
             if not g.user or user.name != g.user.name:
@@ -2561,6 +2639,7 @@ def api_direct_conversation(user_name):
         msg = post_message(conv, g.user, body)
         if msg is None:
             return respond("NOK", "Empty message", 400)
+        _bump_messaging()
         db.session.commit()
         if is_support(target) and not is_support(g.user):
             try:
@@ -2617,6 +2696,7 @@ def api_group_conversation(group_name):
         msg = post_message(conv, g.user, data.get("body", ""))
         if msg is None:
             return respond("NOK", "Empty message", 400)
+        _bump_messaging()
         db.session.commit()
         return jsonify({
             "status": "OK",

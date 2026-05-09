@@ -14,6 +14,9 @@
             <tr><th>{{ gettext('Label') }}</th><td>{{ user.label }}</td></tr>
             <tr><th>{{ gettext('E-Mail') }}</th><td>{{ user.email }}</td></tr>
             <tr><th>{{ gettext('Locale') }}</th><td>{{ user.locale }}</td></tr>
+            <tr><th>{{ gettext('Created') }}</th><td>{% if user.create_date %}{{ user.create_date.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}&mdash;{% endif %}</td></tr>
+            <tr><th>{{ gettext('Verified') }}</th><td>{% if user.verify_date %}{{ user.verify_date.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}&mdash;{% endif %}</td></tr>
+            <tr><th>{{ gettext('Last access') }}</th><td>{% if user.access_date %}{{ user.access_date.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}&mdash;{% endif %}</td></tr>
             <tr>
                 <th>{{ gettext('Status') }}</th>
                 <td>
@@ -29,6 +32,40 @@
                     {% endif %}
                 </td>
             </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card card-wide">
+    <h2>{{ gettext('Usage') }}</h2>
+    {% set uc = user.get_usage_counts() %}
+    <table>
+        <tbody>
+            <tr>
+                <th style="width:14rem;">{{ gettext('Distinct days accessed') }}</th>
+                <td>
+                    {{ user.usage_days_total or 0 }} {{ gettext('total') }}
+                    &middot;
+                    {{ user.usage_days_year or 0 }} {{ gettext('in') }} {{ user.usage_year or '—' }}
+                </td>
+            </tr>
+            <tr>
+                <th>{{ gettext('Weave patterns') }}</th>
+                <td>
+                    {{ gettext('edits') }}: {{ uc.get('weave_edit', 0) }}
+                    &middot;
+                    {{ gettext('views') }}: {{ uc.get('weave_view', 0) }}
+                </td>
+            </tr>
+            <tr>
+                <th>{{ gettext('Bead patterns') }}</th>
+                <td>
+                    {{ gettext('edits') }}: {{ uc.get('bead_edit', 0) }}
+                    &middot;
+                    {{ gettext('views') }}: {{ uc.get('bead_view', 0) }}
+                </td>
+            </tr>
+            <tr><th>{{ gettext('Messages sent') }}</th><td>{{ uc.get('messaging', 0) }}</td></tr>
         </tbody>
     </table>
 </div>

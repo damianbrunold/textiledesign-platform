@@ -1,3 +1,5 @@
+import json
+
 from textileplatform.db import db
 
 
@@ -23,6 +25,10 @@ class User(db.Model):
     verify_date = db.Column(db.DateTime(timezone=True))
     access_date = db.Column(db.DateTime(timezone=True))
     settings = db.Column(db.Text, nullable=True)
+    usage_days_total = db.Column(db.Integer)
+    usage_days_year = db.Column(db.Integer)
+    usage_year = db.Column(db.Integer)
+    usage_counts = db.Column(db.Text)
 
     memberships = db.relationship("Membership", back_populates="user")
     mypatterns = db.relationship(
@@ -58,6 +64,33 @@ class User(db.Model):
 
     def pending_invitations(self):
         return [m for m in self.memberships if m.state == "invited"]
+
+    def bump_usage_day(self, now):
+        today = now.date()
+        last = self.access_date
+        is_new_day = last is None or last.date() != today
+        if self.usage_year != now.year:
+            self.usage_year = now.year
+            self.usage_days_year = 0
+        if is_new_day:
+            self.usage_days_total = (self.usage_days_total or 0) + 1
+            self.usage_days_year = (self.usage_days_year or 0) + 1
+
+    def get_usage_counts(self):
+        if not self.usage_counts:
+            return {}
+        try:
+            data = json.loads(self.usage_counts)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def bump_category(self, category):
+        if not category:
+            return
+        counts = self.get_usage_counts()
+        counts[category] = (counts.get(category) or 0) + 1
+        self.usage_counts = json.dumps(counts)
 
 
 class Membership(db.Model):
