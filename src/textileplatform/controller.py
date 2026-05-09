@@ -146,6 +146,14 @@ def _bump_messaging():
     g.user.bump_category("messaging")
 
 
+def _touch_group(group):
+    """Stamp the group as modified now. Caller is responsible for the
+    surrounding commit."""
+    if group is None:
+        return
+    group.modified = datetime.datetime.now(datetime.timezone.utc)
+
+
 @app.after_request
 def flush_usage_stats(response):
     if not getattr(g, "usage_pending", False):
@@ -1421,11 +1429,22 @@ def assignments(pattern_name):
                 new.append(
                     Assignment(group_id=group_id, pattern_id=pattern.id)
                 )
+            touched_group_ids = (
+                {a.group_id for a in todelete}
+                | {a.group_id for a in new}
+            )
             for a in todelete:
                 db.session.delete(a)
             for a in new:
                 db.session.add(a)
             pattern.assignments = fixed + existing + new
+            if touched_group_ids:
+                for gr in (
+                    Group.query
+                    .filter(Group.id.in_(touched_group_ids))
+                    .all()
+                ):
+                    _touch_group(gr)
             db.session.commit()
         except Exception:
             logging.exception("Assignments could not be saved")
@@ -1481,6 +1500,7 @@ def update_group(group_name):
         return redirect(url_for("edit_group", group_name=group.name))
     description = (request.form.get("description") or "").strip()
     group.description = description
+    _touch_group(group)
     db.session.commit()
     flash(gettext("Group updated"))
     return redirect(url_for("edit_group", group_name=group.name))
@@ -1525,6 +1545,7 @@ def invite_to_group(group_name):
             # declined → re-invite with new role
             existing.role = role
             existing.state = "invited"
+            _touch_group(group)
             db.session.commit()
             flash(gettext("Invitation sent"))
         return redirect(url_for("edit_group", group_name=group.name))
@@ -1536,6 +1557,7 @@ def invite_to_group(group_name):
         state="invited",
     )
     db.session.add(membership)
+    _touch_group(group)
     db.session.commit()
     flash(gettext("Invitation sent"))
     return redirect(url_for("edit_group", group_name=group.name))
@@ -1561,6 +1583,7 @@ def accept_invitation(membership_id):
     if m.state != "invited":
         return redirect(url_for("invitations"))
     m.state = "accepted"
+    _touch_group(m.group)
     db.session.commit()
     flash(gettext("Invitation accepted"))
     return redirect(url_for("edit_group", group_name=m.group.name))
@@ -1575,6 +1598,7 @@ def decline_invitation(membership_id):
     if m.state != "invited":
         return redirect(url_for("invitations"))
     m.state = "declined"
+    _touch_group(m.group)
     db.session.commit()
     flash(gettext("Invitation declined"))
     return redirect(url_for("invitations"))
@@ -1608,6 +1632,7 @@ def update_membership(group_name, user_name):
             flash(gettext("Cannot remove the last owner of a group"))
             return redirect(url_for("edit_group", group_name=group.name))
         db.session.delete(membership)
+        _touch_group(group)
         db.session.commit()
         flash(gettext("Member removed"))
     elif action == "set_role":
@@ -1623,6 +1648,7 @@ def update_membership(group_name, user_name):
             flash(gettext("Cannot demote the last owner of a group"))
             return redirect(url_for("edit_group", group_name=group.name))
         membership.role = new_role
+        _touch_group(group)
         db.session.commit()
         flash(gettext("Role updated"))
     else:
@@ -1648,6 +1674,7 @@ def leave_group(group_name):
         ))
         return redirect(url_for("edit_group", group_name=group.name))
     db.session.delete(membership)
+    _touch_group(group)
     db.session.commit()
     flash(gettext("You left the group"))
     return redirect(url_for("edit_groups"))
@@ -1777,10 +1804,12 @@ def add_group():
         if group:
             flash(gettext("Group already exists"))
         else:
+            now_utc = datetime.datetime.now(datetime.timezone.utc)
             group = Group(
                 name=name,
                 label=label,
                 description=description,
+                created=now_utc,
             )
             membership = Membership(
                 user=g.user,
@@ -1803,18 +1832,80 @@ def add_group():
 @support_required
 def groups():
     try:
-        all_groups = (
-            Group.query
-            .filter(Group.name != SUPPORT_USERNAME)
-            .order_by(Group.name)
+        # Personal groups are auto-created on registration and only ever
+        # contain that one user (membership.user.name == group.name).
+        # Hide them from the admin overview — including orphans whose
+        # namesake user has been deleted (m.user is None).
+        def _is_personal(group):
+            for m in group.memberships:
+                if m.user is not None and m.user.name == group.name:
+                    return True
+            if group.memberships and all(
+                m.user is None for m in group.memberships
+            ):
+                return True
+            return False
+
+        all_groups = [
+            g for g in (
+                Group.query
+                .filter(Group.name != SUPPORT_USERNAME)
+                .order_by(Group.name)
+                .all()
+            )
+            if not _is_personal(g)
+        ]
+        member_rows = (
+            db.session.query(
+                Membership.group_id, db.func.count(Membership.id),
+            )
+            .filter(Membership.state == "accepted")
+            .group_by(Membership.group_id)
             .all()
         )
-        return render_template("admin-groups.html", groups=all_groups)
+        pattern_rows = (
+            db.session.query(
+                Assignment.group_id, db.func.count(Assignment.id),
+            )
+            .group_by(Assignment.group_id)
+            .all()
+        )
+        member_counts = {gid: n for gid, n in member_rows}
+        pattern_counts = {gid: n for gid, n in pattern_rows}
+        return render_template(
+            "admin-groups.html",
+            groups=all_groups,
+            member_counts=member_counts,
+            pattern_counts=pattern_counts,
+        )
     except HTTPException:
         raise
     except Exception:
         logging.exception("failed to get all groups")
         abort(500, description="Failed to get all groups")
+
+
+@app.route("/admin/groups/<string:group_name>")
+@login_required
+@support_required
+def admin_view_group(group_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group:
+        abort(404, description=f"Group {group_name} not found")
+    memberships = sorted(
+        group.memberships,
+        key=lambda m: (m.state != "accepted", m.user.name.lower()),
+    )
+    patterns = sorted(
+        [a.pattern for a in group.assignments],
+        key=lambda p: p.name.lower(),
+    )
+    return render_template(
+        "admin-view-group.html",
+        group=group,
+        memberships=memberships,
+        patterns=patterns,
+    )
 
 
 @app.route("/admin/users")
@@ -2073,10 +2164,12 @@ def register():
                     access_date=None,
                 )
                 db.session.add(user)
+                now_utc = datetime.datetime.now(datetime.timezone.utc)
                 group = Group(
                     name=name,
                     label=label,
                     description="",
+                    created=now_utc,
                 )
                 db.session.add(group)
                 membership = Membership(

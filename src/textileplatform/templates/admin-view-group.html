@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ group.label }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
+{% block header %}
+<h1>{{ group.label }}</h1>
+{% endblock %}
+
+{% block content %}
+<div class="card card-wide">
+    <table>
+        <tbody>
+            <tr><th style="width:10rem;">{{ gettext('Name') }}</th><td>{{ group.name }}</td></tr>
+            <tr><th>{{ gettext('Label') }}</th><td>{{ group.label }}</td></tr>
+            <tr>
+                <th style="vertical-align:top;">{{ gettext('Description') }}</th>
+                <td style="white-space:pre-wrap; word-break:break-word;">{% if group.description %}{{ group.description }}{% else %}<span class="muted">{{ gettext('No description.') }}</span>{% endif %}</td>
+            </tr>
+            <tr><th>{{ gettext('Created') }}</th><td>{% if group.created %}{{ group.created.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}&mdash;{% endif %}</td></tr>
+            <tr><th>{{ gettext('Modified') }}</th><td>{% if group.modified %}{{ group.modified.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}&mdash;{% endif %}</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card card-wide">
+    <h2>{{ gettext('Members') }} ({{ memberships|length }})</h2>
+    {% if memberships %}
+    <table>
+        <thead>
+            <tr>
+                <th>{{ gettext('User') }}</th>
+                <th>{{ gettext('Label') }}</th>
+                <th>{{ gettext('Role') }}</th>
+                <th>{{ gettext('State') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for m in memberships %}
+            <tr>
+                <td><a href="{{ url_for('edit_user', user_name=m.user.name) }}">{{ m.user.name }}</a></td>
+                <td>{{ m.user.label }}</td>
+                <td>{{ m.role }}</td>
+                <td>{{ m.state }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">{{ gettext('No members.') }}</p>
+    {% endif %}
+</div>
+
+<div class="card card-wide">
+    <h2>{{ gettext('Patterns') }} ({{ patterns|length }})</h2>
+    {% if patterns %}
+    <table>
+        <thead>
+            <tr>
+                <th>{{ gettext('Name') }}</th>
+                <th>{{ gettext('Type') }}</th>
+                <th>{{ gettext('Owner') }}</th>
+                <th>{{ gettext('Modified') }}</th>
+                <th>{{ gettext('Public') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in patterns %}
+            <tr>
+                <td>{{ p.name }}</td>
+                <td>{{ p.pattern_type }}</td>
+                <td><a href="{{ url_for('edit_user', user_name=p.owner.name) }}">{{ p.owner.name }}</a></td>
+                <td>{{ p.modified|datetimeformat('short') }}</td>
+                <td title="{{ gettext('Public') if p.public else gettext('Private') }}">{% if p.public %}🌐{% else %}🔒{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">{{ gettext('No patterns.') }}</p>
+    {% endif %}
+</div>
+
+<p class="muted" style="font-size:0.85em;">{{ gettext('Read-only admin view. Use the user pages to make changes.') }}</p>
+{% endblock %}

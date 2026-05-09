@@ -113,6 +113,8 @@ class Group(db.Model):
     name = db.Column(db.String(50), nullable=False, unique=True)
     label = db.Column(db.String(50), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=False)
+    created = db.Column(db.DateTime(timezone=True))
+    modified = db.Column(db.DateTime(timezone=True))
 
     memberships = db.relationship("Membership", back_populates="group")
     assignments = db.relationship("Assignment", back_populates="group")

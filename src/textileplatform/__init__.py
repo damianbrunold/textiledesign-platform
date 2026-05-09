@@ -9,7 +9,9 @@ from textileplatform.models import User
 from textileplatform.models import Group
 from textileplatform.models import Membership
 from textileplatform.models import Pattern
+from textileplatform.models import Conversation
 import textileplatform.controller  # noqa
+from textileplatform.controller import _delete_user_data
 
 import datetime
 import os
@@ -148,7 +150,11 @@ def clean_up_non_verified_users():
             )
             if ok == "y":
                 for user in todelete:
-                    db.session.delete(user)
+                    # Use the same teardown as /profile/delete so the
+                    # personal group, memberships, conversations, etc.
+                    # are removed together with the user. Otherwise we
+                    # leave orphan personal groups behind.
+                    _delete_user_data(user)
                 db.session.commit()
 
 
@@ -309,6 +315,63 @@ def reset_password(user_name):
         db.session.commit()
 
 
+@click.command("clean-up-orphan-personal-groups")
+def clean_up_orphan_personal_groups():
+    """Delete personal groups whose namesake user is gone.
+
+    Older code paths (notably clean-up-non-verified-users before it was
+    fixed) deleted the User row without tearing down the personal group
+    that registration auto-created. This leaves a group with one
+    membership whose user_id has been set to NULL by SQLAlchemy. This
+    command finds and removes those orphans.
+    """
+    with app.app_context():
+        live_user_names = {
+            row[0] for row in db.session.query(User.name).all()
+        }
+        orphans = []
+        for group in Group.query.order_by(Group.name).all():
+            if group.name == SUPPORT_USERNAME:
+                continue
+            if group.name in live_user_names:
+                continue
+            # All memberships either point to a deleted user or to
+            # someone whose name no longer matches anything live. We
+            # only call a group "personal-orphan" when every membership
+            # is either None or the namesake; that excludes shared
+            # groups whose name happens to not match a user (won't
+            # actually happen via registration, but be defensive).
+            if not group.memberships:
+                continue
+            members_ok = all(
+                m.user is None or m.user.name == group.name
+                for m in group.memberships
+            )
+            if members_ok:
+                orphans.append(group)
+        if not orphans:
+            print("no orphan personal groups found")
+            return
+        ok = input(
+            f"Really delete {len(orphans)} orphan personal group(s): "
+            f"{', '.join(g.name for g in orphans)}? (y/N) "
+        )
+        if ok != "y":
+            print("cancelled")
+            return
+        for group in orphans:
+            conv = Conversation.query.filter_by(group_id=group.id).first()
+            if conv is not None:
+                db.session.delete(conv)
+            for m in list(group.memberships):
+                db.session.delete(m)
+            for a in list(group.assignments):
+                db.session.delete(a)
+            db.session.delete(group)
+        db.session.commit()
+        print(f"deleted {len(orphans)} orphan personal group(s)")
+
+
 @click.command("ensure-primary-groups")
 def ensure_primary_groups():
     with app.app_context():
@@ -324,6 +387,7 @@ def ensure_primary_groups():
                 name=user.name,
                 label=user.label,
                 description='',
+                created=datetime.datetime.now(datetime.timezone.utc),
             )
             membership = Membership(
                 user=user,
@@ -349,5 +413,6 @@ app.cli.add_command(create_bead_pattern)
 app.cli.add_command(reset_password)
 app.cli.add_command(ensure_primary_groups)
 app.cli.add_command(clean_up_non_verified_users)
+app.cli.add_command(clean_up_orphan_personal_groups)
 
 application = app

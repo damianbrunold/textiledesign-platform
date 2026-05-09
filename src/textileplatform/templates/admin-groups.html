@@ -7,21 +7,107 @@
 {% endblock %}
 
 {% block content %}
-<div class="card card-wide">
 {% if groups %}
-<ul class="plain">
-    {% for group in groups %}
-    <li>
-        <a href="{{ url_for('edit_group', group_name=group.name) }}"
-           style="display:flex; flex-grow:1; gap:1rem; text-decoration:none;">
-            <span style="width:18rem; flex-shrink:0;"><strong>{{ group.name }}</strong></span>
-            <span style="flex-grow:1;">{{ group.label }}</span>
-        </a>
-    </li>
-    {% endfor %}
-</ul>
-{% else %}
-<p class="muted">{{ gettext('No groups.') }}</p>
-{% endif %}
+<div class="users-toolbar">
+    <input id="group-filter" type="search" placeholder="{{ gettext('Filter by name or label…') }}" autocomplete="off">
+    <span class="sort-group">
+        <label for="group-sort">{{ gettext('Sort:') }}</label>
+        <select id="group-sort">
+            <option value="name-asc">{{ gettext('Name (A→Z)') }}</option>
+            <option value="members-desc">{{ gettext('Members (most first)') }}</option>
+            <option value="patterns-desc">{{ gettext('Patterns (most first)') }}</option>
+            <option value="created-desc">{{ gettext('Created (newest first)') }}</option>
+            <option value="modified-desc">{{ gettext('Modified (newest first)') }}</option>
+        </select>
+    </span>
+    <span class="count" id="group-count">{{ groups|length }} {{ gettext('groups') }}</span>
 </div>
+
+<div class="user-grid" id="group-list">
+    {% for group in groups %}
+    <a class="user-card group-card"
+       href="{{ url_for('admin_view_group', group_name=group.name) }}"
+       data-name="{{ group.name|lower }}"
+       data-label="{{ group.label|lower }}"
+       data-members="{{ member_counts.get(group.id, 0) }}"
+       data-patterns="{{ pattern_counts.get(group.id, 0) }}"
+       data-created="{{ group.created.timestamp() if group.created else 0 }}"
+       data-modified="{{ group.modified.timestamp() if group.modified else 0 }}"
+       style="text-decoration:none; color:inherit;">
+        <div class="head">
+            <span class="name">{{ group.label }}</span>
+        </div>
+        <div class="meta">
+            <span><strong>{{ gettext('Members') }}:</strong> {{ member_counts.get(group.id, 0) }}</span>
+            <span><strong>{{ gettext('Patterns') }}:</strong> {{ pattern_counts.get(group.id, 0) }}</span>
+        </div>
+        <div class="meta">
+            <span title="{{ gettext('Created (UTC)') }}"><strong>{{ gettext('Created') }}:</strong> {% if group.created %}{{ group.created.strftime('%Y-%m-%d') }}{% else %}&mdash;{% endif %}</span>
+            <span title="{{ gettext('Modified (UTC)') }}"><strong>{{ gettext('Modified') }}:</strong> {% if group.modified %}{{ group.modified.strftime('%Y-%m-%d') }}{% else %}&mdash;{% endif %}</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+<script>
+(function () {
+    const list = document.getElementById('group-list');
+    const filter = document.getElementById('group-filter');
+    const sort = document.getElementById('group-sort');
+    const count = document.getElementById('group-count');
+    const items = Array.from(list.querySelectorAll('.group-card'));
+    const totalLabel = count.textContent.replace(/^\d+\s*/, '');
+
+    function applyFilter() {
+        const q = filter.value.trim().toLowerCase();
+        let visible = 0;
+        for (const it of items) {
+            const match = !q
+                || it.dataset.name.includes(q)
+                || it.dataset.label.includes(q);
+            it.style.display = match ? '' : 'none';
+            if (match) visible++;
+        }
+        count.textContent = visible + ' ' + totalLabel;
+    }
+
+    function applySort() {
+        const mode = sort.value;
+        const sorted = items.slice().sort((a, b) => {
+            if (mode === 'members-desc') {
+                return parseInt(b.dataset.members, 10) - parseInt(a.dataset.members, 10)
+                    || a.dataset.name.localeCompare(b.dataset.name);
+            }
+            if (mode === 'patterns-desc') {
+                return parseInt(b.dataset.patterns, 10) - parseInt(a.dataset.patterns, 10)
+                    || a.dataset.name.localeCompare(b.dataset.name);
+            }
+            if (mode === 'created-desc') {
+                return parseFloat(b.dataset.created) - parseFloat(a.dataset.created)
+                    || a.dataset.name.localeCompare(b.dataset.name);
+            }
+            if (mode === 'modified-desc') {
+                return parseFloat(b.dataset.modified) - parseFloat(a.dataset.modified)
+                    || a.dataset.name.localeCompare(b.dataset.name);
+            }
+            return a.dataset.name.localeCompare(b.dataset.name);
+        });
+        for (const it of sorted) list.appendChild(it);
+    }
+
+    filter.addEventListener('input', applyFilter);
+    sort.addEventListener('change', applySort);
+
+    try {
+        const saved = localStorage.getItem('admin-groups-sort');
+        if (saved) { sort.value = saved; applySort(); }
+        sort.addEventListener('change', () => localStorage.setItem('admin-groups-sort', sort.value));
+    } catch (e) {}
+})();
+</script>
+{% else %}
+<div class="card card-wide">
+<p class="muted">{{ gettext('No groups.') }}</p>
+</div>
+{% endif %}
 {% endblock %}

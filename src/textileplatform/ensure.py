@@ -51,6 +51,7 @@ def ensure_db_contents(app):
                 name=examples.name,
                 label=examples.label,
                 description="",
+                created=now,
             )
             db.session.add(group)
             membership = Membership(
@@ -83,6 +84,7 @@ def ensure_db_contents(app):
                 name=beispiele.name,
                 label=beispiele.label,
                 description="",
+                created=now,
             )
             db.session.add(group)
             membership = Membership(
@@ -104,6 +106,7 @@ def ensure_db_contents(app):
                     name=user.name,
                     label=user.label,
                     description="",
+                    created=now,
                 )
                 db.session.add(group)
                 membership = Membership(
