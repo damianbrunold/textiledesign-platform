@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-09 20:33+0200\n"
+"POT-Creation-Date: 2026-05-09 20:38+0200\n"
 "PO-Revision-Date: 2024-04-26 12:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -496,7 +496,7 @@ msgid "Origin visibility"
 msgstr "Sichtbarkeit der Herkunft"
 
 #: src/textileplatform/templates/admin-console.html:46
-#: src/textileplatform/templates/admin-edit-user.html:83
+#: src/textileplatform/templates/admin-edit-user.html:94
 #: src/textileplatform/templates/user_private.html:105
 #: src/textileplatform/templates/user_private.html:113
 #: src/textileplatform/templates/user_private.html:398
@@ -516,12 +516,12 @@ msgid "Unknown"
 msgstr ""
 
 #: src/textileplatform/templates/admin-console.html:53
-#: src/textileplatform/templates/admin-edit-user.html:80
+#: src/textileplatform/templates/admin-edit-user.html:91
 msgid "Type"
 msgstr "Stil"
 
 #: src/textileplatform/templates/admin-console.html:55
-#: src/textileplatform/templates/admin-edit-user.html:82
+#: src/textileplatform/templates/admin-edit-user.html:93
 msgid "Modified"
 msgstr ""
 
@@ -563,7 +563,7 @@ msgstr ""
 "Benutzermuster, um eine zu erstellen."
 
 #: src/textileplatform/templates/admin-edit-user.html:13
-#: src/textileplatform/templates/admin-edit-user.html:79
+#: src/textileplatform/templates/admin-edit-user.html:90
 #: src/textileplatform/templates/messages_inbox.html:20
 #: src/textileplatform/templates/register.html:13
 #: src/textileplatform/templates/upload_pattern.html:13
@@ -587,7 +587,7 @@ msgid "Locale"
 msgstr "Global…"
 
 #: src/textileplatform/templates/admin-edit-user.html:17
-#: src/textileplatform/templates/admin-edit-user.html:81
+#: src/textileplatform/templates/admin-edit-user.html:92
 msgid "Created"
 msgstr "Erstellt"
 
@@ -682,11 +682,34 @@ msgstr "Gesendete Nachrichten"
 msgid "Patterns"
 msgstr "Muster"
 
-#: src/textileplatform/templates/admin-edit-user.html:97
+#: src/textileplatform/templates/admin-edit-user.html:77
+#, fuzzy
+msgid "Filter by name…"
+msgstr "Nach Name oder Bezeichnung filtern…"
+
+#: src/textileplatform/templates/admin-edit-user.html:79
+#: src/textileplatform/templates/admin-users.html:14
+msgid "Sort:"
+msgstr "Sortieren:"
+
+#: src/textileplatform/templates/admin-edit-user.html:81
+#: src/textileplatform/templates/admin-users.html:16
+msgid "Name (A→Z)"
+msgstr "Name (A→Z)"
+
+#: src/textileplatform/templates/admin-edit-user.html:82
+msgid "Modified (newest first)"
+msgstr "Geändert (neueste zuerst)"
+
+#: src/textileplatform/templates/admin-edit-user.html:85
+msgid "patterns"
+msgstr "Muster"
+
+#: src/textileplatform/templates/admin-edit-user.html:109
 msgid "Investigate"
 msgstr "Untersuchen"
 
-#: src/textileplatform/templates/admin-edit-user.html:105
+#: src/textileplatform/templates/admin-edit-user.html:159
 #: src/textileplatform/templates/edit_group.html:218
 #: src/textileplatform/templates/group.html:49
 msgid "No patterns."
@@ -873,14 +896,6 @@ msgstr "Nein"
 #: src/textileplatform/templates/admin-users.html:12
 msgid "Filter by name or label…"
 msgstr "Nach Name oder Bezeichnung filtern…"
-
-#: src/textileplatform/templates/admin-users.html:14
-msgid "Sort:"
-msgstr "Sortieren:"
-
-#: src/textileplatform/templates/admin-users.html:16
-msgid "Name (A→Z)"
-msgstr "Name (A→Z)"
 
 #: src/textileplatform/templates/admin-users.html:17
 msgid "Last access (newest first)"

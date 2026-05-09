@@ -73,7 +73,18 @@
 <div class="card card-wide">
     <h2>{{ gettext('Patterns') }}</h2>
     {% if patterns %}
-    <table>
+    <div class="users-toolbar">
+        <input id="pattern-filter" type="search" placeholder="{{ gettext('Filter by name…') }}" autocomplete="off">
+        <span class="sort-group">
+            <label for="pattern-sort">{{ gettext('Sort:') }}</label>
+            <select id="pattern-sort">
+                <option value="name-asc">{{ gettext('Name (A→Z)') }}</option>
+                <option value="modified-desc">{{ gettext('Modified (newest first)') }}</option>
+            </select>
+        </span>
+        <span class="count" id="pattern-count">{{ patterns|length }} {{ gettext('patterns') }}</span>
+    </div>
+    <table id="pattern-table">
         <thead>
             <tr>
                 <th>{{ gettext('Name') }}</th>
@@ -84,14 +95,15 @@
                 <th></th>
             </tr>
         </thead>
-        <tbody>
+        <tbody id="pattern-rows">
         {% for pattern in patterns %}
-            <tr>
+            <tr data-name="{{ pattern.name|lower }}"
+                data-modified="{{ pattern.modified.timestamp() if pattern.modified else 0 }}">
                 <td>{{ pattern.name }}</td>
                 <td>{{ pattern.pattern_type }}</td>
                 <td>{{ pattern.created|datetimeformat('short') }}</td>
                 <td>{{ pattern.modified|datetimeformat('short') }}</td>
-                <td>{{ pattern.public }}</td>
+                <td title="{{ gettext('Public') if pattern.public else gettext('Private') }}">{% if pattern.public %}🌐{% else %}🔒{% endif %}</td>
                 <td>
                     <form method="post" action="{{ url_for('investigate_pattern', owner_name=user.name, pattern_name=pattern.name) }}" style="display:inline;">
                         <button type="submit" class="btn small">{{ gettext('Investigate') }}</button>
@@ -101,6 +113,48 @@
         {% endfor %}
         </tbody>
     </table>
+    <script>
+    (function () {
+        const tbody = document.getElementById('pattern-rows');
+        const filter = document.getElementById('pattern-filter');
+        const sort = document.getElementById('pattern-sort');
+        const count = document.getElementById('pattern-count');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const totalLabel = count.textContent.replace(/^\d+\s*/, '');
+
+        function applyFilter() {
+            const q = filter.value.trim().toLowerCase();
+            let visible = 0;
+            for (const r of rows) {
+                const match = !q || r.dataset.name.includes(q);
+                r.style.display = match ? '' : 'none';
+                if (match) visible++;
+            }
+            count.textContent = visible + ' ' + totalLabel;
+        }
+
+        function applySort() {
+            const mode = sort.value;
+            const sorted = rows.slice().sort((a, b) => {
+                if (mode === 'modified-desc') {
+                    return parseFloat(b.dataset.modified) - parseFloat(a.dataset.modified)
+                        || a.dataset.name.localeCompare(b.dataset.name);
+                }
+                return a.dataset.name.localeCompare(b.dataset.name);
+            });
+            for (const r of sorted) tbody.appendChild(r);
+        }
+
+        filter.addEventListener('input', applyFilter);
+        sort.addEventListener('change', applySort);
+
+        try {
+            const saved = localStorage.getItem('admin-user-patterns-sort');
+            if (saved) { sort.value = saved; applySort(); }
+            sort.addEventListener('change', () => localStorage.setItem('admin-user-patterns-sort', sort.value));
+        } catch (e) {}
+    })();
+    </script>
     {% else %}
     <p class="muted">{{ gettext('No patterns.') }}</p>
     {% endif %}
