@@ -71,6 +71,16 @@ from werkzeug.security import check_password_hash
 
 
 @app.before_request
+def assign_csp_nonce():
+    g.csp_nonce = secrets.token_urlsafe(16)
+
+
+@app.context_processor
+def inject_csp_nonce():
+    return {"csp_nonce": getattr(g, "csp_nonce", "")}
+
+
+@app.before_request
 def load_logged_in_user():
     g.usage_pending = False
     user_name = session.get("user_name")
@@ -190,12 +200,13 @@ def set_security_headers(response):
     # canvas-driven layout, so 'unsafe-inline' is allowed for styles
     # but not scripts. data: is needed for the embedded preview/
     # thumbnail images returned by the pattern API.
+    nonce = getattr(g, "csp_nonce", "")
     response.headers.setdefault(
         "Content-Security-Policy",
         "default-src 'self'; "
         "img-src 'self' data:; "
         "style-src 'self' 'unsafe-inline'; "
-        "script-src 'self'; "
+        f"script-src 'self' 'nonce-{nonce}'; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
         "form-action 'self'",
@@ -221,10 +232,35 @@ def flush_usage_stats(response):
     return response
 
 
+def _safe_next_url(candidate):
+    """Return candidate iff it is a safe same-origin relative path.
+    Blocks absolute URLs, protocol-relative URLs (//evil.com), and the
+    login URL itself (which would loop)."""
+    if not candidate:
+        return None
+    if not candidate.startswith("/"):
+        return None
+    if candidate.startswith("//") or candidate.startswith("/\\"):
+        return None
+    try:
+        login_path = url_for("login")
+    except Exception:
+        login_path = "/auth/login"
+    if candidate == login_path or candidate.startswith(login_path + "?"):
+        return None
+    return candidate
+
+
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:
+            nxt = None
+            if request.method == "GET":
+                path = request.full_path if request.query_string else request.path
+                nxt = _safe_next_url(path)
+            if nxt:
+                return redirect(url_for("login", next=nxt))
             return redirect(url_for("login"))
         return view(**kwargs)
     return wrapped_view
@@ -2473,11 +2509,15 @@ def login():
             user.access_date = now
             db.session.commit()
 
+            nxt = _safe_next_url(request.form.get("next") or request.args.get("next"))
+            if nxt:
+                return redirect(nxt)
             return redirect(url_for("user", user_name=user.name))
 
         flash(error)
 
-    return render_template("login.html")
+    next_url = _safe_next_url(request.args.get("next"))
+    return render_template("login.html", next_url=next_url)
 
 
 @app.route("/auth/logout", methods=("GET", "POST"))

@@ -10,6 +10,7 @@
 <div class="card card-form">
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
         <div class="field">
             <label for="email">{{ gettext('E-Mail') }}</label>
             <input type="text" name="email" id="email" required aria-required="true" autocomplete="email">

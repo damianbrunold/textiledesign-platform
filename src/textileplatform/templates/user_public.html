@@ -88,7 +88,7 @@
 {{ render_section(gettext('JBead Patterns'), bead) }}
 {{ render_section(gettext('Other Patterns'), others) }}
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     const root = document.body;
     const filterInput = document.getElementById('filter-input');

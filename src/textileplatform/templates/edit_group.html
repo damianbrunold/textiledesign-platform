@@ -31,7 +31,7 @@
             <button type="button" class="btn" id="cancel-description-btn">{{ gettext('Cancel') }}</button>
         </div>
     </form>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     (function() {
         const view = document.getElementById('group-description-view');
         const form = document.getElementById('group-description-form');
@@ -93,7 +93,7 @@
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="action" value="set_role">
                         <label class="visually-hidden" for="role-{{ m.user.id }}">{{ gettext('Role for') }} {{ m.user.label }}</label>
-                        <select name="role" id="role-{{ m.user.id }}" onchange="this.form.submit()">
+                        <select name="role" id="role-{{ m.user.id }}" data-submit-on-change>
                             <option value="owner" {% if m.role == 'owner' %}selected{% endif %}>{{ gettext('Owner') }}</option>
                             <option value="writer" {% if m.role == 'writer' %}selected{% endif %}>{{ gettext('Writer') }}</option>
                             <option value="reader" {% if m.role == 'reader' %}selected{% endif %}>{{ gettext('Reader') }}</option>
@@ -106,7 +106,7 @@
                     <form method="post"
                           action="{{ url_for('update_membership', group_name=group.name, user_name=m.user.name) }}"
                           style="display:inline; margin:0;"
-                          onsubmit="return confirm('{{ gettext('Remove this member?') }}');">
+                          data-confirm="{{ gettext('Remove this member?') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="action" value="remove">
                         <button type="submit" class="btn small">{{ gettext('Remove') }}</button>
@@ -147,7 +147,7 @@
         </div>
         <button type="submit" class="btn primary">{{ gettext('Invite') }}</button>
     </form>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     (function() {
         const input = document.getElementById('invite-user');
         const box = document.getElementById('user-suggestions');
@@ -197,7 +197,7 @@
 
     {% if not is_personal %}
     <form method="post" action="{{ url_for('leave_group', group_name=group.name) }}"
-          onsubmit="return confirm('{{ gettext('Leave this group?') }}');"
+          data-confirm="{{ gettext('Leave this group?') }}"
           style="margin-top:1rem;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="actions left">

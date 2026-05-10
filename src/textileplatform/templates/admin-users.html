@@ -61,7 +61,7 @@
     {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
     const grid = document.getElementById('user-grid');
     const filter = document.getElementById('user-filter');

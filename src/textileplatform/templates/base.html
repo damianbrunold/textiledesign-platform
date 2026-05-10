@@ -3,7 +3,7 @@
     <head>
         <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <script>
+        <script nonce="{{ csp_nonce }}">
         // Wrap window.fetch to inject the CSRF token on every state-
         // changing same-origin request, so existing JS doesn't need to
         // be touched. flask-wtf accepts the token via X-CSRFToken.
@@ -32,6 +32,7 @@
             };
         })();
         </script>
+        <script src="{{ url_for('static', filename='js/confirm.js') }}"></script>
         <title>{% block title %}{% if pattern and pattern.name %}{{ pattern.name }} &mdash; {{ gettext('Textile Platform') }}{% else %}{{ gettext('Textile Platform') }}{% endif %}{% endblock %}</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
         {% set dark_pref = g.user.darkmode if g.user else none %}

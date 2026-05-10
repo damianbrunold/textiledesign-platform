@@ -102,7 +102,7 @@
     <h2>{{ gettext('Delete Account') }}</h2>
     <p>{{ gettext('Deleting your account will permanently remove your patterns, your group memberships, and your messages. This cannot be undone.') }}</p>
     <form method="post" action="{{ url_for('profile_delete') }}"
-          onsubmit="return confirm('{{ gettext('Permanently delete your account? This cannot be undone.') }}');">
+          data-confirm="{{ gettext('Permanently delete your account? This cannot be undone.') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="field">
         <label for="delete_password">{{ gettext('Current Password') }}</label>
@@ -121,7 +121,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
     const darkStyleUrl = "{{ url_for('static', filename='css/style_dark.css') }}";
     function setDarkMode(mode) {
         // mode: 'light' | 'dark' | 'system'

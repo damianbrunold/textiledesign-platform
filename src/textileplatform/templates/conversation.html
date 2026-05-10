@@ -37,7 +37,7 @@
     {% endif %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     const chat = document.querySelector('.chat');
     const apiUrl = chat.dataset.apiUrl;

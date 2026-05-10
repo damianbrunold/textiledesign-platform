@@ -51,7 +51,7 @@
     {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
     const grid = document.getElementById('pattern-grid');
     const filter = document.getElementById('pattern-filter');

@@ -19,13 +19,13 @@
                         <button type="button" id="email-edit-btn" class="btn small">{{ gettext('Edit') }}</button>
                     </div>
                     <form id="email-edit-form" method="post" action="{{ url_for('admin_set_user_email', user_name=user.name) }}" style="display:none; gap:0.5rem; align-items:center; margin:0;"
-                          onsubmit="return confirm('{{ gettext('Change the e-mail for this user? Active sessions will be signed out.') }}');">
+                          data-confirm="{{ gettext('Change the e-mail for this user? Active sessions will be signed out.') }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="email" name="email" id="email-edit-input" value="{{ user.email }}" required style="flex:1;">
                         <button type="submit" class="btn small primary">{{ gettext('Save') }}</button>
                         <button type="button" id="email-cancel-btn" class="btn small">{{ gettext('Cancel') }}</button>
                     </form>
-                    <script>
+                    <script nonce="{{ csp_nonce }}">
                     (function () {
                         var display = document.getElementById('email-display');
                         var form = document.getElementById('email-edit-form');
@@ -58,7 +58,7 @@
                     {% if user.disabled %}{{ gettext('Disabled') }}{% else %}{{ gettext('Active') }}{% endif %}
                     {% if user.name != SUPPORT_USERNAME and (not g.user or g.user.id != user.id) %}
                     <form method="post" action="{{ url_for('admin_set_user_disabled', user_name=user.name) }}" style="display:inline; margin-left:0.75rem;"
-                          onsubmit="return confirm('{% if user.disabled %}{{ gettext('Re-enable this account?') }}{% else %}{{ gettext('Disable this account? The user will be signed out and unable to log in.') }}{% endif %}');">
+                          data-confirm="{% if user.disabled %}{{ gettext('Re-enable this account?') }}{% else %}{{ gettext('Disable this account? The user will be signed out and unable to log in.') }}{% endif %}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="disabled" value="{% if user.disabled %}0{% else %}1{% endif %}">
                         <button type="submit" class="btn small">
@@ -147,7 +147,7 @@
         </div>
         {% endfor %}
     </div>
-    <script>
+    <script nonce="{{ csp_nonce }}">
     (function () {
         const grid = document.getElementById('pattern-grid');
         const filter = document.getElementById('pattern-filter');

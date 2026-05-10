@@ -150,7 +150,7 @@
 </div>
 {% endif %}
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function() {
     const root = document.body;
     const groupsEl = document.getElementById('groups');

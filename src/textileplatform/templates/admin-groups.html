@@ -49,7 +49,7 @@
     {% endfor %}
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 (function () {
     const list = document.getElementById('group-list');
     const filter = document.getElementById('group-filter');

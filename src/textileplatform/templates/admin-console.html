@@ -59,7 +59,7 @@
           <a class="btn small" href="{{ url_for('edit_pattern', user_name=g.user.name, pattern_name=p.name) }}">{{ gettext('Open') }}</a>
           <a class="btn small" href="{{ url_for('source_pattern', user_name=g.user.name, pattern_name=p.name) }}">{{ gettext('Source') }}</a>
           <form method="post" action="{{ url_for('delete_investigation', pattern_id=p.id) }}" style="display:inline;"
-                onsubmit="return confirm('{{ gettext('Delete this investigation copy?') }}');">
+                data-confirm="{{ gettext('Delete this investigation copy?') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn small danger">{{ gettext('Delete') }}</button>
           </form>
