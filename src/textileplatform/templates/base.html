@@ -72,6 +72,9 @@
                 {% if invitation_count and invitation_count > 0 %}
                 <li><a href="{{ url_for('invitations') }}" class="invitation-badge">{{ gettext('Invitations') }} ({{ invitation_count }})</a>
                 {% endif %}
+                {% if g.user.name != SUPPORT_USERNAME %}
+                <li><a id="nav-help" href="{{ url_for('messages_direct', user_name=SUPPORT_USERNAME) }}" title="{{ gettext('Help') }}" aria-label="{{ gettext('Help') }}"><span class="nav-icon" aria-hidden="true"><i class="fas fa-question-circle"></i></span><span class="nav-text">{{ gettext('Help') }}</span></a>
+                {% endif %}
                 <li><a id="nav-messages" href="{{ url_for('messages_inbox') }}"{% if unread_message_count and unread_message_count > 0 %} class="invitation-badge"{% endif %} data-base-label="{{ gettext('Messages') }}" title="{{ gettext('Messages') }}" aria-label="{{ gettext('Messages') }}{% if unread_message_count and unread_message_count > 0 %} ({{ unread_message_count }} {{ gettext('unread') }}){% endif %}"><span class="nav-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span><span class="nav-text">{{ gettext('Messages') }}</span>{% if unread_message_count and unread_message_count > 0 %} <span class="nav-count" aria-hidden="true">({{ unread_message_count }})</span>{% endif %}</a>
                 <li><a class="nav-profile" href="{{ url_for('profile') }}" title="{{ g.user.label }}" aria-label="{{ gettext('Profile') }}: {{ g.user.label }}"><span class="nav-text">{{ g.user.label }}</span><span class="nav-initials" aria-hidden="true">{{ _initials }}</span></a>
             {% else %}
@@ -110,5 +113,56 @@
             </ul>
         </footer>
         {% endblock %}
+        {% if g.user and not g.user.intro_seen %}
+        {% set support_url = url_for('messages_direct', user_name=SUPPORT_USERNAME) %}
+        <div id="intro-overlay" class="intro-overlay" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+            <div class="intro-modal" role="document">
+                <button type="button" class="intro-close" id="intro-close" aria-label="{{ gettext('Close') }}">&times;</button>
+                <h2 id="intro-title">{{ gettext('Welcome to the Textile Platform!') }}</h2>
+                <p>{{ gettext('Glad to have you here. A few quick things to help you get started:') }}</p>
+                <ul>
+                    <li>{{ gettext('We have added two example patterns to your account — one weave pattern and one bead pattern. Open them to see how the editors work, or simply delete them whenever you like.') }}</li>
+                    <li>
+                        {% set support_link %}<a href="{{ support_url }}">{{ gettext('the support user') }}</a>{% endset %}
+                        {{ gettext('If you have a question or need help, just send a message to %(support)s. You can also reach support any time by clicking the Help link in the title bar.', support=support_link)|safe }}
+                    </li>
+                    <li>{{ gettext('You can send direct messages to other users from their profile page.') }}</li>
+                    <li>{{ gettext('You can also create your own groups, invite other users into them, share patterns inside the group and chat together.') }}</li>
+                </ul>
+                <p class="intro-actions">
+                    <button type="button" class="intro-dismiss" id="intro-dismiss">{{ gettext('Got it') }}</button>
+                </p>
+                <p class="intro-hint">{{ gettext('Press Esc or click outside this box to close.') }}</p>
+            </div>
+        </div>
+        <script nonce="{{ csp_nonce }}">
+        (function () {
+            var overlay = document.getElementById('intro-overlay');
+            if (!overlay) return;
+            var modal = overlay.querySelector('.intro-modal');
+            var dismissed = false;
+            function dismiss() {
+                if (dismissed) return;
+                dismissed = true;
+                overlay.style.display = 'none';
+                fetch('/api/intro/dismiss', { method: 'POST' })
+                    .catch(function () { /* ignore — re-shown next visit */ });
+            }
+            document.getElementById('intro-close')
+                .addEventListener('click', dismiss);
+            document.getElementById('intro-dismiss')
+                .addEventListener('click', dismiss);
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) dismiss();
+            });
+            modal.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') dismiss();
+            });
+        })();
+        </script>
+        {% endif %}
     </body>
 </html>

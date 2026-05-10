@@ -80,8 +80,10 @@ nav .nav-brand a img { position: relative; top: 0.3rem; }
 }
 /* Default: show icon + initials, hide their text labels. */
 #nav-messages .nav-text,
+#nav-help .nav-text,
 .nav-profile .nav-text { display: none; }
-#nav-messages .nav-icon {
+#nav-messages .nav-icon,
+#nav-help .nav-icon {
     display: inline-block;
     font-size: 1.15rem;
     line-height: 1;
@@ -1296,4 +1298,76 @@ table.kv td code { font-family: monospace; font-size: 0.9em; word-break: break-a
     border-radius: 0.6rem;
     font-size: 0.7rem;
     text-transform: uppercase;
+}
+
+/* Welcome / intro popup */
+.intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+.intro-modal {
+    background: #fff;
+    color: #222;
+    max-width: 36rem;
+    width: 100%;
+    max-height: 90vh;
+    overflow: auto;
+    border-radius: 8px;
+    padding: 1.5rem 1.75rem 1.25rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+.intro-modal h2 {
+    margin-top: 0;
+}
+.intro-modal ul {
+    padding-left: 1.25rem;
+}
+.intro-modal li {
+    margin-bottom: 0.5rem;
+    line-height: 1.45;
+}
+.intro-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    background: transparent;
+    border: 0;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #555;
+}
+.intro-close:hover { color: #000; }
+.intro-actions {
+    margin-top: 1rem;
+    text-align: right;
+}
+.intro-dismiss {
+    padding: 0.45rem 1.1rem;
+    font-size: 1rem;
+    cursor: pointer;
+}
+.intro-hint {
+    margin: 0.5rem 0 0;
+    font-size: 0.8rem;
+    color: #777;
+    text-align: right;
+}
+
+/* Note shown above the chat when messaging support */
+.support-note {
+    background: #eef6ff;
+    border: 1px solid #b9d6f7;
+    color: #1c3a5e;
+    padding: 0.5rem 0.75rem;
+    border-radius: 5px;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }

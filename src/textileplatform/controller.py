@@ -2381,6 +2381,60 @@ def _new_captcha():
     return f"{a} + {b}"
 
 
+def _seed_starter_patterns(user):
+    """Clone configured starter weave + bead patterns into a new user.
+
+    Picks the example user (beispiele/examples) by the new user's locale,
+    falls back to the other locale if a configured pattern can't be
+    found there. Failures are logged but never block verification.
+    """
+    locale = (user.locale or "de").lower()
+    if locale.startswith("de"):
+        order = [("beispiele", "de"), ("examples", "en")]
+    else:
+        order = [("examples", "en"), ("beispiele", "de")]
+
+    for kind in ("WEAVE", "BEAD"):
+        for example_user_name, lang in order:
+            cfg_name = app.config.get(f"STARTER_{kind}_{lang.upper()}")
+            if not cfg_name:
+                continue
+            try:
+                example_user = User.query.filter(
+                    User.name == example_user_name
+                ).one_or_none()
+                if not example_user:
+                    continue
+                src = (
+                    Pattern.query
+                    .filter(Pattern.owner_id == example_user.id)
+                    .filter(Pattern.name == cfg_name)
+                    .one_or_none()
+                )
+                if not src:
+                    logging.warning(
+                        "starter pattern %s/%s not found",
+                        example_user_name, cfg_name,
+                    )
+                    continue
+                already = (
+                    Pattern.query
+                    .filter(Pattern.owner_id == user.id)
+                    .filter(Pattern.name == src.name)
+                    .first()
+                )
+                if already:
+                    break
+                clone_pattern(user, src, src.contents)
+                break
+            except Exception:
+                logging.exception(
+                    "failed seeding starter %s for user_id=%s",
+                    kind, user.id,
+                )
+                break
+
+
 @app.route("/auth/register", methods=("GET", "POST"))
 @limiter.limit("5/hour", methods=["POST"])
 def register():
@@ -2566,9 +2620,10 @@ def verify(user_name, verification_code):
             db.session.rollback()
             return render_template("verification_failed.html")
         send_admin_notification_mail(
-            user, 
+            user,
             "User completed email account verification step",
         )
+        _seed_starter_patterns(user)
         return render_template("verification_successful.html")
     except HTTPException:
         raise
@@ -3168,6 +3223,14 @@ def api_mark_read(conversation_id):
         for c in conversations_for_user(g.user)
     )
     return jsonify({"status": "OK", "unread_total": total})
+
+
+@app.route("/api/intro/dismiss", methods=("POST",))
+@login_required
+def api_intro_dismiss():
+    g.user.intro_seen = True
+    db.session.commit()
+    return jsonify({"status": "OK"})
 
 
 @app.context_processor

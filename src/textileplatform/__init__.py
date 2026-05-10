@@ -41,6 +41,10 @@ app.config.update(
     SECRET_KEY=os.environ["SECRET_KEY"],
     ADMIN_PASSWORD=os.environ["ADMIN_PASSWORD"],
     SHOW_VERIFICATION_CODE=os.environ.get("SHOW_VERIFICATION_CODE") == "1",
+    STARTER_WEAVE_DE=os.environ.get("STARTER_WEAVE_DE"),
+    STARTER_BEAD_DE=os.environ.get("STARTER_BEAD_DE"),
+    STARTER_WEAVE_EN=os.environ.get("STARTER_WEAVE_EN"),
+    STARTER_BEAD_EN=os.environ.get("STARTER_BEAD_EN"),
     # Tie the CSRF token to the session lifetime instead of the default
     # 1-hour clock. The pattern editors keep a single page open for
     # hours, and we don't want their next save to fail because the
@@ -434,6 +438,32 @@ def clean_up_orphan_personal_groups():
         print(f"deleted {len(orphans)} orphan personal group(s)")
 
 
+@click.command("seed-starter-patterns")
+def seed_starter_patterns_cmd():
+    """Seed configured starter patterns for every verified user.
+
+    Skips a starter pattern if the user already owns one with the same
+    name, so it is safe to run multiple times.
+    """
+    from textileplatform.controller import _seed_starter_patterns
+    with app.app_context():
+        users = (
+            User.query
+            .filter(User.verified.is_(True))
+            .filter(User.name != SUPPORT_USERNAME)
+            .filter(User.name != "examples")
+            .filter(User.name != "beispiele")
+            .order_by(User.id)
+            .all()
+        )
+        for user in users:
+            try:
+                _seed_starter_patterns(user)
+                print(f"seeded {user.name}")
+            except Exception as exc:
+                print(f"failed for {user.name}: {exc}")
+
+
 @click.command("ensure-primary-groups")
 def ensure_primary_groups():
     with app.app_context():
@@ -477,5 +507,6 @@ app.cli.add_command(change_email)
 app.cli.add_command(ensure_primary_groups)
 app.cli.add_command(clean_up_non_verified_users)
 app.cli.add_command(clean_up_orphan_personal_groups)
+app.cli.add_command(seed_starter_patterns_cmd)
 
 application = app

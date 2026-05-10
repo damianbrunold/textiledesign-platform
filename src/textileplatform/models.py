@@ -34,6 +34,7 @@ class User(db.Model):
     usage_days_year = db.Column(db.Integer)
     usage_year = db.Column(db.Integer)
     usage_counts = db.Column(db.Text)
+    intro_seen = db.Column(db.Boolean, nullable=False, server_default="false")
 
     memberships = db.relationship("Membership", back_populates="user")
     mypatterns = db.relationship(

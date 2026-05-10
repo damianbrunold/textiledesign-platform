@@ -7,6 +7,11 @@
 {% endblock %}
 
 {% block content %}
+{% if kind == 'direct' and partner and partner.name == SUPPORT_USERNAME and g.user.name != SUPPORT_USERNAME %}
+<div class="support-note">
+    {{ gettext('Messages sent here reach the system support, who will try to answer your questions and help you out.') }}
+</div>
+{% endif %}
 <div class="chat" data-api-url="{{ api_url }}"
      data-current-user-id="{{ g.user.id }}"
      {% if is_blocked %}data-blocked="1"{% endif %}>

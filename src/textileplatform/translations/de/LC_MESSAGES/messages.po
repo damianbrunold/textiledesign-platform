@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-10 14:18+0200\n"
+"POT-Creation-Date: 2026-05-10 14:39+0200\n"
 "PO-Revision-Date: 2024-04-26 12:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -16,7 +16,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: src/textileplatform/beadexport.py:593 src/textileplatform/beadexport.py:608
 #: src/textileplatform/templates/edit_jbead_pattern.html:131
@@ -84,13 +84,13 @@ msgstr "Aktuelles Passwort ist nicht korrekt"
 msgid "Password cannot be empty"
 msgstr "Passwort darf nicht leer sein"
 
-#: src/textileplatform/controller.py:959 src/textileplatform/controller.py:2409
-#: src/textileplatform/controller.py:2676
+#: src/textileplatform/controller.py:959 src/textileplatform/controller.py:2455
+#: src/textileplatform/controller.py:2723
 msgid "Passwords do not match"
 msgstr "Passwörter stimmen nicht überein"
 
-#: src/textileplatform/controller.py:964 src/textileplatform/controller.py:2414
-#: src/textileplatform/controller.py:2681
+#: src/textileplatform/controller.py:964 src/textileplatform/controller.py:2460
+#: src/textileplatform/controller.py:2728
 msgid ""
 "Password must be at least 8 characters and not a common or trivial "
 "password"
@@ -292,61 +292,61 @@ msgstr "Untersuchungskopie erstellt"
 msgid "Investigation copy deleted"
 msgstr "Untersuchungskopie gelöscht"
 
-#: src/textileplatform/controller.py:2401
+#: src/textileplatform/controller.py:2447
 msgid "Name is required"
 msgstr "Der Name ist erforderlich"
 
-#: src/textileplatform/controller.py:2403
+#: src/textileplatform/controller.py:2449
 msgid "E-Mail is required"
 msgstr "Die E-Mail ist erforderlich"
 
-#: src/textileplatform/controller.py:2405
+#: src/textileplatform/controller.py:2451
 msgid "E-Mail is not valid"
 msgstr "E-Mail ist nicht gültig"
 
-#: src/textileplatform/controller.py:2407
+#: src/textileplatform/controller.py:2453
 msgid "Password is required"
 msgstr "Das Passwort ist erforderlich"
 
-#: src/textileplatform/controller.py:2411
+#: src/textileplatform/controller.py:2457
 msgid "Calculation result required"
 msgstr "Berechnungsresultat ist erforderlich"
 
-#: src/textileplatform/controller.py:2422
+#: src/textileplatform/controller.py:2468
 msgid "Name is invalid and cannot be used"
 msgstr "Der Name ist ungültig und kann nicht verwendet werden"
 
-#: src/textileplatform/controller.py:2478
+#: src/textileplatform/controller.py:2524
 msgid "Name or E-Mail is already used"
 msgstr "Name oder E-Mail werden bereits verwendet"
 
-#: src/textileplatform/controller.py:2483
-#: src/textileplatform/controller.py:2514
+#: src/textileplatform/controller.py:2529
+#: src/textileplatform/controller.py:2560
 msgid "System error"
 msgstr "Systemfehler"
 
-#: src/textileplatform/controller.py:2502
-#: src/textileplatform/controller.py:2505
+#: src/textileplatform/controller.py:2548
+#: src/textileplatform/controller.py:2551
 msgid "Login data are not correct"
 msgstr "Die Anmeldedaten sind nicht korrekt"
 
-#: src/textileplatform/controller.py:2507
+#: src/textileplatform/controller.py:2553
 msgid "Account verification is pending"
 msgstr "Die Verifikation des Kontos is hängig"
 
-#: src/textileplatform/controller.py:2509
+#: src/textileplatform/controller.py:2555
 msgid "Account is disabled"
 msgstr "Das Konto ist gesperrt"
 
-#: src/textileplatform/controller.py:2586
+#: src/textileplatform/controller.py:2633
 msgid "E-Mail is required."
 msgstr "Die E-Mail ist erforderlich."
 
-#: src/textileplatform/controller.py:2674
+#: src/textileplatform/controller.py:2721
 msgid "Password is required."
 msgstr "Das Passwort ist erforderlich."
 
-#: src/textileplatform/controller.py:2699
+#: src/textileplatform/controller.py:2746
 msgid "Could not save changes."
 msgstr "Die Änderungen konnten nicht gespeichert werden."
 
@@ -547,7 +547,7 @@ msgid "All Patterns"
 msgstr "Alle Muster"
 
 #: src/textileplatform/templates/admin-console.html:16
-#: src/textileplatform/templates/base.html:75
+#: src/textileplatform/templates/base.html:78
 #: src/textileplatform/templates/messages_inbox.html:3
 #: src/textileplatform/templates/messages_inbox.html:6
 msgid "Messages"
@@ -644,7 +644,7 @@ msgid "Delete this investigation copy?"
 msgstr "Diese Untersuchungskopie löschen?"
 
 #: src/textileplatform/templates/admin-console.html:64
-#: src/textileplatform/templates/conversation.html:98
+#: src/textileplatform/templates/conversation.html:103
 #: src/textileplatform/templates/delete_pattern.html:15
 #: src/textileplatform/templates/edit_dbweave_pattern.html:58
 #: src/textileplatform/templates/edit_dbweave_pattern.html:106
@@ -1178,23 +1178,27 @@ msgstr "Textil-Plattform"
 msgid "Invitations"
 msgstr "Einladungen"
 
-#: src/textileplatform/templates/base.html:75
+#: src/textileplatform/templates/base.html:76
+msgid "Help"
+msgstr "Hilfe"
+
+#: src/textileplatform/templates/base.html:78
 #, fuzzy
 msgid "unread"
 msgstr "Leser"
 
-#: src/textileplatform/templates/base.html:76
-#: src/textileplatform/templates/conversation.html:20
+#: src/textileplatform/templates/base.html:79
+#: src/textileplatform/templates/conversation.html:25
 #: src/textileplatform/templates/profile.html:3
 #: src/textileplatform/templates/profile.html:6
 msgid "Profile"
 msgstr "Profil"
 
-#: src/textileplatform/templates/base.html:78
+#: src/textileplatform/templates/base.html:81
 msgid "Register"
 msgstr "Registrieren"
 
-#: src/textileplatform/templates/base.html:79
+#: src/textileplatform/templates/base.html:82
 #: src/textileplatform/templates/login.html:3
 #: src/textileplatform/templates/login.html:6
 #: src/textileplatform/templates/login.html:23
@@ -1204,76 +1208,148 @@ msgstr "Registrieren"
 msgid "Log in"
 msgstr "Anmelden"
 
-#: src/textileplatform/templates/base.html:85
+#: src/textileplatform/templates/base.html:88
 msgid "Impersonating"
 msgstr "Identität angenommen von"
 
-#: src/textileplatform/templates/base.html:86
+#: src/textileplatform/templates/base.html:89
 msgid "as"
 msgstr "als"
 
-#: src/textileplatform/templates/base.html:89
+#: src/textileplatform/templates/base.html:92
 msgid "Stop impersonating"
 msgstr "Identität freigeben"
 
-#: src/textileplatform/templates/base.html:105
+#: src/textileplatform/templates/base.html:108
 #, fuzzy
 msgid "Site"
 msgstr "Grösse"
 
-#: src/textileplatform/templates/base.html:107
+#: src/textileplatform/templates/base.html:110
 #: src/textileplatform/templates/edit_dbweave_pattern.html:412
 #: src/textileplatform/templates/edit_jbead_pattern.html:134
 msgid "Terms"
 msgstr "AGB"
 
-#: src/textileplatform/templates/base.html:108
+#: src/textileplatform/templates/base.html:111
 #: src/textileplatform/templates/edit_dbweave_pattern.html:413
 #: src/textileplatform/templates/edit_jbead_pattern.html:135
 msgid "Privacy Policy"
 msgstr "Datenschutz"
 
-#: src/textileplatform/templates/base.html:109
+#: src/textileplatform/templates/base.html:112
 #: src/textileplatform/templates/edit_dbweave_pattern.html:414
 #: src/textileplatform/templates/edit_jbead_pattern.html:136
 msgid "Imprint"
 msgstr "Impressum"
 
-#: src/textileplatform/templates/conversation.html:14
+#: src/textileplatform/templates/base.html:120
+#: src/textileplatform/templates/edit_dbweave_pattern.html:64
+#: src/textileplatform/templates/edit_dbweave_pattern.html:324
+#: src/textileplatform/templates/edit_dbweave_pattern.html:501
+#: src/textileplatform/templates/edit_jbead_pattern.html:54
+#: src/textileplatform/templates/edit_jbead_pattern.html:189
+msgid "Close"
+msgstr "Schliessen"
+
+#: src/textileplatform/templates/base.html:121
+msgid "Welcome to the Textile Platform!"
+msgstr "Willkommen auf der Textil-Plattform!"
+
+#: src/textileplatform/templates/base.html:122
+msgid "Glad to have you here. A few quick things to help you get started:"
+msgstr "Schön, dass Sie da sind. Ein paar kurze Hinweise für den Einstieg:"
+
+#: src/textileplatform/templates/base.html:124
+msgid ""
+"We have added two example patterns to your account — one weave pattern "
+"and one bead pattern. Open them to see how the editors work, or simply "
+"delete them whenever you like."
+msgstr ""
+"Wir haben Ihrem Konto zwei Beispielmuster hinzugefügt – ein Webmuster und"
+" ein Perlenmuster. Öffnen Sie sie, um die Editoren auszuprobieren, oder "
+"löschen Sie sie einfach, wann immer Sie möchten."
+
+#: src/textileplatform/templates/base.html:126
+msgid "the support user"
+msgstr "den Support-Benutzer"
+
+#: src/textileplatform/templates/base.html:127
+#, python-format
+msgid ""
+"If you have a question or need help, just send a message to %(support)s. "
+"You can also reach support any time by clicking the Help link in the "
+"title bar."
+msgstr ""
+"Wenn Sie eine Frage haben oder Hilfe brauchen, senden Sie einfach eine "
+"Nachricht an %(support)s. Sie erreichen den Support auch jederzeit über "
+"den Hilfe-Link in der Titelleiste."
+
+#: src/textileplatform/templates/base.html:129
+msgid "You can send direct messages to other users from their profile page."
+msgstr ""
+"Sie können anderen Benutzern direkt von deren Profilseite aus Nachrichten"
+" schicken."
+
+#: src/textileplatform/templates/base.html:130
+msgid ""
+"You can also create your own groups, invite other users into them, share "
+"patterns inside the group and chat together."
+msgstr ""
+"Sie können auch eigene Gruppen erstellen, andere Benutzer dazu einladen, "
+"Muster innerhalb der Gruppe teilen und gemeinsam chatten."
+
+#: src/textileplatform/templates/base.html:133
+msgid "Got it"
+msgstr "Verstanden"
+
+#: src/textileplatform/templates/base.html:135
+msgid "Press Esc or click outside this box to close."
+msgstr "Mit Esc oder einem Klick ausserhalb schliessen."
+
+#: src/textileplatform/templates/conversation.html:12
+msgid ""
+"Messages sent here reach the system support, who will try to answer your "
+"questions and help you out."
+msgstr ""
+"Nachrichten an diesen Benutzer gehen an den System-Support, der Ihre "
+"Fragen beantwortet und Ihnen weiterhilft."
+
+#: src/textileplatform/templates/conversation.html:19
 msgid "Inbox"
 msgstr "Posteingang"
 
-#: src/textileplatform/templates/conversation.html:17
+#: src/textileplatform/templates/conversation.html:22
 msgid "Group page"
 msgstr "Gruppenseite"
 
-#: src/textileplatform/templates/conversation.html:23
+#: src/textileplatform/templates/conversation.html:28
 #, fuzzy
 msgid "Admin"
 msgstr "Atlas"
 
-#: src/textileplatform/templates/conversation.html:29
+#: src/textileplatform/templates/conversation.html:34
 msgid "Load older messages"
 msgstr "Ältere Nachrichten laden"
 
-#: src/textileplatform/templates/conversation.html:34
+#: src/textileplatform/templates/conversation.html:39
 msgid "Type a message…"
 msgstr "Nachricht eingeben…"
 
-#: src/textileplatform/templates/conversation.html:35
+#: src/textileplatform/templates/conversation.html:40
 #: src/textileplatform/templates/recover.html:19
 msgid "Send"
 msgstr "Abschicken"
 
-#: src/textileplatform/templates/conversation.html:39
+#: src/textileplatform/templates/conversation.html:44
 msgid "This user does not accept new messages."
 msgstr "Dieser Benutzer akzeptiert keine neuen Nachrichten."
 
-#: src/textileplatform/templates/conversation.html:72
+#: src/textileplatform/templates/conversation.html:77
 msgid "(message deleted)"
 msgstr "(Nachricht gelöscht)"
 
-#: src/textileplatform/templates/conversation.html:73
+#: src/textileplatform/templates/conversation.html:78
 msgid "Delete this message?"
 msgstr "Diese Nachricht löschen?"
 
@@ -1343,14 +1419,6 @@ msgstr "Vertikal spiegeln"
 #: src/textileplatform/templates/edit_jbead_pattern.html:78
 msgid "Rotate"
 msgstr "Drehen"
-
-#: src/textileplatform/templates/edit_dbweave_pattern.html:64
-#: src/textileplatform/templates/edit_dbweave_pattern.html:324
-#: src/textileplatform/templates/edit_dbweave_pattern.html:501
-#: src/textileplatform/templates/edit_jbead_pattern.html:54
-#: src/textileplatform/templates/edit_jbead_pattern.html:189
-msgid "Close"
-msgstr "Schliessen"
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:65
 #: src/textileplatform/templates/edit_dbweave_pattern.html:470
