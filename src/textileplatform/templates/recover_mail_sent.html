@@ -8,8 +8,10 @@
 
 {% block content %}
 <div class="card card-form">
-    <p>{{ gettext('We sent an email to') }}
-       <strong>{{ user.email }}</strong>
-       {{ gettext('with instructions on how to reset your password.') }}</p>
+    <p>{{ gettext('If an account exists for that email address, we have sent instructions for resetting the password.') }}</p>
+    {% if show_code and reset_url %}
+    <p class="dev-notice"><strong>{{ gettext('Local-testing helper:') }}</strong>
+       <a href="{{ reset_url }}">{{ reset_url }}</a></p>
+    {% endif %}
 </div>
 {% endblock %}

@@ -9,6 +9,7 @@
 {% block content %}
 <div class="card card-form">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <p>{{ gettext('Please enter your e-mail address. We will send you an e-mail with instructions for resetting your password') }}</p>
         <div class="field">
             <label for="email">{{ gettext('E-Mail') }}</label>

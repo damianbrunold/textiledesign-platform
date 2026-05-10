@@ -17,11 +17,13 @@
         <form method="post"
               action="{{ url_for('accept_invitation', membership_id=m.id) }}"
               style="display:inline; margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn small primary">{{ gettext('Accept') }}</button>
         </form>
         <form method="post"
               action="{{ url_for('decline_invitation', membership_id=m.id) }}"
               style="display:inline; margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn small">{{ gettext('Decline') }}</button>
         </form>
     </li>

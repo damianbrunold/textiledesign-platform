@@ -9,6 +9,7 @@
 {% block content %}
 <div class="card card-form">
     <form enctype="multipart/form-data" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <p>{{ gettext('Do you really want to delete this pattern?')}}</p>
         <div class="actions left">
             <button type="submit" class="btn danger">{{ gettext('Delete') }}</button>

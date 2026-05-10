@@ -2,6 +2,36 @@
 <html lang="{{ (g.user.locale if g.user and g.user.locale else locale) or 'en' }}">
     <head>
         <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <script>
+        // Wrap window.fetch to inject the CSRF token on every state-
+        // changing same-origin request, so existing JS doesn't need to
+        // be touched. flask-wtf accepts the token via X-CSRFToken.
+        (function () {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            var token = meta ? meta.getAttribute('content') : '';
+            var orig = window.fetch;
+            window.fetch = function (input, init) {
+                init = init || {};
+                var method = (init.method || 'GET').toUpperCase();
+                if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+                    var url = (typeof input === 'string') ? input : (input && input.url) || '';
+                    var sameOrigin = (
+                        url.indexOf('/') === 0 ||
+                        url.indexOf(window.location.origin) === 0
+                    );
+                    if (sameOrigin) {
+                        var headers = new Headers(init.headers || {});
+                        if (!headers.has('X-CSRFToken')) {
+                            headers.set('X-CSRFToken', token);
+                        }
+                        init.headers = headers;
+                    }
+                }
+                return orig.call(this, input, init);
+            };
+        })();
+        </script>
         <title>{% block title %}{% if pattern and pattern.name %}{{ pattern.name }} &mdash; {{ gettext('Textile Platform') }}{% else %}{{ gettext('Textile Platform') }}{% endif %}{% endblock %}</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
         {% set dark_pref = g.user.darkmode if g.user else none %}
@@ -54,6 +84,7 @@
             {{ gettext('Impersonating') }} <strong>{{ g.user.label }}</strong>
             ({{ gettext('as') }} {{ impersonator_name }}) &mdash;
             <form method="post" action="{{ url_for('stop_impersonating') }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit">{{ gettext('Stop impersonating') }}</button>
             </form>
         </div>

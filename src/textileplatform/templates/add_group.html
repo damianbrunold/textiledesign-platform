@@ -9,6 +9,7 @@
 {% block content %}
 <div class="card card-form">
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="grp-name">{{ gettext('Group Name') }}</label>
             <input type="text" id="grp-name" name="name" required aria-required="true" value="{{ request.form.get('name', '') }}"/>

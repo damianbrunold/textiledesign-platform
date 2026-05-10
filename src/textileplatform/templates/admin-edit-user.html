@@ -24,6 +24,7 @@
                     {% if user.name != SUPPORT_USERNAME and (not g.user or g.user.id != user.id) %}
                     <form method="post" action="{{ url_for('admin_set_user_disabled', user_name=user.name) }}" style="display:inline; margin-left:0.75rem;"
                           onsubmit="return confirm('{% if user.disabled %}{{ gettext('Re-enable this account?') }}{% else %}{{ gettext('Disable this account? The user will be signed out and unable to log in.') }}{% endif %}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="disabled" value="{% if user.disabled %}0{% else %}1{% endif %}">
                         <button type="submit" class="btn small">
                             {% if user.disabled %}{{ gettext('Enable') }}{% else %}{{ gettext('Disable') }}{% endif %}
@@ -91,6 +92,7 @@
              data-modified="{{ pattern.modified.timestamp() if pattern.modified else 0 }}">
             <div class="head">
                 <form method="post" action="{{ url_for('impersonate', user_name=user.name) }}" style="display:inline; margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="next_url" value="{{ url_for('edit_pattern', user_name=user.name, pattern_name=pattern.name) }}">
                     <button type="submit" class="btn-link link-as-a name" title="{{ gettext('Impersonate owner and open in editor') }}">{{ pattern.name }}</button>
                 </form>
@@ -103,6 +105,7 @@
             </div>
             <div class="actions">
                 <form method="post" action="{{ url_for('investigate_pattern', owner_name=user.name, pattern_name=pattern.name) }}" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn small">{{ gettext('Investigate') }}</button>
                 </form>
             </div>

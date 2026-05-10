@@ -9,5 +9,9 @@
 {% block content %}
 <div class="card card-form">
     <p>{{ gettext('We sent you an email for verifying your account to') }} <strong>{{ user.email }}</strong></p>
+    {% if show_code and verification_url %}
+    <p class="dev-notice"><strong>{{ gettext('Local-testing helper:') }}</strong>
+       <a href="{{ verification_url }}">{{ verification_url }}</a></p>
+    {% endif %}
 </div>
 {% endblock %}

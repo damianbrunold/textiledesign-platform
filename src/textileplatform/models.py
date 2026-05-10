@@ -21,6 +21,11 @@ class User(db.Model):
     verification_code = db.Column(db.String(100))
     password_reset_code = db.Column(db.String(100))
     password_reset_expires = db.Column(db.DateTime(timezone=True))
+    # Bumped on password change; sessions whose stored value doesn't
+    # match are forcibly logged out by load_logged_in_user.
+    session_token_version = db.Column(
+        db.Integer, nullable=False, server_default="0", default=0
+    )
     create_date = db.Column(db.DateTime(timezone=True))
     verify_date = db.Column(db.DateTime(timezone=True))
     access_date = db.Column(db.DateTime(timezone=True))

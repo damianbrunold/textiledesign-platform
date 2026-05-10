@@ -22,6 +22,8 @@ from flask import g
 from flask import request
 from flask_babel import Babel
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash
 
 load_dotenv()
@@ -32,10 +34,27 @@ app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=14),
+    MAX_CONTENT_LENGTH=8 * 1024 * 1024,
     SQLALCHEMY_DATABASE_URI=os.environ["DATABASE"],
     SQLALCHEMY_TRACK_MODIFICATIONS=False,
     SECRET_KEY=os.environ["SECRET_KEY"],
     ADMIN_PASSWORD=os.environ["ADMIN_PASSWORD"],
+    SHOW_VERIFICATION_CODE=os.environ.get("SHOW_VERIFICATION_CODE") == "1",
+    # Tie the CSRF token to the session lifetime instead of the default
+    # 1-hour clock. The pattern editors keep a single page open for
+    # hours, and we don't want their next save to fail because the
+    # token timed out.
+    WTF_CSRF_TIME_LIMIT=None,
+)
+
+# Behind nginx in production: trust exactly one upstream proxy so that
+# request.remote_addr / scheme / host reflect the real client. Without
+# this the rate-limiter would key everything to nginx's own IP. The
+# `flask run` dev server isn't proxied so this is a no-op locally as
+# long as nginx isn't sending the headers.
+app.wsgi_app = ProxyFix(
+    app.wsgi_app, x_for=1, x_proto=1, x_host=1,
 )
 
 
@@ -76,6 +95,7 @@ def inject_support_username():
 
 db.init_app(app)
 Migrate(app, db)
+csrf = CSRFProtect(app)
 
 
 @click.command("init-db")

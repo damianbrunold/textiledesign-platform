@@ -21,6 +21,7 @@
     {% if is_owner and not is_personal %}
     <form method="post" action="{{ url_for('update_group', group_name=group.name) }}"
           id="group-description-form" hidden>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="group-description">{{ gettext('Group Description') }}</label>
             <textarea id="group-description" name="description" rows="2" class="group-description-input">{{ group.description or '' }}</textarea>
@@ -89,6 +90,7 @@
                     <form method="post"
                           action="{{ url_for('update_membership', group_name=group.name, user_name=m.user.name) }}"
                           style="display:inline; margin:0;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="action" value="set_role">
                         <label class="visually-hidden" for="role-{{ m.user.id }}">{{ gettext('Role for') }} {{ m.user.label }}</label>
                         <select name="role" id="role-{{ m.user.id }}" onchange="this.form.submit()">
@@ -105,6 +107,7 @@
                           action="{{ url_for('update_membership', group_name=group.name, user_name=m.user.name) }}"
                           style="display:inline; margin:0;"
                           onsubmit="return confirm('{{ gettext('Remove this member?') }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="action" value="remove">
                         <button type="submit" class="btn small">{{ gettext('Remove') }}</button>
                     </form>
@@ -128,6 +131,7 @@
     <h3>{{ gettext('Invite a user') }}</h3>
     <form class="invite-form" method="post"
           action="{{ url_for('invite_to_group', group_name=group.name) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field invite-user-field">
             <label for="invite-user">{{ gettext('User') }}</label>
             <input type="text" id="invite-user" name="user_name" autocomplete="off" required aria-required="true" aria-autocomplete="list" aria-controls="user-suggestions">
@@ -195,6 +199,7 @@
     <form method="post" action="{{ url_for('leave_group', group_name=group.name) }}"
           onsubmit="return confirm('{{ gettext('Leave this group?') }}');"
           style="margin-top:1rem;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="actions left">
             <button type="submit" class="btn danger">{{ gettext('Leave group') }}</button>
         </div>

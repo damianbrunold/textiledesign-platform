@@ -52,6 +52,7 @@
             <a class="btn small" href="{{ url_for('edit_user', user_name=user.name) }}">{{ gettext('Details') }}</a>
             {% if user.name != SUPPORT_USERNAME and not user.disabled %}
             <form method="post" action="{{ url_for('impersonate', user_name=user.name) }}" style="display:inline; margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn small">{{ gettext('Impersonate') }}</button>
             </form>
             {% endif %}

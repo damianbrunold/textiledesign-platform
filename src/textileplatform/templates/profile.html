@@ -12,6 +12,7 @@
   <div class="profile-section">
     <h2>{{ gettext('Account') }}</h2>
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="settings">
       <div class="field">
         <label for="email">{{ gettext('E-Mail') }}</label>
@@ -57,6 +58,7 @@
   <div class="profile-section">
     <h2>{{ gettext('Change Password') }}</h2>
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="password">
       <div class="field">
         <label for="current_password">{{ gettext('Current Password') }}</label>
@@ -97,6 +99,7 @@
     <p>{{ gettext('Deleting your account will permanently remove your patterns, your group memberships, and your messages. This cannot be undone.') }}</p>
     <form method="post" action="{{ url_for('profile_delete') }}"
           onsubmit="return confirm('{{ gettext('Permanently delete your account? This cannot be undone.') }}');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="field">
         <label for="delete_password">{{ gettext('Current Password') }}</label>
         <input name="password" id="delete_password" type="password" required aria-required="true" autocomplete="current-password">

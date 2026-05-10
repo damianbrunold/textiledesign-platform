@@ -9,6 +9,7 @@
 {% block content %}
 <div class="card card-narrow">
     <form enctype="multipart/form-data" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% set has_any = namespace(value=false) %}
         {% for membership in g.user.memberships %}
         {% if g.user.name != membership.group.name

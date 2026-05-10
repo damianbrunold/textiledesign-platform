@@ -25,6 +25,7 @@
 
 {% block content %}
 <form id="hidden-create-form" method="post" action="{{ url_for('create_pattern') }}" style="display:none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="pattern_type" id="hcf-type">
     <input type="hidden" name="name" id="hcf-name">
     <input type="hidden" name="width" id="hcf-width">
@@ -32,6 +33,7 @@
 </form>
 <form id="hidden-upload-form" method="post" action="{{ url_for('upload_pattern') }}"
       enctype="multipart/form-data" style="display:none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="name" value="">
     <input type="file" name="file" id="hidden-upload-input" multiple>
 </form>

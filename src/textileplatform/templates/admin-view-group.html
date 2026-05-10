@@ -51,6 +51,7 @@
     <div class="user-card">
         <div class="head">
             <form method="post" action="{{ url_for('impersonate', user_name=p.owner.name) }}" style="display:inline; margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next_url" value="{{ url_for('edit_pattern', user_name=p.owner.name, pattern_name=p.name) }}">
                 <button type="submit" class="btn-link link-as-a name" title="{{ gettext('Impersonate owner and open in editor') }}">{{ p.name }}</button>
             </form>

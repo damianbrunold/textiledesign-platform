@@ -29,6 +29,7 @@
          data-modified="{{ pattern.modified.timestamp() if pattern.modified else 0 }}">
         <div class="head">
             <form method="post" action="{{ url_for('impersonate', user_name=pattern.owner.name) }}" style="display:inline; margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next_url" value="{{ url_for('edit_pattern', user_name=pattern.owner.name, pattern_name=pattern.name) }}">
                 <button type="submit" class="btn-link link-as-a name" title="{{ gettext('Impersonate owner and open in editor') }}">{{ pattern.name }}</button>
             </form>
@@ -42,6 +43,7 @@
         </div>
         <div class="actions">
             <form method="post" action="{{ url_for('investigate_pattern', owner_name=pattern.owner.name, pattern_name=pattern.name) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn small">{{ gettext('Investigate') }}</button>
             </form>
         </div>

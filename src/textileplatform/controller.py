@@ -1,6 +1,6 @@
 from textileplatform.beadpattern import parse_jbb_data, render_jbb_data
 from textileplatform.db import db
-from textileplatform.app import app
+from textileplatform.app import app, limiter
 from textileplatform.models import User
 from textileplatform.models import Pattern
 from textileplatform.models import Group
@@ -84,6 +84,22 @@ def load_logged_in_user():
                 if g.user.disabled and not impersonating:
                     session.clear()
                     return redirect(url_for("login"))
+
+                # If the session's token version is stale (e.g. the
+                # password was changed elsewhere), force logout. Skip
+                # while impersonating so a support session isn't
+                # invalidated when the target user's password is reset.
+                if not impersonating:
+                    session_ver = session.get("session_token_version")
+                    user_ver = g.user.session_token_version or 0
+                    if session_ver is None:
+                        # Pre-existing sessions without the field — adopt
+                        # the current value so we don't kick everyone out
+                        # at deploy time.
+                        session["session_token_version"] = user_ver
+                    elif session_ver != user_ver:
+                        session.clear()
+                        return redirect(url_for("login"))
                 now = datetime.datetime.now(datetime.timezone.utc)
 
                 # we force logout after a month of inactivity (skip while
@@ -155,6 +171,38 @@ def _touch_group(group):
 
 
 @app.after_request
+def set_security_headers(response):
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "same-origin")
+    # HSTS — only meaningful (and only safe) on HTTPS responses.
+    # request.scheme is "https" for proxied HTTPS requests because
+    # ProxyFix translates X-Forwarded-Proto. 2 years + subdomains;
+    # not adding `preload` until you've decided to commit to HSTS
+    # preload-list submission, which is hard to reverse.
+    if request.scheme == "https":
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=63072000; includeSubDomains",
+        )
+    # First-party CSS/JS only; pattern editors use inline styles for
+    # canvas-driven layout, so 'unsafe-inline' is allowed for styles
+    # but not scripts. data: is needed for the embedded preview/
+    # thumbnail images returned by the pattern API.
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "img-src 'self' data:; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'",
+    )
+    return response
+
+
+@app.after_request
 def flush_usage_stats(response):
     if not getattr(g, "usage_pending", False):
         return response
@@ -201,6 +249,55 @@ def is_real_support():
 
 def respond(status, message, status_code=500):
     return jsonify({"status": status, "message": message}), status_code
+
+
+# Lenient email shape check. We're not trying to validate RFC 5322 —
+# we just want to bounce obvious garbage like "" or "foo" before it
+# hits the database. PostgreSQL's unique constraint and the verification
+# email are the real correctness gate.
+_EMAIL_RE = __import__("re").compile(
+    r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+)
+
+
+def is_valid_email(email):
+    if not email:
+        return False
+    if len(email) > 254:
+        return False
+    return bool(_EMAIL_RE.match(email))
+
+
+# Trivially weak passwords that are rejected outright. Kept short on
+# purpose — the goal is to bounce the absolute worst, not enforce a
+# strict policy. Add to this if real-world abuse shows new patterns.
+_TRIVIAL_PASSWORDS = frozenset({
+    "password", "passwort", "geheim", "secret",
+    "12345678", "123456789", "1234567890",
+    "qwertyui", "qwertz12", "asdfghjk",
+    "letmein1", "welcome1", "iloveyou",
+    "textile1", "textileplatform",
+})
+
+
+def is_acceptable_password(password, name=None, email=None):
+    """Return True iff the password meets minimum rules: at least 8
+    characters, not on the trivial list, and not equal (case-insensitive)
+    to the user's name or email-local-part. Intentionally lenient — if
+    a user wants to use 'aaaaaaaa' that's their call. We just prevent
+    the very worst defaults."""
+    if not password or len(password) < 8:
+        return False
+    lower = password.lower()
+    if lower in _TRIVIAL_PASSWORDS:
+        return False
+    if name and lower == name.lower():
+        return False
+    if email:
+        local = email.split("@", 1)[0].lower()
+        if local and lower == local:
+            return False
+    return True
 
 
 @app.route("/")
@@ -784,9 +881,27 @@ def profile():
                 flash(gettext("Password cannot be empty"))
             elif new != confirm:
                 flash(gettext("Passwords do not match"))
+            elif not is_acceptable_password(
+                new, name=user.name, email=user.email
+            ):
+                flash(gettext(
+                    "Password must be at least 8 characters and not a "
+                    "common or trivial password"
+                ))
             else:
                 try:
                     user.password = generate_password_hash(new)
+                    # Invalidate any outstanding password-reset tokens
+                    # and bump the session-token version so other
+                    # active sessions for this user are forced out.
+                    user.password_reset_code = None
+                    user.password_reset_expires = None
+                    user.session_token_version = (
+                        (user.session_token_version or 0) + 1
+                    )
+                    session["session_token_version"] = (
+                        user.session_token_version
+                    )
                     db.session.commit()
                     flash(gettext("Password changed"))
                 except Exception:
@@ -794,7 +909,10 @@ def profile():
                     flash(gettext("Changes could not be saved"))
             return redirect(url_for("profile"))
 
-        email = request.form["email"]
+        email = (request.form.get("email") or "").strip()
+        if not is_valid_email(email):
+            flash(gettext("E-Mail is not valid"))
+            return redirect(url_for("profile"))
         darkmode_raw = request.form.get("darkmode", "")
         if darkmode_raw == "1":
             darkmode = True
@@ -952,7 +1070,11 @@ def _create_deleted_user_placeholder(deleted_user):
         label="[deleted user]",
         email=f"{name}@invalid.local",
         email_lower=f"{name}@invalid.local",
-        password="!",
+        # An unguessable random hash that no plaintext can match. Using
+        # a real hash (rather than a sentinel like "!") means the column
+        # cannot accidentally satisfy check_password_hash regardless of
+        # werkzeug version.
+        password=generate_password_hash(secrets.token_urlsafe(32)),
         disabled=True,
         verified=False,
     )
@@ -2132,12 +2254,29 @@ def delete_investigation(pattern_id):
     return redirect(url_for("support_console"))
 
 
+def _new_captcha():
+    """Mint a fresh arithmetic question and store the answer in the
+    session. The user has to echo the answer back; a static script that
+    posts a constant value won't get past it."""
+    rng = secrets.SystemRandom()
+    a = rng.randint(2, 9)
+    b = rng.randint(2, 9)
+    session["captcha_answer"] = a + b
+    return f"{a} + {b}"
+
+
 @app.route("/auth/register", methods=("GET", "POST"))
+@limiter.limit("5/hour", methods=["POST"])
 def register():
     if request.method == "POST":
         name = request.form["name"]
-        email = request.form["email"]
+        email = (request.form.get("email") or "").strip()
         password = request.form["password"]
+        expected = session.pop("captcha_answer", None)
+        try:
+            given = int((request.form.get("x") or "").strip())
+        except ValueError:
+            given = None
 
         error = None
 
@@ -2145,10 +2284,17 @@ def register():
             error = gettext("Name is required")
         elif not email:
             error = gettext("E-Mail is required")
+        elif not is_valid_email(email):
+            error = gettext("E-Mail is not valid")
         elif not password:
             error = gettext("Password is required")
-        elif request.form["x"].strip() != "7":
+        elif expected is None or given != expected:
             error = gettext("Calculation result required")
+        elif not is_acceptable_password(password, name=name, email=email):
+            error = gettext(
+                "Password must be at least 8 characters and not a "
+                "common or trivial password"
+            )
 
         label = name
         name = from_label(label)
@@ -2198,10 +2344,15 @@ def register():
 
                 send_verification_mail(user)
                 send_admin_notification_mail(user, "User created account")
-                print(f"verify/{user.name}/{user.verification_code}")
                 return render_template(
                     "verification_pending.html",
-                    user=user
+                    user=user,
+                    show_code=app.config.get("SHOW_VERIFICATION_CODE", False),
+                    verification_url=url_for(
+                        "verify",
+                        user_name=user.name,
+                        verification_code=user.verification_code,
+                    ),
                 )
             except IntegrityError:
                 logging.exception(f"Failed to register user '{name}'")
@@ -2214,23 +2365,24 @@ def register():
 
         flash(error)
 
-    return render_template("register.html")
+    return render_template("register.html", captcha_question=_new_captcha())
 
 
 @app.route("/auth/login", methods=("GET", "POST"))
+@limiter.limit("10/minute;60/hour", methods=["POST"])
 def login():
     if request.method == "POST":
-        email = request.form["email"] or ""
+        email = (request.form.get("email") or "").strip()
         password = request.form["password"]
         error = None
         try:
             user = User.query.filter(User.email_lower == email.lower()).first()
 
             if user is None:
-                logging.error(f"user {email.lower()} not found")
+                logging.info("login failed: unknown email")
                 error = gettext("Login data are not correct")
             elif not check_password_hash(user.password, password):
-                logging.error(f"user {email.lower()} incorrect password")
+                logging.info("login failed: incorrect password")
                 error = gettext("Login data are not correct")
             elif not user.verified:
                 error = gettext("Account verification is pending")
@@ -2245,6 +2397,9 @@ def login():
         if error is None:
             session.clear()
             session["user_name"] = user.name
+            session["session_token_version"] = (
+                user.session_token_version or 0
+            )
             session.permanent = True
 
             now = datetime.datetime.now(datetime.timezone.utc)
@@ -2259,13 +2414,14 @@ def login():
     return render_template("login.html")
 
 
-@app.route("/auth/logout")
+@app.route("/auth/logout", methods=("GET", "POST"))
 def logout():
     session.clear()
     return redirect(url_for("index"))
 
 
 @app.route("/auth/verify/<string:user_name>/<string:verification_code>")
+@limiter.limit("30/hour")
 def verify(user_name, verification_code):
     try:
         user = User.query.filter(User.name == user_name).first()
@@ -2276,14 +2432,11 @@ def verify(user_name, verification_code):
         if not user.verification_code or not secrets.compare_digest(
             user.verification_code, verification_code
         ):
-            logging.error(
-                f"verification, expected {user.verification_code} "
-                f"but got {verification_code}"
-            )
+            logging.info("verification failed for user_id=%s", user.id)
             return render_template("verification_failed.html")
         user.verified = True
         user.verification_code = None
-        logging.error(f"user {user_name} successfully verified")
+        logging.info("user_id=%s successfully verified", user.id)
         try:
             db.session.commit()
         except IntegrityError:
@@ -2302,24 +2455,31 @@ def verify(user_name, verification_code):
 
 
 @app.route("/auth/recover", methods=("GET", "POST"))
+@limiter.limit("3/hour;10/day", methods=["POST"])
 def recover():
     if request.method == "POST":
-        error = None
-
-        email = request.form["email"]
+        email = (request.form.get("email") or "").strip()
         if not email:
-            error = gettext("E-Mail is required.")
-        try:
-            user = User.query.filter(User.email_lower == email.lower()).first()
-            if not user:
-                error = gettext("E-Mail is unknown.")
-            elif not user.verified:
-                error = gettext("E-Mail is unknown.")
-        except Exception:
-            error = gettext("System error")
+            flash(gettext("E-Mail is required."))
+            return render_template("recover.html")
+        if not is_valid_email(email):
+            # Don't leak via a different error path: render the same
+            # response we use for unknown/known emails, just as if we
+            # accepted the input. This keeps recover non-enumerable.
+            return render_template(
+                "recover_mail_sent.html",
+                email=email,
+                show_code=False,
+                reset_url=None,
+            )
 
-        if error is None:
-            try:
+        user = None
+        reset_url = None
+        try:
+            user = User.query.filter(
+                User.email_lower == email.lower()
+            ).first()
+            if user is not None and user.verified:
                 user.password_reset_code = secrets.token_urlsafe(30)
                 user.password_reset_expires = (
                     datetime.datetime.now(datetime.timezone.utc)
@@ -2331,19 +2491,29 @@ def recover():
                     user,
                     "User requested password recovery",
                 )
-                return render_template(
-                    "recover_mail_sent.html",
-                    user=user
+                reset_url = url_for(
+                    "reset_password",
+                    user_name=user.name,
+                    verification_code=user.password_reset_code,
                 )
-            except IntegrityError:
-                error = gettext("Could not save changes.")
-            except HTTPException:
-                raise
-            except Exception:
-                logging.exception("system error")
-                error = gettext("System error")
+        except HTTPException:
+            raise
+        except Exception:
+            db.session.rollback()
+            logging.exception("recover failed")
 
-        flash(error)
+        # Always render the same response regardless of whether the
+        # email exists or is verified — otherwise the page itself is
+        # an account-enumeration oracle.
+        return render_template(
+            "recover_mail_sent.html",
+            email=email,
+            show_code=(
+                app.config.get("SHOW_VERIFICATION_CODE", False)
+                and reset_url is not None
+            ),
+            reset_url=reset_url,
+        )
 
     return render_template("recover.html")
 
@@ -2352,6 +2522,7 @@ def recover():
     "/auth/reset-password/<string:user_name>/<string:verification_code>",
     methods=("GET", "POST"),
 )
+@limiter.limit("10/hour")
 def reset_password(user_name, verification_code):
     try:
         user = User.query.filter(User.name == user_name).first()
@@ -2377,12 +2548,22 @@ def reset_password(user_name, verification_code):
             password = request.form["password"]
             if not password:
                 error = gettext("Password is required.")
+            elif not is_acceptable_password(
+                password, name=user.name, email=user.email
+            ):
+                error = gettext(
+                    "Password must be at least 8 characters and not a "
+                    "common or trivial password"
+                )
 
             if error is None:
                 try:
                     user.password = generate_password_hash(password)
                     user.password_reset_code = None
                     user.password_reset_expires = None
+                    user.session_token_version = (
+                        (user.session_token_version or 0) + 1
+                    )
                     db.session.commit()
                     send_admin_notification_mail(
                         user,

@@ -9,6 +9,7 @@
 {% block content %}
 <div class="card card-narrow">
     <form enctype="multipart/form-data" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="name">{{ gettext('Name') }}</label>
             <input type="text" name="name" id="name">

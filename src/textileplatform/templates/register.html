@@ -9,6 +9,7 @@
 {% block content %}
 <div class="card card-form">
     <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="name">{{ gettext('Name') }}</label>
             <input type="text" name="name" id="name" required aria-required="true" autocomplete="username" value="{{ request.form['name'] }}">
@@ -22,7 +23,7 @@
             <input type="password" name="password" id="password" required aria-required="true" autocomplete="new-password" value="{{ request.form['password'] }}">
         </div>
         <div class="field">
-            <label for="x">{{ gettext("Please enter the result of the following calculation 3+4") }}</label>
+            <label for="x">{{ gettext('Please enter the result of the following calculation') }} {{ captcha_question }}</label>
             <input type="text" name="x" id="x" required aria-required="true" autocomplete="off" inputmode="numeric" value=""/>
         </div>
         <div class="actions left">
