@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-10 14:39+0200\n"
+"POT-Creation-Date: 2026-05-10 14:51+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -83,13 +83,13 @@ msgstr ""
 msgid "Password cannot be empty"
 msgstr ""
 
-#: src/textileplatform/controller.py:959 src/textileplatform/controller.py:2455
-#: src/textileplatform/controller.py:2723
+#: src/textileplatform/controller.py:959 src/textileplatform/controller.py:2495
+#: src/textileplatform/controller.py:2763
 msgid "Passwords do not match"
 msgstr ""
 
-#: src/textileplatform/controller.py:964 src/textileplatform/controller.py:2460
-#: src/textileplatform/controller.py:2728
+#: src/textileplatform/controller.py:964 src/textileplatform/controller.py:2500
+#: src/textileplatform/controller.py:2768
 msgid ""
 "Password must be at least 8 characters and not a common or trivial "
 "password"
@@ -108,6 +108,7 @@ msgid "Profile updated"
 msgstr ""
 
 #: src/textileplatform/controller.py:1244
+#: src/textileplatform/controller.py:2240
 msgid "The support account cannot be deleted."
 msgstr ""
 
@@ -265,81 +266,98 @@ msgstr ""
 msgid "Account enabled."
 msgstr ""
 
-#: src/textileplatform/controller.py:2252
+#: src/textileplatform/controller.py:2243
+msgid "You cannot delete your own account from here."
+msgstr ""
+
+#: src/textileplatform/controller.py:2248
+msgid "Please type the user's name exactly to confirm deletion."
+msgstr ""
+
+#: src/textileplatform/controller.py:2258
+msgid "Could not delete the account."
+msgstr ""
+
+#: src/textileplatform/controller.py:2260
+#, python-format
+msgid "Account \"%(label)s\" deleted."
+msgstr ""
+
+#: src/textileplatform/controller.py:2284
 msgid "Another account already uses this e-mail address"
 msgstr ""
 
-#: src/textileplatform/controller.py:2257
+#: src/textileplatform/controller.py:2289
 msgid "Could not update the e-mail."
 msgstr ""
 
-#: src/textileplatform/controller.py:2269
+#: src/textileplatform/controller.py:2301
 msgid "E-Mail updated."
 msgstr ""
 
-#: src/textileplatform/controller.py:2348
+#: src/textileplatform/controller.py:2380
 msgid "Investigation copy created"
 msgstr ""
 
-#: src/textileplatform/controller.py:2369
+#: src/textileplatform/controller.py:2401
 msgid "Investigation copy deleted"
 msgstr ""
 
-#: src/textileplatform/controller.py:2447
+#: src/textileplatform/controller.py:2487
 msgid "Name is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2449
+#: src/textileplatform/controller.py:2489
 msgid "E-Mail is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2451
+#: src/textileplatform/controller.py:2491
 msgid "E-Mail is not valid"
 msgstr ""
 
-#: src/textileplatform/controller.py:2453
+#: src/textileplatform/controller.py:2493
 msgid "Password is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2457
+#: src/textileplatform/controller.py:2497
 msgid "Calculation result required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2468
+#: src/textileplatform/controller.py:2508
 msgid "Name is invalid and cannot be used"
 msgstr ""
 
-#: src/textileplatform/controller.py:2524
+#: src/textileplatform/controller.py:2564
 msgid "Name or E-Mail is already used"
 msgstr ""
 
-#: src/textileplatform/controller.py:2529
-#: src/textileplatform/controller.py:2560
+#: src/textileplatform/controller.py:2569
+#: src/textileplatform/controller.py:2600
 msgid "System error"
 msgstr ""
 
-#: src/textileplatform/controller.py:2548
-#: src/textileplatform/controller.py:2551
+#: src/textileplatform/controller.py:2588
+#: src/textileplatform/controller.py:2591
 msgid "Login data are not correct"
 msgstr ""
 
-#: src/textileplatform/controller.py:2553
+#: src/textileplatform/controller.py:2593
 msgid "Account verification is pending"
 msgstr ""
 
-#: src/textileplatform/controller.py:2555
+#: src/textileplatform/controller.py:2595
 msgid "Account is disabled"
 msgstr ""
 
-#: src/textileplatform/controller.py:2633
+#: src/textileplatform/controller.py:2673
 msgid "E-Mail is required."
 msgstr ""
 
-#: src/textileplatform/controller.py:2721
+#: src/textileplatform/controller.py:2761
 msgid "Password is required."
 msgstr ""
 
-#: src/textileplatform/controller.py:2746
+#: src/textileplatform/controller.py:2786
 msgid "Could not save changes."
 msgstr ""
 
@@ -827,6 +845,31 @@ msgstr ""
 #: src/textileplatform/templates/edit_group.html:223
 #: src/textileplatform/templates/group.html:49
 msgid "No patterns."
+msgstr ""
+
+#: src/textileplatform/templates/admin-edit-user.html:199
+#: src/textileplatform/templates/profile.html:102
+msgid "Delete Account"
+msgstr ""
+
+#: src/textileplatform/templates/admin-edit-user.html:200
+msgid ""
+"Deleting this account will permanently remove the user, their patterns, "
+"group memberships, and reattribute their messages to a deleted-user "
+"placeholder. This cannot be undone."
+msgstr ""
+
+#: src/textileplatform/templates/admin-edit-user.html:202
+msgid "Permanently delete this account? This cannot be undone."
+msgstr ""
+
+#: src/textileplatform/templates/admin-edit-user.html:205
+#, python-format
+msgid "Type the user name \"%(name)s\" to confirm"
+msgstr ""
+
+#: src/textileplatform/templates/admin-edit-user.html:209
+msgid "Delete this account"
 msgstr ""
 
 #: src/textileplatform/templates/admin-groups.html:12
@@ -3215,10 +3258,6 @@ msgstr ""
 
 #: src/textileplatform/templates/profile.html:96
 msgid "Download ZIP"
-msgstr ""
-
-#: src/textileplatform/templates/profile.html:102
-msgid "Delete Account"
 msgstr ""
 
 #: src/textileplatform/templates/profile.html:103

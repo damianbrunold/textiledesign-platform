@@ -193,4 +193,22 @@
     <p class="muted">{{ gettext('No patterns.') }}</p>
     {% endif %}
 </div>
+
+{% if user.name != SUPPORT_USERNAME and (not g.user or g.user.id != user.id) %}
+<div class="card card-wide danger-zone">
+    <h2>{{ gettext('Delete Account') }}</h2>
+    <p>{{ gettext('Deleting this account will permanently remove the user, their patterns, group memberships, and reattribute their messages to a deleted-user placeholder. This cannot be undone.') }}</p>
+    <form method="post" action="{{ url_for('admin_delete_user', user_name=user.name) }}"
+          data-confirm="{{ gettext('Permanently delete this account? This cannot be undone.') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+            <label for="admin_delete_confirm">{{ gettext('Type the user name "%(name)s" to confirm', name=user.name) }}</label>
+            <input name="confirm_name" id="admin_delete_confirm" type="text" required aria-required="true" autocomplete="off" pattern="{{ user.name }}" placeholder="{{ user.name }}">
+        </div>
+        <div class="profile-actions">
+            <button type="submit" class="btn danger">{{ gettext('Delete this account') }}</button>
+        </div>
+    </form>
+</div>
+{% endif %}
 {% endblock %}

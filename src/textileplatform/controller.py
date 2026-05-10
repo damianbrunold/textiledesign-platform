@@ -2229,6 +2229,38 @@ def admin_set_user_disabled(user_name):
     return redirect(url_for("edit_user", user_name=target.name))
 
 
+@app.route("/admin/users/<string:user_name>/delete", methods=("POST",))
+@login_required
+@support_required
+def admin_delete_user(user_name):
+    target = User.query.filter(User.name == user_name).first()
+    if not target:
+        abort(404, description=f"User {user_name} not found")
+    if target.name == SUPPORT_USERNAME:
+        flash(gettext("The support account cannot be deleted."))
+        return redirect(url_for("edit_user", user_name=target.name))
+    if g.user and target.id == g.user.id:
+        flash(gettext("You cannot delete your own account from here."))
+        return redirect(url_for("edit_user", user_name=target.name))
+    typed = (request.form.get("confirm_name") or "").strip()
+    if typed != target.name:
+        flash(gettext(
+            "Please type the user's name exactly to confirm deletion."
+        ))
+        return redirect(url_for("edit_user", user_name=target.name))
+    target_label = target.label
+    try:
+        _delete_user_data(target)
+        db.session.commit()
+    except Exception:
+        logging.exception("admin user deletion failed")
+        db.session.rollback()
+        flash(gettext("Could not delete the account."))
+        return redirect(url_for("edit_user", user_name=user_name))
+    flash(gettext('Account "%(label)s" deleted.', label=target_label))
+    return redirect(url_for("users"))
+
+
 @app.route(
     "/admin/users/<string:user_name>/set-email", methods=("POST",)
 )
