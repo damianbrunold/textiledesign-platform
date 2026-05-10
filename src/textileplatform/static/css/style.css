@@ -1371,3 +1371,33 @@ table.kv td code { font-family: monospace; font-size: 0.9em; word-break: break-a
     margin-bottom: 0.5rem;
     font-size: 0.9rem;
 }
+
+/* Unsaved-changes guard modal (shown when navigating away from the
+   editor with unsaved edits). Visual style mirrors .intro-overlay. */
+.navguard-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    padding: 1rem;
+}
+.navguard-modal {
+    background: #fff;
+    color: #222;
+    max-width: 30rem;
+    width: 100%;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+.navguard-modal h2 { margin-top: 0; }
+.navguard-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+}

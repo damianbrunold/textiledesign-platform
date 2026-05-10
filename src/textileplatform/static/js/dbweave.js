@@ -12349,10 +12349,12 @@ window.addEventListener("load", () => {
         }
     });
     if (!readonly) {
-        installBeforeUnloadGuard(() => {
+        const preSave = () => {
             saveSettings(data, settings);
             savePatternData(data, pattern);
-        });
+        };
+        installBeforeUnloadGuard(preSave);
+        installNavGuard(preSave, _getI18n().prompts || {});
     }
     const publicEl = document.getElementById("public");
     if (!readonly && publicEl) publicEl.addEventListener("click", togglePublic);

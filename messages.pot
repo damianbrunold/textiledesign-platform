@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-10 14:51+0200\n"
+"POT-Creation-Date: 2026-05-10 15:01+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -500,10 +500,10 @@ msgstr ""
 #: src/textileplatform/templates/assignments_pattern.html:36
 #: src/textileplatform/templates/edit_dbweave_pattern.html:63
 #: src/textileplatform/templates/edit_dbweave_pattern.html:244
-#: src/textileplatform/templates/edit_dbweave_pattern.html:459
+#: src/textileplatform/templates/edit_dbweave_pattern.html:467
 #: src/textileplatform/templates/edit_group.html:30
 #: src/textileplatform/templates/edit_jbead_pattern.html:51
-#: src/textileplatform/templates/edit_jbead_pattern.html:156
+#: src/textileplatform/templates/edit_jbead_pattern.html:164
 #: src/textileplatform/templates/profile.html:57
 #: src/textileplatform/templates/recover_set_password.html:23
 msgid "Save"
@@ -693,8 +693,10 @@ msgstr ""
 #: src/textileplatform/templates/assignments_pattern.html:37
 #: src/textileplatform/templates/delete_pattern.html:16
 #: src/textileplatform/templates/edit_dbweave_pattern.html:120
+#: src/textileplatform/templates/edit_dbweave_pattern.html:457
 #: src/textileplatform/templates/edit_group.html:31
 #: src/textileplatform/templates/edit_jbead_pattern.html:107
+#: src/textileplatform/templates/edit_jbead_pattern.html:154
 #: src/textileplatform/templates/user_private.html:481
 msgid "Cancel"
 msgstr ""
@@ -1249,9 +1251,9 @@ msgstr ""
 #: src/textileplatform/templates/base.html:120
 #: src/textileplatform/templates/edit_dbweave_pattern.html:64
 #: src/textileplatform/templates/edit_dbweave_pattern.html:324
-#: src/textileplatform/templates/edit_dbweave_pattern.html:501
+#: src/textileplatform/templates/edit_dbweave_pattern.html:509
 #: src/textileplatform/templates/edit_jbead_pattern.html:54
-#: src/textileplatform/templates/edit_jbead_pattern.html:189
+#: src/textileplatform/templates/edit_jbead_pattern.html:197
 msgid "Close"
 msgstr ""
 
@@ -1355,32 +1357,32 @@ msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:52
 #: src/textileplatform/templates/edit_dbweave_pattern.html:360
-#: src/textileplatform/templates/edit_dbweave_pattern.html:462
+#: src/textileplatform/templates/edit_dbweave_pattern.html:470
 #: src/textileplatform/templates/edit_jbead_pattern.html:73
-#: src/textileplatform/templates/edit_jbead_pattern.html:159
+#: src/textileplatform/templates/edit_jbead_pattern.html:167
 msgid "Undo"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:53
 #: src/textileplatform/templates/edit_dbweave_pattern.html:361
-#: src/textileplatform/templates/edit_dbweave_pattern.html:463
+#: src/textileplatform/templates/edit_dbweave_pattern.html:471
 #: src/textileplatform/templates/edit_jbead_pattern.html:74
-#: src/textileplatform/templates/edit_jbead_pattern.html:160
+#: src/textileplatform/templates/edit_jbead_pattern.html:168
 msgid "Redo"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:54
-#: src/textileplatform/templates/edit_dbweave_pattern.html:465
+#: src/textileplatform/templates/edit_dbweave_pattern.html:473
 msgid "Cut"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:55
-#: src/textileplatform/templates/edit_dbweave_pattern.html:466
+#: src/textileplatform/templates/edit_dbweave_pattern.html:474
 msgid "Copy"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:56
-#: src/textileplatform/templates/edit_dbweave_pattern.html:467
+#: src/textileplatform/templates/edit_dbweave_pattern.html:475
 msgid "Paste"
 msgstr ""
 
@@ -1391,7 +1393,7 @@ msgstr ""
 #: src/textileplatform/templates/edit_dbweave_pattern.html:59
 #: src/textileplatform/templates/edit_dbweave_pattern.html:104
 #: src/textileplatform/templates/edit_dbweave_pattern.html:358
-#: src/textileplatform/templates/edit_dbweave_pattern.html:479
+#: src/textileplatform/templates/edit_dbweave_pattern.html:487
 msgid "Invert"
 msgstr ""
 
@@ -1405,22 +1407,22 @@ msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:62
 #: src/textileplatform/templates/edit_dbweave_pattern.html:357
-#: src/textileplatform/templates/edit_dbweave_pattern.html:482
+#: src/textileplatform/templates/edit_dbweave_pattern.html:490
 #: src/textileplatform/templates/edit_jbead_pattern.html:78
 msgid "Rotate"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:65
-#: src/textileplatform/templates/edit_dbweave_pattern.html:470
+#: src/textileplatform/templates/edit_dbweave_pattern.html:478
 #: src/textileplatform/templates/edit_jbead_pattern.html:60
-#: src/textileplatform/templates/edit_jbead_pattern.html:166
+#: src/textileplatform/templates/edit_jbead_pattern.html:174
 msgid "Zoom in"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:66
-#: src/textileplatform/templates/edit_dbweave_pattern.html:471
+#: src/textileplatform/templates/edit_dbweave_pattern.html:479
 #: src/textileplatform/templates/edit_jbead_pattern.html:61
-#: src/textileplatform/templates/edit_jbead_pattern.html:167
+#: src/textileplatform/templates/edit_jbead_pattern.html:175
 msgid "Zoom out"
 msgstr ""
 
@@ -1829,9 +1831,9 @@ msgid "PDF file…"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:166
-#: src/textileplatform/templates/edit_dbweave_pattern.html:460
+#: src/textileplatform/templates/edit_dbweave_pattern.html:468
 #: src/textileplatform/templates/edit_jbead_pattern.html:55
-#: src/textileplatform/templates/edit_jbead_pattern.html:157
+#: src/textileplatform/templates/edit_jbead_pattern.html:165
 msgid "Print…"
 msgstr ""
 
@@ -2803,56 +2805,81 @@ msgstr ""
 msgid "Export"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:474
+#: src/textileplatform/templates/edit_dbweave_pattern.html:453
+#: src/textileplatform/templates/edit_jbead_pattern.html:150
+msgid "Unsaved changes"
+msgstr ""
+
+#: src/textileplatform/templates/edit_dbweave_pattern.html:454
+#: src/textileplatform/templates/edit_jbead_pattern.html:151
+msgid "You have unsaved changes. Save them before leaving this page?"
+msgstr ""
+
+#: src/textileplatform/templates/edit_dbweave_pattern.html:455
+#: src/textileplatform/templates/edit_jbead_pattern.html:152
+msgid "Save and continue"
+msgstr ""
+
+#: src/textileplatform/templates/edit_dbweave_pattern.html:456
+#: src/textileplatform/templates/edit_jbead_pattern.html:153
+msgid "Discard and continue"
+msgstr ""
+
+#: src/textileplatform/templates/edit_dbweave_pattern.html:458
+#: src/textileplatform/templates/edit_jbead_pattern.html:155
+msgid "Save failed. Please try again."
+msgstr ""
+
+#: src/textileplatform/templates/edit_dbweave_pattern.html:482
 msgid "Shaft up"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:475
+#: src/textileplatform/templates/edit_dbweave_pattern.html:483
 msgid "Shaft down"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:476
+#: src/textileplatform/templates/edit_dbweave_pattern.html:484
 msgid "Treadle left"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:477
+#: src/textileplatform/templates/edit_dbweave_pattern.html:485
 msgid "Treadle right"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:480
+#: src/textileplatform/templates/edit_dbweave_pattern.html:488
 #: src/textileplatform/templates/edit_jbead_pattern.html:76
 msgid "Mirror horizontal"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:481
+#: src/textileplatform/templates/edit_dbweave_pattern.html:489
 #: src/textileplatform/templates/edit_jbead_pattern.html:77
 msgid "Mirror vertical"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:483
+#: src/textileplatform/templates/edit_dbweave_pattern.html:491
 msgid "Central symmetry"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:486
+#: src/textileplatform/templates/edit_dbweave_pattern.html:494
 msgid "Highlight"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:493
-#: src/textileplatform/templates/edit_dbweave_pattern.html:495
-#: src/textileplatform/templates/edit_jbead_pattern.html:181
-#: src/textileplatform/templates/edit_jbead_pattern.html:183
+#: src/textileplatform/templates/edit_dbweave_pattern.html:501
+#: src/textileplatform/templates/edit_dbweave_pattern.html:503
+#: src/textileplatform/templates/edit_jbead_pattern.html:189
+#: src/textileplatform/templates/edit_jbead_pattern.html:191
 msgid "Public - visible to all users"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:494
-#: src/textileplatform/templates/edit_dbweave_pattern.html:495
-#: src/textileplatform/templates/edit_jbead_pattern.html:182
-#: src/textileplatform/templates/edit_jbead_pattern.html:183
+#: src/textileplatform/templates/edit_dbweave_pattern.html:502
+#: src/textileplatform/templates/edit_dbweave_pattern.html:503
+#: src/textileplatform/templates/edit_jbead_pattern.html:190
+#: src/textileplatform/templates/edit_jbead_pattern.html:191
 msgid "Private - not visible to other users"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:499
-#: src/textileplatform/templates/edit_jbead_pattern.html:187
+#: src/textileplatform/templates/edit_dbweave_pattern.html:507
+#: src/textileplatform/templates/edit_jbead_pattern.html:195
 msgid "Clone"
 msgstr ""
 
@@ -2944,22 +2971,22 @@ msgid "Draw symbols"
 msgstr ""
 
 #: src/textileplatform/templates/edit_jbead_pattern.html:69
-#: src/textileplatform/templates/edit_jbead_pattern.html:170
+#: src/textileplatform/templates/edit_jbead_pattern.html:178
 msgid "Pencil"
 msgstr ""
 
 #: src/textileplatform/templates/edit_jbead_pattern.html:70
-#: src/textileplatform/templates/edit_jbead_pattern.html:171
+#: src/textileplatform/templates/edit_jbead_pattern.html:179
 msgid "Select"
 msgstr ""
 
 #: src/textileplatform/templates/edit_jbead_pattern.html:71
-#: src/textileplatform/templates/edit_jbead_pattern.html:172
+#: src/textileplatform/templates/edit_jbead_pattern.html:180
 msgid "Fill"
 msgstr ""
 
 #: src/textileplatform/templates/edit_jbead_pattern.html:72
-#: src/textileplatform/templates/edit_jbead_pattern.html:173
+#: src/textileplatform/templates/edit_jbead_pattern.html:181
 msgid "Pipette"
 msgstr ""
 
@@ -2968,17 +2995,17 @@ msgid "Delete selection"
 msgstr ""
 
 #: src/textileplatform/templates/edit_jbead_pattern.html:79
-#: src/textileplatform/templates/edit_jbead_pattern.html:161
+#: src/textileplatform/templates/edit_jbead_pattern.html:169
 msgid "Shift left"
 msgstr ""
 
 #: src/textileplatform/templates/edit_jbead_pattern.html:80
-#: src/textileplatform/templates/edit_jbead_pattern.html:162
+#: src/textileplatform/templates/edit_jbead_pattern.html:170
 msgid "Shift right"
 msgstr ""
 
 #: src/textileplatform/templates/edit_jbead_pattern.html:81
-#: src/textileplatform/templates/edit_jbead_pattern.html:163
+#: src/textileplatform/templates/edit_jbead_pattern.html:171
 msgid "Arrange…"
 msgstr ""
 
@@ -3078,7 +3105,7 @@ msgstr ""
 msgid "Info"
 msgstr ""
 
-#: src/textileplatform/templates/edit_jbead_pattern.html:195
+#: src/textileplatform/templates/edit_jbead_pattern.html:203
 msgid "Scroll pattern"
 msgstr ""
 

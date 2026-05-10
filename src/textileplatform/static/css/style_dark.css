@@ -334,3 +334,9 @@ ul.inbox .preview { color: #aaa; }
     border-color: #3a5476;
     color: #cfe1f7;
 }
+
+.navguard-modal {
+    background: #2a2a2a;
+    color: #eee;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}

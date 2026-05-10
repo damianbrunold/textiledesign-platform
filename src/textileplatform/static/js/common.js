@@ -151,6 +151,130 @@ function installBeforeUnloadGuard(preSave) {
 }
 
 
+// Intercept in-app navigation (clicks on links, non-GET form submits)
+// while the editor has unsaved changes, and show a localized modal
+// asking the user whether to save, discard, or cancel. The native
+// `beforeunload` prompt still fires for cases this can't reach (tab
+// close, browser refresh/back) — see installBeforeUnloadGuard above.
+//
+//   prompts = {
+//       title, body, save, discard, cancel,
+//       saveFailed   // optional, shown via alert() on save error
+//   }
+function installNavGuard(preSave, prompts) {
+    prompts = prompts || {};
+    const labels = {
+        title:   prompts.title   || "Unsaved changes",
+        body:    prompts.body    || "You have unsaved changes. Save them before leaving this page?",
+        save:    prompts.save    || "Save and continue",
+        discard: prompts.discard || "Discard and continue",
+        cancel:  prompts.cancel  || "Cancel",
+        saveFailed: prompts.saveFailed || "Save failed. Please try again.",
+    };
+    let bypass = false;
+    function isInternal(href) {
+        if (!href) return false;
+        if (href.startsWith("#")) return false;
+        if (href.startsWith("javascript:")) return false;
+        if (href.startsWith("mailto:") || href.startsWith("tel:")) return false;
+        try {
+            const u = new URL(href, window.location.href);
+            if (u.origin !== window.location.origin) return false;
+            // Same path + same search = same page (just a hash change etc).
+            if (u.pathname === window.location.pathname
+                && u.search === window.location.search) return false;
+            return true;
+        } catch (e) { return false; }
+    }
+    function buildModal() {
+        const overlay = document.createElement("div");
+        overlay.className = "navguard-overlay";
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.innerHTML =
+            '<div class="navguard-modal" role="document">'
+            + '<h2></h2><p></p>'
+            + '<div class="navguard-actions">'
+            + '<button type="button" class="btn navguard-cancel"></button>'
+            + '<button type="button" class="btn navguard-discard"></button>'
+            + '<button type="button" class="btn primary navguard-save"></button>'
+            + '</div></div>';
+        overlay.querySelector("h2").textContent = labels.title;
+        overlay.querySelector("p").textContent = labels.body;
+        overlay.querySelector(".navguard-cancel").textContent = labels.cancel;
+        overlay.querySelector(".navguard-discard").textContent = labels.discard;
+        overlay.querySelector(".navguard-save").textContent = labels.save;
+        return overlay;
+    }
+    function ask(navigate) {
+        const overlay = buildModal();
+        const modal = overlay.querySelector(".navguard-modal");
+        function close() {
+            document.removeEventListener("keydown", onKey);
+            overlay.remove();
+        }
+        function onKey(e) { if (e.key === "Escape") close(); }
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) close();
+        });
+        modal.addEventListener("click", (e) => e.stopPropagation());
+        document.addEventListener("keydown", onKey);
+        overlay.querySelector(".navguard-cancel")
+            .addEventListener("click", close);
+        overlay.querySelector(".navguard-discard")
+            .addEventListener("click", () => {
+                clearModified();
+                close();
+                bypass = true;
+                navigate();
+            });
+        overlay.querySelector(".navguard-save")
+            .addEventListener("click", async () => {
+                try {
+                    if (preSave) preSave();
+                    await savePattern();
+                } catch (err) {
+                    console.error(err);
+                    alert(labels.saveFailed);
+                    return;
+                }
+                close();
+                bypass = true;
+                navigate();
+            });
+        document.body.appendChild(overlay);
+        overlay.querySelector(".navguard-save").focus();
+    }
+    document.addEventListener("click", (e) => {
+        if (!modified || bypass) return;
+        if (e.defaultPrevented) return;
+        if (e.button !== 0) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        const a = e.target.closest("a");
+        if (!a) return;
+        if (a.target && a.target !== "" && a.target !== "_self") return;
+        if (a.hasAttribute("download")) return;
+        if (a.dataset.navguardSkip === "1") return;
+        const href = a.getAttribute("href");
+        if (!isInternal(href)) return;
+        e.preventDefault();
+        ask(() => { window.location.href = a.href; });
+    }, true);
+    document.addEventListener("submit", (e) => {
+        if (!modified || bypass) return;
+        if (e.defaultPrevented) return;
+        const form = e.target;
+        if (!form || form.tagName !== "FORM") return;
+        if (form.dataset.navguardSkip === "1") return;
+        const method = (form.method || "GET").toUpperCase();
+        const action = form.getAttribute("action");
+        if (method === "GET" && !isInternal(action)) return;
+        e.preventDefault();
+        ask(() => { form.submit(); });
+    }, true);
+}
+
+
 async function clonePattern() {
     const user = document.getElementById("user").value;
     const viewer = document.getElementById("viewer").value;

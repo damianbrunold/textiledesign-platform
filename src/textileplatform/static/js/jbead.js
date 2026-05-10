@@ -3306,10 +3306,12 @@ window.addEventListener("load", () => {
         }
     });
     if (!readonly) {
-        installBeforeUnloadGuard(() => {
+        const preSave = () => {
             saveSettings(data, settings);
             savePatternData(data, pattern);
-        });
+        };
+        installBeforeUnloadGuard(preSave);
+        installNavGuard(preSave, (_i18n && _i18n.prompts) || {});
         const pub = document.getElementById("public");
         if (pub) pub.addEventListener("click", togglePublic);
     } else {
