@@ -136,6 +136,51 @@ class TestChangeUserEmail:
         assert "note.old@example.com" in receivers
         assert "note.new@example.com" in receivers
 
+    def test_notice_renders_in_recipient_locale(
+        self, app, captured_mails,
+    ):
+        """A German user must get a German body with a German-style
+        date, even if the requester's request locale is English."""
+        from textileplatform.mail import send_email_changed_notice
+        u = _make_user(name="dora", email="dora.old@example.com")
+        u.locale = "de"
+        u.email = "dora.new@example.com"
+        with app.test_request_context(headers={"Accept-Language": "en"}):
+            send_email_changed_notice(u, "dora.old@example.com")
+        old_msg = next(
+            m for m in captured_mails
+            if m["receiver"] == "dora.old@example.com"
+        )
+        # German body uses "Hallo" and "Alte Adresse:".
+        assert "Hallo Dora" in old_msg["content"]
+        assert "Alte Adresse:" in old_msg["content"]
+        # German date convention dd.mm.yyyy somewhere in the body.
+        import re as _re
+        assert _re.search(
+            r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2} UTC", old_msg["content"]
+        )
+
+    def test_notice_renders_in_english_for_en_user(
+        self, app, captured_mails,
+    ):
+        from textileplatform.mail import send_email_changed_notice
+        u = _make_user(name="ena", email="ena.old@example.com")
+        u.locale = "en"
+        u.email = "ena.new@example.com"
+        with app.test_request_context(headers={"Accept-Language": "de"}):
+            send_email_changed_notice(u, "ena.old@example.com")
+        old_msg = next(
+            m for m in captured_mails
+            if m["receiver"] == "ena.old@example.com"
+        )
+        assert "Hello Ena" in old_msg["content"]
+        assert "Old address:" in old_msg["content"]
+        # ISO date convention for English.
+        import re as _re
+        assert _re.search(
+            r"\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC", old_msg["content"]
+        )
+
 
 # ---------- captcha ---------------------------------------------------
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-10 11:11+0200\n"
+"POT-Creation-Date: 2026-05-10 11:32+0200\n"
 "PO-Revision-Date: 2024-04-26 12:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -349,51 +349,97 @@ msgstr "Das Passwort ist erforderlich."
 msgid "Could not save changes."
 msgstr "Die Änderungen konnten nicht gespeichert werden."
 
-#: src/textileplatform/mail.py:22
-msgid "Please verify your account by clicking or entering the following link:"
-msgstr "Bitte verifizieren Sie Ihr Konto, indem Sie den folgenden Link verwenden:"
+#: src/textileplatform/mail.py:24
+#, python-format
+msgid "Hello %(label)s,"
+msgstr "Hallo %(label)s,"
 
-#: src/textileplatform/mail.py:37
-msgid "Texile-Platform account verification"
-msgstr "Textil-Plattform Kontoverifikation"
+#: src/textileplatform/mail.py:28
+msgid "— The Textile-Platform team"
+msgstr "— Das Team der Textil-Plattform"
 
-#: src/textileplatform/mail.py:45
-msgid "Reset your password by clicking or entering the following link:"
-msgstr "Setzen Sie Ihr Passwort zurück, indem Sie den folgenden Link verwenden:"
+#: src/textileplatform/mail.py:55
+msgid "Please verify your account by opening the following link:"
+msgstr "Bitte bestätigen Sie Ihr Konto, indem Sie den folgenden Link öffnen:"
 
-#: src/textileplatform/mail.py:59
-msgid "Texile-Platform password reset"
-msgstr "Textil-Plattform Passwort zurücksetzen"
+#: src/textileplatform/mail.py:62
+msgid ""
+"If you did not create an account on Textile-Platform, you can ignore this"
+" message."
+msgstr ""
+"Falls Sie kein Konto auf der Textil-Plattform erstellt haben, können Sie "
+"diese Nachricht ignorieren."
 
-#: src/textileplatform/mail.py:72
-msgid "The e-mail address on your Textile-Platform account was changed."
-msgstr "Die E-Mail-Adresse Ihres Textile-Platform-Kontos wurde geändert."
+#: src/textileplatform/mail.py:70
+msgid "Confirm your Textile-Platform account"
+msgstr "Textil-Plattform-Konto bestätigen"
 
-#: src/textileplatform/mail.py:76
+#: src/textileplatform/mail.py:88
+msgid ""
+"We received a request to reset the password on your Textile-Platform "
+"account. Open the link below to choose a new password:"
+msgstr ""
+"Wir haben eine Anfrage zum Zurücksetzen des Passworts Ihres Textil-"
+"Plattform-Kontos erhalten. Öffnen Sie den unten stehenden Link, um ein "
+"neues Passwort zu wählen:"
+
+#: src/textileplatform/mail.py:96
+msgid ""
+"The link is valid for one hour. If you did not request a password reset, "
+"you can ignore this message — your password will not be changed."
+msgstr ""
+"Der Link ist eine Stunde gültig. Falls Sie kein Zurücksetzen des "
+"Passworts angefordert haben, können Sie diese Nachricht ignorieren — Ihr "
+"Passwort wird nicht geändert."
+
+#: src/textileplatform/mail.py:105
+msgid "Reset your Textile-Platform password"
+msgstr "Textil-Plattform-Passwort zurücksetzen"
+
+#: src/textileplatform/mail.py:133
+#, python-format
+msgid ""
+"The e-mail address on your Textile-Platform account was changed on "
+"%(when)s."
+msgstr ""
+"Die E-Mail-Adresse Ihres Textil-Plattform-Kontos wurde am %(when)s "
+"geändert."
+
+#: src/textileplatform/mail.py:138
 #, python-format
 msgid "Old address: %(old)s"
 msgstr "Alte Adresse: %(old)s"
 
-#: src/textileplatform/mail.py:77
+#: src/textileplatform/mail.py:139
 #, python-format
 msgid "New address: %(new)s"
 msgstr "Neue Adresse: %(new)s"
 
-#: src/textileplatform/mail.py:80
-msgid "If you did not request this change, please contact support immediately."
-msgstr "Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte umgehend den Support."
+#: src/textileplatform/mail.py:142
+msgid "If you requested this change, no further action is needed."
+msgstr "Falls Sie diese Änderung angefordert haben, ist nichts weiter zu tun."
 
-#: src/textileplatform/mail.py:86
+#: src/textileplatform/mail.py:146
+msgid ""
+"If you did not request this change, your account may have been "
+"compromised. Please contact support immediately:"
+msgstr ""
+"Falls Sie diese Änderung nicht angefordert haben, könnte Ihr Konto "
+"kompromittiert sein. Kontaktieren Sie bitte umgehend den Support:"
+
+#: src/textileplatform/mail.py:158
 msgid "Your Textile-Platform account is now reachable at this e-mail address."
-msgstr "Ihr Textile-Platform-Konto ist nun unter dieser E-Mail-Adresse erreichbar."
+msgstr "Ihr Textil-Plattform-Konto ist nun unter dieser E-Mail-Adresse erreichbar."
 
-#: src/textileplatform/mail.py:91
-msgid "If you did not request this change, please contact support."
-msgstr "Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte den Support."
+#: src/textileplatform/mail.py:163
+msgid "If you did not request this change, please contact support:"
+msgstr ""
+"Falls Sie diese Änderung nicht angefordert haben, kontaktieren Sie bitte "
+"den Support:"
 
-#: src/textileplatform/mail.py:94
-msgid "Textile-Platform: e-mail address changed"
-msgstr "Textile-Platform: E-Mail-Adresse geändert"
+#: src/textileplatform/mail.py:171
+msgid "Your Textile-Platform e-mail address was changed"
+msgstr "Ihre Textil-Plattform-E-Mail-Adresse wurde geändert"
 
 #: src/textileplatform/templates/add_group.html:3
 #: src/textileplatform/templates/add_group.html:6
@@ -3079,6 +3125,7 @@ msgid "support"
 msgstr "Support"
 
 #: src/textileplatform/templates/profile.html:22
+#, python-format
 msgid "To change your e-mail address, please contact %(support)s."
 msgstr "Um Ihre E-Mail-Adresse zu ändern, kontaktieren Sie bitte den %(support)s."
 
@@ -3667,4 +3714,7 @@ msgstr "Ihr Konto ist nun verifiziert. Bitte melden Sie sich an."
 
 #~ msgid "Change"
 #~ msgstr "Ändern"
+
+#~ msgid "Reset your password by clicking or entering the following link:"
+#~ msgstr "Setzen Sie Ihr Passwort zurück, indem Sie den folgenden Link verwenden:"
 

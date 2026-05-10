@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-10 11:11+0200\n"
+"POT-Creation-Date: 2026-05-10 11:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -342,50 +342,82 @@ msgstr ""
 msgid "Could not save changes."
 msgstr ""
 
-#: src/textileplatform/mail.py:22
-msgid "Please verify your account by clicking or entering the following link:"
+#: src/textileplatform/mail.py:24
+#, python-format
+msgid "Hello %(label)s,"
 msgstr ""
 
-#: src/textileplatform/mail.py:37
-msgid "Texile-Platform account verification"
+#: src/textileplatform/mail.py:28
+msgid "— The Textile-Platform team"
 msgstr ""
 
-#: src/textileplatform/mail.py:45
-msgid "Reset your password by clicking or entering the following link:"
+#: src/textileplatform/mail.py:55
+msgid "Please verify your account by opening the following link:"
 msgstr ""
 
-#: src/textileplatform/mail.py:59
-msgid "Texile-Platform password reset"
+#: src/textileplatform/mail.py:62
+msgid ""
+"If you did not create an account on Textile-Platform, you can ignore this"
+" message."
 msgstr ""
 
-#: src/textileplatform/mail.py:72
-msgid "The e-mail address on your Textile-Platform account was changed."
+#: src/textileplatform/mail.py:70
+msgid "Confirm your Textile-Platform account"
 msgstr ""
 
-#: src/textileplatform/mail.py:76
+#: src/textileplatform/mail.py:88
+msgid ""
+"We received a request to reset the password on your Textile-Platform "
+"account. Open the link below to choose a new password:"
+msgstr ""
+
+#: src/textileplatform/mail.py:96
+msgid ""
+"The link is valid for one hour. If you did not request a password reset, "
+"you can ignore this message — your password will not be changed."
+msgstr ""
+
+#: src/textileplatform/mail.py:105
+msgid "Reset your Textile-Platform password"
+msgstr ""
+
+#: src/textileplatform/mail.py:133
+#, python-format
+msgid ""
+"The e-mail address on your Textile-Platform account was changed on "
+"%(when)s."
+msgstr ""
+
+#: src/textileplatform/mail.py:138
 #, python-format
 msgid "Old address: %(old)s"
 msgstr ""
 
-#: src/textileplatform/mail.py:77
+#: src/textileplatform/mail.py:139
 #, python-format
 msgid "New address: %(new)s"
 msgstr ""
 
-#: src/textileplatform/mail.py:80
-msgid "If you did not request this change, please contact support immediately."
+#: src/textileplatform/mail.py:142
+msgid "If you requested this change, no further action is needed."
 msgstr ""
 
-#: src/textileplatform/mail.py:86
+#: src/textileplatform/mail.py:146
+msgid ""
+"If you did not request this change, your account may have been "
+"compromised. Please contact support immediately:"
+msgstr ""
+
+#: src/textileplatform/mail.py:158
 msgid "Your Textile-Platform account is now reachable at this e-mail address."
 msgstr ""
 
-#: src/textileplatform/mail.py:91
-msgid "If you did not request this change, please contact support."
+#: src/textileplatform/mail.py:163
+msgid "If you did not request this change, please contact support:"
 msgstr ""
 
-#: src/textileplatform/mail.py:94
-msgid "Textile-Platform: e-mail address changed"
+#: src/textileplatform/mail.py:171
+msgid "Your Textile-Platform e-mail address was changed"
 msgstr ""
 
 #: src/textileplatform/templates/add_group.html:3
