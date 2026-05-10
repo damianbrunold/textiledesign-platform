@@ -15,8 +15,12 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="settings">
       <div class="field">
-        <label for="email">{{ gettext('E-Mail') }}</label>
-        <input name="email" id="email" type="email" required aria-required="true" value="{{ user.email }}">
+        <label>{{ gettext('E-Mail') }}</label>
+        <div class="readonly-value">{{ user.email }}</div>
+        <small class="muted">
+          {% set support_link %}<a href="{{ url_for('messages_direct', user_name=SUPPORT_USERNAME) }}">{{ gettext('support') }}</a>{% endset %}
+          {{ gettext('To change your e-mail address, please contact %(support)s.', support=support_link)|safe }}
+        </small>
       </div>
       <fieldset class="field appearance-field">
         <legend>{{ gettext('Appearance') }}</legend>

@@ -12,7 +12,42 @@
         <tbody>
             <tr><th style="width:10rem;">{{ gettext('Name') }}</th><td>{{ user.name }}</td></tr>
             <tr><th>{{ gettext('Label') }}</th><td>{{ user.label }}</td></tr>
-            <tr><th>{{ gettext('E-Mail') }}</th><td>{{ user.email }}</td></tr>
+            <tr><th>{{ gettext('E-Mail') }}</th>
+                <td>
+                    <div id="email-display" style="display:flex; gap:0.5rem; align-items:center;">
+                        <span>{{ user.email }}</span>
+                        <button type="button" id="email-edit-btn" class="btn small">{{ gettext('Edit') }}</button>
+                    </div>
+                    <form id="email-edit-form" method="post" action="{{ url_for('admin_set_user_email', user_name=user.name) }}" style="display:none; gap:0.5rem; align-items:center; margin:0;"
+                          onsubmit="return confirm('{{ gettext('Change the e-mail for this user? Active sessions will be signed out.') }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="email" name="email" id="email-edit-input" value="{{ user.email }}" required style="flex:1;">
+                        <button type="submit" class="btn small primary">{{ gettext('Save') }}</button>
+                        <button type="button" id="email-cancel-btn" class="btn small">{{ gettext('Cancel') }}</button>
+                    </form>
+                    <script>
+                    (function () {
+                        var display = document.getElementById('email-display');
+                        var form = document.getElementById('email-edit-form');
+                        var editBtn = document.getElementById('email-edit-btn');
+                        var cancelBtn = document.getElementById('email-cancel-btn');
+                        var input = document.getElementById('email-edit-input');
+                        var original = input.value;
+                        editBtn.addEventListener('click', function () {
+                            display.style.display = 'none';
+                            form.style.display = 'flex';
+                            input.focus();
+                            input.select();
+                        });
+                        cancelBtn.addEventListener('click', function () {
+                            input.value = original;
+                            form.style.display = 'none';
+                            display.style.display = 'flex';
+                        });
+                    })();
+                    </script>
+                </td>
+            </tr>
             <tr><th>{{ gettext('Locale') }}</th><td>{{ user.locale }}</td></tr>
             <tr><th>{{ gettext('Created') }}</th><td>{% if user.create_date %}{{ user.create_date.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}&mdash;{% endif %}</td></tr>
             <tr><th>{{ gettext('Verified') }}</th><td>{% if user.verify_date %}{{ user.verify_date.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}&mdash;{% endif %}</td></tr>

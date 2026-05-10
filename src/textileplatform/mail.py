@@ -61,6 +61,42 @@ def send_recover_mail(user):
     )
 
 
+def send_email_changed_notice(user, old_email):
+    """Notify both the old and the new address that the user's e-mail
+    was changed. Sent only after the change is committed. The message
+    to the OLD address is the security-relevant one — it's the only
+    channel a rightful owner still has if the change wasn't theirs."""
+    new_email = user.email
+    old_msg = "\r\n".join([
+        gettext(
+            "The e-mail address on your Textile-Platform account was "
+            "changed."
+        ),
+        "",
+        gettext("Old address: %(old)s", old=old_email),
+        gettext("New address: %(new)s", new=new_email),
+        "",
+        gettext(
+            "If you did not request this change, please contact support "
+            "immediately."
+        ),
+    ])
+    new_msg = "\r\n".join([
+        gettext(
+            "Your Textile-Platform account is now reachable at this "
+            "e-mail address."
+        ),
+        "",
+        gettext(
+            "If you did not request this change, please contact support."
+        ),
+    ])
+    subject = gettext("Textile-Platform: e-mail address changed")
+    if old_email and old_email.lower() != new_email.lower():
+        send_mail(old_email, subject, old_msg)
+    send_mail(new_email, subject, new_msg)
+
+
 def send_admin_notification_mail(user, message):
     send_mail(
         "admin@textil-plattform.ch",

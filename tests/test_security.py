@@ -10,7 +10,11 @@ import re
 import pytest
 from flask import session
 
-from textileplatform.controller import is_acceptable_password, is_valid_email
+from textileplatform.controller import (
+    change_user_email,
+    is_acceptable_password,
+    is_valid_email,
+)
 from textileplatform.db import db
 from textileplatform.models import Group, Membership, User
 from werkzeug.security import generate_password_hash
@@ -87,6 +91,50 @@ class TestEmailValidation:
     def test_accepts_normal(self):
         assert is_valid_email("user@example.com")
         assert is_valid_email("first.last+tag@sub.example.co.uk")
+
+
+# ---------- change_user_email ----------------------------------------
+
+
+class TestChangeUserEmail:
+    def test_invalid_email_rejected(self, app):
+        u = _make_user(name="ed", email="ed@example.com")
+        err = change_user_email(u, "not-an-email")
+        assert err is not None
+        assert u.email == "ed@example.com"
+
+    def test_collision_rejected(self, app):
+        a = _make_user(name="aa", email="a@example.com")
+        b = _make_user(name="bb", email="b@example.com")
+        err = change_user_email(b, "a@example.com")
+        assert err is not None
+        assert b.email == "b@example.com"
+
+    def test_success_bumps_session_token_version(self, app):
+        u = _make_user(name="eve", email="eve@example.com")
+        before = u.session_token_version
+        err = change_user_email(u, "eve.new@example.com")
+        assert err is None
+        assert u.email == "eve.new@example.com"
+        assert u.email_lower == "eve.new@example.com"
+        assert u.session_token_version == before + 1
+
+    def test_no_op_does_not_bump_version(self, app):
+        u = _make_user(name="noop", email="noop@example.com")
+        before = u.session_token_version
+        err = change_user_email(u, "noop@example.com")
+        assert err is None
+        assert u.session_token_version == before
+
+    def test_notification_sent_to_old_and_new(self, app, captured_mails):
+        from textileplatform.mail import send_email_changed_notice
+        u = _make_user(name="note", email="note.old@example.com")
+        u.email = "note.new@example.com"
+        with app.test_request_context():
+            send_email_changed_notice(u, "note.old@example.com")
+        receivers = [m["receiver"] for m in captured_mails]
+        assert "note.old@example.com" in receivers
+        assert "note.new@example.com" in receivers
 
 
 # ---------- captcha ---------------------------------------------------

@@ -335,6 +335,48 @@ def reset_password(user_name):
         db.session.commit()
 
 
+@click.command("change-email")
+@click.argument("user-name")
+@click.argument("new-email")
+def change_email(user_name, new_email):
+    """Set a user's e-mail address. Use sparingly — bumps
+    session_token_version so the user is logged out everywhere."""
+    from textileplatform.controller import change_user_email
+    from textileplatform.mail import (
+        send_email_changed_notice,
+        send_admin_notification_mail,
+    )
+    with app.app_context():
+        user = User.query.filter(User.name == user_name).first()
+        if not user:
+            print("user not found")
+            return
+        old_email = user.email
+        err = change_user_email(user, new_email)
+        if err:
+            print(f"refused: {err}")
+            return
+        changed = (old_email or "").lower() != user.email.lower()
+        try:
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            print(f"failed: {exc}")
+            return
+        if changed:
+            try:
+                send_email_changed_notice(user, old_email)
+            except Exception as exc:
+                print(f"warning: notification mail failed: {exc}")
+            try:
+                send_admin_notification_mail(
+                    user, f"CLI changed e-mail from {old_email}",
+                )
+            except Exception:
+                pass
+        print(f"updated {user.name} -> {user.email}")
+
+
 @click.command("clean-up-orphan-personal-groups")
 def clean_up_orphan_personal_groups():
     """Delete personal groups whose namesake user is gone.
@@ -431,6 +473,7 @@ app.cli.add_command(delete_user_pattern)
 app.cli.add_command(create_weave_pattern)
 app.cli.add_command(create_bead_pattern)
 app.cli.add_command(reset_password)
+app.cli.add_command(change_email)
 app.cli.add_command(ensure_primary_groups)
 app.cli.add_command(clean_up_non_verified_users)
 app.cli.add_command(clean_up_orphan_personal_groups)

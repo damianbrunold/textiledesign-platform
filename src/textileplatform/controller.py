@@ -28,6 +28,7 @@ from textileplatform.name import from_label
 from textileplatform.name import is_valid
 from textileplatform.mail import send_verification_mail
 from textileplatform.mail import send_admin_notification_mail
+from textileplatform.mail import send_email_changed_notice
 from textileplatform.mail import send_recover_mail
 from textileplatform.mail import send_support_dm_mail
 from textileplatform.support import SUPPORT_USERNAME
@@ -266,6 +267,31 @@ def is_valid_email(email):
     if len(email) > 254:
         return False
     return bool(_EMAIL_RE.match(email))
+
+
+def change_user_email(user, new_email):
+    """Apply an admin-driven email change. Returns None on success or a
+    user-facing error message string. Does not commit — callers commit
+    after they have finished the surrounding transaction.
+
+    Bumps session_token_version so any active sessions for the user are
+    forced to re-login (the email is the login credential, so this is
+    the safe thing to do)."""
+    new_email = (new_email or "").strip()
+    if not is_valid_email(new_email):
+        return "E-Mail is not valid"
+    if new_email.lower() == (user.email_lower or "").lower():
+        return None
+    clash = User.query.filter(
+        User.email_lower == new_email.lower(),
+        User.id != user.id,
+    ).first()
+    if clash is not None:
+        return "Another account already uses this e-mail address"
+    user.email = new_email
+    user.email_lower = new_email.lower()
+    user.session_token_version = (user.session_token_version or 0) + 1
+    return None
 
 
 # Trivially weak passwords that are rejected outright. Kept short on
@@ -909,10 +935,12 @@ def profile():
                     flash(gettext("Changes could not be saved"))
             return redirect(url_for("profile"))
 
-        email = (request.form.get("email") or "").strip()
-        if not is_valid_email(email):
-            flash(gettext("E-Mail is not valid"))
-            return redirect(url_for("profile"))
+        # Email is intentionally not user-editable here. Self-service
+        # email change requires a verified-change flow (token sent to
+        # the new address, notification to the old address) which we
+        # haven't built yet. Until then, changes go through the admin
+        # UI / `change-email` CLI. We ignore any submitted email field
+        # so a hand-crafted POST cannot bypass the read-only template.
         darkmode_raw = request.form.get("darkmode", "")
         if darkmode_raw == "1":
             darkmode = True
@@ -929,9 +957,6 @@ def profile():
             timezone = None
         elif not timezone:
             timezone = None
-        user.email = email
-        user.email_lower = email.lower()
-        # TODO reset verified?!
         user.darkmode = darkmode
         user.block_invitations = block_invitations
         user.locale = locale
@@ -2151,6 +2176,47 @@ def admin_set_user_disabled(user_name):
         flash(gettext("Account disabled."))
     else:
         flash(gettext("Account enabled."))
+    return redirect(url_for("edit_user", user_name=target.name))
+
+
+@app.route(
+    "/admin/users/<string:user_name>/set-email", methods=("POST",)
+)
+@login_required
+@support_required
+def admin_set_user_email(user_name):
+    target = User.query.filter(User.name == user_name).first()
+    if not target:
+        abort(404, description=f"User {user_name} not found")
+    new_email = (request.form.get("email") or "").strip()
+    old_email = target.email
+    err = change_user_email(target, new_email)
+    if err:
+        flash(gettext(err))
+        return redirect(url_for("edit_user", user_name=target.name))
+    changed = (old_email or "").lower() != target.email.lower()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash(gettext("Another account already uses this e-mail address"))
+        return redirect(url_for("edit_user", user_name=target.name))
+    except Exception:
+        db.session.rollback()
+        logging.exception("Failed to update e-mail")
+        flash(gettext("Could not update the e-mail."))
+        return redirect(url_for("edit_user", user_name=target.name))
+    if changed:
+        try:
+            send_email_changed_notice(target, old_email)
+        except Exception:
+            # The DB change already happened — don't roll it back just
+            # because a notification mail bounced. Log and move on.
+            logging.exception("email-change notification failed")
+        send_admin_notification_mail(
+            target, f"Admin changed e-mail from {old_email}",
+        )
+    flash(gettext("E-Mail updated."))
     return redirect(url_for("edit_user", user_name=target.name))
 
 
