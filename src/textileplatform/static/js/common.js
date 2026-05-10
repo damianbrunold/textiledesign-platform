@@ -161,6 +161,17 @@ function installBeforeUnloadGuard(preSave) {
 //       title, body, save, discard, cancel,
 //       saveFailed   // optional, shown via alert() on save error
 //   }
+// Browsers may restore this page from the back/forward cache when the
+// user navigates back to the editor. The DOM is then preserved exactly
+// as it was at unload — including any unsaved edits the user may have
+// chosen to discard — while our `modified` flag has been cleared. To
+// avoid that inconsistency, reload from the server on bfcache restore
+// so the editor always reflects authoritative state.
+window.addEventListener("pageshow", (e) => {
+    if (e.persisted) window.location.reload();
+});
+
+
 function installNavGuard(preSave, prompts) {
     prompts = prompts || {};
     const labels = {
@@ -171,7 +182,6 @@ function installNavGuard(preSave, prompts) {
         cancel:  prompts.cancel  || "Cancel",
         saveFailed: prompts.saveFailed || "Save failed. Please try again.",
     };
-    let bypass = false;
     function isInternal(href) {
         if (!href) return false;
         if (href.startsWith("#")) return false;
@@ -225,7 +235,6 @@ function installNavGuard(preSave, prompts) {
             .addEventListener("click", () => {
                 clearModified();
                 close();
-                bypass = true;
                 navigate();
             });
         overlay.querySelector(".navguard-save")
@@ -239,14 +248,13 @@ function installNavGuard(preSave, prompts) {
                     return;
                 }
                 close();
-                bypass = true;
                 navigate();
             });
         document.body.appendChild(overlay);
         overlay.querySelector(".navguard-save").focus();
     }
     document.addEventListener("click", (e) => {
-        if (!modified || bypass) return;
+        if (!modified) return;
         if (e.defaultPrevented) return;
         if (e.button !== 0) return;
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -261,7 +269,7 @@ function installNavGuard(preSave, prompts) {
         ask(() => { window.location.href = a.href; });
     }, true);
     document.addEventListener("submit", (e) => {
-        if (!modified || bypass) return;
+        if (!modified) return;
         if (e.defaultPrevented) return;
         const form = e.target;
         if (!form || form.tagName !== "FORM") return;
