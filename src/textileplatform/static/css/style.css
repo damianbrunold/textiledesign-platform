@@ -1206,6 +1206,7 @@ ul.inbox .unread {
 .inv-card-meta dt { color: #666; }
 .inv-card-meta dd { margin: 0; word-break: break-word; min-width: 0; }
 .inv-card-actions { margin-top: auto; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.btn-row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 
 table.kv { border-collapse: collapse; width: 100%; }
 table.kv th, table.kv td { padding: 0.25rem 0.75rem 0.25rem 0; text-align: left; vertical-align: top; white-space: normal; }

@@ -9,13 +9,13 @@
 {% block content %}
 <div class="card card-wide">
   <h2>{{ gettext('Administration') }}</h2>
-  <ul class="plain">
-    <li><a class="btn" href="{{ url_for('users') }}">{{ gettext('Users') }}</a></li>
-    <li><a class="btn" href="{{ url_for('groups') }}">{{ gettext('Groups') }}</a></li>
-    <li><a class="btn" href="{{ url_for('patterns') }}">{{ gettext('All Patterns') }}</a></li>
-    <li><a class="btn" href="{{ url_for('messages_inbox') }}">{{ gettext('Messages') }}</a></li>
-    <li><a class="btn" href="{{ url_for('admin_system') }}">{{ gettext('System Status') }}</a></li>
-  </ul>
+  <div class="btn-row">
+    <a class="btn" href="{{ url_for('users') }}">{{ gettext('Users') }}</a>
+    <a class="btn" href="{{ url_for('groups') }}">{{ gettext('Groups') }}</a>
+    <a class="btn" href="{{ url_for('patterns') }}">{{ gettext('All Patterns') }}</a>
+    <a class="btn" href="{{ url_for('messages_inbox') }}">{{ gettext('Messages') }}</a>
+    <a class="btn" href="{{ url_for('admin_system') }}">{{ gettext('System Status') }}</a>
+  </div>
 </div>
 
 <div class="card card-wide">

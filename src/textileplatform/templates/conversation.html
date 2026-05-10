@@ -18,6 +18,10 @@
         {% else %}
         &middot;
         <a href="{{ url_for('user', user_name=partner.name) }}">{{ gettext('Profile') }}</a>
+        {% if g.user and g.user.name == SUPPORT_USERNAME and partner.name != SUPPORT_USERNAME %}
+        &middot;
+        <a href="{{ url_for('edit_user', user_name=partner.name) }}">{{ gettext('Admin') }}</a>
+        {% endif %}
         {% endif %}
     </div>
     <div class="chat-messages" id="chat-messages">
@@ -52,6 +56,12 @@
     let newestId = null;
     let conversationId = null;
     let hasMore = false;
+
+    async function apiFetch(url, opts) {
+        const res = await fetch(url, opts);
+        if (res.status === 401) { window.location.reload(); throw new Error('auth'); }
+        return res;
+    }
 
     function fmtTime(iso) {
         if (!iso) return '';
@@ -100,7 +110,7 @@
 
     async function deleteMessage(id, div) {
         if (!confirm(CONFIRM_DELETE)) return;
-        const res = await fetch('/api/messages/' + id, { method: 'DELETE' });
+        const res = await apiFetch('/api/messages/' + id, { method: 'DELETE' });
         const data = await res.json();
         if (data.status === 'OK') {
             applyDeleted(div);
@@ -110,7 +120,7 @@
     }
 
     async function loadInitial() {
-        const res = await fetch(apiUrl);
+        const res = await apiFetch(apiUrl);
         const data = await res.json();
         conversationId = data.conversation_id;
         hasMore = !!data.has_more;
@@ -126,7 +136,7 @@
 
     async function loadOlder() {
         if (!oldestId) return;
-        const res = await fetch(apiUrl + '?before=' + oldestId);
+        const res = await apiFetch(apiUrl + '?before=' + oldestId);
         const data = await res.json();
         hasMore = !!data.has_more;
         loadMore.style.display = hasMore ? '' : 'none';
@@ -150,7 +160,7 @@
 
     async function poll() {
         if (!conversationId) return;
-        const res = await fetch(apiUrl);
+        const res = await apiFetch(apiUrl);
         const data = await res.json();
         const msgs = data.messages || [];
         let added = false;
@@ -193,7 +203,7 @@
 
     async function markRead() {
         if (!conversationId) return;
-        const res = await fetch(
+        const res = await apiFetch(
             '/api/conversations/' + conversationId + '/read',
             { method: 'POST' });
         try {
@@ -208,7 +218,7 @@
         e.preventDefault();
         const text = body.value.trim();
         if (!text) return;
-        const res = await fetch(apiUrl, {
+        const res = await apiFetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ body: text }),

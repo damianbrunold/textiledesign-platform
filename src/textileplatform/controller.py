@@ -94,7 +94,7 @@ def load_logged_in_user():
                 # if the user got disabled, we force logout
                 if g.user.disabled and not impersonating:
                     session.clear()
-                    return redirect(url_for("login"))
+                    return _auth_redirect_or_401()
 
                 # If the session's token version is stale (e.g. the
                 # password was changed elsewhere), force logout. Skip
@@ -121,7 +121,7 @@ def load_logged_in_user():
                     and (now - g.user.access_date).days > 30
                 ):
                     session.clear()
-                    return redirect(url_for("login"))
+                    return _auth_redirect_or_401()
 
                 # Flush access_date + day counters when either:
                 #   - it's the first access of a new day (so day counters
@@ -232,6 +232,18 @@ def flush_usage_stats(response):
     return response
 
 
+def _is_api_request():
+    return request.path.startswith("/api/")
+
+
+def _auth_redirect_or_401():
+    """Force-logout response: 401 JSON for /api/ requests (so JS clients
+    can reload), HTML redirect to login otherwise."""
+    if _is_api_request():
+        return jsonify({"status": "NOK", "message": "Not authenticated"}), 401
+    return redirect(url_for("login"))
+
+
 def _safe_next_url(candidate):
     """Return candidate iff it is a safe same-origin relative path.
     Blocks absolute URLs, protocol-relative URLs (//evil.com), and the
@@ -255,6 +267,8 @@ def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:
+            if _is_api_request():
+                return jsonify({"status": "NOK", "message": "Not authenticated"}), 401
             nxt = None
             if request.method == "GET":
                 path = request.full_path if request.query_string else request.path
