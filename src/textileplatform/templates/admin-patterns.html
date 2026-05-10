@@ -21,61 +21,51 @@
     <span class="count" id="pattern-count">{{ patterns|length }} {{ gettext('patterns') }}</span>
 </div>
 
-<table id="pattern-table">
-    <thead>
-        <tr>
-            <th>{{ gettext('Name') }}</th>
-            <th>{{ gettext('Owner') }}</th>
-            <th>{{ gettext('Type') }}</th>
-            <th>{{ gettext('Created') }}</th>
-            <th>{{ gettext('Modified') }}</th>
-            <th>{{ gettext('Public') }}</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody id="pattern-rows">
+<div class="user-grid" id="pattern-grid">
     {% for pattern in patterns %}
-        <tr data-name="{{ pattern.name|lower }}"
-            data-owner="{{ pattern.owner.name|lower }}"
-            data-modified="{{ pattern.modified.timestamp() if pattern.modified else 0 }}">
-            <td>
-                <form method="post" action="{{ url_for('impersonate', user_name=pattern.owner.name) }}" style="display:inline; margin:0;">
-                    <input type="hidden" name="next_url" value="{{ url_for('edit_pattern', user_name=pattern.owner.name, pattern_name=pattern.name) }}">
-                    <button type="submit" class="btn-link link-as-a" title="{{ gettext('Impersonate owner and open in editor') }}">{{ pattern.name }}</button>
-                </form>
-            </td>
-            <td><a href="{{ url_for('edit_user', user_name=pattern.owner.name) }}">{{ pattern.owner.name }}</a></td>
-            <td>{{ pattern.pattern_type }}</td>
-            <td>{{ pattern.created|datetimeformat('short') }}</td>
-            <td>{{ pattern.modified|datetimeformat('short') }}</td>
-            <td title="{{ gettext('Public') if pattern.public else gettext('Private') }}">{% if pattern.public %}🌐{% else %}🔒{% endif %}</td>
-            <td>
-                <form method="post" action="{{ url_for('investigate_pattern', owner_name=pattern.owner.name, pattern_name=pattern.name) }}" style="display:inline;">
-                    <button type="submit" class="btn small">{{ gettext('Investigate') }}</button>
-                </form>
-            </td>
-        </tr>
+    <div class="user-card"
+         data-name="{{ pattern.name|lower }}"
+         data-owner="{{ pattern.owner.name|lower }}"
+         data-modified="{{ pattern.modified.timestamp() if pattern.modified else 0 }}">
+        <div class="head">
+            <form method="post" action="{{ url_for('impersonate', user_name=pattern.owner.name) }}" style="display:inline; margin:0;">
+                <input type="hidden" name="next_url" value="{{ url_for('edit_pattern', user_name=pattern.owner.name, pattern_name=pattern.name) }}">
+                <button type="submit" class="btn-link link-as-a name" title="{{ gettext('Impersonate owner and open in editor') }}">{{ pattern.name }}</button>
+            </form>
+            <span title="{{ gettext('Public') if pattern.public else gettext('Private') }}">{% if pattern.public %}🌐{% else %}🔒{% endif %}</span>
+        </div>
+        <div class="meta">
+            <span><strong>{{ gettext('Owner') }}:</strong> <a href="{{ url_for('edit_user', user_name=pattern.owner.name) }}">{{ pattern.owner.name }}</a></span>
+            <span><strong>{{ gettext('Type') }}:</strong> {{ pattern.pattern_type }}</span>
+            <span><strong>{{ gettext('Created') }}:</strong> {{ pattern.created|datetimeformat('short') }}</span>
+            <span><strong>{{ gettext('Modified') }}:</strong> {{ pattern.modified|datetimeformat('short') }}</span>
+        </div>
+        <div class="actions">
+            <form method="post" action="{{ url_for('investigate_pattern', owner_name=pattern.owner.name, pattern_name=pattern.name) }}" style="display:inline;">
+                <button type="submit" class="btn small">{{ gettext('Investigate') }}</button>
+            </form>
+        </div>
+    </div>
     {% endfor %}
-    </tbody>
-</table>
+</div>
 
 <script>
 (function () {
-    const tbody = document.getElementById('pattern-rows');
+    const grid = document.getElementById('pattern-grid');
     const filter = document.getElementById('pattern-filter');
     const sort = document.getElementById('pattern-sort');
     const count = document.getElementById('pattern-count');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const cards = Array.from(grid.querySelectorAll('.user-card'));
     const totalLabel = count.textContent.replace(/^\d+\s*/, '');
 
     function applyFilter() {
         const q = filter.value.trim().toLowerCase();
         let visible = 0;
-        for (const r of rows) {
+        for (const c of cards) {
             const match = !q
-                || r.dataset.name.includes(q)
-                || r.dataset.owner.includes(q);
-            r.style.display = match ? '' : 'none';
+                || c.dataset.name.includes(q)
+                || c.dataset.owner.includes(q);
+            c.style.display = match ? '' : 'none';
             if (match) visible++;
         }
         count.textContent = visible + ' ' + totalLabel;
@@ -83,7 +73,7 @@
 
     function applySort() {
         const mode = sort.value;
-        const sorted = rows.slice().sort((a, b) => {
+        const sorted = cards.slice().sort((a, b) => {
             if (mode === 'modified-desc') {
                 return parseFloat(b.dataset.modified) - parseFloat(a.dataset.modified)
                     || a.dataset.name.localeCompare(b.dataset.name);
@@ -94,7 +84,7 @@
             }
             return a.dataset.name.localeCompare(b.dataset.name);
         });
-        for (const r of sorted) tbody.appendChild(r);
+        for (const c of sorted) grid.appendChild(c);
     }
 
     filter.addEventListener('input', applyFilter);

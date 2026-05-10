@@ -22,63 +22,53 @@
     </table>
 </div>
 
-<div class="card card-wide">
-    <h2>{{ gettext('Members') }} ({{ memberships|length }})</h2>
-    {% if memberships %}
-    <table>
-        <thead>
-            <tr>
-                <th>{{ gettext('User') }}</th>
-                <th>{{ gettext('Label') }}</th>
-                <th>{{ gettext('Role') }}</th>
-                <th>{{ gettext('State') }}</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for m in memberships %}
-            <tr>
-                <td><a href="{{ url_for('edit_user', user_name=m.user.name) }}">{{ m.user.name }}</a></td>
-                <td>{{ m.user.label }}</td>
-                <td>{{ m.role }}</td>
-                <td>{{ m.state }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="muted">{{ gettext('No members.') }}</p>
-    {% endif %}
+<h2>{{ gettext('Members') }} ({{ memberships|length }})</h2>
+{% if memberships %}
+<div class="user-grid">
+    {% for m in memberships %}
+    <div class="user-card">
+        <div class="head">
+            <a class="name" href="{{ url_for('edit_user', user_name=m.user.name) }}">{{ m.user.name }}</a>
+            <span class="label">{{ m.user.label }}</span>
+        </div>
+        <div class="meta">
+            <span><strong>{{ gettext('Role') }}:</strong> {{ m.role }}</span>
+            <span><strong>{{ gettext('State') }}:</strong> {{ m.state }}</span>
+        </div>
+    </div>
+    {% endfor %}
 </div>
+{% else %}
+<div class="card card-wide">
+<p class="muted">{{ gettext('No members.') }}</p>
+</div>
+{% endif %}
 
-<div class="card card-wide">
-    <h2>{{ gettext('Patterns') }} ({{ patterns|length }})</h2>
-    {% if patterns %}
-    <table>
-        <thead>
-            <tr>
-                <th>{{ gettext('Name') }}</th>
-                <th>{{ gettext('Type') }}</th>
-                <th>{{ gettext('Owner') }}</th>
-                <th>{{ gettext('Modified') }}</th>
-                <th>{{ gettext('Public') }}</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for p in patterns %}
-            <tr>
-                <td>{{ p.name }}</td>
-                <td>{{ p.pattern_type }}</td>
-                <td><a href="{{ url_for('edit_user', user_name=p.owner.name) }}">{{ p.owner.name }}</a></td>
-                <td>{{ p.modified|datetimeformat('short') }}</td>
-                <td title="{{ gettext('Public') if p.public else gettext('Private') }}">{% if p.public %}🌐{% else %}🔒{% endif %}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p class="muted">{{ gettext('No patterns.') }}</p>
-    {% endif %}
+<h2>{{ gettext('Patterns') }} ({{ patterns|length }})</h2>
+{% if patterns %}
+<div class="user-grid">
+    {% for p in patterns %}
+    <div class="user-card">
+        <div class="head">
+            <form method="post" action="{{ url_for('impersonate', user_name=p.owner.name) }}" style="display:inline; margin:0;">
+                <input type="hidden" name="next_url" value="{{ url_for('edit_pattern', user_name=p.owner.name, pattern_name=p.name) }}">
+                <button type="submit" class="btn-link link-as-a name" title="{{ gettext('Impersonate owner and open in editor') }}">{{ p.name }}</button>
+            </form>
+            <span title="{{ gettext('Public') if p.public else gettext('Private') }}">{% if p.public %}🌐{% else %}🔒{% endif %}</span>
+        </div>
+        <div class="meta">
+            <span><strong>{{ gettext('Owner') }}:</strong> <a href="{{ url_for('edit_user', user_name=p.owner.name) }}">{{ p.owner.name }}</a></span>
+            <span><strong>{{ gettext('Type') }}:</strong> {{ p.pattern_type }}</span>
+            <span><strong>{{ gettext('Modified') }}:</strong> {{ p.modified|datetimeformat('short') }}</span>
+        </div>
+    </div>
+    {% endfor %}
 </div>
+{% else %}
+<div class="card card-wide">
+<p class="muted">{{ gettext('No patterns.') }}</p>
+</div>
+{% endif %}
 
 <p class="muted" style="font-size:0.85em;">{{ gettext('Read-only admin view. Use the user pages to make changes.') }}</p>
 {% endblock %}

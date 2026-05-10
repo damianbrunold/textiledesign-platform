@@ -542,8 +542,8 @@ img.icon.selected {
 .profile-section.danger-zone h2 { color: #a93226; }
 /* Submit buttons & generic buttons inside .card adopt .btn look —
    unless the element already has an explicit .btn class. */
-.card input[type=submit]:not(.btn),
-.card button[type=submit]:not(.btn) {
+.card input[type=submit]:not(.btn):not(.btn-link),
+.card button[type=submit]:not(.btn):not(.btn-link) {
     align-self: flex-start;
     display: inline-block;
     padding: 0.4rem 1rem;
@@ -555,8 +555,8 @@ img.icon.selected {
     font: inherit;
     line-height: 1.4;
 }
-.card input[type=submit]:not(.btn):hover,
-.card button[type=submit]:not(.btn):hover { background: #0a76bf; }
+.card input[type=submit]:not(.btn):not(.btn-link):hover,
+.card button[type=submit]:not(.btn):not(.btn-link):hover { background: #0a76bf; }
 .card button:not([type=submit]):not(.btn):not(.btn-link) {
     display: inline-block;
     padding: 0.35rem 0.8rem;

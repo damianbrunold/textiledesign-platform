@@ -190,15 +190,15 @@ img.icon.selected { outline: 2px solid #999; }
     color: #cfe0ee;
     border-color: #2a4f6e;
 }
-.card input[type=submit]:not(.btn),
-.card button[type=submit]:not(.btn) {
+.card input[type=submit]:not(.btn):not(.btn-link),
+.card button[type=submit]:not(.btn):not(.btn-link) {
     background: #0a76bf;
     border-color: #0a76bf;
     color: #fff;
 }
-.card input[type=submit]:not(.btn):hover,
-.card button[type=submit]:not(.btn):hover { background: #1389d9; }
-.card button:not([type=submit]):not(.btn) {
+.card input[type=submit]:not(.btn):not(.btn-link):hover,
+.card button[type=submit]:not(.btn):not(.btn-link):hover { background: #1389d9; }
+.card button:not([type=submit]):not(.btn):not(.btn-link) {
     background: #2a2a2a;
     border-color: #555;
     color: #ddd;
