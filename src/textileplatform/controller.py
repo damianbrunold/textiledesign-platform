@@ -2388,6 +2388,7 @@ def register():
         name = request.form["name"]
         email = (request.form.get("email") or "").strip()
         password = request.form["password"]
+        confirm = request.form.get("confirm_password", "")
         expected = session.pop("captcha_answer", None)
         try:
             given = int((request.form.get("x") or "").strip())
@@ -2404,6 +2405,8 @@ def register():
             error = gettext("E-Mail is not valid")
         elif not password:
             error = gettext("Password is required")
+        elif password != confirm:
+            error = gettext("Passwords do not match")
         elif expected is None or given != expected:
             error = gettext("Calculation result required")
         elif not is_acceptable_password(password, name=name, email=email):
@@ -2666,8 +2669,11 @@ def reset_password(user_name, verification_code):
         if request.method == "POST":
             error = None
             password = request.form["password"]
+            confirm = request.form.get("confirm_password", "")
             if not password:
                 error = gettext("Password is required.")
+            elif password != confirm:
+                error = gettext("Passwords do not match")
             elif not is_acceptable_password(
                 password, name=user.name, email=user.email
             ):

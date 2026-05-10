@@ -20,7 +20,11 @@
         </div>
         <div class="field">
             <label for="password">{{ gettext('Password') }}</label>
-            <input type="password" name="password" id="password" required aria-required="true" autocomplete="new-password" value="{{ request.form['password'] }}">
+            <input type="password" name="password" id="password" required aria-required="true" autocomplete="new-password">
+        </div>
+        <div class="field">
+            <label for="confirm_password">{{ gettext('Confirm Password') }}</label>
+            <input type="password" name="confirm_password" id="confirm_password" required aria-required="true" autocomplete="new-password">
         </div>
         <div class="field">
             <label for="x">{{ gettext('Please enter the result of the following calculation') }} {{ captcha_question }}</label>
