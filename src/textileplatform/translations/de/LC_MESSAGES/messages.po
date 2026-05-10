@@ -2183,6 +2183,14 @@ msgid "Weft range"
 msgstr "Schussfadenbereich"
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:238
+msgid "Harness range"
+msgstr "Schaftbereich"
+
+#: src/textileplatform/templates/edit_dbweave_pattern.html:239
+msgid "Treadle range"
+msgstr "Trittbereich"
+
+#: src/textileplatform/templates/edit_dbweave_pattern.html:240
 msgid "From"
 msgstr "Von"
 

@@ -133,12 +133,14 @@ class Layout:
     gh: int
     dx: int   # warp count (used range)
     dy: int   # weft count (used range)
-    shafts: int
-    treadles: int
+    shafts: int     # number of shaft rows shown (count, after clipping)
+    treadles: int   # number of treadle columns shown (count, after clipping)
     width: int
     height: int
     kette_a: int
     schuesse_a: int
+    shafts_a: int = 0     # 0-based index of the first shaft shown
+    treadles_a: int = 0   # 0-based index of the first treadle shown
 
 
 def _apply_ratio(base, warp_factor, weft_factor):
@@ -326,6 +328,7 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
     ``paintPattern`` in exportbitmap.cpp:159-405."""
     gw, gh = layout.gw, layout.gh
     shafts, treadles = layout.shafts, layout.treadles
+    shafts_a, treadles_a = layout.shafts_a, layout.treadles_a
     dx, dy = layout.dx, layout.dy
     sdy = 1 if shafts != 0 else 0
     tdx = 1 if treadles != 0 else 0
@@ -362,8 +365,12 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
             s = _get_entering(data, layout.kette_a + i)
             if s == 0:
                 continue
+            # Clip to the visible shaft window [shafts_a+1 .. shafts_a+shafts].
+            s_rel = s - shafts_a
+            if s_rel < 1 or s_rel > shafts:
+                continue
             x = x0 + (dx - i - 1) * gw if rtl else x0 + i * gw
-            y = y0 + (s - 1) * gh if ttb else y0 + (shafts - s) * gh
+            y = y0 + (s_rel - 1) * gh if ttb else y0 + (shafts - s_rel) * gh
             _paint_cell(t, ez_darst, x, y, gw, gh, BLACK)
         t.stroke_rect(x0, y0, dx * gw, shafts * gh, BLACK)
 
@@ -385,7 +392,7 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
         else:
             for j in range(shafts):
                 for i in range(treadles):
-                    s = _get_tieup(data, i, j)
+                    s = _get_tieup(data, i + treadles_a, j + shafts_a)
                     if s <= 0:
                         continue
                     x = x0 + i * gw
@@ -414,9 +421,9 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
         for j in range(dy):
             for i in range(treadles):
                 if pegplan:
-                    s = _get_pegplan(data, i, layout.schuesse_a + j)
+                    s = _get_pegplan(data, i + treadles_a, layout.schuesse_a + j)
                 else:
-                    s = _get_treadling(data, i, layout.schuesse_a + j)
+                    s = _get_treadling(data, i + treadles_a, layout.schuesse_a + j)
                 if s <= 0:
                     continue
                 x = x0 + i * gw
@@ -649,6 +656,8 @@ def export_pdf(data, title=None) -> bytes:
 def print_pdf(data, title=None,
               warp_from=None, warp_to=None,
               weft_from=None, weft_to=None,
+              harness_from=None, harness_to=None,
+              treadle_from=None, treadle_to=None,
               cell_mm=2.5):
     """Multi-page PDF print of the pattern.
 
@@ -658,8 +667,10 @@ def print_pdf(data, title=None,
 
     ``warp_from`` / ``warp_to`` (1-based, inclusive) optionally clip
     the warp range; same for ``weft_from`` / ``weft_to`` on the weft
-    axis. When omitted the auto-detected pattern extent is used —
-    matching desktop "Drucken" vs. "Teil drucken".
+    axis, ``harness_from`` / ``harness_to`` on the shaft axis, and
+    ``treadle_from`` / ``treadle_to`` on the treadle axis. When all
+    are omitted the auto-detected pattern extent is used — matching
+    desktop "Drucken" vs. "Teil drucken".
     """
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import mm
@@ -683,6 +694,32 @@ def print_pdf(data, title=None,
             a, b = b, a
         layout.schuesse_a = a
         layout.dy = b - a + 1
+    # Harness / treadle ranges. Sentinel (None, None) keeps the auto-
+    # detected count; explicit values clip to that window. A value of
+    # 0 in both fields is the desktop "skip section" marker — collapse
+    # the strip to zero rows / columns.
+    if harness_from is not None or harness_to is not None:
+        if (harness_from == 0 and harness_to == 0):
+            layout.shafts_a = 0
+            layout.shafts = 0
+        else:
+            a = layout.shafts_a if harness_from is None else max(0, int(harness_from) - 1)
+            b = (layout.shafts_a + layout.shafts - 1) if harness_to is None else max(0, int(harness_to) - 1)
+            if b < a:
+                a, b = b, a
+            layout.shafts_a = a
+            layout.shafts = b - a + 1
+    if treadle_from is not None or treadle_to is not None:
+        if (treadle_from == 0 and treadle_to == 0):
+            layout.treadles_a = 0
+            layout.treadles = 0
+        else:
+            a = layout.treadles_a if treadle_from is None else max(0, int(treadle_from) - 1)
+            b = (layout.treadles_a + layout.treadles - 1) if treadle_to is None else max(0, int(treadle_to) - 1)
+            if b < a:
+                a, b = b, a
+            layout.treadles_a = a
+            layout.treadles = b - a + 1
     sdy = 1 if layout.shafts != 0 else 0
     tdx = 1 if layout.treadles != 0 else 0
     layout.width  = layout.gw * (layout.dx + tdx + layout.treadles) + 1

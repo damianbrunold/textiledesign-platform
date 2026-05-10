@@ -878,6 +878,10 @@ def print_pattern(user_name, pattern_name):
         warp_to   = payload.get("warp_to")
         weft_from = payload.get("weft_from")
         weft_to   = payload.get("weft_to")
+        harness_from = payload.get("harness_from")
+        harness_to   = payload.get("harness_to")
+        treadle_from = payload.get("treadle_from")
+        treadle_to   = payload.get("treadle_to")
         full_pattern = payload.get("full_pattern", True)
     else:
         pattern_data = json.loads(pattern.contents)
@@ -885,6 +889,10 @@ def print_pattern(user_name, pattern_name):
         warp_to   = request.args.get("warp_to",   type=int)
         weft_from = request.args.get("weft_from", type=int)
         weft_to   = request.args.get("weft_to",   type=int)
+        harness_from = request.args.get("harness_from", type=int)
+        harness_to   = request.args.get("harness_to",   type=int)
+        treadle_from = request.args.get("treadle_from", type=int)
+        treadle_to   = request.args.get("treadle_to",   type=int)
         full_pattern = request.args.get("full_pattern", "1") != "0"
 
     try:
@@ -894,6 +902,8 @@ def print_pattern(user_name, pattern_name):
                 title=pattern.label or pattern_name,
                 warp_from=warp_from, warp_to=warp_to,
                 weft_from=weft_from, weft_to=weft_to,
+                harness_from=harness_from, harness_to=harness_to,
+                treadle_from=treadle_from, treadle_to=treadle_to,
             )
         else:
             body = bead_exporter.print_pdf(
@@ -904,7 +914,10 @@ def print_pattern(user_name, pattern_name):
     except Exception as e:  # pragma: no cover
         logging.exception("Print for %s/%s failed", user_name, pattern_name)
         return f"Print failed: {e}", 500
-    suffix = "-part" if any(v is not None for v in (warp_from, warp_to, weft_from, weft_to)) else ""
+    suffix = "-part" if any(v is not None for v in (
+        warp_from, warp_to, weft_from, weft_to,
+        harness_from, harness_to, treadle_from, treadle_to,
+    )) else ""
     return send_file(
         io.BytesIO(body),
         mimetype="application/pdf",

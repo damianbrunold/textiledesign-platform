@@ -4750,8 +4750,10 @@ async function _printDownload(opts) {
     }, 0);
 }
 
-// Print part — range dialog (warp + weft) → multi-page PDF. Direct
-// port of printrangedialog.cpp's two range groups.
+// Print part — range dialog (warp + weft + harness + treadle) →
+// multi-page PDF. Direct port of printrangedialog.cpp's four range
+// groups. As in desktop, entering 0 in both From and To of a group
+// suppresses that strip in the output.
 function showPrintPartDialog() {
     const i18n = _getI18n();
     const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
@@ -4761,46 +4763,85 @@ function showPrintPartDialog() {
     const wb = (pattern.max_x | 0) + 1;
     const sa = (pattern.min_y | 0) + 1;
     const sb = (pattern.max_y | 0) + 1;
+    // Highest shaft / treadle actually used — defaults for the new
+    // harness / treadle range groups, mirroring desktop's
+    // CalcSchaefte / CalcTritte.
+    const maxShafts   = pattern.max_shafts   || (data && data.max_shafts)   || 32;
+    const maxTreadles = pattern.max_treadles || (data && data.max_treadles) || 32;
+    let firstShaft = -1, lastShaft = -1;
+    if (data && Array.isArray(data.data_entering)) {
+        for (let i = 0; i < data.data_entering.length; i++) {
+            const s = data.data_entering[i] | 0;
+            if (s <= 0) continue;
+            if (firstShaft < 0 || s - 1 < firstShaft) firstShaft = s - 1;
+            if (s - 1 > lastShaft) lastShaft = s - 1;
+        }
+    }
+    let firstTreadle = -1, lastTreadle = -1;
+    if (data && Array.isArray(data.data_treadling) && maxTreadles > 0) {
+        for (let j = 0; j < h; j++) {
+            for (let i = 0; i < maxTreadles; i++) {
+                const v = data.data_treadling[i + j * maxTreadles] | 0;
+                if (v <= 0) continue;
+                if (firstTreadle < 0 || i < firstTreadle) firstTreadle = i;
+                if (i > lastTreadle) lastTreadle = i;
+            }
+        }
+    }
+    const ha = firstShaft   >= 0 ? firstShaft   + 1 : 1;
+    const hb = lastShaft    >= 0 ? lastShaft    + 1 : Math.min(maxShafts, 1);
+    const ta = firstTreadle >= 0 ? firstTreadle + 1 : 1;
+    const tb = lastTreadle  >= 0 ? lastTreadle  + 1 : Math.min(maxTreadles, 1);
     const body = document.createElement("div");
     body.style.minWidth = "360px";
-    body.innerHTML = `
+    const group = (legend, idA, idB, max) => `
         <fieldset style="border:1px solid #888;padding:0.4rem 0.6rem;margin-bottom:0.6rem">
-            <legend>${L("print.warp-range", "Warp range")}</legend>
+            <legend>${legend}</legend>
             <div style="display:grid;grid-template-columns:auto 6rem;gap:0.4rem 1rem;align-items:center">
                 <label>${L("print.from", "From")}</label>
-                <input id="tx-pp-wa" type="number" min="1" step="1">
+                <input id="${idA}" type="number" min="0" max="${max}" step="1">
                 <label>${L("print.to",   "To")}</label>
-                <input id="tx-pp-wb" type="number" min="1" step="1">
-            </div>
-        </fieldset>
-        <fieldset style="border:1px solid #888;padding:0.4rem 0.6rem">
-            <legend>${L("print.weft-range", "Weft range")}</legend>
-            <div style="display:grid;grid-template-columns:auto 6rem;gap:0.4rem 1rem;align-items:center">
-                <label>${L("print.from", "From")}</label>
-                <input id="tx-pp-sa" type="number" min="1" step="1">
-                <label>${L("print.to",   "To")}</label>
-                <input id="tx-pp-sb" type="number" min="1" step="1">
+                <input id="${idB}" type="number" min="0" max="${max}" step="1">
             </div>
         </fieldset>`;
+    body.innerHTML =
+        group(L("print.warp-range",    "Warp range"),    "tx-pp-wa", "tx-pp-wb", w)
+      + group(L("print.weft-range",    "Weft range"),    "tx-pp-sa", "tx-pp-sb", h)
+      + group(L("print.harness-range", "Harness range"), "tx-pp-ha", "tx-pp-hb", maxShafts)
+      + group(L("print.treadle-range", "Treadle range"), "tx-pp-ta", "tx-pp-tb", maxTreadles);
     const $ = (sel) => body.querySelector(sel);
-    $("#tx-pp-wa").max = String(w); $("#tx-pp-wa").value = wa;
-    $("#tx-pp-wb").max = String(w); $("#tx-pp-wb").value = wb;
-    $("#tx-pp-sa").max = String(h); $("#tx-pp-sa").value = sa;
-    $("#tx-pp-sb").max = String(h); $("#tx-pp-sb").value = sb;
+    $("#tx-pp-wa").value = wa; $("#tx-pp-wb").value = wb;
+    $("#tx-pp-sa").value = sa; $("#tx-pp-sb").value = sb;
+    $("#tx-pp-ha").value = ha; $("#tx-pp-hb").value = hb;
+    $("#tx-pp-ta").value = ta; $("#tx-pp-tb").value = tb;
     setTimeout(() => { $("#tx-pp-wa").focus(); $("#tx-pp-wa").select(); }, 0);
+
+    // Read a range pair: 0/0 in both fields is the "skip section"
+    // sentinel; otherwise non-positive entries fall back to the
+    // axis-wide default (1..max) and the pair is normalised so
+    // From ≤ To.
+    const readRange = (idA, idB, max) => {
+        const a = parseInt($(idA).value, 10);
+        const b = parseInt($(idB).value, 10);
+        if (a === 0 && b === 0) return { from: 0, to: 0 };
+        let aa = (Number.isFinite(a) && a > 0) ? a : 1;
+        let bb = (Number.isFinite(b) && b > 0) ? b : max;
+        if (bb < aa) [aa, bb] = [bb, aa];
+        return { from: aa, to: bb };
+    };
 
     let modal;
     const accept = () => {
-        let wa2 = parseInt($("#tx-pp-wa").value, 10) || 1;
-        let wb2 = parseInt($("#tx-pp-wb").value, 10) || w;
-        let sa2 = parseInt($("#tx-pp-sa").value, 10) || 1;
-        let sb2 = parseInt($("#tx-pp-sb").value, 10) || h;
-        if (wb2 < wa2) [wa2, wb2] = [wb2, wa2];
-        if (sb2 < sa2) [sa2, sb2] = [sb2, sa2];
+        const rW = readRange("#tx-pp-wa", "#tx-pp-wb", w);
+        const rS = readRange("#tx-pp-sa", "#tx-pp-sb", h);
+        const rH = readRange("#tx-pp-ha", "#tx-pp-hb", maxShafts);
+        const rT = readRange("#tx-pp-ta", "#tx-pp-tb", maxTreadles);
         modal.close();
         _printDownload({
-            warp_from: wa2, warp_to: wb2,
-            weft_from: sa2, weft_to: sb2,
+            warp_from:    rW.from, warp_to:    rW.to,
+            weft_from:    rS.from, weft_to:    rS.to,
+            harness_from: rH.from, harness_to: rH.to,
+            treadle_from: rT.from, treadle_to: rT.to,
         });
     };
     modal = Modal.open({
