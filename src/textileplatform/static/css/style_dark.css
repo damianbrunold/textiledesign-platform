@@ -9,6 +9,7 @@ nav .nav-brand a { color: white; }
 nav ul li span { color: white; }
 .flash { background: #1c3a52; border: 1px solid #67c3ff; color: #e6f3ff; }
 .flash-error, .flash-warning, .flash-danger { background: #4a1a1a; border-color: #ff6b6b; color: #ffe2e0; }
+.form-notice { background: #1c3a52; border: 1px solid #67c3ff; color: #e6f3ff; }
 .field-help { color: #bbb; }
 .btn-link { color: #67c3ff; }
 .btn-link:hover { color: #9ad6ff; }

@@ -10,7 +10,46 @@
 <div class="card card-wide">
     <table>
         <tbody>
-            <tr><th style="width:10rem;">{{ gettext('Name') }}</th><td>{{ user.name }}</td></tr>
+            <tr><th style="width:10rem;">{{ gettext('Name') }}</th>
+                <td>
+                    <div id="name-display" style="display:flex; gap:0.5rem; align-items:center;">
+                        <span>{{ user.name }}</span>
+                        {% if user.name != SUPPORT_USERNAME and (not g.user or g.user.id != user.id) %}
+                        <button type="button" id="name-edit-btn" class="btn small">{{ gettext('Edit') }}</button>
+                        {% endif %}
+                    </div>
+                    {% if user.name != SUPPORT_USERNAME and (not g.user or g.user.id != user.id) %}
+                    <form id="name-edit-form" method="post" action="{{ url_for('admin_set_user_name', user_name=user.name) }}" style="display:none; gap:0.5rem; align-items:center; margin:0;"
+                          data-confirm="{{ gettext('Change the name for this user? URLs containing the name will change and active sessions will be signed out.') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="text" name="name" id="name-edit-input" value="{{ user.name }}" required maxlength="50" style="flex:1;">
+                        <button type="submit" class="btn small primary">{{ gettext('Save') }}</button>
+                        <button type="button" id="name-cancel-btn" class="btn small">{{ gettext('Cancel') }}</button>
+                    </form>
+                    <script nonce="{{ csp_nonce }}">
+                    (function () {
+                        var display = document.getElementById('name-display');
+                        var form = document.getElementById('name-edit-form');
+                        var editBtn = document.getElementById('name-edit-btn');
+                        var cancelBtn = document.getElementById('name-cancel-btn');
+                        var input = document.getElementById('name-edit-input');
+                        var original = input.value;
+                        editBtn.addEventListener('click', function () {
+                            display.style.display = 'none';
+                            form.style.display = 'flex';
+                            input.focus();
+                            input.select();
+                        });
+                        cancelBtn.addEventListener('click', function () {
+                            input.value = original;
+                            form.style.display = 'none';
+                            display.style.display = 'flex';
+                        });
+                    })();
+                    </script>
+                    {% endif %}
+                </td>
+            </tr>
             <tr><th>{{ gettext('Label') }}</th><td>{{ user.label }}</td></tr>
             <tr><th>{{ gettext('E-Mail') }}</th>
                 <td>

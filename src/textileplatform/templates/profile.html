@@ -15,6 +15,14 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="settings">
       <div class="field">
+        <label>{{ gettext('Name') }}</label>
+        <div class="readonly-value">{{ user.name }}</div>
+        <small class="muted">
+          {% set name_support_link %}<a href="{{ url_for('messages_direct', user_name=SUPPORT_USERNAME) }}">{{ gettext('support') }}</a>{% endset %}
+          {{ gettext('Your name appears in the URLs of your patterns. To change it, please contact %(support)s.', support=name_support_link)|safe }}
+        </small>
+      </div>
+      <div class="field">
         <label>{{ gettext('E-Mail') }}</label>
         <div class="readonly-value">{{ user.email }}</div>
         <small class="muted">
@@ -52,6 +60,22 @@
         <input type="checkbox" name="block_invitations" id="block-invitations" value="1"
                {% if user.block_invitations %}checked{% endif %}>
         <label for="block-invitations">{{ gettext('Block invitations and direct messages from other users') }}</label>
+      </div>
+      <div class="profile-actions">
+        <button type="submit" class="btn primary">{{ gettext('Save') }}</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="profile-section">
+    <h2>{{ gettext('Display Name') }}</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="label">
+      <div class="field">
+        <label for="label">{{ gettext('Label') }}</label>
+        <input name="label" id="label" type="text" value="{{ user.label }}" required maxlength="50" autocomplete="off">
+        <small class="muted">{{ gettext('Shown to other users. The URL handle (your name) does not change.') }}</small>
       </div>
       <div class="profile-actions">
         <button type="submit" class="btn primary">{{ gettext('Save') }}</button>

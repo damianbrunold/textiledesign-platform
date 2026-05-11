@@ -344,6 +344,98 @@ def change_user_email(user, new_email):
     return None
 
 
+def _is_name_taken(name):
+    """A handle is taken if any user or any group already has it."""
+    if User.query.filter(User.name == name).first():
+        return True
+    if Group.query.filter(Group.name == name).first():
+        return True
+    return False
+
+
+def _propose_free_name(base):
+    """Pick a free handle that visibly relates to `base`. Tries numeric
+    suffixes first (`base-2`, `base-3`, …), which most users immediately
+    understand. Falls back to a short random suffix only when the
+    numeric range is exhausted, so we never loop unbounded."""
+    if not base:
+        base = "user"
+    for i in range(2, 10):
+        candidate = f"{base}-{i}"
+        if not _is_name_taken(candidate) and is_valid(candidate, max_len=50):
+            return candidate
+    for _ in range(10):
+        candidate = f"{base}-{secrets.token_hex(3)}"
+        if not _is_name_taken(candidate) and is_valid(candidate, max_len=50):
+            return candidate
+    return f"{base}-{secrets.token_hex(6)}"
+
+
+def _i18n_marker():
+    # Strings returned from change_user_name / change_user_label below.
+    # Listed here so pybabel sees them as gettext literals — the actual
+    # lookup happens in the route handlers that call flash(gettext(err)).
+    gettext("Label is required")
+    gettext("Label is too long")
+    gettext("Another group already uses this name")
+
+
+def change_user_name(user, new_name):
+    """Apply an admin-driven user-name change. Returns None on success
+    or a user-facing error message string. Does not commit.
+
+    Renames the user's primary group (which shares the name) as part
+    of the same transaction so the group handle continues to match the
+    user. Bumps session_token_version so any active session for the
+    user is forced to re-login — every URL containing the handle just
+    changed."""
+    new_name = (new_name or "").strip().lower()
+    if not new_name:
+        return "Name is required"
+    if not is_valid(new_name, max_len=50):
+        return "Name is invalid and cannot be used"
+    if new_name == user.name:
+        return None
+    clash_user = User.query.filter(
+        User.name == new_name, User.id != user.id,
+    ).first()
+    if clash_user is not None:
+        return "Another account already uses this name"
+    primary = Group.query.filter(Group.name == user.name).first()
+    clash_group = Group.query.filter(
+        Group.name == new_name,
+        Group.id != (primary.id if primary else -1),
+    ).first()
+    if clash_group is not None:
+        return "Another group already uses this name"
+    if primary is not None:
+        primary.name = new_name
+    user.name = new_name
+    user.session_token_version = (user.session_token_version or 0) + 1
+    return None
+
+
+def change_user_label(user, new_label):
+    """Apply a label change for a user. Returns None on success or a
+    user-facing error message string. Does not commit.
+
+    Labels are purely display — duplicates are allowed (five Silvias
+    can all call themselves Silvia). The URL handle on `name` stays
+    unique and is the only identifier that has to be."""
+    new_label = (new_label or "").strip()
+    if not new_label:
+        return "Label is required"
+    if len(new_label) > 50:
+        return "Label is too long"
+    if new_label == user.label:
+        return None
+    primary = Group.query.filter(Group.name == user.name).first()
+    if primary is not None:
+        primary.label = new_label
+    user.label = new_label
+    return None
+
+
 # Trivially weak passwords that are rejected outright. Kept short on
 # purpose — the goal is to bounce the absolute worst, not enforce a
 # strict policy. Add to this if real-world abuse shows new patterns.
@@ -960,6 +1052,21 @@ def profile():
     user = g.user
     if request.method == "POST":
         action = request.form.get("action", "settings")
+        if action == "label":
+            new_label = (request.form.get("label") or "").strip()
+            err = change_user_label(user, new_label)
+            if err:
+                flash(gettext(err))
+            else:
+                try:
+                    db.session.commit()
+                    flash(gettext("Display name updated"))
+                except Exception:
+                    db.session.rollback()
+                    logging.exception("Label change failed")
+                    flash(gettext("Changes could not be saved"))
+            return redirect(url_for("profile"))
+
         if action == "password":
             current = request.form.get("current_password", "")
             new = request.form.get("new_password", "")
@@ -2315,6 +2422,50 @@ def admin_set_user_email(user_name):
     return redirect(url_for("edit_user", user_name=target.name))
 
 
+@app.route(
+    "/admin/users/<string:user_name>/set-name", methods=("POST",)
+)
+@login_required
+@support_required
+def admin_set_user_name(user_name):
+    target = User.query.filter(User.name == user_name).first()
+    if not target:
+        abort(404, description=f"User {user_name} not found")
+    if target.name == SUPPORT_USERNAME:
+        flash(gettext("The support account cannot be renamed."))
+        return redirect(url_for("edit_user", user_name=target.name))
+    if g.user and target.id == g.user.id:
+        flash(gettext("You cannot rename your own account from here."))
+        return redirect(url_for("edit_user", user_name=target.name))
+    new_name = (request.form.get("name") or "").strip()
+    old_name = target.name
+    err = change_user_name(target, new_name)
+    if err:
+        flash(gettext(err))
+        return redirect(url_for("edit_user", user_name=old_name))
+    changed = old_name != target.name
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash(gettext("Another account already uses this name"))
+        return redirect(url_for("edit_user", user_name=old_name))
+    except Exception:
+        db.session.rollback()
+        logging.exception("Failed to update name")
+        flash(gettext("Could not update the name."))
+        return redirect(url_for("edit_user", user_name=old_name))
+    if changed:
+        try:
+            send_admin_notification_mail(
+                target, f"Admin changed name from {old_name}",
+            )
+        except Exception:
+            logging.exception("name-change notification failed")
+    flash(gettext("Name updated."))
+    return redirect(url_for("edit_user", user_name=target.name))
+
+
 @app.route("/admin/system")
 @login_required
 @support_required
@@ -2484,7 +2635,14 @@ def _seed_starter_patterns(user):
 @limiter.limit("5/hour", methods=["POST"])
 def register():
     if request.method == "POST":
-        name = request.form["name"]
+        # Two-field mode is entered when a clash on the slug forced us
+        # to surface the handle separately. The client carries this
+        # state back via a hidden flag, plus an explicit `name` input.
+        two_field = request.form.get("mode") == "two"
+        label = (request.form.get("label") or "").strip()
+        # Legacy/single-field form posts only carry `label`; in
+        # two-field mode the user has an editable `name` input too.
+        handle_raw = (request.form.get("name") or "").strip().lower()
         email = (request.form.get("email") or "").strip()
         password = request.form["password"]
         confirm = request.form.get("confirm_password", "")
@@ -2496,7 +2654,7 @@ def register():
 
         error = None
 
-        if not name:
+        if not label:
             error = gettext("Name is required")
         elif not email:
             error = gettext("E-Mail is required")
@@ -2508,17 +2666,48 @@ def register():
             error = gettext("Passwords do not match")
         elif expected is None or given != expected:
             error = gettext("Calculation result required")
-        elif not is_acceptable_password(password, name=name, email=email):
+        elif not is_acceptable_password(password, name=label, email=email):
             error = gettext(
                 "Password must be at least 8 characters and not a "
                 "common or trivial password"
             )
 
-        label = name
-        name = from_label(label)
+        # In two-field mode the user controls the handle directly; in
+        # single-field mode we derive it from the label as we always
+        # have. Empty `name` in two-field mode falls back to the slug.
+        if two_field and handle_raw:
+            name = handle_raw
+        else:
+            name = from_label(label)
 
-        if not is_valid(name):
+        if error is None and (not name or not is_valid(name, max_len=50)):
             error = gettext("Name is invalid and cannot be used")
+
+        clash = False
+        if error is None and _is_name_taken(name):
+            clash = True
+
+        if clash and not two_field:
+            # First-time conflict: propose a free suffix, switch the
+            # form into two-field mode, and ask the user to confirm.
+            proposed = _propose_free_name(name)
+            return render_template(
+                "register.html",
+                captcha_question=_new_captcha(),
+                form_label=label,
+                form_name=proposed,
+                two_field=True,
+                conflict_notice=gettext(
+                    "The handle “%(taken)s” is already in use. We can "
+                    "register you as “%(proposed)s” and keep "
+                    "“%(label)s” as your display name. Adjust the "
+                    "handle below if you prefer, then submit again.",
+                    taken=name, proposed=proposed, label=label,
+                ),
+            )
+
+        if clash and two_field:
+            error = gettext("Name or E-Mail is already used")
 
         if error is None:
             try:
@@ -2582,6 +2771,13 @@ def register():
                 error = gettext("System error")
 
         flash(error)
+        return render_template(
+            "register.html",
+            captcha_question=_new_captcha(),
+            form_label=label,
+            form_name=handle_raw if two_field else "",
+            two_field=two_field,
+        )
 
     return render_template("register.html", captcha_question=_new_captcha())
 

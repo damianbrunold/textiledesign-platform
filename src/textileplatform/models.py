@@ -8,7 +8,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
-    label = db.Column(db.String(50), nullable=False, unique=True)
+    label = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(255), nullable=False, unique=True)
     email_lower = db.Column(db.String(255), nullable=True, unique=True)
     password = db.Column(db.String(255), nullable=False)
@@ -117,7 +117,7 @@ class Group(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
-    label = db.Column(db.String(50), nullable=False, unique=True)
+    label = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=False)
     created = db.Column(db.DateTime(timezone=True))
     modified = db.Column(db.DateTime(timezone=True))

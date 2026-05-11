@@ -8,12 +8,26 @@
 
 {% block content %}
 <div class="card card-form">
+    {% if conflict_notice %}
+    <div class="form-notice" role="status">{{ conflict_notice }}</div>
+    {% endif %}
     <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="mode" value="{{ 'two' if two_field else 'one' }}">
         <div class="field">
-            <label for="name">{{ gettext('Name') }}</label>
-            <input type="text" name="name" id="name" required aria-required="true" autocomplete="username" value="{{ request.form['name'] }}">
+            <label for="label">{{ gettext('Name') }}</label>
+            <input type="text" name="label" id="label" required aria-required="true" autocomplete="username" value="{{ form_label if form_label is defined else request.form.get('label', '') }}">
+            {% if two_field %}
+            <small class="muted">{{ gettext('Shown to other users. Can be shared with other accounts.') }}</small>
+            {% endif %}
         </div>
+        {% if two_field %}
+        <div class="field">
+            <label for="name">{{ gettext('URL handle') }}</label>
+            <input type="text" name="name" id="name" required aria-required="true" autocomplete="off" value="{{ form_name if form_name is defined else '' }}" pattern="[a-z0-9][a-z0-9-]*" maxlength="50">
+            <small class="muted">{{ gettext('Appears in your pattern URLs and must be unique. Lowercase letters, digits, and hyphens.') }}</small>
+        </div>
+        {% endif %}
         <div class="field">
             <label for="email">{{ gettext('E-Mail') }}</label>
             <input type="email" name="email" id="email" required aria-required="true" autocomplete="email" value="{{ request.form['email'] }}">
