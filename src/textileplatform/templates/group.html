@@ -27,12 +27,12 @@
 </form>
 {% endif %}
 
-{% macro render_section(title, items, kind=None) %}
-{% if items or (can_write and kind) %}
+{% macro render_section(title, items, writable=False, kind=None) %}
+{% if items or (writable and kind) %}
 <div class="patterns-section">
     <div class="section-title">
         {{ title }}
-        {% if can_write and kind %}
+        {% if writable and kind %}
         <button type="button" class="section-action" data-add="{{ kind }}" aria-label="{{ gettext('Add new pattern') }}" title="{{ gettext('Add new pattern') }}">+</button>
         <button type="button" class="section-action" data-upload="{{ kind }}" aria-label="{{ gettext('Upload pattern file') }}" title="{{ gettext('Upload pattern file') }}">↑</button>
         {% endif %}
@@ -73,8 +73,8 @@
 <div class="empty-note">{{ gettext('No patterns.') }}</div>
 {% endif %}
 
-{{ render_section(gettext('DB-WEAVE Patterns'), patterns_weave, kind='weave' if can_write else None) }}
-{{ render_section(gettext('JBead Patterns'), patterns_bead, kind='bead' if can_write else None) }}
+{{ render_section(gettext('DB-WEAVE Patterns'), patterns_weave, writable=can_write, kind='weave') }}
+{{ render_section(gettext('JBead Patterns'), patterns_bead, writable=can_write, kind='bead') }}
 {{ render_section(gettext('Other Patterns'), patterns_other) }}
 
 {% if can_write %}
