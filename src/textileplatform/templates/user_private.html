@@ -30,11 +30,13 @@
     <input type="hidden" name="name" id="hcf-name">
     <input type="hidden" name="width" id="hcf-width">
     <input type="hidden" name="height" id="hcf-height">
+    <input type="hidden" name="group" id="hcf-group" value="">
 </form>
 <form id="hidden-upload-form" method="post" action="{{ url_for('upload_pattern') }}"
       enctype="multipart/form-data" style="display:none">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="name" value="">
+    <input type="hidden" name="group" id="huf-group" value="">
     <input type="file" name="file" id="hidden-upload-input" multiple>
 </form>
 
@@ -79,7 +81,7 @@
     <div class="patterns-section">
         <div class="section-title">
             {{ title }}
-            {% if kind and gr.is_personal %}
+            {% if kind and (gr.is_personal or gr.can_write) %}
             <button type="button" class="section-action" data-add="{{ kind }}" aria-label="{{ gettext('Add new pattern') }}" title="{{ gettext('Add new pattern') }}">+</button>
             <button type="button" class="section-action" data-upload="{{ kind }}" aria-label="{{ gettext('Upload pattern file') }}" title="{{ gettext('Upload pattern file') }}">↑</button>
             {% endif %}
@@ -131,10 +133,10 @@
     {% endif %}
     {% endmacro %}
 
-    {{ render_pattern_section(gettext('DB-WEAVE Patterns'), weave, gr, kind='weave' if gr.is_personal else None) }}
-    {{ render_pattern_section(gettext('JBead Patterns'), bead, gr, kind='bead' if gr.is_personal else None) }}
+    {{ render_pattern_section(gettext('DB-WEAVE Patterns'), weave, gr, kind='weave' if (gr.is_personal or gr.can_write) else None) }}
+    {{ render_pattern_section(gettext('JBead Patterns'), bead, gr, kind='bead' if (gr.is_personal or gr.can_write) else None) }}
     {{ render_pattern_section(gettext('Other Patterns'), others, gr) }}
-    {% if not weave and not bead and not others and not gr.is_personal %}
+    {% if not weave and not bead and not others and not gr.is_personal and not gr.can_write %}
     <div class="empty-note">{{ gettext('No patterns in this group.') }}</div>
     {% endif %}
 </div>
@@ -441,6 +443,17 @@
     };
     const uploadInput = document.getElementById('hidden-upload-input');
     const uploadForm  = document.getElementById('hidden-upload-form');
+    const hcfGroup    = document.getElementById('hcf-group');
+    const hufGroup    = document.getElementById('huf-group');
+    // Group context for create/upload: blank for the personal group
+    // (server defaults to the user's primary group anyway), otherwise
+    // the active non-personal group name so the new pattern is assigned
+    // there as well.
+    function setGroupContext(groupName) {
+        const value = (groupName && groupName !== userName) ? groupName : '';
+        if (hcfGroup) hcfGroup.value = value;
+        if (hufGroup) hufGroup.value = value;
+    }
     uploadInput.addEventListener('change', () => {
         if (uploadInput.files && uploadInput.files.length > 0) {
             uploadForm.submit();
@@ -450,11 +463,15 @@
     groupsContent.addEventListener('click', e => {
         const addBtn = e.target.closest('.section-action[data-add]');
         if (addBtn) {
+            const gc = addBtn.closest('.group-content');
+            setGroupContext(gc ? gc.dataset.groupName : '');
             openInlineNewForm(addBtn);
             return;
         }
         const upBtn = e.target.closest('.section-action[data-upload]');
         if (upBtn) {
+            const gc = upBtn.closest('.group-content');
+            setGroupContext(gc ? gc.dataset.groupName : '');
             const kind = upBtn.dataset.upload;
             uploadInput.accept = kind === 'weave' ? '.dbw,.json'
                               : kind === 'bead'  ? '.jbb,.json'
