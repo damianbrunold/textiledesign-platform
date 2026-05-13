@@ -77,11 +77,12 @@
     {% set others = patterns | rejectattr('pattern_type', 'in', ['DB-WEAVE Pattern', 'JBead Pattern']) | list %}
 
     {% macro render_pattern_section(title, items, group, kind=None) %}
-    {% if items or kind %}
+    {% set show_actions = kind and (group.is_personal or group.can_write) %}
+    {% if items or show_actions %}
     <div class="patterns-section">
         <div class="section-title">
             {{ title }}
-            {% if kind and (gr.is_personal or gr.can_write) %}
+            {% if show_actions %}
             <button type="button" class="section-action" data-add="{{ kind }}" aria-label="{{ gettext('Add new pattern') }}" title="{{ gettext('Add new pattern') }}">+</button>
             <button type="button" class="section-action" data-upload="{{ kind }}" aria-label="{{ gettext('Upload pattern file') }}" title="{{ gettext('Upload pattern file') }}">↑</button>
             {% endif %}
@@ -133,8 +134,8 @@
     {% endif %}
     {% endmacro %}
 
-    {{ render_pattern_section(gettext('DB-WEAVE Patterns'), weave, gr, kind='weave' if (gr.is_personal or gr.can_write) else None) }}
-    {{ render_pattern_section(gettext('JBead Patterns'), bead, gr, kind='bead' if (gr.is_personal or gr.can_write) else None) }}
+    {{ render_pattern_section(gettext('DB-WEAVE Patterns'), weave, gr, kind='weave') }}
+    {{ render_pattern_section(gettext('JBead Patterns'), bead, gr, kind='bead') }}
     {{ render_pattern_section(gettext('Other Patterns'), others, gr) }}
     {% if not weave and not bead and not others and not gr.is_personal and not gr.can_write %}
     <div class="empty-note">{{ gettext('No patterns in this group.') }}</div>
