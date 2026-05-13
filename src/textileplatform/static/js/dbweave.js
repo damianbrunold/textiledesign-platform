@@ -5408,6 +5408,29 @@ function keyDown(e) {
             _advanceCursorAfterToggle();
             view.draw();
         }
+    } else if (/^[0-9]$/.test(e.key)
+               && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey
+               && cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2) {
+        // Legacy digit shortcuts: 1..9 toggle the current cell with that
+        // range color; 0 clears it. Applies to weave / tieup / pegplan
+        // parts (everything that holds a range value).
+        const part = cursor.selected_part;
+        const grid = cursor.selected_pattern;
+        const tieupOk = (part === "tieup" && !settings.display_pegplan);
+        if (part === "weave" || tieupOk || part === "pegplan") {
+            e.stopPropagation();
+            e.preventDefault();
+            const i = cursor.x1, j = cursor.y1;
+            const r = parseInt(e.key, 10);
+            const recalcKind = (part === "weave") ? "from_weave" : "weave_recalc";
+            if (r === 0) {
+                _applyCellSet(grid, i, j, 0, recalcKind);
+            } else {
+                _applyGridToggle(grid, i, j, r, recalcKind);
+            }
+            _advanceCursorAfterToggle();
+            view.draw();
+        }
     } else if (e.key == "Enter" || e.key == "Tab") {
         e.stopPropagation();
         e.preventDefault();
