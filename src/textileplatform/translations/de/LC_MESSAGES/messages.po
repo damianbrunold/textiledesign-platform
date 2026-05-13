@@ -3184,6 +3184,10 @@ msgstr "Gruppe verlassen"
 msgid "Public link"
 msgstr "Öffentlicher Link"
 
+#: src/textileplatform/templates/admin-view-group.html:22
+msgid "Public URL"
+msgstr "Öffentliche URL"
+
 #: src/textileplatform/templates/edit_group.html:211
 msgid ""
 "Share this URL to let anyone view the public patterns assigned to this "
@@ -3198,15 +3202,13 @@ msgstr "Gesprungen"
 
 #: src/textileplatform/templates/edit_group.html:268
 #: src/textileplatform/templates/user_private.html:129
-#, fuzzy
 msgid "Make private"
-msgstr "Privat"
+msgstr "Privat machen"
 
 #: src/textileplatform/templates/edit_group.html:268
 #: src/textileplatform/templates/user_private.html:129
-#, fuzzy
 msgid "Make public"
-msgstr "Öffentlich"
+msgstr "Öffentlich machen"
 
 #: src/textileplatform/templates/edit_group.html:269
 #: src/textileplatform/templates/user_private.html:129

@@ -592,6 +592,8 @@ def group(group_name):
         group = Group.query.filter(Group.name == group_name).one_or_none()
         if not group:
             return redirect(url_for("index"))
+        if not group.public:
+            abort(404)
         # /groups/<name> is a shareable read-only public view — show only
         # public patterns even to logged-in members. Members manage and
         # see private content via their personal page's group tabs.
@@ -2017,6 +2019,23 @@ def update_group(group_name):
     _touch_group(group)
     db.session.commit()
     flash(gettext("Group updated"))
+    return redirect(url_for("edit_group", group_name=group.name))
+
+
+@app.route("/groups/<group_name>/visibility", methods=("POST",))
+@login_required
+def update_group_visibility(group_name):
+    group = Group.query.filter(Group.name == group_name).first()
+    if not group:
+        abort(404)
+    if not g.user.is_owner_of(group):
+        abort(403)
+    if group.name == g.user.name:
+        flash(gettext("Cannot edit a personal group"))
+        return redirect(url_for("edit_group", group_name=group.name))
+    group.public = bool(request.form.get("public"))
+    _touch_group(group)
+    db.session.commit()
     return redirect(url_for("edit_group", group_name=group.name))
 
 

@@ -36,6 +36,7 @@
        style="text-decoration:none; color:inherit;">
         <div class="head">
             <span class="name">{{ group.label }}</span>
+            <span title="{% if group.public %}{{ gettext('Public') }}{% else %}{{ gettext('Private') }}{% endif %}">{% if group.public %}🌐{% else %}🔒{% endif %}</span>
         </div>
         <div class="meta">
             <span><strong>{{ gettext('Members') }}:</strong> {{ member_counts.get(group.id, 0) }}</span>

@@ -61,6 +61,29 @@
         <span class="tag role">{{ gettext(role|capitalize) }}</span>
     </p>
 
+    {% if not is_personal %}
+    <p>
+        {{ gettext('Visibility') }}:
+        {% if group.public %}
+        <span class="tag">{{ gettext('Public') }}</span>
+        {% else %}
+        <span class="tag">{{ gettext('Private') }}</span>
+        {% endif %}
+        {% if is_owner %}
+        <form method="post" style="display:inline; margin-left:0.5rem;"
+              action="{{ url_for('update_group_visibility', group_name=group.name) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if group.public %}
+            <button type="submit" class="btn small">{{ gettext('Make private') }}</button>
+            {% else %}
+            <input type="hidden" name="public" value="1">
+            <button type="submit" class="btn small">{{ gettext('Make public') }}</button>
+            {% endif %}
+        </form>
+        {% endif %}
+    </p>
+    {% endif %}
+
     {% set accepted_count = group.memberships | selectattr('state', 'equalto', 'accepted') | list | length %}
     {% if not is_personal and accepted_count > 1 %}
     <div class="actions left">
@@ -205,7 +228,7 @@
     {% endif %}
 </div>
 
-{% if not is_personal %}
+{% if not is_personal and group.public %}
 <div class="card card-wide">
     <h2>{{ gettext('Public link') }}</h2>
     <p class="muted">{{ gettext('Share this URL to let anyone view the public patterns assigned to this group.') }}</p>

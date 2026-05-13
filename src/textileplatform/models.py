@@ -127,6 +127,7 @@ class Group(db.Model):
     name = db.Column(db.String(50), nullable=False, unique=True)
     label = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=False)
+    public = db.Column(db.Boolean, nullable=False, default=False)
     created = db.Column(db.DateTime(timezone=True))
     modified = db.Column(db.DateTime(timezone=True))
 
