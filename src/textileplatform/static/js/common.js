@@ -472,7 +472,12 @@ async function gotoUser(user) {
 
 function closePattern() {
     const origin = document.getElementById("origin").value;
-    if (origin.startsWith("group-")) {
+    if (origin.startsWith("user-tab-")) {
+        const user = document.getElementById("user").value;
+        const groupName = origin.substring(9);
+        window.location.href = "/" + user + "?group="
+            + encodeURIComponent(groupName);
+    } else if (origin.startsWith("group-")) {
         window.location.href = "/groups/" + origin.substring(6);
     } else if (origin.startsWith("groups-edit-")) {
         window.location.href = "/groups/edit/" + origin.substring(12);

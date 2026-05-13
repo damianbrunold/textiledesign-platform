@@ -592,27 +592,13 @@ def group(group_name):
         group = Group.query.filter(Group.name == group_name).one_or_none()
         if not group:
             return redirect(url_for("index"))
-        is_member = bool(g.user and g.user.is_in_group(group.id))
-        is_personal = (g.user is not None and group.name == g.user.name)
-        can_write = bool(
-            g.user
-            and not is_personal
-            and g.user.can_assign_to(group)
-        )
-        try:
-            user_settings = (
-                json.loads(g.user.settings)
-                if g.user and g.user.settings
-                else {}
-            )
-            if not isinstance(user_settings, dict):
-                user_settings = {}
-        except Exception:
-            user_settings = {}
+        # /groups/<name> is a shareable read-only public view — show only
+        # public patterns even to logged-in members. Members manage and
+        # see private content via their personal page's group tabs.
         raw = []
         for a in group.assignments:
             p = a.pattern
-            if not is_member and not p.public:
+            if not p.public:
                 continue
             raw.append(p)
         raw.sort(key=lambda p: (p.label.lower(), p.name, p.owner.name, p.id))
@@ -645,8 +631,6 @@ def group(group_name):
             patterns_weave=patterns_weave,
             patterns_bead=patterns_bead,
             patterns_other=patterns_other,
-            can_write=can_write,
-            user_settings=user_settings,
         )
     except HTTPException:
         raise
@@ -1597,12 +1581,16 @@ def upload_pattern():
                 pattern_name=imported[0],
                 autosave="1",
                 origin=(
-                    "group-" + extra_group.name
+                    "user-tab-" + extra_group.name
                     if extra_group is not None else ""
                 ),
             ))
         if extra_group is not None:
-            return redirect(url_for("group", group_name=extra_group.name))
+            return redirect(url_for(
+                "user",
+                user_name=g.user.name,
+                group=extra_group.name,
+            ))
         return redirect(url_for("user", user_name=g.user.name))
     return render_template("upload_pattern.html", user=g.user)
 
@@ -1728,7 +1716,7 @@ def create_pattern():
                     user_name=g.user.name,
                     pattern_name=name,
                     origin=(
-                        "group-" + extra_group.name
+                        "user-tab-" + extra_group.name
                         if extra_group is not None else ""
                     ),
                 ))
@@ -1847,7 +1835,7 @@ def create_pattern():
                     user_name=g.user.name,
                     pattern_name=name,
                     origin=(
-                        "group-" + extra_group.name
+                        "user-tab-" + extra_group.name
                         if extra_group is not None else ""
                     ),
                 ))
@@ -1860,7 +1848,11 @@ def create_pattern():
     # Validation failed or pattern_type was unknown. Send the user back
     # to their listing; the flash message explains what to fix.
     if extra_group is not None:
-        return redirect(url_for("group", group_name=extra_group.name))
+        return redirect(url_for(
+            "user",
+            user_name=g.user.name,
+            group=extra_group.name,
+        ))
     return redirect(url_for("user", user_name=g.user.name))
 
 

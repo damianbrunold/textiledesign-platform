@@ -205,18 +205,107 @@
     {% endif %}
 </div>
 
+{% if not is_personal %}
+<div class="card card-wide">
+    <h2>{{ gettext('Public link') }}</h2>
+    <p class="muted">{{ gettext('Share this URL to let anyone view the public patterns assigned to this group.') }}</p>
+    {% set public_url = url_for('group', group_name=group.name, _external=True) %}
+    <div class="public-link-row" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <a href="{{ public_url }}" id="group-public-url" class="public-link" style="word-break:break-all;">{{ public_url }}</a>
+        <button type="button" class="btn small" id="group-public-url-copy"
+                data-copy="{{ public_url }}"
+                data-label-copy="{{ gettext('Copy') }}"
+                data-label-copied="{{ gettext('Copied') }}">{{ gettext('Copy') }}</button>
+    </div>
+    <script nonce="{{ csp_nonce }}">
+    (function() {
+        const btn = document.getElementById('group-public-url-copy');
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            const url = btn.dataset.copy;
+            const labelCopy = btn.dataset.labelCopy;
+            const labelCopied = btn.dataset.labelCopied;
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(url);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = url;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                btn.textContent = labelCopied;
+                setTimeout(() => { btn.textContent = labelCopy; }, 1500);
+            } catch (e) {
+                btn.textContent = labelCopy;
+            }
+        });
+    })();
+    </script>
+</div>
+{% endif %}
+
 <div class="card card-wide">
     <h2>{{ gettext('Patterns') }}</h2>
     {% if group.assignments %}
-    <ul class="plain">
+    <ul class="plain" id="group-pattern-list">
     {% for a in group.assignments %}
-    <li>
-        <a href="{{ url_for('edit_pattern', user_name=a.pattern.owner.name, pattern_name=a.pattern.name, origin='groups-edit-'+group.name) }}">
+    {% set is_mine = (g.user and a.pattern.owner_id == g.user.id) %}
+    <li class="group-pattern-row{% if a.pattern.public %} is-public{% endif %}"
+        data-owner-name="{{ a.pattern.owner.name }}"
+        data-pattern-name="{{ a.pattern.name }}">
+        <a href="{{ url_for('edit_pattern', user_name=a.pattern.owner.name, pattern_name=a.pattern.name, origin='groups-edit-'+group.name) }}"
+           style="flex-grow:1;">
             {{ a.pattern.owner.label }} — {{ a.pattern.label }}
         </a>
+        {% if is_mine %}
+        <button type="button" class="act-publish btn small"
+                aria-pressed="{{ 'true' if a.pattern.public else 'false' }}"
+                aria-label="{% if a.pattern.public %}{{ gettext('Make private') }}{% else %}{{ gettext('Make public') }}{% endif %}: {{ a.pattern.label }}"
+                title="{{ gettext('Toggle public/private') }}">{% if a.pattern.public %}🌐{% else %}🔒{% endif %}</button>
+        {% else %}
+        <span class="pub-icon" aria-label="{% if a.pattern.public %}{{ gettext('Public') }}{% else %}{{ gettext('Private') }}{% endif %}" title="{% if a.pattern.public %}{{ gettext('Public') }}{% else %}{{ gettext('Private') }}{% endif %}">{% if a.pattern.public %}🌐{% else %}🔒{% endif %}</span>
+        {% endif %}
     </li>
     {% endfor %}
     </ul>
+    <script nonce="{{ csp_nonce }}">
+    (function() {
+        const list = document.getElementById('group-pattern-list');
+        if (!list) return;
+        list.addEventListener('click', async e => {
+            const btn = e.target.closest('.act-publish');
+            if (!btn) return;
+            const row = btn.closest('.group-pattern-row');
+            const owner = row.dataset.ownerName;
+            const name = row.dataset.patternName;
+            const next = !row.classList.contains('is-public');
+            try {
+                const res = await fetch('/api/pattern/' + owner + '/' + name, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'set-publication-state',
+                        publication_state: next,
+                    }),
+                    credentials: 'same-origin',
+                });
+                const data = await res.json();
+                if (data.status === 'OK') {
+                    row.classList.toggle('is-public', next);
+                    btn.textContent = next ? '🌐' : '🔒';
+                    btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+                } else {
+                    alert(data.message || "{{ gettext('Failed') }}");
+                }
+            } catch (err) { alert(err); }
+        });
+    })();
+    </script>
     {% else %}
     <p class="muted">{{ gettext('No patterns.') }}</p>
     {% endif %}

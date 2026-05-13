@@ -76,9 +76,15 @@
     {% set bead  = patterns | selectattr('pattern_type', 'equalto', 'JBead Pattern')   | list %}
     {% set others = patterns | rejectattr('pattern_type', 'in', ['DB-WEAVE Pattern', 'JBead Pattern']) | list %}
 
-    {% macro render_pattern_section(title, items, group, kind=None) %}
-    {% set show_actions = kind and (group.is_personal or group.can_write) %}
-    {% if items or show_actions %}
+    {% set group_empty = not weave and not bead and not others %}
+    {% macro render_pattern_section(title, items, group, kind=None, group_empty=False) %}
+    {% set writable = group.is_personal or group.can_write %}
+    {% set show_actions = kind and writable %}
+    {# Sections render when they have items, or — in an empty writable
+       group — when they advertise a kind, so DB-WEAVE and JBead both
+       get a heading-with-actions for the first pattern. Once any
+       pattern exists, only the matching kind keeps its heading. #}
+    {% if items or (show_actions and group_empty) %}
     <div class="patterns-section">
         <div class="section-title">
             {{ title }}
@@ -134,8 +140,8 @@
     {% endif %}
     {% endmacro %}
 
-    {{ render_pattern_section(gettext('DB-WEAVE Patterns'), weave, gr, kind='weave') }}
-    {{ render_pattern_section(gettext('JBead Patterns'), bead, gr, kind='bead') }}
+    {{ render_pattern_section(gettext('DB-WEAVE Patterns'), weave, gr, kind='weave', group_empty=group_empty) }}
+    {{ render_pattern_section(gettext('JBead Patterns'), bead, gr, kind='bead', group_empty=group_empty) }}
     {{ render_pattern_section(gettext('Other Patterns'), others, gr) }}
     {% if not weave and not bead and not others and not gr.is_personal and not gr.can_write %}
     <div class="empty-note">{{ gettext('No patterns in this group.') }}</div>
@@ -233,10 +239,14 @@
             const matches = terms.every(t => text.indexOf(t) !== -1);
             r.style.display = matches ? '' : 'none';
         });
-        // Hide section titles whose lists are empty after filtering.
+        // Hide section titles whose lists are empty after filtering —
+        // except writable sections whose heading carries the + / ↑
+        // create-upload affordances; those must remain visible so the
+        // user can add the first pattern into an empty group.
         groupsContent.querySelectorAll('.patterns-section').forEach(sec => {
             const visible = sec.querySelectorAll('.pattern-row:not([style*="display: none"])').length;
-            sec.style.display = visible ? '' : 'none';
+            const hasActions = sec.querySelector('.section-action');
+            sec.style.display = (visible || hasActions) ? '' : 'none';
         });
     }
 
