@@ -1578,7 +1578,6 @@ def create_pattern():
         pattern["visible_treadles"] = 12
         pattern["warp_lifting"] = True
         pattern["zoom"] = 3
-        pattern["single_treadling"] = True
 
         pattern["display_repeat"] = False
         pattern["display_reed"] = True
@@ -1587,13 +1586,34 @@ def create_pattern():
         pattern["display_entering"] = True
         pattern["display_threading"] = True
 
-        # TODO use user defaults
-        pattern["direction_righttoleft"] = False
-        pattern["directon_toptobottom"] = False
-        pattern["direction_entering_at_bottom"] = False
-        pattern["entering_style"] = "vdash"
-        pattern["treadling_style"] = "dot"
-        pattern["tieup_style"] = "cross"
+        # Style/direction defaults come from the user's saved dbweave
+        # prefs (Extras ▸ Grundeinstellung / Optionen ▸ Global…) so the
+        # American/Scandinavian/Swiss preset chosen in the editor flows
+        # through to subsequently created patterns. Falls back to the
+        # Swiss preset when no preference is stored.
+        try:
+            dbw_prefs = (
+                json.loads(g.user.settings).get("dbweave", {})
+                if g.user and g.user.settings else {}
+            )
+            if not isinstance(dbw_prefs, dict):
+                dbw_prefs = {}
+        except Exception:
+            dbw_prefs = {}
+
+        pattern["direction_righttoleft"] = bool(
+            dbw_prefs.get("direction_righttoleft", False))
+        pattern["direction_toptobottom"] = bool(
+            dbw_prefs.get("direction_toptobottom", False))
+        pattern["direction_entering_at_bottom"] = bool(
+            dbw_prefs.get("entering_at_bottom", False))
+        pattern["entering_style"]  = dbw_prefs.get("entering_style",  "vdash")
+        pattern["treadling_style"] = dbw_prefs.get("treadling_style", "dot")
+        pattern["tieup_style"]     = dbw_prefs.get("tieup_style",     "cross")
+        pattern["pegplan_style"]   = dbw_prefs.get("pegplan_style",   "filled")
+        pattern["sinking_shed"]    = bool(dbw_prefs.get("sinking_shed", False))
+        pattern["single_treadling"] = bool(
+            dbw_prefs.get("single_treadling", True))
 
         pattern["weave_style"] = "draft"
 

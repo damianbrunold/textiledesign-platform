@@ -5295,7 +5295,7 @@ function savePatternData(data, pattern) {
     }
 
     for (let i = 0; i < data.max_treadles; i++) {
-        for (let j = 0; j <= data.max_shafts; j++) {
+        for (let j = 0; j < data.max_shafts; j++) {
             const idx = i + j * data.max_treadles;
             data.data_tieup[idx] = pattern.tieup.get(i, j);
         }
