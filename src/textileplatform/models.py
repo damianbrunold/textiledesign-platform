@@ -335,6 +335,11 @@ class Pattern(db.Model):
     pattern_type = db.Column(db.String(50))  # DB-WEAVE Pattern, JBead Pattern
     description = db.Column(db.Text)
     contents = db.Column(db.Text)
+    # Single-slot safety stash: holds the prior `contents` when a save
+    # would have overwritten a substantial pattern with an empty one.
+    # Restored via the `restore-pattern-salvage` CLI; cleared on the
+    # next legitimate save.
+    contents_salvage = db.Column(db.Text)
     preview_image = db.Column(db.LargeBinary)
     thumbnail_image = db.Column(db.LargeBinary)
     created = db.Column(db.DateTime(timezone=True))

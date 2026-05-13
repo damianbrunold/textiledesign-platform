@@ -3294,7 +3294,25 @@ function setupEditorActions() {
 
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    getPattern().then(init).then(() => {
+    const preSave = !readonly ? () => {
+        saveSettings(data, settings);
+        savePatternData(data, pattern);
+    } : null;
+    // Register the draft-autosave preSave hook before any edit can fire,
+    // so setModified()'s debounced draft write captures fresh `data`.
+    if (!readonly) installDraftAutosave(preSave);
+    let _draftRecovered = false;
+    getPattern()
+        .then(async () => {
+            const dp = (_i18n && _i18n.prompts && _i18n.prompts.draft) || {};
+            _draftRecovered = await maybeRecoverDraft(dp);
+        })
+        .then(init).then(() => {
+        if (_draftRecovered) {
+            // init() resets `modified`; restore it so the recovered
+            // edits are visibly unsaved and the nav guards engage.
+            setModified();
+        }
         setupEditorActions();
         _updateStatusbar();
         const params = new URLSearchParams(window.location.search);
@@ -3316,10 +3334,6 @@ window.addEventListener("load", () => {
         }
     });
     if (!readonly) {
-        const preSave = () => {
-            saveSettings(data, settings);
-            savePatternData(data, pattern);
-        };
         installBeforeUnloadGuard(preSave);
         installNavGuard(preSave, (_i18n && _i18n.prompts) || {});
         const pub = document.getElementById("public");

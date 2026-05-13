@@ -10,6 +10,7 @@ function setModified() {
     if (m !== null) {
         m.className = "changed";
     }
+    _scheduleDraftSave();
 }
 
 
@@ -113,7 +114,157 @@ async function savePattern() {
         // navigation and the next Save attempt isn't a no-op.
         throw new Error("save-failed:" + resp.status);
     }
+    _clearDraft();
     await clearModified();
+}
+
+
+// ---- Local draft persistence ---------------------------------------
+// Per-pattern JSON snapshot of the in-memory state, written to
+// localStorage on every edit (debounced) and cleared after a confirmed
+// successful save. On editor open, the editor calls maybeRecoverDraft
+// between getPattern and init: if a local draft differs from what the
+// server returned (e.g. the previous session crashed, the tab was
+// closed before save, or the save failed silently), the user is asked
+// whether to restore the local copy.
+//
+// The editor must register a `preSave` callback via installDraftAutosave
+// that flushes the editor's working state into the `data` global —
+// `data` is otherwise stale until the user actually triggers a save.
+
+let _draftPreSave = null;
+let _draftTimer = null;
+const _DRAFT_DEBOUNCE_MS = 1000;
+
+function installDraftAutosave(preSave) {
+    _draftPreSave = preSave;
+}
+
+function _draftKey() {
+    const u = document.getElementById("user");
+    const p = document.getElementById("pattern");
+    if (!u || !p) return null;
+    return `textile-draft:${u.value}/${p.value}`;
+}
+
+function _writeDraftNow() {
+    try {
+        const k = _draftKey();
+        if (!k || data == null) return;
+        if (typeof _draftPreSave === "function") {
+            try { _draftPreSave(); } catch (e) { console.error(e); }
+        }
+        const payload = { savedAt: Date.now(), contents: data };
+        localStorage.setItem(k, JSON.stringify(payload));
+    } catch (e) {
+        // Quota exceeded, private mode, serialisation error, etc.
+        // The draft is best-effort — never disrupt the editor.
+        console.warn("draft save failed", e);
+    }
+}
+
+function _scheduleDraftSave() {
+    if (_draftTimer) return;
+    _draftTimer = setTimeout(() => {
+        _draftTimer = null;
+        _writeDraftNow();
+    }, _DRAFT_DEBOUNCE_MS);
+}
+
+function _clearDraft() {
+    try {
+        const k = _draftKey();
+        if (k) localStorage.removeItem(k);
+    } catch (e) { /* ignore */ }
+}
+
+function _readDraft() {
+    try {
+        const k = _draftKey();
+        if (!k) return null;
+        const raw = localStorage.getItem(k);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || typeof obj !== "object" || obj.contents == null) return null;
+        return obj;
+    } catch (e) { return null; }
+}
+
+// Returns true if the user chose to recover (in which case `data` has
+// been replaced with the draft contents). The caller is responsible
+// for re-running setModified() after init clears it.
+async function maybeRecoverDraft(prompts) {
+    if (typeof readonly !== "undefined" && readonly) return false;
+    const draft = _readDraft();
+    if (!draft) return false;
+    let serverJson, draftJson;
+    try {
+        serverJson = JSON.stringify(data);
+        draftJson  = JSON.stringify(draft.contents);
+    } catch (e) { return false; }
+    if (serverJson === draftJson) {
+        // Server already has the same content — nothing to recover.
+        _clearDraft();
+        return false;
+    }
+    const choice = await _askRecoverDraft(prompts || {});
+    if (choice === "recover") {
+        data = draft.contents;
+        return true;
+    }
+    if (choice === "discard") {
+        _clearDraft();
+    }
+    return false;
+}
+
+function _askRecoverDraft(prompts) {
+    const labels = {
+        title:   prompts.title   || "Recover unsaved changes?",
+        body:    prompts.body    || "Local edits to this pattern from your last session were not saved on the server. Recover them?",
+        recover: prompts.recover || "Recover",
+        discard: prompts.discard || "Discard local edits",
+        cancel:  prompts.cancel  || "Decide later",
+    };
+    return new Promise((resolve) => {
+        const overlay = document.createElement("div");
+        overlay.className = "navguard-overlay";
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.innerHTML =
+            '<div class="navguard-modal" role="document">'
+            + '<h2></h2><p></p>'
+            + '<div class="navguard-actions">'
+            + '<button type="button" class="btn navguard-cancel"></button>'
+            + '<button type="button" class="btn navguard-discard"></button>'
+            + '<button type="button" class="btn primary navguard-save"></button>'
+            + '</div></div>';
+        const modal = overlay.querySelector(".navguard-modal");
+        overlay.querySelector("h2").textContent = labels.title;
+        overlay.querySelector("p").textContent  = labels.body;
+        overlay.querySelector(".navguard-cancel").textContent  = labels.cancel;
+        overlay.querySelector(".navguard-discard").textContent = labels.discard;
+        overlay.querySelector(".navguard-save").textContent    = labels.recover;
+        function close(result) {
+            document.removeEventListener("keydown", onKey);
+            overlay.remove();
+            resolve(result);
+        }
+        function onKey(e) { if (e.key === "Escape") close("cancel"); }
+        modal.addEventListener("click", (e) => e.stopPropagation());
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) close("cancel");
+        });
+        document.addEventListener("keydown", onKey);
+        overlay.querySelector(".navguard-cancel")
+            .addEventListener("click", () => close("cancel"));
+        overlay.querySelector(".navguard-discard")
+            .addEventListener("click", () => close("discard"));
+        overlay.querySelector(".navguard-save")
+            .addEventListener("click", () => close("recover"));
+        document.body.appendChild(overlay);
+        overlay.querySelector(".navguard-save").focus();
+    });
 }
 
 

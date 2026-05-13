@@ -464,6 +464,66 @@ def seed_starter_patterns_cmd():
                 print(f"failed for {user.name}: {exc}")
 
 
+@click.command("list-pattern-salvage")
+def list_pattern_salvage():
+    """List patterns that currently hold a contents_salvage stash —
+    i.e., a recent save would have emptied them but the prior contents
+    was preserved by the server-side tripwire."""
+    with app.app_context():
+        rows = (
+            Pattern.query
+            .filter(Pattern.contents_salvage.isnot(None))
+            .all()
+        )
+        if not rows:
+            print("no salvage entries")
+            return
+        for p in rows:
+            owner = p.owner.name if p.owner else "?"
+            print(
+                f"{owner:<25} {p.name:<40} "
+                f"{len(p.contents_salvage)} bytes"
+            )
+
+
+@click.command("restore-pattern-salvage")
+@click.argument("user-name")
+@click.argument("pattern-name")
+def restore_pattern_salvage(user_name, pattern_name):
+    """Restore txpattern.contents from txpattern.contents_salvage when
+    a tripwire event preserved the prior contents."""
+    with app.app_context():
+        user = User.query.filter(User.name == user_name).first()
+        if not user:
+            print("user not found")
+            return
+        pattern = (
+            Pattern.query
+            .filter(Pattern.owner_id == user.id)
+            .filter(Pattern.name == pattern_name)
+            .first()
+        )
+        if not pattern:
+            print("pattern not found")
+            return
+        if not pattern.contents_salvage:
+            print("no salvage available")
+            return
+        ok = input(
+            f"Restore {user.name}/{pattern.name} from salvage "
+            f"({len(pattern.contents_salvage)} bytes) and clear stash? "
+            "(y/N) "
+        )
+        if ok != "y":
+            print("cancelled")
+            return
+        pattern.contents = pattern.contents_salvage
+        pattern.contents_salvage = None
+        pattern.modified = datetime.datetime.now(datetime.timezone.utc)
+        db.session.commit()
+        print(f"restored {user.name}/{pattern.name}")
+
+
 @click.command("ensure-primary-groups")
 def ensure_primary_groups():
     with app.app_context():
@@ -508,5 +568,7 @@ app.cli.add_command(ensure_primary_groups)
 app.cli.add_command(clean_up_non_verified_users)
 app.cli.add_command(clean_up_orphan_personal_groups)
 app.cli.add_command(seed_starter_patterns_cmd)
+app.cli.add_command(list_pattern_salvage)
+app.cli.add_command(restore_pattern_salvage)
 
 application = app

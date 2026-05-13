@@ -144,6 +144,29 @@ def load_logged_in_user():
             g.user = None
 
 
+def _pattern_has_data(contents, pattern_type):
+    """True if the parsed pattern has at least one non-zero data cell.
+    A freshly-created pattern, or one whose grid arrays are all zeros,
+    returns False. Used by the save-pattern tripwire to detect when an
+    incoming save would empty an otherwise-substantial pattern."""
+    if not isinstance(contents, dict):
+        return False
+    if pattern_type == "DB-WEAVE Pattern":
+        for key in ("data_entering", "data_tieup", "data_treadling"):
+            arr = contents.get(key)
+            if isinstance(arr, list) and any(arr):
+                return True
+        return False
+    if pattern_type == "JBead Pattern":
+        model = contents.get("model")
+        if isinstance(model, list):
+            for row in model:
+                if isinstance(row, list) and any(row):
+                    return True
+        return False
+    return False
+
+
 def _bump_pattern_edit(pattern_type):
     """Unthrottled edit-count bump used by save / create / upload / delete
     routes."""
@@ -3070,6 +3093,30 @@ def update_pattern(user_name, pattern_name):
             if not g.user or user.name != g.user.name:
                 return respond("NOK", "Invalid user", 403)
             contents = data["contents"]
+            # Tripwire: if the existing pattern has real data and the
+            # incoming save would empty it, stash the prior contents to
+            # contents_salvage and log a warning. The client-side
+            # localStorage draft is the first line of defence; this is
+            # the server-side last-good copy in case the draft is
+            # unavailable (other browser, private mode, quota exceeded).
+            try:
+                existing = (
+                    json.loads(pattern.contents) if pattern.contents else None
+                )
+            except Exception:
+                existing = None
+            if (
+                _pattern_has_data(existing, pattern.pattern_type)
+                and not _pattern_has_data(contents, pattern.pattern_type)
+            ):
+                pattern.contents_salvage = pattern.contents
+                logging.warning(
+                    "save-pattern would empty %s/%s; stashed prior "
+                    "contents to contents_salvage (%d bytes, ip=%s)",
+                    user.name, pattern.name,
+                    len(pattern.contents or ""),
+                    request.remote_addr,
+                )
             pattern.contents = json.dumps(contents)
             pattern.modified = datetime.datetime.now(datetime.timezone.utc)
             apply_pattern_metadata(pattern, contents)

@@ -12386,7 +12386,25 @@ function setupEditorActions() {
 
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    getPattern().then(init).then(setupEditorActions).then(setupToolbarAndStatusbar).then(() => {
+    const preSave = !readonly ? () => {
+        saveSettings(data, settings);
+        savePatternData(data, pattern);
+    } : null;
+    // Register the draft-autosave preSave hook before any edit can fire,
+    // so setModified()'s debounced draft write captures fresh `data`.
+    if (!readonly) installDraftAutosave(preSave);
+    let _draftRecovered = false;
+    getPattern()
+        .then(async () => {
+            const dp = (_getI18n().prompts && _getI18n().prompts.draft) || {};
+            _draftRecovered = await maybeRecoverDraft(dp);
+        })
+        .then(init).then(setupEditorActions).then(setupToolbarAndStatusbar).then(() => {
+        if (_draftRecovered) {
+            // init() resets `modified`; restore it so the recovered
+            // edits are visibly unsaved and the nav guards engage.
+            setModified();
+        }
         // Auto-save once after load (used by the upload flow to capture
         // a thumbnail and persist auto-detected rapport bounds without
         // requiring the user to click Save themselves).
@@ -12409,10 +12427,6 @@ window.addEventListener("load", () => {
         }
     });
     if (!readonly) {
-        const preSave = () => {
-            saveSettings(data, settings);
-            savePatternData(data, pattern);
-        };
         installBeforeUnloadGuard(preSave);
         installNavGuard(preSave, _getI18n().prompts || {});
     }

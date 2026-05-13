@@ -152,7 +152,14 @@
             "save":       {{ gettext('Save and continue') | tojson }},
             "discard":    {{ gettext('Discard and continue') | tojson }},
             "cancel":     {{ gettext('Cancel') | tojson }},
-            "saveFailed": {{ gettext('Save failed. Please try again.') | tojson }}
+            "saveFailed": {{ gettext('Save failed. Please try again.') | tojson }},
+            "draft": {
+                "title":   {{ gettext('Recover unsaved changes?') | tojson }},
+                "body":    {{ gettext('Local edits to this pattern from your last session were not saved on the server. Recover them?') | tojson }},
+                "recover": {{ gettext('Recover') | tojson }},
+                "discard": {{ gettext('Discard local edits') | tojson }},
+                "cancel":  {{ gettext('Decide later') | tojson }}
+            }
         }
     }</script>
 
