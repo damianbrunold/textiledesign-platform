@@ -5535,14 +5535,13 @@ function _cursorTtb() {
 
 // Auto-advance the cursor after a Space toggle, in the direction(s)
 // configured by Extras ▸ Cursor ▸ Movement. Multiple bits OR'd together
-// produce diagonal moves. Uses the existing cursorUp/Down/Left/Right
-// handlers so screen-axis flipping (toptobottom / righttoleft) stays
-// consistent with arrow-key behaviour.
+// produce diagonal moves. cursor_dir bits are interpreted in doc/work
+// coordinates (CD_RIGHT = next warp thread, CD_UP = next weft row), so
+// "advance" always moves to the next cell in reading order — when RTL
+// is on this is visually leftward, matching the user's work direction.
 function _advanceCursorAfterToggle() {
     const dir = settings.cursor_dir | 0;
     const ev = { shiftKey: false, ctrlKey: false };
-    const ttb = _cursorTtb();
-    const rtl = _cursorRtl();
     // Single-row bars (color_warp, reed) must only advance horizontally;
     // single-column bars (color_weft) only vertically. Strip the
     // perpendicular bits, and if the user's cursor_dir has no bit on
@@ -5561,10 +5560,10 @@ function _advanceCursorAfterToggle() {
         if (!v) v = CD_UP;
     }
     if (!h && !v) return;
-    if (v & CD_UP)    (ttb ? cursorDown : cursorUp)(ev);
-    if (v & CD_DOWN)  (ttb ? cursorUp   : cursorDown)(ev);
-    if (h & CD_LEFT)  (rtl ? cursorRight: cursorLeft)(ev);
-    if (h & CD_RIGHT) (rtl ? cursorLeft : cursorRight)(ev);
+    if (v & CD_UP)    cursorUp(ev);
+    if (v & CD_DOWN)  cursorDown(ev);
+    if (h & CD_LEFT)  cursorLeft(ev);
+    if (h & CD_RIGHT) cursorRight(ev);
 }
 
 // When the cursor currently spans a multi-cell selection, an unmodified
