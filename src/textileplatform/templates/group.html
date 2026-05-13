@@ -9,6 +9,9 @@
 {% block body_class %}view-thumb{% endblock %}
 
 {% block content %}
+{% if group.description %}
+<p class="group-description">{{ group.description }}</p>
+{% endif %}
 {% macro render_section(title, items) %}
 {% if items %}
 <div class="patterns-section">

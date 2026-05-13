@@ -103,7 +103,7 @@
              data-label="{{ p.label }}"
              data-modified="{{ p.modified or '' }}"
              data-search="{{ (p.label ~ ' ' ~ p.author ~ ' ' ~ p.organization ~ ' ' ~ p.notes ~ ' ' ~ (group.label if not p.is_mine else '')) | lower }}">
-            {% set link_origin = ('groups-edit-' ~ group.name) if not group.is_personal else '' %}
+            {% set link_origin = ('user-tab-' ~ group.name) if not group.is_personal else '' %}
             {% set edit_url = url_for('edit_pattern', user_name=p.owner_name, pattern_name=p.name, origin=link_origin) %}
             <a class="thumb-link" href="{{ edit_url }}" aria-label="{{ gettext('Edit pattern') }} {{ p.label }}">
                 <img class="thumb" loading="lazy"

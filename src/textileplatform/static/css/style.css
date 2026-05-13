@@ -706,6 +706,13 @@ body.no-page-header .content > header { display: none; }
     font-weight: bold;
 }
 
+.group-description {
+    max-width: 40rem;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    margin: 0.5rem 0 1rem;
+}
+
 .patterns-section { margin-top: 1rem; }
 .section-title {
     font-size: 1.1rem;
