@@ -44,6 +44,12 @@ const Shortcuts = (function () {
 
     function eventToCombo(e) {
         let key = e.key;
+        // Shift+<digit> reports e.key as the shifted glyph ("@", "!", '"',
+        // …), which varies by keyboard layout. Use e.code for the top-row
+        // digit keys so "Shift+2" matches regardless of layout. Same for
+        // the numeric keypad.
+        if (e.code && /^Digit[0-9]$/.test(e.code)) key = e.code.slice(5);
+        else if (e.code && /^Numpad[0-9]$/.test(e.code)) key = e.code.slice(6);
         if (key === " ") key = "Space";
         if (key.length === 1 && /[a-z]/i.test(key)) key = key.toUpperCase();
         const out = [];
