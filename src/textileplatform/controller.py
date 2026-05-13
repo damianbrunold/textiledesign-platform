@@ -613,6 +613,14 @@ def user(user_name):
         groups = []
         patterns_by_group = {}
         seen = set()
+        # Personal-group view hides patterns that are also assigned to a
+        # non-personal group the user currently belongs to — the pattern
+        # "lives" in that shared group instead. Leaving/being kicked from
+        # the shared group makes it visible in the personal group again.
+        non_personal_member_group_ids = {
+            m.group_id for m in user.memberships
+            if m.state == "accepted" and m.group.name != user.name
+        }
         for m in user.memberships:
             if m.state != "accepted":
                 continue
@@ -621,9 +629,15 @@ def user(user_name):
             seen.add(m.group.id)
             role = m.role
             can_write = role in ("owner", "writer")
+            is_personal_group = (m.group.name == user.name)
             patterns = []
             for a in m.group.assignments:
                 p = a.pattern
+                if is_personal_group and any(
+                    other.group_id in non_personal_member_group_ids
+                    for other in p.assignments
+                ):
+                    continue
                 # Owner of pattern can fully manage it; others can only
                 # view (or clone elsewhere). For pattern owned by THIS
                 # user (the profile owner), treat as writable.
