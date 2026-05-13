@@ -7913,6 +7913,75 @@ function showMusterDialog(mode) {
             _applyBereichmuster();
         }
     };
+    // Dialog-level shortcuts. Installed in capture phase on the document
+    // so they run before (and override) the global Shortcuts dispatcher —
+    // otherwise top-level bindings like "H" would mirror the main pattern
+    // while this dialog is open. Removed on modal close.
+    const dialogKey = (e) => {
+        if (!modal || modal._closed) return;
+        if (!modal.root.contains(e.target)) return;
+        // Don't hijack typing in real text inputs (none in this dialog, but
+        // be defensive in case future widgets are added).
+        const tag = e.target && e.target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target && e.target.isContentEditable)) return;
+
+        // Layout-independent digit detection (matches shortcuts.js).
+        let digit = null;
+        if (e.code && /^Digit[0-9]$/.test(e.code)) digit = parseInt(e.code.slice(5), 10);
+        else if (e.code && /^Numpad[0-9]$/.test(e.code)) digit = parseInt(e.code.slice(6), 10);
+
+        const ctrl = e.ctrlKey || e.metaKey;
+        const shift = e.shiftKey;
+        const alt = e.altKey;
+        let consumed = false;
+
+        // Ctrl+Enter → Apply (close + commit).
+        if (ctrl && !shift && !alt && e.key === "Enter") {
+            consumed = true;
+            apply();
+        }
+        // Ctrl+Z / Ctrl+Y → local undo/redo.
+        else if (ctrl && !shift && !alt && (e.key === "z" || e.key === "Z")) {
+            consumed = true; doUndo();
+        }
+        else if (ctrl && !shift && !alt && (e.key === "y" || e.key === "Y")) {
+            consumed = true; doRedo();
+        }
+        // Ctrl+Shift+digit → copy from slot N into current.
+        else if (ctrl && shift && !alt && digit !== null) {
+            consumed = true; grabFrom(digit);
+        }
+        // Shift+digit → select pattern slot N.
+        else if (!ctrl && shift && !alt && digit !== null) {
+            consumed = true; selectBindung(digit);
+        }
+        // Ctrl+6/7/8/9 → roll up/down/left/right (matches top-level).
+        else if (ctrl && !shift && !alt && digit !== null) {
+            if (digit === 6) { consumed = true; rollUp(); }
+            else if (digit === 7) { consumed = true; rollDown(); }
+            else if (digit === 8) { consumed = true; rollLeft(); }
+            else if (digit === 9) { consumed = true; rollRight(); }
+        }
+        // Unmodified letters mirror the top-level Bearbeiten menu.
+        else if (!ctrl && !alt && !shift) {
+            const k = (e.key || "").toUpperCase();
+            switch (k) {
+                case "H": consumed = true; editMirrorH(); break;
+                case "V": consumed = true; editMirrorV(); break;
+                case "R": consumed = true; editRotate(); break;
+                case "I": consumed = true; editInvert(); break;
+                case "Z": consumed = true; editCentralsym(); break;
+                case "DELETE": consumed = true; editDelete(); break;
+            }
+        }
+
+        if (consumed) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+    };
+    document.addEventListener("keydown", dialogKey, true);
+
     modal = Modal.open({
         title: isBlock
             ? L("muster.block-title",   "Substitute with block patterns")
@@ -7922,6 +7991,9 @@ function showMusterDialog(mode) {
             { label: L("btn.cancel", "Cancel"), role: "cancel" },
             { label: L("muster.apply", "Apply"), role: "primary", onClick: () => apply() },
         ],
+        onClose: () => {
+            document.removeEventListener("keydown", dialogKey, true);
+        },
     });
     refreshAll();
     setTimeout(() => canvas.focus(), 0);
