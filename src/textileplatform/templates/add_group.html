@@ -16,7 +16,7 @@
         </div>
         <div class="field">
             <label for="grp-desc">{{ gettext('Group Description') }}</label>
-            <input type="text" id="grp-desc" name="description" value="{{ request.form.get('description', '') }}"/>
+            <textarea id="grp-desc" name="description" rows="4" class="group-description-input">{{ request.form.get('description', '') }}</textarea>
         </div>
         <div class="actions left">
             <button type="submit" class="btn primary">{{ gettext('Save') }}</button>

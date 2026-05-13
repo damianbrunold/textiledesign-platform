@@ -1881,6 +1881,9 @@ def update_group(group_name):
     if group.name == g.user.name:
         flash(gettext("Cannot edit a personal group"))
         return redirect(url_for("edit_group", group_name=group.name))
+    label = (request.form.get("label") or "").strip()
+    if label:
+        group.label = label
     description = (request.form.get("description") or "").strip()
     group.description = description
     _touch_group(group)

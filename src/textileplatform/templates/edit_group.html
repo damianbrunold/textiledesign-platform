@@ -15,7 +15,7 @@
         <p class="group-description-text muted">{{ gettext('No description.') }}</p>
         {% endif %}
         {% if is_owner and not is_personal %}
-        <button type="button" class="btn small" id="edit-description-btn" aria-label="{{ gettext('Edit description') }}">{{ gettext('Edit') }}</button>
+        <button type="button" class="btn small" id="edit-description-btn" aria-label="{{ gettext('Edit group') }}">{{ gettext('Edit') }}</button>
         {% endif %}
     </div>
     {% if is_owner and not is_personal %}
@@ -23,8 +23,12 @@
           id="group-description-form" hidden>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
+            <label for="group-label">{{ gettext('Group Name') }}</label>
+            <input type="text" id="group-label" name="label" required aria-required="true" value="{{ group.label }}"/>
+        </div>
+        <div class="field">
             <label for="group-description">{{ gettext('Group Description') }}</label>
-            <textarea id="group-description" name="description" rows="2" class="group-description-input">{{ group.description or '' }}</textarea>
+            <textarea id="group-description" name="description" rows="4" class="group-description-input">{{ group.description or '' }}</textarea>
         </div>
         <div class="actions left">
             <button type="submit" class="btn primary">{{ gettext('Save') }}</button>
@@ -38,15 +42,9 @@
         const editBtn = document.getElementById('edit-description-btn');
         const cancelBtn = document.getElementById('cancel-description-btn');
         const textarea = form.querySelector('textarea');
-        function autosize() {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
-        }
-        textarea.addEventListener('input', autosize);
         editBtn.addEventListener('click', () => {
             view.hidden = true;
             form.hidden = false;
-            autosize();
             textarea.focus();
         });
         cancelBtn.addEventListener('click', () => {
