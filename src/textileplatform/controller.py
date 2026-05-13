@@ -99,6 +99,11 @@ def inject_pending_announcement():
     user = getattr(g, "user", None)
     if user is None:
         return {}
+    # Don't show the modal during an impersonation session — the real
+    # user hasn't seen it, and dismissing would mark it seen on their
+    # behalf.
+    if session.get("impersonator"):
+        return {}
     current = _current_announcement()
     if current is None:
         return {}
@@ -2605,6 +2610,10 @@ def dismiss_announcement():
         return respond("NOK", "Invalid id", 400)
     if aid <= 0:
         return respond("NOK", "Invalid id", 400)
+    # During an impersonation session a stale modal could otherwise
+    # mark the impersonated user's pointer on behalf of support.
+    if session.get("impersonator"):
+        return jsonify({"status": "OK"}), 200
     # Only move the pointer forward — never let a stale tab regress it.
     current = g.user.last_seen_announcement_id or 0
     if aid > current:
