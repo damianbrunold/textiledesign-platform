@@ -247,6 +247,48 @@ def _touch_group(group):
     group.modified = datetime.datetime.now(datetime.timezone.utc)
 
 
+def _resolve_extra_group(group_name, user):
+    """Return a non-personal Group the user can write to, or None.
+
+    Used by create/upload flows to honour an optional `group` form field
+    so newly created patterns land in the originating group rather than
+    only in the user's personal group.
+    """
+    if not group_name or not user:
+        return None
+    if group_name == user.name:
+        return None
+    group = Group.query.filter(Group.name == group_name).one_or_none()
+    if not group:
+        return None
+    if not user.can_assign_to(group):
+        return None
+    return group
+
+
+def _assign_new_pattern_to_group(pattern_name, group):
+    """Add an Assignment of the just-created pattern to ``group``.
+
+    No-op if ``group`` is None. The caller is responsible for committing.
+    Used by create/upload flows so newly created patterns appear in the
+    originating non-personal group instead of only the personal one.
+    """
+    if group is None:
+        return
+    p = (
+        Pattern.query
+        .filter(Pattern.owner_id == g.user.id)
+        .filter(Pattern.name == pattern_name)
+        .one_or_none()
+    )
+    if p is None:
+        return
+    if any(a.group_id == group.id for a in p.assignments):
+        return
+    db.session.add(Assignment(pattern_id=p.id, group_id=group.id))
+    _touch_group(group)
+
+
 @app.after_request
 def set_security_headers(response):
     response.headers.setdefault("X-Frame-Options", "DENY")
@@ -551,6 +593,22 @@ def group(group_name):
         if not group:
             return redirect(url_for("index"))
         is_member = bool(g.user and g.user.is_in_group(group.id))
+        is_personal = (g.user is not None and group.name == g.user.name)
+        can_write = bool(
+            g.user
+            and not is_personal
+            and g.user.can_assign_to(group)
+        )
+        try:
+            user_settings = (
+                json.loads(g.user.settings)
+                if g.user and g.user.settings
+                else {}
+            )
+            if not isinstance(user_settings, dict):
+                user_settings = {}
+        except Exception:
+            user_settings = {}
         raw = []
         for a in group.assignments:
             p = a.pattern
@@ -587,6 +645,8 @@ def group(group_name):
             patterns_weave=patterns_weave,
             patterns_bead=patterns_bead,
             patterns_other=patterns_other,
+            can_write=can_write,
+            user_settings=user_settings,
         )
     except HTTPException:
         raise
@@ -1471,6 +1531,9 @@ def upload_pattern():
         name = request.form["name"]
         name = name.replace("..", "").replace("/", "").replace("\\", "")
         files = request.files.getlist("file")
+        extra_group = _resolve_extra_group(
+            request.form.get("group"), g.user
+        )
         # Track names of imported patterns so we can redirect a
         # single-file upload directly into the editor (which will
         # auto-save to capture thumbnail + rapport).
@@ -1509,6 +1572,22 @@ def upload_pattern():
             if saved:
                 imported.append(saved)
                 _bump_pattern_edit(saved_kind)
+                if extra_group is not None:
+                    p = (
+                        Pattern.query
+                        .filter(Pattern.owner_id == g.user.id)
+                        .filter(Pattern.name == saved)
+                        .one_or_none()
+                    )
+                    if p is not None and not any(
+                        a.group_id == extra_group.id
+                        for a in p.assignments
+                    ):
+                        db.session.add(Assignment(
+                            pattern_id=p.id,
+                            group_id=extra_group.id,
+                        ))
+                        _touch_group(extra_group)
         if imported:
             db.session.commit()
         if len(imported) == 1:
@@ -1517,7 +1596,13 @@ def upload_pattern():
                 user_name=g.user.name,
                 pattern_name=imported[0],
                 autosave="1",
+                origin=(
+                    "group-" + extra_group.name
+                    if extra_group is not None else ""
+                ),
             ))
+        if extra_group is not None:
+            return redirect(url_for("group", group_name=extra_group.name))
         return redirect(url_for("user", user_name=g.user.name))
     return render_template("upload_pattern.html", user=g.user)
 
@@ -1529,6 +1614,7 @@ def create_pattern():
     # user listing page. There is no GET form — defaults are seeded from
     # the user's server-side editor settings on the listing template.
     pattern_type = request.form.get("pattern_type")
+    extra_group = _resolve_extra_group(request.form.get("group"), g.user)
     if pattern_type == "DB-WEAVE Pattern":
         name = request.form["name"]
         width = request.form["width"]
@@ -1635,10 +1721,17 @@ def create_pattern():
             try:
                 name = add_weave_pattern(pattern, g.user)
                 _bump_pattern_edit("DB-WEAVE Pattern")
+                _assign_new_pattern_to_group(name, extra_group)
                 db.session.commit()
-                return redirect(url_for("edit_pattern",
-                                        user_name=g.user.name,
-                                        pattern_name=name))
+                return redirect(url_for(
+                    "edit_pattern",
+                    user_name=g.user.name,
+                    pattern_name=name,
+                    origin=(
+                        "group-" + extra_group.name
+                        if extra_group is not None else ""
+                    ),
+                ))
             except HTTPException:
                 raise
             except Exception:
@@ -1747,10 +1840,17 @@ def create_pattern():
             try:
                 name = add_bead_pattern(pattern, g.user)
                 _bump_pattern_edit("JBead Pattern")
+                _assign_new_pattern_to_group(name, extra_group)
                 db.session.commit()
-                return redirect(url_for("edit_pattern",
-                                        user_name=g.user.name,
-                                        pattern_name=name))
+                return redirect(url_for(
+                    "edit_pattern",
+                    user_name=g.user.name,
+                    pattern_name=name,
+                    origin=(
+                        "group-" + extra_group.name
+                        if extra_group is not None else ""
+                    ),
+                ))
             except HTTPException:
                 raise
             except Exception:
@@ -1759,6 +1859,8 @@ def create_pattern():
 
     # Validation failed or pattern_type was unknown. Send the user back
     # to their listing; the flash message explains what to fix.
+    if extra_group is not None:
+        return redirect(url_for("group", group_name=extra_group.name))
     return redirect(url_for("user", user_name=g.user.name))
 
 

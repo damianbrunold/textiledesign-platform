@@ -9,10 +9,34 @@
 {% block body_class %}view-thumb{% endblock %}
 
 {% block content %}
-{% macro render_section(title, items) %}
-{% if items %}
+{% if can_write %}
+<form id="hidden-create-form" method="post" action="{{ url_for('create_pattern') }}" style="display:none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="pattern_type" id="hcf-type">
+    <input type="hidden" name="name" id="hcf-name">
+    <input type="hidden" name="width" id="hcf-width">
+    <input type="hidden" name="height" id="hcf-height">
+    <input type="hidden" name="group" value="{{ group.name }}">
+</form>
+<form id="hidden-upload-form" method="post" action="{{ url_for('upload_pattern') }}"
+      enctype="multipart/form-data" style="display:none">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="name" value="">
+    <input type="hidden" name="group" value="{{ group.name }}">
+    <input type="file" name="file" id="hidden-upload-input" multiple>
+</form>
+{% endif %}
+
+{% macro render_section(title, items, kind=None) %}
+{% if items or (can_write and kind) %}
 <div class="patterns-section">
-    <div class="section-title">{{ title }}</div>
+    <div class="section-title">
+        {{ title }}
+        {% if can_write and kind %}
+        <button type="button" class="section-action" data-add="{{ kind }}" aria-label="{{ gettext('Add new pattern') }}" title="{{ gettext('Add new pattern') }}">+</button>
+        <button type="button" class="section-action" data-upload="{{ kind }}" aria-label="{{ gettext('Upload pattern file') }}" title="{{ gettext('Upload pattern file') }}">↑</button>
+        {% endif %}
+    </div>
     <div class="patterns-list">
     {% for p in items %}
     <div class="pattern-row"
@@ -45,11 +69,94 @@
 {% endif %}
 {% endmacro %}
 
-{% if not patterns_weave and not patterns_bead and not patterns_other %}
+{% if not patterns_weave and not patterns_bead and not patterns_other and not can_write %}
 <div class="empty-note">{{ gettext('No patterns.') }}</div>
 {% endif %}
 
-{{ render_section(gettext('DB-WEAVE Patterns'), patterns_weave) }}
-{{ render_section(gettext('JBead Patterns'), patterns_bead) }}
+{{ render_section(gettext('DB-WEAVE Patterns'), patterns_weave, kind='weave' if can_write else None) }}
+{{ render_section(gettext('JBead Patterns'), patterns_bead, kind='bead' if can_write else None) }}
 {{ render_section(gettext('Other Patterns'), patterns_other) }}
+
+{% if can_write %}
+<script nonce="{{ csp_nonce }}">
+(function() {
+    {%- set dbw = (user_settings or {}).get('dbweave', {}) %}
+    {%- set bead = (user_settings or {}).get('jbead', {}) %}
+    {%- set dbw_w = dbw.get('warp_threads') if dbw.get('warp_threads', 0) > 0 else 300 %}
+    {%- set dbw_h = dbw.get('weft_threads') if dbw.get('weft_threads', 0) > 0 else 300 %}
+    {%- set bead_w = bead.get('width') if bead.get('width', 0) > 0 else 12 %}
+    {%- set bead_h = bead.get('height') if bead.get('height', 0) > 0 else 200 %}
+    const PATTERN_DEFAULTS = {
+        weave: { type: 'DB-WEAVE Pattern', width: {{ dbw_w }}, height: {{ dbw_h }} },
+        bead:  { type: 'JBead Pattern',     width: {{ bead_w }}, height: {{ bead_h }} },
+    };
+    const uploadInput = document.getElementById('hidden-upload-input');
+    const uploadForm  = document.getElementById('hidden-upload-form');
+    uploadInput.addEventListener('change', () => {
+        if (uploadInput.files && uploadInput.files.length > 0) {
+            uploadForm.submit();
+        }
+    });
+
+    document.addEventListener('click', e => {
+        const addBtn = e.target.closest('.section-action[data-add]');
+        if (addBtn) { openInlineNewForm(addBtn); return; }
+        const upBtn = e.target.closest('.section-action[data-upload]');
+        if (upBtn) {
+            const kind = upBtn.dataset.upload;
+            uploadInput.accept = kind === 'weave' ? '.dbw,.json'
+                              : kind === 'bead'  ? '.jbb,.json'
+                              : '';
+            uploadInput.click();
+            return;
+        }
+    });
+
+    function openInlineNewForm(btn) {
+        const section = btn.closest('.patterns-section');
+        let form = section.querySelector(':scope > .inline-new-form');
+        if (form) {
+            form.classList.toggle('open');
+            if (form.classList.contains('open')) form.querySelector('input').focus();
+            return;
+        }
+        form = document.createElement('div');
+        form.className = 'inline-new-form open';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = "{{ gettext('Pattern name') }}";
+        const submit = document.createElement('button');
+        submit.type = 'button';
+        submit.textContent = "{{ gettext('Create') }}";
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = "{{ gettext('Cancel') }}";
+        form.appendChild(input);
+        form.appendChild(submit);
+        form.appendChild(cancel);
+        const title = section.querySelector('.section-title');
+        title.after(form);
+        input.focus();
+
+        const create = () => {
+            const name = input.value.trim();
+            if (!name) { input.focus(); return; }
+            const def = PATTERN_DEFAULTS[btn.dataset.add];
+            if (!def) return;
+            document.getElementById('hcf-type').value = def.type;
+            document.getElementById('hcf-name').value = name;
+            document.getElementById('hcf-width').value = def.width;
+            document.getElementById('hcf-height').value = def.height;
+            document.getElementById('hidden-create-form').submit();
+        };
+        submit.addEventListener('click', create);
+        cancel.addEventListener('click', () => form.remove());
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter')  { e.preventDefault(); create(); }
+            if (e.key === 'Escape') { form.remove(); }
+        });
+    }
+})();
+</script>
+{% endif %}
 {% endblock %}
