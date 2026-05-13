@@ -67,6 +67,28 @@
     </form>
   </div>
 
+  {% if user.name != SUPPORT_USERNAME %}
+  <div class="profile-section">
+    <h2>{{ gettext('Public link') }}</h2>
+    <p class="muted">{{ gettext('Share this URL to let anyone view your public patterns.') }}</p>
+    {% set public_url = url_for('user', user_name=user.name, _external=True) %}
+    <div class="public-link-row" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <a href="{{ public_url }}" id="user-public-url" class="public-link" style="word-break:break-all;">{{ public_url }}</a>
+      <button type="button" class="btn small" id="user-public-url-copy"
+              data-copy="{{ public_url }}"
+              data-label-copy="{{ gettext('Copy') }}"
+              data-label-copied="{{ gettext('Copied') }}">{{ gettext('Copy') }}</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="profile-section">
+    <h2>{{ gettext('Session') }}</h2>
+    <div class="profile-actions">
+      <a class="btn" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a>
+    </div>
+  </div>
+
   <div class="profile-section">
     <h2>{{ gettext('Display Name') }}</h2>
     <form method="post">
@@ -104,13 +126,6 @@
         <button type="submit" class="btn primary">{{ gettext('Change Password') }}</button>
       </div>
     </form>
-  </div>
-
-  <div class="profile-section">
-    <h2>{{ gettext('Session') }}</h2>
-    <div class="profile-actions">
-      <a class="btn" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a>
-    </div>
   </div>
 
   <div class="profile-section">
@@ -179,5 +194,33 @@
     document.getElementById('btn-light').addEventListener('click', () => setDarkMode('light'));
     document.getElementById('btn-dark').addEventListener('click', () => setDarkMode('dark'));
     document.getElementById('btn-system').addEventListener('click', () => setDarkMode('system'));
+
+    (function() {
+        const btn = document.getElementById('user-public-url-copy');
+        if (!btn) return;
+        btn.addEventListener('click', async () => {
+            const url = btn.dataset.copy;
+            const labelCopy = btn.dataset.labelCopy;
+            const labelCopied = btn.dataset.labelCopied;
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(url);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = url;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                }
+                btn.textContent = labelCopied;
+                setTimeout(() => { btn.textContent = labelCopy; }, 1500);
+            } catch (e) {
+                btn.textContent = labelCopy;
+            }
+        });
+    })();
 </script>
 {% endblock %}
