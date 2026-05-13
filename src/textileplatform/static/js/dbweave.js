@@ -2733,6 +2733,8 @@ class PatternView {
             cursor.selected_view = this.color_warp;
         } else if (cursor.selected_part === "color_weft") {
             cursor.selected_view = this.color_weft;
+        } else if (cursor.selected_part === "reed") {
+            cursor.selected_view = this.reed;
         }
 
         // -----------------------------------------------------------
@@ -5443,7 +5445,7 @@ function keyDown(e) {
     } else if (e.key == "ArrowUp") {
         e.stopPropagation();
         e.preventDefault();
-        if (cursor.selected_view.toptobottom) {
+        if (_cursorTtb()) {
             cursorDown(e);
         } else {
             cursorUp(e);
@@ -5451,7 +5453,7 @@ function keyDown(e) {
     } else if (e.key == "ArrowDown") {
         e.stopPropagation();
         e.preventDefault();
-        if (cursor.selected_view.toptobottom) {
+        if (_cursorTtb()) {
             cursorUp(e);
         } else {
             cursorDown(e);
@@ -5459,7 +5461,7 @@ function keyDown(e) {
     } else if (e.key == "ArrowRight") {
         e.stopPropagation();
         e.preventDefault();
-        if (cursor.selected_view.righttoleft) {
+        if (_cursorRtl()) {
             cursorLeft(e);
         } else {
             cursorRight(e);
@@ -5467,7 +5469,7 @@ function keyDown(e) {
     } else if (e.key == "ArrowLeft") {
         e.stopPropagation();
         e.preventDefault();
-        if (cursor.selected_view.righttoleft) {
+        if (_cursorRtl()) {
             cursorRight(e);
         } else {
             cursorLeft(e);
@@ -5504,6 +5506,33 @@ function _applyCursorLock() {
     }
 }
 
+// Live screen-axis flags for the cursor's current pane. Reading from
+// settings + selected_part instead of cursor.selected_view.righttoleft /
+// .toptobottom — view.layout() rebuilds pane objects on every settings
+// change, and cursor.selected_view can lag behind (e.g. the reed pane
+// isn't re-bound after layout). Deriving from the live setting keeps
+// arrow keys correct even if the cached view is stale.
+function _cursorRtl() {
+    const part = cursor && cursor.selected_part;
+    // Panes laid out on the warp axis honour direction_righttoleft.
+    // Treadling / tie-up / pegplan / color_weft never flip horizontally.
+    if (part === "entering" || part === "weave"
+        || part === "reed" || part === "color_warp") {
+        return !!settings.direction_righttoleft;
+    }
+    return false;
+}
+function _cursorTtb() {
+    const part = cursor && cursor.selected_part;
+    // Panes on the weft axis (entering shafts, tie-up shafts) honour
+    // direction_toptobottom. Other panes paint top-to-bottom by their
+    // own convention.
+    if (part === "entering" || part === "tieup") {
+        return !!settings.direction_toptobottom;
+    }
+    return false;
+}
+
 // Auto-advance the cursor after a Space toggle, in the direction(s)
 // configured by Extras ▸ Cursor ▸ Movement. Multiple bits OR'd together
 // produce diagonal moves. Uses the existing cursorUp/Down/Left/Right
@@ -5512,8 +5541,8 @@ function _applyCursorLock() {
 function _advanceCursorAfterToggle() {
     const dir = settings.cursor_dir | 0;
     const ev = { shiftKey: false, ctrlKey: false };
-    const ttb = !!(cursor.selected_view && cursor.selected_view.toptobottom);
-    const rtl = !!(cursor.selected_view && cursor.selected_view.righttoleft);
+    const ttb = _cursorTtb();
+    const rtl = _cursorRtl();
     // Single-row bars (color_warp, reed) must only advance horizontally;
     // single-column bars (color_weft) only vertically. Strip the
     // perpendicular bits, and if the user's cursor_dir has no bit on
