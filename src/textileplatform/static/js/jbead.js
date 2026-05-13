@@ -2920,7 +2920,14 @@ function setupEditorActions() {
         handler: async () => {
             saveSettings(data, settings);
             savePatternData(data, pattern);
-            await savePattern();
+            try {
+                await savePattern();
+            } catch (e) {
+                console.error(e);
+                const p = (_i18n && _i18n.prompts) || {};
+                alert(p.saveFailed || "Save failed. Please try again.");
+                return;
+            }
             _markSaved();
         },
     });
@@ -3296,8 +3303,11 @@ window.addEventListener("load", () => {
                 try {
                     saveSettings(data, settings);
                     savePatternData(data, pattern);
-                    savePattern();
                 } catch (e) { console.error(e); }
+                // savePattern is async — handle its rejection too.
+                Promise.resolve()
+                    .then(() => savePattern())
+                    .catch((e) => console.error("autosave failed", e));
                 params.delete("autosave");
                 const url = window.location.pathname
                     + (params.toString() ? "?" + params : "");

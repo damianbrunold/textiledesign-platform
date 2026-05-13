@@ -57,7 +57,6 @@ function togglePublic() {
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         redirect: 'follow',
-        referrerPolicy: 'no-referrer',
         body: JSON.stringify(request)
     });
 }
@@ -96,16 +95,24 @@ async function savePattern() {
         thumbnail: thumbs.thumbnail || null,
         preview: thumbs.preview || null,
     };
-    await fetch(`/api/pattern/${user}/${pattern}`, {
+    // CSRFProtect on HTTPS rejects with 400 if the Referer header is
+    // missing (WTF_CSRF_SSL_STRICT). Don't override the document's
+    // referrer policy here — the page sets `Referrer-Policy: same-origin`
+    // already, which sends Referer for this same-origin call.
+    const resp = await fetch(`/api/pattern/${user}/${pattern}`, {
         method: "PUT",
         mode: 'cors',
         cache: 'no-cache',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         redirect: 'follow',
-        referrerPolicy: 'no-referrer',
         body: JSON.stringify(request)
     });
+    if (!resp.ok) {
+        // Leave `modified` set so the user is still warned on
+        // navigation and the next Save attempt isn't a no-op.
+        throw new Error("save-failed:" + resp.status);
+    }
     await clearModified();
 }
 
@@ -291,16 +298,18 @@ async function clonePattern() {
         action: "clone-pattern",
         contents: data
     };
-    await fetch(`/api/pattern/${user}/${pattern}`, {
+    const resp = await fetch(`/api/pattern/${user}/${pattern}`, {
         method: "PUT",
         mode: 'cors',
         cache: 'no-cache',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         redirect: 'follow',
-        referrerPolicy: 'no-referrer',
         body: JSON.stringify(request)
     });
+    if (!resp.ok) {
+        throw new Error("clone-failed:" + resp.status);
+    }
     await gotoUser(viewer);
 }
 

@@ -4906,7 +4906,15 @@ function _closePatternGuarded() {
     const doSave = async () => {
         saveSettings(data, settings);
         savePatternData(data, pattern);
-        await savePattern();
+        try {
+            await savePattern();
+        } catch (e) {
+            console.error(e);
+            const p = (_getI18n().prompts) || {};
+            alert(p.saveFailed || "Save failed. Please try again.");
+            // Keep the dialog open so the user can retry or discard.
+            return;
+        }
         _markSaved();
         modal.close();
         closePattern();
@@ -11617,7 +11625,14 @@ function setupEditorActions() {
         if (readonly) return;
         saveSettings(data, settings);
         savePatternData(data, pattern);
-        await savePattern();
+        try {
+            await savePattern();
+        } catch (e) {
+            console.error(e);
+            const p = (_getI18n().prompts) || {};
+            alert(p.saveFailed || "Save failed. Please try again.");
+            return;
+        }
         _markSaved();
     }, { enabledWhen: () => !readonly });
     R("file.revert", null, _revertChanges,
@@ -12379,7 +12394,11 @@ window.addEventListener("load", () => {
         if (!readonly && params.get("autosave") === "1") {
             // Defer one tick so layout/draw have settled.
             setTimeout(() => {
-                try { savePattern(); } catch (e) { console.error(e); }
+                // savePattern is async — `try` only catches sync errors,
+                // so attach a rejection handler explicitly.
+                Promise.resolve()
+                    .then(() => savePattern())
+                    .catch((e) => console.error("autosave failed", e));
                 // Strip the flag from the URL so a manual reload
                 // doesn't keep re-saving.
                 params.delete("autosave");
