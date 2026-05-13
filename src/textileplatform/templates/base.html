@@ -46,6 +46,46 @@
         {% block headext %}{% endblock %}
     </head>
     <body class="{% if impersonating %}impersonating {% endif %}{% block body_class %}{% endblock %} {% block footer_class %}with-footer{% endblock %}">
+        {% if pending_announcement %}
+        <div id="tx-announcement" class="navguard-overlay" role="dialog" aria-modal="true">
+          <div class="navguard-modal" role="document">
+            <h2>{{ gettext('Notice') }}</h2>
+            <p style="white-space:pre-wrap">{{ pending_announcement.body }}</p>
+            <div class="navguard-actions">
+              <button type="button" class="btn primary" id="tx-announcement-ok" data-id="{{ pending_announcement.id }}">{{ gettext('OK') }}</button>
+            </div>
+          </div>
+        </div>
+        <script nonce="{{ csp_nonce }}">
+        (function () {
+            var el = document.getElementById('tx-announcement');
+            if (!el) return;
+            var btn = document.getElementById('tx-announcement-ok');
+            function dismiss() {
+                var id = parseInt(btn.getAttribute('data-id'), 10) || 0;
+                // Optimistically remove the modal so the user is not
+                // blocked if the dismiss POST fails. Worst case: the
+                // server still has them as un-dismissed and they see
+                // the same notice once more next session.
+                el.remove();
+                document.removeEventListener('keydown', onKey);
+                fetch('/api/announcement/dismiss', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                }).catch(function (e) { console.error(e); });
+            }
+            function onKey(e) {
+                if (e.key === 'Escape' || e.key === 'Enter') dismiss();
+            }
+            btn.addEventListener('click', dismiss);
+            document.addEventListener('keydown', onKey);
+            // Focus the button so Enter / Space dismiss without a click.
+            setTimeout(function () { btn.focus(); }, 0);
+        })();
+        </script>
+        {% endif %}
         {% if g.user %}
             {% set _parts = (g.user.label or g.user.name).split() %}
             {% set _initials = ((_parts[0][:1] if _parts else '') ~ (_parts[1][:1] if _parts|length > 1 else ''))|upper %}

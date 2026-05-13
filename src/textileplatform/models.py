@@ -35,6 +35,14 @@ class User(db.Model):
     usage_year = db.Column(db.Integer)
     usage_counts = db.Column(db.Text)
     intro_seen = db.Column(db.Boolean, nullable=False, server_default="false")
+    # Highest announcement id this user has dismissed. The site-wide
+    # announcement modal is shown when a current announcement exists
+    # whose id is greater than this value. NULL = nothing seen yet.
+    last_seen_announcement_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txannouncement.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     memberships = db.relationship("Membership", back_populates="user")
     mypatterns = db.relationship(
@@ -380,3 +388,25 @@ class Pattern(db.Model):
         remote_side="Pattern.id",
         foreign_keys=[investigation_origin_pattern_id],
     )
+
+
+class Announcement(db.Model):
+    """Site-wide notice shown once to each logged-in user.
+
+    Append-only: the most recent non-expired row is the "current"
+    announcement. Publishing a new one implicitly retires older ones.
+    """
+    __tablename__ = "txannouncement"
+
+    id = db.Column(db.Integer, primary_key=True)
+    body_de = db.Column(db.Text, nullable=False)
+    body_en = db.Column(db.Text, nullable=False)
+    created = db.Column(db.DateTime(timezone=True), nullable=False)
+    expires = db.Column(db.DateTime(timezone=True), nullable=False)
+    author_id = db.Column(
+        db.Integer,
+        db.ForeignKey("txuser.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    author = db.relationship("User", foreign_keys=[author_id])

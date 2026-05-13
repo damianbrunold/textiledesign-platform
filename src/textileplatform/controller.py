@@ -18,6 +18,7 @@ from textileplatform.messaging import (
 from textileplatform.models import Conversation
 from textileplatform.models import ConversationParticipant
 from textileplatform.models import Message
+from textileplatform.models import Announcement
 from textileplatform.patterns import add_weave_pattern
 from textileplatform.patterns import add_bead_pattern
 from textileplatform.patterns import apply_pattern_metadata
@@ -78,6 +79,43 @@ def assign_csp_nonce():
 @app.context_processor
 def inject_csp_nonce():
     return {"csp_nonce": getattr(g, "csp_nonce", "")}
+
+
+def _current_announcement():
+    """Return the most recent non-expired announcement, or None."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    return (
+        Announcement.query
+        .filter(Announcement.expires > now)
+        .order_by(Announcement.id.desc())
+        .first()
+    )
+
+
+@app.context_processor
+def inject_pending_announcement():
+    """Expose `pending_announcement = {id, body}` to templates when the
+    logged-in user has not yet dismissed the current announcement."""
+    user = getattr(g, "user", None)
+    if user is None:
+        return {}
+    current = _current_announcement()
+    if current is None:
+        return {}
+    last = user.last_seen_announcement_id or 0
+    if current.id <= last:
+        return {}
+    # Locale picked at render time so a language switch between visits
+    # is reflected without extra bookkeeping.
+    body = (
+        current.body_de
+        if str(get_locale() or "en") == "de"
+        else current.body_en
+    )
+    return {"pending_announcement": {
+        "id": current.id,
+        "body": body,
+    }}
 
 
 @app.before_request
@@ -2511,7 +2549,68 @@ def support_console():
     return render_template(
         "admin-console.html",
         investigations=investigations,
+        current_announcement=_current_announcement(),
     )
+
+
+@app.route("/admin/announcement", methods=("POST",))
+@login_required
+@support_required
+def publish_announcement():
+    body_de = (request.form.get("body_de") or "").strip()
+    body_en = (request.form.get("body_en") or "").strip()
+    try:
+        days = int(request.form.get("days") or "0")
+    except ValueError:
+        days = 0
+    if not body_de or not body_en:
+        flash(gettext("Both German and English text are required."))
+        return redirect(url_for("support_console"))
+    if days < 1 or days > 365:
+        flash(gettext("Duration must be between 1 and 365 days."))
+        return redirect(url_for("support_console"))
+    now = datetime.datetime.now(datetime.timezone.utc)
+    ann = Announcement(
+        body_de=body_de,
+        body_en=body_en,
+        created=now,
+        expires=now + datetime.timedelta(days=days),
+        author_id=g.user.id,
+    )
+    db.session.add(ann)
+    db.session.commit()
+    flash(gettext("Announcement published."))
+    return redirect(url_for("support_console"))
+
+
+@app.route("/admin/announcement/retire", methods=("POST",))
+@login_required
+@support_required
+def retire_announcement():
+    current = _current_announcement()
+    if current is not None:
+        current.expires = datetime.datetime.now(datetime.timezone.utc)
+        db.session.commit()
+        flash(gettext("Announcement retired."))
+    return redirect(url_for("support_console"))
+
+
+@app.route("/api/announcement/dismiss", methods=("POST",))
+@login_required
+def dismiss_announcement():
+    payload = request.get_json(silent=True) or {}
+    try:
+        aid = int(payload.get("id") or 0)
+    except (TypeError, ValueError):
+        return respond("NOK", "Invalid id", 400)
+    if aid <= 0:
+        return respond("NOK", "Invalid id", 400)
+    # Only move the pointer forward — never let a stale tab regress it.
+    current = g.user.last_seen_announcement_id or 0
+    if aid > current:
+        g.user.last_seen_announcement_id = aid
+        db.session.commit()
+    return jsonify({"status": "OK"}), 200
 
 
 @app.route(
