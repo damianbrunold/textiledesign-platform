@@ -223,12 +223,32 @@
     </ul>
     {% endif %}
 
-    <form method="post" action="{{ url_for('leave_group', group_name=group.name) }}"
-          data-confirm="{{ gettext('Leave this group?') }}"
-          style="margin-top:1rem;">
+    <div class="actions left" style="margin-top:1rem;">
+        <form method="post" action="{{ url_for('leave_group', group_name=group.name) }}"
+              data-confirm="{{ gettext('Leave this group?') }}"
+              style="display:inline; margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn danger">{{ gettext('Leave group') }}</button>
+        </form>
+        {% if is_owner %}
+        <form method="post" action="{{ url_for('delete_group', group_name=group.name) }}"
+              data-confirm="{{ gettext('Delete this group? All memberships and pattern assignments will be removed. This cannot be undone.') }}"
+              style="display:inline; margin:0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn danger">{{ gettext('Delete group') }}</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if is_personal and not is_primary %}
+<div class="card card-wide">
+    <form method="post" action="{{ url_for('delete_group', group_name=group.name) }}"
+          data-confirm="{{ gettext('Delete this group? All pattern assignments will be removed. This cannot be undone.') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="actions left">
-            <button type="submit" class="btn danger">{{ gettext('Leave group') }}</button>
+            <button type="submit" class="btn danger">{{ gettext('Delete group') }}</button>
         </div>
     </form>
 </div>

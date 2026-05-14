@@ -2347,6 +2347,35 @@ def update_membership(group_name, user_name):
     return redirect(url_for("edit_group", group_name=group.name))
 
 
+@app.route("/groups/<group_name>/delete", methods=("POST",))
+@login_required
+def delete_group(group_name):
+    group = _user_group_by_name(g.user, group_name)
+    if not group:
+        abort(404)
+    if group.is_primary_personal():
+        flash(gettext("Cannot delete your primary group"))
+        return redirect(url_for("edit_group", group_name=group.name))
+    if group.is_personal():
+        if group.owner_id != g.user.id:
+            abort(403)
+    else:
+        if not g.user.is_owner_of(group):
+            abort(403)
+    label = group.label
+    conv = Conversation.query.filter_by(group_id=group.id).first()
+    if conv is not None:
+        db.session.delete(conv)
+    for a in list(group.assignments):
+        db.session.delete(a)
+    for m in list(group.memberships):
+        db.session.delete(m)
+    db.session.delete(group)
+    db.session.commit()
+    flash(gettext("Group \"%(label)s\" deleted", label=label))
+    return redirect(url_for("edit_groups"))
+
+
 @app.route("/groups/<group_name>/leave", methods=("POST",))
 @login_required
 def leave_group(group_name):
