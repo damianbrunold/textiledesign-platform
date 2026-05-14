@@ -248,17 +248,26 @@ def _touch_group(group):
 
 
 def _resolve_extra_group(group_name, user):
-    """Return a non-personal Group the user can write to, or None.
+    """Return a Group the user can write to, or None.
 
     Used by create/upload flows to honour an optional `group` form field
     so newly created patterns land in the originating group rather than
-    only in the user's personal group.
+    only in the user's primary personal group. Resolves the name first
+    among the user's personal groups, then among global groups.
     """
     if not group_name or not user:
         return None
     if group_name == user.name:
+        # The user's primary personal group is the default destination —
+        # no "extra" assignment needed.
         return None
-    group = Group.query.filter(Group.name == group_name).one_or_none()
+    group = Group.query.filter(
+        Group.owner_id == user.id, Group.name == group_name,
+    ).one_or_none()
+    if group is None:
+        group = Group.query.filter(
+            Group.owner_id.is_(None), Group.name == group_name,
+        ).one_or_none()
     if not group:
         return None
     if not user.can_assign_to(group):
@@ -453,12 +462,49 @@ def change_user_email(user, new_email):
 
 
 def _is_name_taken(name):
-    """A handle is taken if any user or any group already has it."""
+    """A handle is taken if it collides in the *global* namespace —
+    i.e. any user, or any global (non-personal) group. Personal-group
+    names live under their owner's account and don't participate in
+    this check; they're validated per-user via
+    `_is_personal_group_name_taken`."""
     if User.query.filter(User.name == name).first():
         return True
-    if Group.query.filter(Group.name == name).first():
+    if Group.query.filter(
+        Group.name == name, Group.owner_id.is_(None),
+    ).first():
         return True
     return False
+
+
+def _user_group_by_name(user, group_name):
+    """Find a group by name from the user's perspective: prefer a
+    global group the user has any membership in, otherwise a personal
+    group the user owns. Returns None when neither matches. Disjoint
+    namespaces (enforced at create time) guarantee at most one match."""
+    if user is None or not group_name:
+        return None
+    global_group = Group.query.filter(
+        Group.owner_id.is_(None), Group.name == group_name,
+    ).one_or_none()
+    if global_group is not None:
+        return global_group
+    return Group.query.filter(
+        Group.owner_id == user.id, Group.name == group_name,
+    ).one_or_none()
+
+
+def _is_personal_group_name_taken(user, name, exclude_id=None):
+    """True if `user` already has a personal group called `name`.
+    Pass `exclude_id` when checking during a rename to ignore the
+    group being renamed."""
+    if user is None or not name:
+        return False
+    q = Group.query.filter(
+        Group.owner_id == user.id, Group.name == name,
+    )
+    if exclude_id is not None:
+        q = q.filter(Group.id != exclude_id)
+    return q.first() is not None
 
 
 def _propose_free_name(base):
@@ -509,10 +555,14 @@ def change_user_name(user, new_name):
     ).first()
     if clash_user is not None:
         return "Another account already uses this name"
-    primary = Group.query.filter(Group.name == user.name).first()
+    primary = Group.query.filter(
+        Group.owner_id == user.id, Group.name == user.name,
+    ).first()
+    # A global group claiming the new handle would clash with the
+    # forthcoming user URL. Personal groups owned by *other* users are
+    # fine — they're namespaced under their owner.
     clash_group = Group.query.filter(
-        Group.name == new_name,
-        Group.id != (primary.id if primary else -1),
+        Group.name == new_name, Group.owner_id.is_(None),
     ).first()
     if clash_group is not None:
         return "Another group already uses this name"
@@ -537,7 +587,9 @@ def change_user_label(user, new_label):
         return "Label is too long"
     if new_label == user.label:
         return None
-    primary = Group.query.filter(Group.name == user.name).first()
+    primary = Group.query.filter(
+        Group.owner_id == user.id, Group.name == user.name,
+    ).first()
     if primary is not None:
         primary.label = new_label
     user.label = new_label
@@ -581,58 +633,137 @@ def index():
     if g.user:
         return redirect(url_for("user", user_name=g.user.name))
     elif str(get_locale() or "en") == "de":
-        return redirect(url_for("group", group_name="beispiele"))
+        return redirect(url_for(
+            "personal_group", user_name="beispiele", group_name="beispiele",
+        ))
     else:
-        return redirect(url_for("group", group_name="examples"))
+        return redirect(url_for(
+            "personal_group", user_name="examples", group_name="examples",
+        ))
+
+
+def _group_view_payload(group):
+    """Build the dict shape used by group.html for the public read-only
+    view. Shared by the global and personal-group routes."""
+    raw = []
+    for a in group.assignments:
+        p = a.pattern
+        if not p.public:
+            continue
+        raw.append(p)
+    raw.sort(key=lambda p: (p.label.lower(), p.name, p.owner.name, p.id))
+    patterns = [{
+        "name": p.name,
+        "label": p.label,
+        "owner_name": p.owner.name,
+        "owner_label": p.owner.label,
+        "pattern_type": p.pattern_type,
+        "public": bool(p.public),
+        "modified": p.modified.isoformat() if p.modified else None,
+        "created": p.created.isoformat() if p.created else None,
+        "author": p.author or "",
+        "organization": p.organization or "",
+        "notes": p.notes or "",
+        "pattern_width": p.pattern_width,
+        "pattern_height": p.pattern_height,
+        "rapport_width": p.rapport_width,
+        "rapport_height": p.rapport_height,
+    } for p in raw]
+    return {
+        "patterns_weave": [
+            p for p in patterns if p["pattern_type"] == "DB-WEAVE Pattern"
+        ],
+        "patterns_bead": [
+            p for p in patterns if p["pattern_type"] == "JBead Pattern"
+        ],
+        "patterns_other": [
+            p for p in patterns
+            if p["pattern_type"] not in ("DB-WEAVE Pattern", "JBead Pattern")
+        ],
+    }
+
+
+def group_url(group, **kwargs):
+    """Build the correct URL for a Group, picking the global or personal
+    route based on ownership. Use this instead of hand-building
+    `/groups/...` so personal vs global stays transparent to templates
+    and callers."""
+    if group is None:
+        return url_for("index")
+    if group.is_personal():
+        return url_for(
+            "personal_group",
+            user_name=group.owner.name,
+            group_name=group.name,
+            **kwargs,
+        )
+    return url_for("group", group_name=group.name, **kwargs)
+
+
+@app.context_processor
+def inject_group_url():
+    return {"group_url": group_url}
 
 
 @app.route("/groups/<string:group_name>")
 def group(group_name):
     try:
-        group = Group.query.filter(Group.name == group_name).one_or_none()
+        # Only global groups live at /groups/<name>. Hitting this URL
+        # with a former primary-group handle (now a personal group)
+        # redirects to the canonical personal URL so old links keep
+        # working.
+        group = Group.query.filter(
+            Group.name == group_name, Group.owner_id.is_(None),
+        ).one_or_none()
         if not group:
+            personal = Group.query.filter(
+                Group.name == group_name,
+            ).join(User, Group.owner_id == User.id).filter(
+                User.name == group_name,
+            ).one_or_none()
+            if personal is not None:
+                return redirect(group_url(personal), code=301)
             return redirect(url_for("index"))
         if not group.public:
             abort(404)
         # /groups/<name> is a shareable read-only public view — show only
         # public patterns even to logged-in members. Members manage and
         # see private content via their personal page's group tabs.
-        raw = []
-        for a in group.assignments:
-            p = a.pattern
-            if not p.public:
-                continue
-            raw.append(p)
-        raw.sort(key=lambda p: (p.label.lower(), p.name, p.owner.name, p.id))
-        # Flatten into the same shape as the user_private/_public templates
-        # so we can reuse the thumbnail-card markup.
-        patterns = [{
-            "name": p.name,
-            "label": p.label,
-            "owner_name": p.owner.name,
-            "owner_label": p.owner.label,
-            "pattern_type": p.pattern_type,
-            "public": bool(p.public),
-            "modified": p.modified.isoformat() if p.modified else None,
-            "created": p.created.isoformat() if p.created else None,
-            "author": p.author or "",
-            "organization": p.organization or "",
-            "notes": p.notes or "",
-            "pattern_width": p.pattern_width,
-            "pattern_height": p.pattern_height,
-            "rapport_width": p.rapport_width,
-            "rapport_height": p.rapport_height,
-        } for p in raw]
-        patterns_weave = [p for p in patterns if p["pattern_type"] == "DB-WEAVE Pattern"]
-        patterns_bead = [p for p in patterns if p["pattern_type"] == "JBead Pattern"]
-        patterns_other = [p for p in patterns
-                          if p["pattern_type"] not in ("DB-WEAVE Pattern", "JBead Pattern")]
         return render_template(
-            "group.html",
-            group=group,
-            patterns_weave=patterns_weave,
-            patterns_bead=patterns_bead,
-            patterns_other=patterns_other,
+            "group.html", group=group, **_group_view_payload(group),
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("system error")
+        abort(500)
+
+
+@app.route("/<string:user_name>/g/<string:group_name>")
+def personal_group(user_name, group_name):
+    """Read-only public view of a personal group. Owner-only views and
+    edits use the regular profile tabs."""
+    try:
+        owner = User.query.filter(
+            User.name == user_name.lower(),
+        ).one_or_none()
+        if owner is None:
+            abort(404)
+        group = Group.query.filter(
+            Group.owner_id == owner.id, Group.name == group_name,
+        ).one_or_none()
+        if group is None:
+            abort(404)
+        if not group.public:
+            # Owner reaching their own private personal group is sent to
+            # their profile with the group's tab activated.
+            if g.user and g.user.id == owner.id:
+                return redirect(url_for(
+                    "user", user_name=owner.name,
+                ) + f"?group={group.name}")
+            abort(404)
+        return render_template(
+            "group.html", group=group, **_group_view_payload(group),
         )
     except HTTPException:
         raise
@@ -659,13 +790,19 @@ def user(user_name):
         groups = []
         patterns_by_group = {}
         seen = set()
-        # Personal-group view hides patterns that are also assigned to a
-        # non-personal group the user currently belongs to — the pattern
-        # "lives" in that shared group instead. Leaving/being kicked from
-        # the shared group makes it visible in the personal group again.
-        non_personal_member_group_ids = {
+        # Primary-personal-group view hides patterns that are also
+        # assigned to any *other* group the user is in — shared or
+        # personal. The primary is the catch-all "everything not
+        # otherwise sorted"; once a pattern has been filed into a
+        # shared or personal group it lives there. Unassigning it from
+        # all those groups makes it reappear in the primary.
+        non_primary_member_group_ids = {
             m.group_id for m in user.memberships
-            if m.state == "accepted" and m.group.name != user.name
+            if m.state == "accepted"
+            and not (
+                m.group.owner_id == user.id
+                and m.group.name == user.name
+            )
         }
         for m in user.memberships:
             if m.state != "accepted":
@@ -675,12 +812,15 @@ def user(user_name):
             seen.add(m.group.id)
             role = m.role
             can_write = role in ("owner", "writer")
-            is_personal_group = (m.group.name == user.name)
+            is_personal_group = (m.group.owner_id == user.id)
+            is_primary_group = (
+                is_personal_group and m.group.name == user.name
+            )
             patterns = []
             for a in m.group.assignments:
                 p = a.pattern
-                if is_personal_group and any(
-                    other.group_id in non_personal_member_group_ids
+                if is_primary_group and any(
+                    other.group_id in non_primary_member_group_ids
                     for other in p.assignments
                 ):
                     continue
@@ -710,15 +850,22 @@ def user(user_name):
             groups.append({
                 "name": m.group.name,
                 "label": m.group.label,
-                "is_personal": (m.group.name == user.name),
+                "is_personal": is_personal_group,
+                "is_primary": is_primary_group,
+                "is_public": bool(m.group.public),
                 "role": role,
                 "can_write": can_write,
             })
             patterns_by_group[m.group.name] = patterns
-        # Order: personal first, then alphabetical by label.
-        groups.sort(key=lambda gr: (
-            0 if gr["is_personal"] else 1, gr["label"].lower(),
-        ))
+        # Order: primary personal first, then other personal groups
+        # (alphabetical), then shared groups (alphabetical).
+        def _group_sort_key(gr):
+            if gr.get("is_primary"):
+                return (0, "")
+            if gr["is_personal"]:
+                return (1, gr["label"].lower())
+            return (2, gr["label"].lower())
+        groups.sort(key=_group_sort_key)
         active = request.args.get("group") or user.name
         if active not in patterns_by_group:
             active = user.name if user.name in patterns_by_group else (
@@ -1467,9 +1614,9 @@ def _delete_user_data(user):
     for m in list(user.memberships):
         db.session.delete(m)
 
-    # Personal group (same name as user) — remove if present.
-    pg = Group.query.filter(Group.name == user.name).first()
-    if pg is not None:
+    # Personal groups (owned by this user) — remove all of them.
+    personal_groups = Group.query.filter(Group.owner_id == user.id).all()
+    for pg in personal_groups:
         gc = Conversation.query.filter_by(group_id=pg.id).first()
         if gc is not None:
             db.session.delete(gc)
@@ -1984,33 +2131,40 @@ def edit_groups():
 @app.route("/groups/edit/<group_name>")
 @login_required
 def edit_group(group_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = _user_group_by_name(g.user, group_name)
     if not group:
         return redirect(url_for("edit_groups"))
-    if not g.user.is_in_group(group.id):
+    if group.is_global() and not g.user.is_in_group(group.id):
         return redirect(url_for("edit_groups"))
     role = g.user.role_in(group)
+    is_personal = group.is_personal()
+    is_primary = group.is_primary_personal()
     return render_template(
         "edit_group.html",
         user=g.user,
         group=group,
         role=role,
-        is_owner=(role == "owner"),
-        is_personal=(group.name == g.user.name),
+        is_owner=(role == "owner") or (is_personal and group.owner_id == g.user.id),
+        is_personal=is_personal,
+        is_primary=is_primary,
     )
 
 
 @app.route("/groups/<group_name>/update", methods=("POST",))
 @login_required
 def update_group(group_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = _user_group_by_name(g.user, group_name)
     if not group:
         abort(404)
-    if not g.user.is_owner_of(group):
-        abort(403)
-    if group.name == g.user.name:
-        flash(gettext("Cannot edit a personal group"))
-        return redirect(url_for("edit_group", group_name=group.name))
+    if group.is_personal():
+        if group.owner_id != g.user.id:
+            abort(403)
+        if group.is_primary_personal():
+            flash(gettext("Cannot edit your primary group"))
+            return redirect(url_for("edit_group", group_name=group.name))
+    else:
+        if not g.user.is_owner_of(group):
+            abort(403)
     label = (request.form.get("label") or "").strip()
     if label:
         group.label = label
@@ -2025,14 +2179,18 @@ def update_group(group_name):
 @app.route("/groups/<group_name>/visibility", methods=("POST",))
 @login_required
 def update_group_visibility(group_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = _user_group_by_name(g.user, group_name)
     if not group:
         abort(404)
-    if not g.user.is_owner_of(group):
-        abort(403)
-    if group.name == g.user.name:
-        flash(gettext("Cannot edit a personal group"))
-        return redirect(url_for("edit_group", group_name=group.name))
+    if group.is_personal():
+        if group.owner_id != g.user.id:
+            abort(403)
+        if group.is_primary_personal():
+            flash(gettext("Cannot change visibility of your primary group"))
+            return redirect(url_for("edit_group", group_name=group.name))
+    else:
+        if not g.user.is_owner_of(group):
+            abort(403)
     group.public = bool(request.form.get("public"))
     _touch_group(group)
     db.session.commit()
@@ -2042,14 +2200,14 @@ def update_group_visibility(group_name):
 @app.route("/groups/<group_name>/invite", methods=("POST",))
 @login_required
 def invite_to_group(group_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = _user_group_by_name(g.user, group_name)
     if not group:
         abort(404)
-    if not g.user.is_owner_of(group):
-        abort(403)
-    if group.name == g.user.name:
+    if group.is_personal():
         flash(gettext("Cannot invite to a personal group"))
         return redirect(url_for("edit_group", group_name=group.name))
+    if not g.user.is_owner_of(group):
+        abort(403)
 
     target_name = (request.form.get("user_name") or "").strip().lower()
     role = request.form.get("role") or "reader"
@@ -2143,13 +2301,13 @@ def decline_invitation(membership_id):
 )
 @login_required
 def update_membership(group_name, user_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = _user_group_by_name(g.user, group_name)
     if not group:
         abort(404)
+    if group.is_personal():
+        abort(400)
     if not g.user.is_owner_of(group):
         abort(403)
-    if group.name == g.user.name:
-        abort(400)
 
     target = User.query.filter(User.name == user_name.lower()).first()
     if not target:
@@ -2192,11 +2350,11 @@ def update_membership(group_name, user_name):
 @app.route("/groups/<group_name>/leave", methods=("POST",))
 @login_required
 def leave_group(group_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = _user_group_by_name(g.user, group_name)
     if not group:
         abort(404)
-    if group.name == g.user.name:
-        flash(gettext("Cannot leave your personal group"))
+    if group.is_personal():
+        flash(gettext("Cannot leave a personal group"))
         return redirect(url_for("edit_group", group_name=group.name))
     membership = g.user.membership_in(group)
     if membership is None or membership.state != "accepted":
@@ -2265,7 +2423,9 @@ def api_users_search():
     ).order_by(User.label).limit(20).all()
     exclude_ids = set()
     if group_name:
-        group = Group.query.filter(Group.name == group_name).first()
+        group = Group.query.filter(
+            Group.name == group_name, Group.owner_id.is_(None),
+        ).first()
         if group:
             for m in group.memberships:
                 if m.state in ("accepted", "invited"):
@@ -2339,34 +2499,76 @@ def inject_invitation_count():
 @login_required
 def add_group():
     if request.method == "POST":
-        label = request.form["name"]
+        kind = (request.form.get("kind") or "").strip().lower()
+        if kind not in ("personal", "shared"):
+            flash(gettext("Please choose a group kind"))
+            return render_template("add_group.html", form=request.form)
+        label = (request.form.get("name") or "").strip()
         name = from_label(label)
-        description = request.form["description"]
+        description = request.form.get("description") or ""
+        make_public = bool(request.form.get("public"))
 
-        group = Group.query.filter(Group.name == name).first()
-        if group:
-            flash(gettext("Group already exists"))
+        if not label:
+            flash(gettext("Group Name is required"))
+            return render_template("add_group.html", form=request.form)
+        if not name or not is_valid(name, max_len=50):
+            flash(gettext("Name is invalid and cannot be used"))
+            return render_template("add_group.html", form=request.form)
+
+        if kind == "shared":
+            # Shared groups must own a globally unique handle (no user
+            # and no other global group may already hold it).
+            if _is_name_taken(name):
+                flash(gettext("Group already exists"))
+                return render_template("add_group.html", form=request.form)
+            owner_id = None
         else:
-            now_utc = datetime.datetime.now(datetime.timezone.utc)
-            group = Group(
-                name=name,
-                label=label,
-                description=description,
-                created=now_utc,
-            )
-            membership = Membership(
-                user=g.user,
-                group=group,
-                role="owner",
-                state="accepted",
-            )
-            db.session.add(group)
-            db.session.add(membership)
-            db.session.flush()
+            # Personal groups live under the user's namespace. Disallow
+            # colliding with an existing global group's handle so that
+            # name-based lookups (e.g. /groups/edit/<name>) remain
+            # unambiguous for this user.
+            if _is_personal_group_name_taken(g.user, name):
+                flash(gettext("You already have a group with this name"))
+                return render_template("add_group.html", form=request.form)
+            global_clash = Group.query.filter(
+                Group.owner_id.is_(None), Group.name == name,
+            ).first()
+            if global_clash is not None:
+                flash(gettext(
+                    "A shared group already uses this name. Choose another."
+                ))
+                return render_template("add_group.html", form=request.form)
+            owner_id = g.user.id
+
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        group = Group(
+            name=name,
+            label=label,
+            description=description,
+            owner_id=owner_id,
+            public=make_public,
+            created=now_utc,
+        )
+        membership = Membership(
+            user=g.user,
+            group=group,
+            role="owner",
+            state="accepted",
+        )
+        db.session.add(group)
+        db.session.add(membership)
+        db.session.flush()
+        if kind == "shared":
+            # Personal groups never get a group conversation — they're
+            # single-member by construction.
             ensure_group_conversation(group)
-            db.session.commit()
-            # TODO errorhandling
-            return redirect(url_for("edit_groups", user_name=g.user.name))
+        db.session.commit()
+
+        if kind == "personal":
+            return redirect(url_for(
+                "user", user_name=g.user.name,
+            ) + f"?group={group.name}")
+        return redirect(url_for("edit_groups", user_name=g.user.name))
     return render_template("add_group.html")
 
 
@@ -2375,29 +2577,15 @@ def add_group():
 @support_required
 def groups():
     try:
-        # Personal groups are auto-created on registration and only ever
-        # contain that one user (membership.user.name == group.name).
-        # Hide them from the admin overview — including orphans whose
-        # namesake user has been deleted (m.user is None).
-        def _is_personal(group):
-            for m in group.memberships:
-                if m.user is not None and m.user.name == group.name:
-                    return True
-            if group.memberships and all(
-                m.user is None for m in group.memberships
-            ):
-                return True
-            return False
-
-        all_groups = [
-            g for g in (
-                Group.query
-                .filter(Group.name != SUPPORT_USERNAME)
-                .order_by(Group.name)
-                .all()
-            )
-            if not _is_personal(g)
-        ]
+        # Admin overview lists only shared (global) groups. Personal
+        # groups are namespaced to their owner and managed there.
+        all_groups = (
+            Group.query
+            .filter(Group.owner_id.is_(None))
+            .filter(Group.name != SUPPORT_USERNAME)
+            .order_by(Group.name)
+            .all()
+        )
         member_rows = (
             db.session.query(
                 Membership.group_id, db.func.count(Membership.id),
@@ -2432,7 +2620,9 @@ def groups():
 @login_required
 @support_required
 def admin_view_group(group_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = Group.query.filter(
+        Group.name == group_name, Group.owner_id.is_(None),
+    ).first()
     if not group:
         abort(404, description=f"Group {group_name} not found")
     memberships = sorted(
@@ -3011,11 +3201,13 @@ def register():
                     access_date=None,
                 )
                 db.session.add(user)
+                db.session.flush()
                 now_utc = datetime.datetime.now(datetime.timezone.utc)
                 group = Group(
                     name=name,
                     label=label,
                     description="",
+                    owner_id=user.id,
                     created=now_utc,
                 )
                 db.session.add(group)
@@ -3700,7 +3892,9 @@ def api_direct_conversation(user_name):
            methods=("GET", "POST"))
 @login_required
 def api_group_conversation(group_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = Group.query.filter(
+        Group.name == group_name, Group.owner_id.is_(None),
+    ).first()
     if not group or not g.user.is_in_group(group.id):
         return respond("NOK", "Not a member of this group", 403)
     conv = ensure_group_conversation(group)
@@ -3823,7 +4017,9 @@ def messages_direct(user_name):
 @app.route("/messages/g/<string:group_name>")
 @login_required
 def messages_group(group_name):
-    group = Group.query.filter(Group.name == group_name).first()
+    group = Group.query.filter(
+        Group.name == group_name, Group.owner_id.is_(None),
+    ).first()
     if not group or not g.user.is_in_group(group.id):
         return redirect(url_for("messages_inbox"))
     accepted = sum(

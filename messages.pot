@@ -8,14 +8,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-13 23:07+0200\n"
+"POT-Creation-Date: 2026-05-14 09:18+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: src/textileplatform/beadexport.py:593 src/textileplatform/beadexport.py:608
 #: src/textileplatform/templates/edit_jbead_pattern.html:131
@@ -75,315 +75,336 @@ msgstr ""
 msgid "Total beads:"
 msgstr ""
 
-#: src/textileplatform/controller.py:486
+#: src/textileplatform/controller.py:532
 msgid "Label is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:487
+#: src/textileplatform/controller.py:533
 msgid "Label is too long"
 msgstr ""
 
-#: src/textileplatform/controller.py:488
+#: src/textileplatform/controller.py:534
 msgid "Another group already uses this name"
 msgstr ""
 
-#: src/textileplatform/controller.py:1187
+#: src/textileplatform/controller.py:1336
 msgid "Display name updated"
 msgstr ""
 
-#: src/textileplatform/controller.py:1191
-#: src/textileplatform/controller.py:1229
-#: src/textileplatform/controller.py:1263
+#: src/textileplatform/controller.py:1340
+#: src/textileplatform/controller.py:1378
+#: src/textileplatform/controller.py:1412
 msgid "Changes could not be saved"
 msgstr ""
 
-#: src/textileplatform/controller.py:1199
+#: src/textileplatform/controller.py:1348
 msgid "Current password is incorrect"
 msgstr ""
 
-#: src/textileplatform/controller.py:1201
+#: src/textileplatform/controller.py:1350
 msgid "Password cannot be empty"
 msgstr ""
 
-#: src/textileplatform/controller.py:1203
-#: src/textileplatform/controller.py:2928
-#: src/textileplatform/controller.py:3234
+#: src/textileplatform/controller.py:1352
+#: src/textileplatform/controller.py:3137
+#: src/textileplatform/controller.py:3445
 msgid "Passwords do not match"
 msgstr ""
 
-#: src/textileplatform/controller.py:1208
-#: src/textileplatform/controller.py:2933
-#: src/textileplatform/controller.py:3239
+#: src/textileplatform/controller.py:1357
+#: src/textileplatform/controller.py:3142
+#: src/textileplatform/controller.py:3450
 msgid ""
 "Password must be at least 8 characters and not a common or trivial "
 "password"
 msgstr ""
 
-#: src/textileplatform/controller.py:1226
+#: src/textileplatform/controller.py:1375
 msgid "Password changed"
 msgstr ""
 
-#: src/textileplatform/controller.py:1260
+#: src/textileplatform/controller.py:1409
 msgid "Profile updated"
 msgstr ""
 
-#: src/textileplatform/controller.py:1488
-#: src/textileplatform/controller.py:2557
+#: src/textileplatform/controller.py:1637
+#: src/textileplatform/controller.py:2766
 msgid "The support account cannot be deleted."
 msgstr ""
 
-#: src/textileplatform/controller.py:1493
+#: src/textileplatform/controller.py:1642
 msgid "Please type \"DELETE\" to confirm."
 msgstr ""
 
-#: src/textileplatform/controller.py:1496
+#: src/textileplatform/controller.py:1645
 msgid "Incorrect password."
 msgstr ""
 
-#: src/textileplatform/controller.py:1504
+#: src/textileplatform/controller.py:1653
 msgid "The account could not be deleted."
 msgstr ""
 
-#: src/textileplatform/controller.py:1507
+#: src/textileplatform/controller.py:1656
 msgid "Your account and all related data have been deleted."
 msgstr ""
 
-#: src/textileplatform/controller.py:1614
-#: src/textileplatform/controller.py:1737
+#: src/textileplatform/controller.py:1763
+#: src/textileplatform/controller.py:1886
 msgid "Please provide a name for the pattern"
 msgstr ""
 
-#: src/textileplatform/controller.py:1620
-#: src/textileplatform/controller.py:1623
+#: src/textileplatform/controller.py:1769
+#: src/textileplatform/controller.py:1772
 msgid "Width must be between 10 and 1000"
 msgstr ""
 
-#: src/textileplatform/controller.py:1629
-#: src/textileplatform/controller.py:1632
+#: src/textileplatform/controller.py:1778
+#: src/textileplatform/controller.py:1781
 msgid "Height must be between 10 and 1000"
 msgstr ""
 
-#: src/textileplatform/controller.py:1727
-#: src/textileplatform/controller.py:1846
+#: src/textileplatform/controller.py:1876
+#: src/textileplatform/controller.py:1995
 msgid "Failed to create pattern"
 msgstr ""
 
-#: src/textileplatform/controller.py:1743
-#: src/textileplatform/controller.py:1746
+#: src/textileplatform/controller.py:1892
+#: src/textileplatform/controller.py:1895
 msgid "Width must be between 6 and 100"
 msgstr ""
 
-#: src/textileplatform/controller.py:1752
-#: src/textileplatform/controller.py:1755
+#: src/textileplatform/controller.py:1901
+#: src/textileplatform/controller.py:1904
 msgid "Height must be between 5 and 5000"
 msgstr ""
 
-#: src/textileplatform/controller.py:1883
+#: src/textileplatform/controller.py:2032
 msgid "Pattern could not be deleted."
 msgstr ""
 
-#: src/textileplatform/controller.py:1962
+#: src/textileplatform/controller.py:2111
 msgid "Assignments could not be saved."
 msgstr ""
 
-#: src/textileplatform/controller.py:2010
-msgid "Cannot edit a personal group"
+#: src/textileplatform/controller.py:2163
+msgid "Cannot edit your primary group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2019
+#: src/textileplatform/controller.py:2175
 msgid "Group updated"
 msgstr ""
 
-#: src/textileplatform/controller.py:2032
+#: src/textileplatform/controller.py:2189
+msgid "Cannot change visibility of your primary group"
+msgstr ""
+
+#: src/textileplatform/controller.py:2207
 msgid "Cannot invite to a personal group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2038
-#: src/textileplatform/controller.py:2155
+#: src/textileplatform/controller.py:2215
+#: src/textileplatform/controller.py:2332
 msgid "Invalid role"
 msgstr ""
 
-#: src/textileplatform/controller.py:2043
-#: src/textileplatform/controller.py:2046
-#: src/textileplatform/controller.py:2049
+#: src/textileplatform/controller.py:2220
+#: src/textileplatform/controller.py:2223
+#: src/textileplatform/controller.py:2226
 msgid "User not found"
 msgstr ""
 
-#: src/textileplatform/controller.py:2055
+#: src/textileplatform/controller.py:2232
 msgid "User is already a member"
 msgstr ""
 
-#: src/textileplatform/controller.py:2057
+#: src/textileplatform/controller.py:2234
 msgid "User has already been invited"
 msgstr ""
 
-#: src/textileplatform/controller.py:2064
-#: src/textileplatform/controller.py:2076
+#: src/textileplatform/controller.py:2241
+#: src/textileplatform/controller.py:2253
 msgid "Invitation sent"
 msgstr ""
 
-#: src/textileplatform/controller.py:2102
+#: src/textileplatform/controller.py:2279
 msgid "Invitation accepted"
 msgstr ""
 
-#: src/textileplatform/controller.py:2117
+#: src/textileplatform/controller.py:2294
 msgid "Invitation declined"
 msgstr ""
 
-#: src/textileplatform/controller.py:2146
+#: src/textileplatform/controller.py:2323
 msgid "Cannot remove the last owner of a group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2151
+#: src/textileplatform/controller.py:2328
 msgid "Member removed"
 msgstr ""
 
-#: src/textileplatform/controller.py:2162
+#: src/textileplatform/controller.py:2339
 msgid "Cannot demote the last owner of a group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2167
+#: src/textileplatform/controller.py:2344
 msgid "Role updated"
 msgstr ""
 
-#: src/textileplatform/controller.py:2180
-msgid "Cannot leave your personal group"
+#: src/textileplatform/controller.py:2357
+msgid "Cannot leave a personal group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2187
+#: src/textileplatform/controller.py:2364
 msgid "You are the last owner. Promote another owner before leaving."
 msgstr ""
 
-#: src/textileplatform/controller.py:2193
+#: src/textileplatform/controller.py:2370
 msgid "You left the group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2271
+#: src/textileplatform/controller.py:2450
 msgid "Cannot impersonate a disabled user"
 msgstr ""
 
-#: src/textileplatform/controller.py:2329
+#: src/textileplatform/controller.py:2504
+msgid "Please choose a group kind"
+msgstr ""
+
+#: src/textileplatform/controller.py:2512
+msgid "Group Name is required"
+msgstr ""
+
+#: src/textileplatform/controller.py:2515
+#: src/textileplatform/controller.py:3155
+msgid "Name is invalid and cannot be used"
+msgstr ""
+
+#: src/textileplatform/controller.py:2522
 msgid "Group already exists"
 msgstr ""
 
-#: src/textileplatform/controller.py:2526
+#: src/textileplatform/controller.py:2531
+msgid "You already have a group with this name"
+msgstr ""
+
+#: src/textileplatform/controller.py:2538
+msgid "A shared group already uses this name. Choose another."
+msgstr ""
+
+#: src/textileplatform/controller.py:2735
 msgid "The support account cannot be disabled."
 msgstr ""
 
-#: src/textileplatform/controller.py:2529
+#: src/textileplatform/controller.py:2738
 msgid "You cannot disable your own account."
 msgstr ""
 
-#: src/textileplatform/controller.py:2540
+#: src/textileplatform/controller.py:2749
 msgid "Could not update the account state."
 msgstr ""
 
-#: src/textileplatform/controller.py:2543
+#: src/textileplatform/controller.py:2752
 msgid "Account disabled."
 msgstr ""
 
-#: src/textileplatform/controller.py:2545
+#: src/textileplatform/controller.py:2754
 msgid "Account enabled."
 msgstr ""
 
-#: src/textileplatform/controller.py:2560
+#: src/textileplatform/controller.py:2769
 msgid "You cannot delete your own account from here."
 msgstr ""
 
-#: src/textileplatform/controller.py:2565
+#: src/textileplatform/controller.py:2774
 msgid "Please type the user's name exactly to confirm deletion."
 msgstr ""
 
-#: src/textileplatform/controller.py:2575
+#: src/textileplatform/controller.py:2784
 msgid "Could not delete the account."
 msgstr ""
 
-#: src/textileplatform/controller.py:2577
+#: src/textileplatform/controller.py:2786
 #, python-format
 msgid "Account \"%(label)s\" deleted."
 msgstr ""
 
-#: src/textileplatform/controller.py:2601
+#: src/textileplatform/controller.py:2810
 msgid "Another account already uses this e-mail address"
 msgstr ""
 
-#: src/textileplatform/controller.py:2606
+#: src/textileplatform/controller.py:2815
 msgid "Could not update the e-mail."
 msgstr ""
 
-#: src/textileplatform/controller.py:2618
+#: src/textileplatform/controller.py:2827
 msgid "E-Mail updated."
 msgstr ""
 
-#: src/textileplatform/controller.py:2632
+#: src/textileplatform/controller.py:2841
 msgid "The support account cannot be renamed."
 msgstr ""
 
-#: src/textileplatform/controller.py:2635
+#: src/textileplatform/controller.py:2844
 msgid "You cannot rename your own account from here."
 msgstr ""
 
-#: src/textileplatform/controller.py:2648
+#: src/textileplatform/controller.py:2857
 msgid "Another account already uses this name"
 msgstr ""
 
-#: src/textileplatform/controller.py:2653
+#: src/textileplatform/controller.py:2862
 msgid "Could not update the name."
 msgstr ""
 
-#: src/textileplatform/controller.py:2662
+#: src/textileplatform/controller.py:2871
 msgid "Name updated."
 msgstr ""
 
-#: src/textileplatform/controller.py:2703
+#: src/textileplatform/controller.py:2912
 msgid "Both German and English text are required."
 msgstr ""
 
-#: src/textileplatform/controller.py:2706
+#: src/textileplatform/controller.py:2915
 msgid "Duration must be between 1 and 365 days."
 msgstr ""
 
-#: src/textileplatform/controller.py:2718
+#: src/textileplatform/controller.py:2927
 msgid "Announcement published."
 msgstr ""
 
-#: src/textileplatform/controller.py:2730
+#: src/textileplatform/controller.py:2939
 msgid "Announcement retired."
 msgstr ""
 
-#: src/textileplatform/controller.py:2806
+#: src/textileplatform/controller.py:3015
 msgid "Investigation copy created"
 msgstr ""
 
-#: src/textileplatform/controller.py:2827
+#: src/textileplatform/controller.py:3036
 msgid "Investigation copy deleted"
 msgstr ""
 
-#: src/textileplatform/controller.py:2920
+#: src/textileplatform/controller.py:3129
 msgid "Name is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2922
+#: src/textileplatform/controller.py:3131
 msgid "E-Mail is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2924
+#: src/textileplatform/controller.py:3133
 msgid "E-Mail is not valid"
 msgstr ""
 
-#: src/textileplatform/controller.py:2926
+#: src/textileplatform/controller.py:3135
 msgid "Password is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2930
+#: src/textileplatform/controller.py:3139
 msgid "Calculation result required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2946
-msgid "Name is invalid and cannot be used"
-msgstr ""
-
-#: src/textileplatform/controller.py:2963
+#: src/textileplatform/controller.py:3172
 #, python-format
 msgid ""
 "The handle “%(taken)s” is already in use. We can register you as "
@@ -391,38 +412,38 @@ msgid ""
 "handle below if you prefer, then submit again."
 msgstr ""
 
-#: src/textileplatform/controller.py:2972
-#: src/textileplatform/controller.py:3028
+#: src/textileplatform/controller.py:3181
+#: src/textileplatform/controller.py:3239
 msgid "Name or E-Mail is already used"
 msgstr ""
 
-#: src/textileplatform/controller.py:3033
-#: src/textileplatform/controller.py:3071
+#: src/textileplatform/controller.py:3244
+#: src/textileplatform/controller.py:3282
 msgid "System error"
 msgstr ""
 
-#: src/textileplatform/controller.py:3059
-#: src/textileplatform/controller.py:3062
+#: src/textileplatform/controller.py:3270
+#: src/textileplatform/controller.py:3273
 msgid "Login data are not correct"
 msgstr ""
 
-#: src/textileplatform/controller.py:3064
+#: src/textileplatform/controller.py:3275
 msgid "Account verification is pending"
 msgstr ""
 
-#: src/textileplatform/controller.py:3066
+#: src/textileplatform/controller.py:3277
 msgid "Account is disabled"
 msgstr ""
 
-#: src/textileplatform/controller.py:3144
+#: src/textileplatform/controller.py:3355
 msgid "E-Mail is required."
 msgstr ""
 
-#: src/textileplatform/controller.py:3232
+#: src/textileplatform/controller.py:3443
 msgid "Password is required."
 msgstr ""
 
-#: src/textileplatform/controller.py:3257
+#: src/textileplatform/controller.py:3468
 msgid "Could not save changes."
 msgstr ""
 
@@ -506,7 +527,7 @@ msgstr ""
 
 #: src/textileplatform/templates/add_group.html:3
 #: src/textileplatform/templates/add_group.html:6
-#: src/textileplatform/templates/edit_groups.html:30
+#: src/textileplatform/templates/edit_groups.html:42
 msgid "Add Group"
 msgstr ""
 
@@ -551,20 +572,50 @@ msgstr ""
 msgid "Textile Platform"
 msgstr ""
 
-#: src/textileplatform/templates/add_group.html:14
+#: src/textileplatform/templates/add_group.html:16
+msgid "Group Kind"
+msgstr ""
+
+#: src/textileplatform/templates/add_group.html:20
+#: src/textileplatform/templates/edit_group.html:66
+msgid "Personal group"
+msgstr ""
+
+#: src/textileplatform/templates/add_group.html:23
+msgid ""
+"Just for organizing your own patterns. The name is private to your "
+"account — you can call it anything (e.g. “samples”, “gifts”). You can "
+"optionally make it publicly viewable as a read-only collection."
+msgstr ""
+
+#: src/textileplatform/templates/add_group.html:28
+msgid "Shared group"
+msgstr ""
+
+#: src/textileplatform/templates/add_group.html:31
+msgid ""
+"Collaborate with other users. The name appears in a public URL and must "
+"be globally unique."
+msgstr ""
+
+#: src/textileplatform/templates/add_group.html:36
 #: src/textileplatform/templates/edit_group.html:26
 msgid "Group Name"
 msgstr ""
 
-#: src/textileplatform/templates/add_group.html:18
+#: src/textileplatform/templates/add_group.html:40
 #: src/textileplatform/templates/edit_group.html:30
 msgid "Group Description"
 msgstr ""
 
-#: src/textileplatform/templates/add_group.html:22
+#: src/textileplatform/templates/add_group.html:47
+msgid "Make this group publicly viewable"
+msgstr ""
+
+#: src/textileplatform/templates/add_group.html:51
 #: src/textileplatform/templates/admin-edit-user.html:26
 #: src/textileplatform/templates/admin-edit-user.html:64
-#: src/textileplatform/templates/assignments_pattern.html:36
+#: src/textileplatform/templates/assignments_pattern.html:40
 #: src/textileplatform/templates/edit_dbweave_pattern.html:63
 #: src/textileplatform/templates/edit_dbweave_pattern.html:246
 #: src/textileplatform/templates/edit_dbweave_pattern.html:476
@@ -590,7 +641,7 @@ msgstr ""
 #: src/textileplatform/templates/admin-console.html:13
 #: src/textileplatform/templates/admin-users.html:3
 #: src/textileplatform/templates/admin-users.html:6
-#: src/textileplatform/templates/user_private.html:157
+#: src/textileplatform/templates/user_private.html:160
 msgid "Users"
 msgstr ""
 
@@ -600,14 +651,14 @@ msgstr ""
 #: src/textileplatform/templates/edit_groups.html:3
 #: src/textileplatform/templates/edit_groups.html:6
 #: src/textileplatform/templates/user_private.html:66
-#: src/textileplatform/templates/user_private.html:156
+#: src/textileplatform/templates/user_private.html:159
 msgid "Groups"
 msgstr ""
 
 #: src/textileplatform/templates/admin-console.html:15
 #: src/textileplatform/templates/admin-patterns.html:3
 #: src/textileplatform/templates/admin-patterns.html:6
-#: src/textileplatform/templates/user_private.html:158
+#: src/textileplatform/templates/user_private.html:161
 msgid "All Patterns"
 msgstr ""
 
@@ -694,24 +745,31 @@ msgstr ""
 
 #: src/textileplatform/templates/admin-console.html:85
 #: src/textileplatform/templates/admin-edit-user.html:173
+#: src/textileplatform/templates/admin-groups.html:39
 #: src/textileplatform/templates/admin-patterns.html:36
-#: src/textileplatform/templates/admin-view-group.html:58
-#: src/textileplatform/templates/edit_group.html:271
-#: src/textileplatform/templates/user_private.html:116
-#: src/textileplatform/templates/user_private.html:124
-#: src/textileplatform/templates/user_private.html:413
+#: src/textileplatform/templates/admin-view-group.html:19
+#: src/textileplatform/templates/admin-view-group.html:63
+#: src/textileplatform/templates/edit_group.html:74
+#: src/textileplatform/templates/edit_group.html:300
+#: src/textileplatform/templates/user_private.html:15
+#: src/textileplatform/templates/user_private.html:119
+#: src/textileplatform/templates/user_private.html:127
+#: src/textileplatform/templates/user_private.html:473
 #: src/textileplatform/templates/user_public.html:73
 msgid "Public"
 msgstr ""
 
 #: src/textileplatform/templates/admin-console.html:87
 #: src/textileplatform/templates/admin-edit-user.html:173
+#: src/textileplatform/templates/admin-groups.html:39
 #: src/textileplatform/templates/admin-patterns.html:36
-#: src/textileplatform/templates/admin-view-group.html:58
-#: src/textileplatform/templates/edit_group.html:271
-#: src/textileplatform/templates/user_private.html:116
-#: src/textileplatform/templates/user_private.html:124
-#: src/textileplatform/templates/user_private.html:413
+#: src/textileplatform/templates/admin-view-group.html:19
+#: src/textileplatform/templates/admin-view-group.html:63
+#: src/textileplatform/templates/edit_group.html:76
+#: src/textileplatform/templates/edit_group.html:300
+#: src/textileplatform/templates/user_private.html:119
+#: src/textileplatform/templates/user_private.html:127
+#: src/textileplatform/templates/user_private.html:473
 msgid "Private"
 msgstr ""
 
@@ -722,16 +780,16 @@ msgstr ""
 #: src/textileplatform/templates/admin-console.html:92
 #: src/textileplatform/templates/admin-edit-user.html:176
 #: src/textileplatform/templates/admin-patterns.html:40
-#: src/textileplatform/templates/admin-view-group.html:62
+#: src/textileplatform/templates/admin-view-group.html:67
 msgid "Type"
 msgstr ""
 
 #: src/textileplatform/templates/admin-console.html:94
 #: src/textileplatform/templates/admin-edit-user.html:178
-#: src/textileplatform/templates/admin-groups.html:46
+#: src/textileplatform/templates/admin-groups.html:47
 #: src/textileplatform/templates/admin-patterns.html:42
-#: src/textileplatform/templates/admin-view-group.html:20
-#: src/textileplatform/templates/admin-view-group.html:63
+#: src/textileplatform/templates/admin-view-group.html:25
+#: src/textileplatform/templates/admin-view-group.html:68
 msgid "Modified"
 msgstr ""
 
@@ -759,7 +817,7 @@ msgstr ""
 #: src/textileplatform/templates/edit_dbweave_pattern.html:324
 #: src/textileplatform/templates/edit_dbweave_pattern.html:356
 #: src/textileplatform/templates/edit_dbweave_pattern.html:425
-#: src/textileplatform/templates/user_private.html:133
+#: src/textileplatform/templates/user_private.html:136
 msgid "Delete"
 msgstr ""
 
@@ -794,14 +852,14 @@ msgstr ""
 
 #: src/textileplatform/templates/admin-edit-user.html:27
 #: src/textileplatform/templates/admin-edit-user.html:65
-#: src/textileplatform/templates/assignments_pattern.html:37
+#: src/textileplatform/templates/assignments_pattern.html:41
 #: src/textileplatform/templates/delete_pattern.html:16
 #: src/textileplatform/templates/edit_dbweave_pattern.html:120
 #: src/textileplatform/templates/edit_dbweave_pattern.html:459
 #: src/textileplatform/templates/edit_group.html:35
 #: src/textileplatform/templates/edit_jbead_pattern.html:107
 #: src/textileplatform/templates/edit_jbead_pattern.html:154
-#: src/textileplatform/templates/user_private.html:509
+#: src/textileplatform/templates/user_private.html:569
 msgid "Cancel"
 msgstr ""
 
@@ -829,9 +887,9 @@ msgstr ""
 
 #: src/textileplatform/templates/admin-edit-user.html:91
 #: src/textileplatform/templates/admin-edit-user.html:177
-#: src/textileplatform/templates/admin-groups.html:45
+#: src/textileplatform/templates/admin-groups.html:46
 #: src/textileplatform/templates/admin-patterns.html:41
-#: src/textileplatform/templates/admin-view-group.html:19
+#: src/textileplatform/templates/admin-view-group.html:24
 msgid "Created"
 msgstr ""
 
@@ -915,11 +973,12 @@ msgid "Messages sent"
 msgstr ""
 
 #: src/textileplatform/templates/admin-edit-user.html:149
-#: src/textileplatform/templates/admin-groups.html:42
+#: src/textileplatform/templates/admin-groups.html:43
 #: src/textileplatform/templates/admin-users.html:40
-#: src/textileplatform/templates/admin-view-group.html:47
-#: src/textileplatform/templates/edit_group.html:253
-#: src/textileplatform/templates/edit_groups.html:21
+#: src/textileplatform/templates/admin-view-group.html:52
+#: src/textileplatform/templates/edit_group.html:282
+#: src/textileplatform/templates/edit_groups.html:29
+#: src/textileplatform/templates/edit_groups.html:32
 msgid "Patterns"
 msgstr ""
 
@@ -954,7 +1013,7 @@ msgstr ""
 
 #: src/textileplatform/templates/admin-edit-user.html:171
 #: src/textileplatform/templates/admin-patterns.html:34
-#: src/textileplatform/templates/admin-view-group.html:56
+#: src/textileplatform/templates/admin-view-group.html:61
 msgid "Impersonate owner and open in editor"
 msgstr ""
 
@@ -965,8 +1024,8 @@ msgstr ""
 
 #: src/textileplatform/templates/admin-edit-user.html:232
 #: src/textileplatform/templates/admin-patterns.html:104
-#: src/textileplatform/templates/admin-view-group.html:70
-#: src/textileplatform/templates/edit_group.html:310
+#: src/textileplatform/templates/admin-view-group.html:75
+#: src/textileplatform/templates/edit_group.html:339
 msgid "No patterns."
 msgstr ""
 
@@ -1016,22 +1075,22 @@ msgstr ""
 msgid "groups"
 msgstr ""
 
-#: src/textileplatform/templates/admin-groups.html:41
-#: src/textileplatform/templates/admin-view-group.html:25
-#: src/textileplatform/templates/edit_group.html:73
-#: src/textileplatform/templates/edit_groups.html:20
+#: src/textileplatform/templates/admin-groups.html:42
+#: src/textileplatform/templates/admin-view-group.html:30
+#: src/textileplatform/templates/edit_group.html:103
+#: src/textileplatform/templates/edit_groups.html:31
 msgid "Members"
 msgstr ""
 
-#: src/textileplatform/templates/admin-groups.html:45
+#: src/textileplatform/templates/admin-groups.html:46
 msgid "Created (UTC)"
 msgstr ""
 
-#: src/textileplatform/templates/admin-groups.html:46
+#: src/textileplatform/templates/admin-groups.html:47
 msgid "Modified (UTC)"
 msgstr ""
 
-#: src/textileplatform/templates/admin-groups.html:110
+#: src/textileplatform/templates/admin-groups.html:111
 msgid "No groups."
 msgstr ""
 
@@ -1044,9 +1103,9 @@ msgid "Owner (A→Z)"
 msgstr ""
 
 #: src/textileplatform/templates/admin-patterns.html:39
-#: src/textileplatform/templates/admin-view-group.html:61
-#: src/textileplatform/templates/edit_group.html:95
-#: src/textileplatform/templates/edit_group.html:143
+#: src/textileplatform/templates/admin-view-group.html:66
+#: src/textileplatform/templates/edit_group.html:125
+#: src/textileplatform/templates/edit_group.html:173
 msgid "Owner"
 msgstr ""
 
@@ -1184,7 +1243,7 @@ msgid "Investigation copies"
 msgstr ""
 
 #: src/textileplatform/templates/admin-system.html:104
-#: src/textileplatform/templates/edit_group.html:121
+#: src/textileplatform/templates/edit_group.html:151
 msgid "Pending invitations"
 msgstr ""
 
@@ -1261,21 +1320,31 @@ msgstr ""
 msgid "No description."
 msgstr ""
 
-#: src/textileplatform/templates/admin-view-group.html:35
-#: src/textileplatform/templates/edit_group.html:79
-#: src/textileplatform/templates/edit_group.html:139
+#: src/textileplatform/templates/admin-view-group.html:19
+#: src/textileplatform/templates/edit_dbweave_pattern.html:252
+#: src/textileplatform/templates/edit_group.html:72
+msgid "Visibility"
+msgstr ""
+
+#: src/textileplatform/templates/admin-view-group.html:22
+msgid "Public URL"
+msgstr ""
+
+#: src/textileplatform/templates/admin-view-group.html:40
+#: src/textileplatform/templates/edit_group.html:109
+#: src/textileplatform/templates/edit_group.html:169
 msgid "Role"
 msgstr ""
 
-#: src/textileplatform/templates/admin-view-group.html:36
+#: src/textileplatform/templates/admin-view-group.html:41
 msgid "State"
 msgstr ""
 
-#: src/textileplatform/templates/admin-view-group.html:43
+#: src/textileplatform/templates/admin-view-group.html:48
 msgid "No members."
 msgstr ""
 
-#: src/textileplatform/templates/admin-view-group.html:74
+#: src/textileplatform/templates/admin-view-group.html:79
 msgid "Read-only admin view. Use the user pages to make changes."
 msgstr ""
 
@@ -1284,7 +1353,12 @@ msgstr ""
 msgid "Group assignments for"
 msgstr ""
 
-#: src/textileplatform/templates/assignments_pattern.html:33
+#: src/textileplatform/templates/assignments_pattern.html:28
+#: src/textileplatform/templates/edit_groups.html:24
+msgid "Personal"
+msgstr ""
+
+#: src/textileplatform/templates/assignments_pattern.html:37
 msgid "You are not a writer or owner in any group yet."
 msgstr ""
 
@@ -1478,7 +1552,7 @@ msgstr ""
 
 #: src/textileplatform/templates/delete_pattern.html:3
 #: src/textileplatform/templates/delete_pattern.html:6
-#: src/textileplatform/templates/user_private.html:421
+#: src/textileplatform/templates/user_private.html:481
 msgid "Delete pattern"
 msgstr ""
 
@@ -1509,8 +1583,8 @@ msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:55
 #: src/textileplatform/templates/edit_dbweave_pattern.html:483
-#: src/textileplatform/templates/edit_group.html:217
-#: src/textileplatform/templates/edit_group.html:218
+#: src/textileplatform/templates/edit_group.html:246
+#: src/textileplatform/templates/edit_group.html:247
 #: src/textileplatform/templates/profile.html:79
 #: src/textileplatform/templates/profile.html:80
 msgid "Copy"
@@ -1970,7 +2044,8 @@ msgstr ""
 #: src/textileplatform/templates/edit_dbweave_pattern.html:167
 #: src/textileplatform/templates/edit_dbweave_pattern.html:355
 #: src/textileplatform/templates/edit_dbweave_pattern.html:396
-#: src/textileplatform/templates/edit_groups.html:21
+#: src/textileplatform/templates/edit_groups.html:29
+#: src/textileplatform/templates/edit_groups.html:32
 #: src/textileplatform/templates/edit_jbead_pattern.html:146
 msgid "Pattern"
 msgstr ""
@@ -2300,10 +2375,6 @@ msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:251
 msgid "Weft threads:"
-msgstr ""
-
-#: src/textileplatform/templates/edit_dbweave_pattern.html:252
-msgid "Visibility"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:253
@@ -3052,102 +3123,104 @@ msgstr ""
 msgid "Edit group"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:60
+#: src/textileplatform/templates/edit_group.html:61
 msgid "Your role"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:67
-msgid "Group chat"
+#: src/textileplatform/templates/edit_group.html:83
+#: src/textileplatform/templates/edit_group.html:297
+#: src/textileplatform/templates/user_private.html:132
+msgid "Make private"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:78
-#: src/textileplatform/templates/edit_group.html:134
-msgid "User"
-msgstr ""
-
-#: src/textileplatform/templates/edit_group.html:93
-msgid "Role for"
+#: src/textileplatform/templates/edit_group.html:86
+#: src/textileplatform/templates/edit_group.html:297
+#: src/textileplatform/templates/user_private.html:132
+msgid "Make public"
 msgstr ""
 
 #: src/textileplatform/templates/edit_group.html:96
-#: src/textileplatform/templates/edit_group.html:142
+msgid "Group chat"
+msgstr ""
+
+#: src/textileplatform/templates/edit_group.html:108
+#: src/textileplatform/templates/edit_group.html:164
+msgid "User"
+msgstr ""
+
+#: src/textileplatform/templates/edit_group.html:123
+msgid "Role for"
+msgstr ""
+
+#: src/textileplatform/templates/edit_group.html:126
+#: src/textileplatform/templates/edit_group.html:172
 msgid "Writer"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:97
-#: src/textileplatform/templates/edit_group.html:141
+#: src/textileplatform/templates/edit_group.html:127
+#: src/textileplatform/templates/edit_group.html:171
 msgid "Reader"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:99
+#: src/textileplatform/templates/edit_group.html:129
 msgid "Update"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:107
+#: src/textileplatform/templates/edit_group.html:137
 msgid "Remove this member?"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:110
+#: src/textileplatform/templates/edit_group.html:140
 msgid "Remove"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:129
+#: src/textileplatform/templates/edit_group.html:159
 msgid "Invite a user"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:146
+#: src/textileplatform/templates/edit_group.html:176
 msgid "Invite"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:198
+#: src/textileplatform/templates/edit_group.html:227
 msgid "Leave this group?"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:202
+#: src/textileplatform/templates/edit_group.html:231
 msgid "Leave group"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:210
+#: src/textileplatform/templates/edit_group.html:239
 #: src/textileplatform/templates/profile.html:72
 msgid "Public link"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:211
+#: src/textileplatform/templates/edit_group.html:240
 msgid ""
 "Share this URL to let anyone view the public patterns assigned to this "
 "group."
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:218
+#: src/textileplatform/templates/edit_group.html:247
 #: src/textileplatform/templates/profile.html:80
 msgid "Copied"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:268
-#: src/textileplatform/templates/user_private.html:129
-msgid "Make private"
-msgstr ""
-
-#: src/textileplatform/templates/edit_group.html:268
-#: src/textileplatform/templates/user_private.html:129
-msgid "Make public"
-msgstr ""
-
-#: src/textileplatform/templates/edit_group.html:269
-#: src/textileplatform/templates/user_private.html:129
+#: src/textileplatform/templates/edit_group.html:298
+#: src/textileplatform/templates/user_private.html:132
 msgid "Toggle public/private"
 msgstr ""
 
-#: src/textileplatform/templates/edit_group.html:303
-#: src/textileplatform/templates/user_private.html:415
+#: src/textileplatform/templates/edit_group.html:332
+#: src/textileplatform/templates/user_private.html:475
 msgid "Failed"
 msgstr ""
 
-#: src/textileplatform/templates/edit_groups.html:20
+#: src/textileplatform/templates/edit_groups.html:31
 msgid "Member"
 msgstr ""
 
-#: src/textileplatform/templates/edit_groups.html:27
+#: src/textileplatform/templates/edit_groups.html:39
 msgid "No groups yet."
 msgstr ""
 
@@ -3327,25 +3400,25 @@ msgstr ""
 msgid "Go to my patterns"
 msgstr ""
 
-#: src/textileplatform/templates/group.html:25
+#: src/textileplatform/templates/group.html:28
 #: src/textileplatform/templates/user_public.html:61
 msgid "Open pattern"
 msgstr ""
 
-#: src/textileplatform/templates/group.html:48
-#: src/textileplatform/templates/user_private.html:143
+#: src/textileplatform/templates/group.html:51
+#: src/textileplatform/templates/user_private.html:146
 #: src/textileplatform/templates/user_public.html:87
 msgid "DB-WEAVE Patterns"
 msgstr ""
 
-#: src/textileplatform/templates/group.html:49
-#: src/textileplatform/templates/user_private.html:144
+#: src/textileplatform/templates/group.html:52
+#: src/textileplatform/templates/user_private.html:147
 #: src/textileplatform/templates/user_public.html:88
 msgid "JBead Patterns"
 msgstr ""
 
-#: src/textileplatform/templates/group.html:50
-#: src/textileplatform/templates/user_private.html:145
+#: src/textileplatform/templates/group.html:53
+#: src/textileplatform/templates/user_private.html:148
 #: src/textileplatform/templates/user_public.html:89
 msgid "Other Patterns"
 msgstr ""
@@ -3607,7 +3680,7 @@ msgid "Please enter the result of the following calculation"
 msgstr ""
 
 #: src/textileplatform/templates/register.html:48
-#: src/textileplatform/templates/user_private.html:506
+#: src/textileplatform/templates/user_private.html:566
 msgid "Create"
 msgstr ""
 
@@ -3690,60 +3763,64 @@ msgstr ""
 msgid "Detail"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:92
+#: src/textileplatform/templates/user_private.html:95
 msgid "Add new pattern"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:93
+#: src/textileplatform/templates/user_private.html:96
 msgid "Upload pattern file"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:108
+#: src/textileplatform/templates/user_private.html:111
 msgid "Edit pattern"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:128
+#: src/textileplatform/templates/user_private.html:131
 msgid "Rename"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:130
+#: src/textileplatform/templates/user_private.html:133
 msgid "Share to groups"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:131
+#: src/textileplatform/templates/user_private.html:134
 msgid "Download"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:132
+#: src/textileplatform/templates/user_private.html:135
 msgid "Clone pattern"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:147
+#: src/textileplatform/templates/user_private.html:150
 msgid "No patterns in this group."
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:155
+#: src/textileplatform/templates/user_private.html:158
 msgid "Administration:"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:310
+#: src/textileplatform/templates/user_private.html:238
+msgid "Also in"
+msgstr ""
+
+#: src/textileplatform/templates/user_private.html:370
 msgid "Clone this pattern?"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:321
+#: src/textileplatform/templates/user_private.html:381
 #: src/textileplatform/templates/user_public.html:123
 msgid "Clone failed"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:379
+#: src/textileplatform/templates/user_private.html:439
 msgid "Rename failed"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:433
+#: src/textileplatform/templates/user_private.html:493
 msgid "Delete failed"
 msgstr ""
 
-#: src/textileplatform/templates/user_private.html:503
+#: src/textileplatform/templates/user_private.html:563
 msgid "Pattern name"
 msgstr ""
 

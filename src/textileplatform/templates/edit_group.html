@@ -14,11 +14,11 @@
         {% else %}
         <p class="group-description-text muted">{{ gettext('No description.') }}</p>
         {% endif %}
-        {% if is_owner and not is_personal %}
+        {% if is_owner and not is_primary %}
         <button type="button" class="btn small" id="edit-description-btn" aria-label="{{ gettext('Edit group') }}">{{ gettext('Edit') }}</button>
         {% endif %}
     </div>
-    {% if is_owner and not is_personal %}
+    {% if is_owner and not is_primary %}
     <form method="post" action="{{ url_for('update_group', group_name=group.name) }}"
           id="group-description-form" hidden>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -56,12 +56,18 @@
     </script>
     {% endif %}
 
+    {% if not is_personal %}
     <p>
         {{ gettext('Your role') }}:
         <span class="tag role">{{ gettext(role|capitalize) }}</span>
     </p>
+    {% else %}
+    <p>
+        <span class="tag">{{ gettext('Personal group') }}</span>
+    </p>
+    {% endif %}
 
-    {% if not is_personal %}
+    {% if not is_primary %}
     <p>
         {{ gettext('Visibility') }}:
         {% if group.public %}
@@ -92,9 +98,10 @@
     {% endif %}
 </div>
 
+{% if not is_personal %}
 <div class="card card-wide">
     <h2>{{ gettext('Members') }}</h2>
-    {% if is_owner and not is_personal %}
+    {% if is_owner and not is_primary %}
     <table>
         <thead>
             <tr>
@@ -216,7 +223,6 @@
     </ul>
     {% endif %}
 
-    {% if not is_personal %}
     <form method="post" action="{{ url_for('leave_group', group_name=group.name) }}"
           data-confirm="{{ gettext('Leave this group?') }}"
           style="margin-top:1rem;">
@@ -225,14 +231,14 @@
             <button type="submit" class="btn danger">{{ gettext('Leave group') }}</button>
         </div>
     </form>
-    {% endif %}
 </div>
+{% endif %}
 
-{% if not is_personal and group.public %}
+{% if not is_primary and group.public %}
 <div class="card card-wide">
     <h2>{{ gettext('Public link') }}</h2>
     <p class="muted">{{ gettext('Share this URL to let anyone view the public patterns assigned to this group.') }}</p>
-    {% set public_url = url_for('group', group_name=group.name, _external=True) %}
+    {% set public_url = group_url(group, _external=True) %}
     <div class="public-link-row" style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
         <a href="{{ public_url }}" id="group-public-url" class="public-link" style="word-break:break-all;">{{ public_url }}</a>
         <button type="button" class="btn small" id="group-public-url-copy"

@@ -7,16 +7,45 @@
 {% endblock %}
 
 {% block content %}
+{% set f = form or request.form %}
 <div class="card card-form">
     <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <fieldset class="field">
+            <legend>{{ gettext('Group Kind') }}</legend>
+            <label>
+                <input type="radio" name="kind" value="personal"
+                       {% if f.get('kind', 'personal') == 'personal' %}checked{% endif %}>
+                {{ gettext('Personal group') }}
+            </label>
+            <p class="muted" style="font-weight:normal; margin:0.25rem 0 0.75rem 1.75rem;">
+                {{ gettext('Just for organizing your own patterns. The name is private to your account — you can call it anything (e.g. “samples”, “gifts”). You can optionally make it publicly viewable as a read-only collection.') }}
+            </p>
+            <label>
+                <input type="radio" name="kind" value="shared"
+                       {% if f.get('kind') == 'shared' %}checked{% endif %}>
+                {{ gettext('Shared group') }}
+            </label>
+            <p class="muted" style="font-weight:normal; margin:0.25rem 0 0 1.75rem;">
+                {{ gettext('Collaborate with other users. The name appears in a public URL and must be globally unique.') }}
+            </p>
+        </fieldset>
+
         <div class="field">
             <label for="grp-name">{{ gettext('Group Name') }}</label>
-            <input type="text" id="grp-name" name="name" required aria-required="true" value="{{ request.form.get('name', '') }}"/>
+            <input type="text" id="grp-name" name="name" required aria-required="true" value="{{ f.get('name', '') }}"/>
         </div>
         <div class="field">
             <label for="grp-desc">{{ gettext('Group Description') }}</label>
-            <textarea id="grp-desc" name="description" rows="4" class="group-description-input">{{ request.form.get('description', '') }}</textarea>
+            <textarea id="grp-desc" name="description" rows="4" class="group-description-input">{{ f.get('description', '') }}</textarea>
+        </div>
+        <div class="field">
+            <label>
+                <input type="checkbox" name="public" value="1"
+                       {% if f.get('public') %}checked{% endif %}>
+                {{ gettext('Make this group publicly viewable') }}
+            </label>
         </div>
         <div class="actions left">
             <button type="submit" class="btn primary">{{ gettext('Save') }}</button>

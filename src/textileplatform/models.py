@@ -123,14 +123,23 @@ class Membership(db.Model):
 class Group(db.Model):
     __tablename__ = "txgroup"
 
+    # Personal groups (owner_id set) are scoped to one user; their
+    # `name` is unique only within that user's personal groups. Global
+    # groups (owner_id NULL) keep globally unique names. Both
+    # constraints are enforced by partial unique indexes created in
+    # migration e7f8a9b0c1d2.
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False, unique=True)
+    name = db.Column(db.String(50), nullable=False)
     label = db.Column(db.String(50), nullable=False)
     description = db.Column(db.Text, nullable=False)
     public = db.Column(db.Boolean, nullable=False, default=False)
+    owner_id = db.Column(
+        db.Integer, db.ForeignKey("txuser.id"), nullable=True,
+    )
     created = db.Column(db.DateTime(timezone=True))
     modified = db.Column(db.DateTime(timezone=True))
 
+    owner = db.relationship("User", foreign_keys=[owner_id])
     memberships = db.relationship("Membership", back_populates="group")
     assignments = db.relationship("Assignment", back_populates="group")
 
@@ -154,8 +163,16 @@ class Group(db.Model):
         )
 
     def is_personal(self):
-        return any(
-            m.user.name == self.name for m in self.memberships
+        return self.owner_id is not None
+
+    def is_global(self):
+        return self.owner_id is None
+
+    def is_primary_personal(self):
+        return (
+            self.owner_id is not None
+            and self.owner is not None
+            and self.name == self.owner.name
         )
 
     def is_assigned(self, pattern):

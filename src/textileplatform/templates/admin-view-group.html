@@ -18,7 +18,7 @@
             </tr>
             <tr><th>{{ gettext('Visibility') }}</th><td>{% if group.public %}{{ gettext('Public') }}{% else %}{{ gettext('Private') }}{% endif %}</td></tr>
             {% if group.public %}
-            {% set public_url = url_for('group', group_name=group.name, _external=True) %}
+            {% set public_url = group_url(group, _external=True) %}
             <tr><th>{{ gettext('Public URL') }}</th><td><a href="{{ public_url }}" style="word-break:break-all;">{{ public_url }}</a></td></tr>
             {% endif %}
             <tr><th>{{ gettext('Created') }}</th><td>{% if group.created %}{{ group.created.strftime('%Y-%m-%d %H:%M') }} UTC{% else %}&mdash;{% endif %}</td></tr>

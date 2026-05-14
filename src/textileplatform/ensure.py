@@ -47,10 +47,12 @@ def ensure_db_contents(app):
                 access_date=None,
             )
             db.session.add(examples)
+            db.session.flush()
             group = Group(
                 name=examples.name,
                 label=examples.label,
                 description="",
+                owner_id=examples.id,
                 created=now,
             )
             db.session.add(group)
@@ -80,10 +82,12 @@ def ensure_db_contents(app):
                 access_date=None,
             )
             db.session.add(beispiele)
+            db.session.flush()
             group = Group(
                 name=beispiele.name,
                 label=beispiele.label,
                 description="",
+                owner_id=beispiele.id,
                 created=now,
             )
             db.session.add(group)
@@ -98,14 +102,18 @@ def ensure_db_contents(app):
         for user in User.query.all():
             if user.name == SUPPORT_USERNAME:
                 continue
-            group = Group.query.filter(Group.name == user.name).one_or_none()
+            group = Group.query.filter(
+                Group.owner_id == user.id,
+                Group.name == user.name,
+            ).one_or_none()
             if not group:
-                # Create default group for user and assign all owned
-                # patterns to the group
+                # Create default personal group for user and assign all
+                # owned patterns to it.
                 group = Group(
                     name=user.name,
                     label=user.label,
                     description="",
+                    owner_id=user.id,
                     created=now,
                 )
                 db.session.add(group)

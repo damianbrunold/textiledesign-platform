@@ -24,7 +24,11 @@
             {% endif %}
             <label for="grp-{{membership.group.id}}">
                 {{ membership.group.label }}
+                {% if membership.group.is_personal() %}
+                <span class="tag role">{{ gettext('Personal') }}</span>
+                {% else %}
                 <span class="tag role">{{ gettext(membership.role|capitalize) }}</span>
+                {% endif %}
             </label>
         </div>
         {% endif %}

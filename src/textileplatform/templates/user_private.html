@@ -12,7 +12,7 @@
          data-group-name="{{ gr.name }}"
          data-can-write="{{ '1' if gr.can_write else '0' }}"
          data-is-personal="{{ '1' if gr.is_personal else '0' }}">
-        {{ gr.label }}{% if not gr.is_personal %}<span class="role-tag">({{ gettext(gr.role|capitalize) }})</span>{% endif %}
+        {{ gr.label }}{% if not gr.is_personal %}<span class="role-tag">({{ gettext(gr.role|capitalize) }})</span>{% endif %}{% if gr.is_public %} <span class="role-tag" title="{{ gettext('Public') }}">🌐</span>{% endif %}
     </div>
     {% endfor %}
 </div>
@@ -65,6 +65,9 @@
     <span class="toolbar-spacer"></span>
     <span class="button"><a href="{{ url_for('edit_groups') }}">{{ gettext('Groups') }}</a></span>
 </div>
+
+<div id="cross-group-hint" class="muted" hidden
+     style="margin:0.25rem 0 0.5rem; font-weight:normal;"></div>
 
 <div id="groups-content">
 {% for gr in groups %}
@@ -231,6 +234,9 @@
     }
 
     // ---- Filter ----------------------------------------------------
+    const crossGroupHint = document.getElementById('cross-group-hint');
+    const ALSO_IN_LABEL = "{{ gettext('Also in') }}";
+
     function applyFilter() {
         const q = filterInput.value.trim().toLowerCase();
         const terms = q ? q.split(/\s+/) : [];
@@ -248,10 +254,64 @@
             const hasActions = sec.querySelector('.section-action');
             sec.style.display = (visible || hasActions) ? '' : 'none';
         });
+        updateCrossGroupHint(terms);
+    }
+
+    function updateCrossGroupHint(terms) {
+        if (!crossGroupHint) return;
+        if (!terms || !terms.length) {
+            crossGroupHint.hidden = true;
+            crossGroupHint.replaceChildren();
+            return;
+        }
+        const active = groupsEl.dataset.activeGroup;
+        const counts = [];
+        groupsContent.querySelectorAll('.group-content').forEach(gc => {
+            const name = gc.dataset.groupName;
+            if (name === active) return;
+            let n = 0;
+            gc.querySelectorAll('.pattern-row').forEach(r => {
+                const text = r.dataset.search || '';
+                if (terms.every(t => text.indexOf(t) !== -1)) n++;
+            });
+            if (n > 0) {
+                const tab = groupsEl.querySelector(
+                    '.group-tab[data-group-name="' + CSS.escape(name) + '"]');
+                const label = tab ? tab.textContent.trim() : name;
+                counts.push({ name, label, n });
+            }
+        });
+        if (!counts.length) {
+            crossGroupHint.hidden = true;
+            crossGroupHint.replaceChildren();
+            return;
+        }
+        counts.sort((a, b) => a.label.localeCompare(b.label));
+        crossGroupHint.replaceChildren();
+        crossGroupHint.append(ALSO_IN_LABEL + ': ');
+        counts.forEach((c, i) => {
+            if (i > 0) crossGroupHint.append(', ');
+            const a = document.createElement('a');
+            a.href = '#';
+            a.dataset.jumpGroup = c.name;
+            a.textContent = c.label + ' (' + c.n + ')';
+            crossGroupHint.append(a);
+        });
+        crossGroupHint.hidden = false;
+    }
+
+    if (crossGroupHint) {
+        crossGroupHint.addEventListener('click', e => {
+            const a = e.target.closest('a[data-jump-group]');
+            if (!a) return;
+            e.preventDefault();
+            switchGroup(a.dataset.jumpGroup);
+        });
     }
 
     // ---- Group switcher --------------------------------------------
     function switchGroup(name) {
+        groupsEl.dataset.activeGroup = name;
         let activeTab = null;
         groupsEl.querySelectorAll('.group-tab').forEach(t => {
             const on = t.dataset.groupName === name;
