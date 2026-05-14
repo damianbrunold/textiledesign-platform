@@ -8,14 +8,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-05-14 09:18+0200\n"
+"POT-Creation-Date: 2026-05-14 09:36+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.17.0\n"
+"Generated-By: Babel 2.18.0\n"
 
 #: src/textileplatform/beadexport.py:593 src/textileplatform/beadexport.py:608
 #: src/textileplatform/templates/edit_jbead_pattern.html:131
@@ -3725,14 +3725,14 @@ msgstr ""
 #: src/textileplatform/templates/user_private.html:52
 #: src/textileplatform/templates/user_public.html:18
 #: src/textileplatform/templates/user_public.html:24
-msgid "Name ↑"
+msgid "Name A–Z ▲"
 msgstr ""
 
 #: src/textileplatform/templates/user_private.html:47
 #: src/textileplatform/templates/user_private.html:53
 #: src/textileplatform/templates/user_public.html:19
 #: src/textileplatform/templates/user_public.html:25
-msgid "Name ↓"
+msgid "Name Z–A ▼"
 msgstr ""
 
 #: src/textileplatform/templates/user_private.html:48

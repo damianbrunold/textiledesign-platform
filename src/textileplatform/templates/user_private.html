@@ -43,14 +43,14 @@
 <div id="profile-toolbar">
     <input type="text" id="filter-input" placeholder="{{ gettext('Filter…') }}">
     <div class="sort-modes" id="sort-modes" role="group" aria-label="{{ gettext('Sort by') }}">
-        <button type="button" data-sort="name-asc" class="active" aria-pressed="true">{{ gettext('Name ↑') }}</button>
-        <button type="button" data-sort="name-desc" aria-pressed="false">{{ gettext('Name ↓') }}</button>
+        <button type="button" data-sort="name-asc" class="active" aria-pressed="true">{{ gettext('Name A–Z ▲') }}</button>
+        <button type="button" data-sort="name-desc" aria-pressed="false">{{ gettext('Name Z–A ▼') }}</button>
         <button type="button" data-sort="modified-desc" aria-pressed="false">{{ gettext('Newest') }}</button>
         <button type="button" data-sort="modified-asc" aria-pressed="false">{{ gettext('Oldest') }}</button>
     </div>
     <select class="sort-select toolbar-select" id="sort-select" aria-label="{{ gettext('Sort by') }}">
-        <option value="name-asc">{{ gettext('Name ↑') }}</option>
-        <option value="name-desc">{{ gettext('Name ↓') }}</option>
+        <option value="name-asc">{{ gettext('Name A–Z ▲') }}</option>
+        <option value="name-desc">{{ gettext('Name Z–A ▼') }}</option>
         <option value="modified-desc">{{ gettext('Newest') }}</option>
         <option value="modified-asc">{{ gettext('Oldest') }}</option>
     </select>
