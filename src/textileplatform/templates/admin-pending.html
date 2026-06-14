@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ gettext('Pending Verifications') }} &mdash; {{ gettext('Textile Platform') }}{% endblock %}
+
+{% block header %}
+<h1>{{ gettext('Pending Verifications') }}</h1>
+{% endblock %}
+
+{% block content %}
+{% if users %}
+<div class="users-toolbar">
+    <input id="user-filter" type="search" placeholder="{{ gettext('Filter by name or label…') }}" autocomplete="off">
+    <span class="count" id="user-count">{{ users|length }} {{ gettext('accounts') }}</span>
+</div>
+
+<div class="user-grid" id="user-grid">
+    {% for user in users %}
+    <div class="user-card"
+         data-name="{{ user.name|lower }}"
+         data-label="{{ user.label|lower }}"
+         data-email="{{ user.email|lower }}">
+        <div class="head">
+            <span class="name">{{ user.name }}</span>
+            <span class="label">{{ user.label }}</span>
+            <span class="badge">{{ gettext('Not verified') }}</span>
+        </div>
+        <div class="meta">
+            <span><strong>{{ gettext('E-Mail') }}:</strong> {{ user.email }}</span>
+            <span title="{{ gettext('Registered (UTC)') }}"><strong>{{ gettext('Registered') }}:</strong> {% if user.create_date %}{{ user.create_date.strftime('%Y-%m-%d %H:%M') }}{% else %}&mdash;{% endif %}</span>
+        </div>
+        <div class="actions">
+            <form method="post" action="{{ url_for('admin_resend_verification', user_name=user.name) }}" style="display:inline; margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn small">{{ gettext('Resend verification') }}</button>
+            </form>
+            <form method="post" action="{{ url_for('admin_delete_pending_user', user_name=user.name) }}" style="display:inline; margin:0;"
+                  data-confirm="{{ gettext('Delete this non-verified account? This cannot be undone.') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn small danger">{{ gettext('Delete') }}</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script nonce="{{ csp_nonce }}">
+(function () {
+    const grid = document.getElementById('user-grid');
+    const filter = document.getElementById('user-filter');
+    const count = document.getElementById('user-count');
+    const cards = Array.from(grid.querySelectorAll('.user-card'));
+    const totalLabel = count.textContent.replace(/^\d+\s*/, '');
+
+    function applyFilter() {
+        const q = filter.value.trim().toLowerCase();
+        let visible = 0;
+        for (const c of cards) {
+            const match = !q
+                || c.dataset.name.includes(q)
+                || c.dataset.label.includes(q)
+                || c.dataset.email.includes(q);
+            c.style.display = match ? '' : 'none';
+            if (match) visible++;
+        }
+        count.textContent = visible + ' ' + totalLabel;
+    }
+
+    filter.addEventListener('input', applyFilter);
+})();
+</script>
+{% else %}
+<div class="card card-wide">
+<p class="muted">{{ gettext('No accounts awaiting verification.') }}</p>
+</div>
+{% endif %}
+{% endblock %}

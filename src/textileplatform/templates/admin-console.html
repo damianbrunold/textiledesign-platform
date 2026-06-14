@@ -11,6 +11,7 @@
   <h2>{{ gettext('Administration') }}</h2>
   <div class="btn-row">
     <a class="btn" href="{{ url_for('users') }}">{{ gettext('Users') }}</a>
+    <a class="btn" href="{{ url_for('pending_users') }}">{{ gettext('Pending Verifications') }}</a>
     <a class="btn" href="{{ url_for('groups') }}">{{ gettext('Groups') }}</a>
     <a class="btn" href="{{ url_for('patterns') }}">{{ gettext('All Patterns') }}</a>
     <a class="btn" href="{{ url_for('messages_inbox') }}">{{ gettext('Messages') }}</a>

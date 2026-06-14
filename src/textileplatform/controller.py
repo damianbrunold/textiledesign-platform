@@ -2901,6 +2901,83 @@ def admin_set_user_name(user_name):
     return redirect(url_for("edit_user", user_name=target.name))
 
 
+@app.route("/admin/pending")
+@login_required
+@support_required
+def pending_users():
+    try:
+        pending = (
+            User.query
+            .filter(User.name != SUPPORT_USERNAME)
+            .filter(
+                (User.verified.is_(False)) | (User.verified.is_(None))
+            )
+            .order_by(User.create_date.desc().nullslast())
+            .all()
+        )
+        return render_template(
+            "admin-pending.html", users=pending,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("failed to get pending users")
+        abort(500, description="Failed to get pending users")
+
+
+@app.route(
+    "/admin/pending/<string:user_name>/delete", methods=("POST",)
+)
+@login_required
+@support_required
+def admin_delete_pending_user(user_name):
+    target = User.query.filter(User.name == user_name).first()
+    if not target:
+        abort(404, description=f"User {user_name} not found")
+    if target.name == SUPPORT_USERNAME or target.verified:
+        flash(gettext("Only non-verified accounts can be deleted here."))
+        return redirect(url_for("pending_users"))
+    target_label = target.label
+    try:
+        _delete_user_data(target)
+        db.session.commit()
+    except Exception:
+        logging.exception("admin pending-user deletion failed")
+        db.session.rollback()
+        flash(gettext("Could not delete the account."))
+        return redirect(url_for("pending_users"))
+    flash(gettext('Account "%(label)s" deleted.', label=target_label))
+    return redirect(url_for("pending_users"))
+
+
+@app.route(
+    "/admin/pending/<string:user_name>/resend", methods=("POST",)
+)
+@login_required
+@support_required
+def admin_resend_verification(user_name):
+    target = User.query.filter(User.name == user_name).first()
+    if not target:
+        abort(404, description=f"User {user_name} not found")
+    if target.name == SUPPORT_USERNAME or target.verified:
+        flash(gettext("This account is already verified."))
+        return redirect(url_for("pending_users"))
+    try:
+        if not target.verification_code:
+            target.verification_code = secrets.token_urlsafe(30)
+            db.session.commit()
+        send_verification_mail(target)
+    except Exception:
+        logging.exception("failed to resend verification mail")
+        db.session.rollback()
+        flash(gettext("Could not send the verification e-mail."))
+        return redirect(url_for("pending_users"))
+    flash(gettext(
+        'Verification e-mail sent to %(email)s.', email=target.email,
+    ))
+    return redirect(url_for("pending_users"))
+
+
 @app.route("/admin/system")
 @login_required
 @support_required
