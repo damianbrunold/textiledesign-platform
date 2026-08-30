@@ -465,11 +465,17 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
     weft_colors = data.get("colors_weft") or [0]
 
     def _warp_col(i_abs):
-        idx = warp_colors[min(i_abs, len(warp_colors) - 1)] if warp_colors else 0
+        idx = (
+            warp_colors[min(i_abs, len(warp_colors) - 1)]
+            if warp_colors else 0
+        )
         return _palette_color(data, idx)
 
     def _weft_col(j_abs):
-        idx = weft_colors[min(j_abs, len(weft_colors) - 1)] if weft_colors else 0
+        idx = (
+            weft_colors[min(j_abs, len(weft_colors) - 1)]
+            if weft_colors else 0
+        )
         return _palette_color(data, idx)
 
     def _warp_x(i):
@@ -510,7 +516,10 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
                 if s_rel < 1 or s_rel > shafts:
                     continue
                 x = _warp_x(i)
-                y = y0 + (s_rel - 1) * gh if ttb else y0 + (shafts - s_rel) * gh
+                y = (
+                    y0 + (s_rel - 1) * gh if ttb
+                    else y0 + (shafts - s_rel) * gh
+                )
                 _paint_cell(t, ez_darst, x, y, gw, gh, BLACK)
         t.stroke_rect(x0, y0, dx * gw, shafts * gh, BLACK)
 
@@ -716,22 +725,31 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
                                         gw - 2 * bx, gh - 2 * by, red)
             # Vertical boundary lines in einzug strip (only when shown).
             if b.show_einzug:
-                ez_x_left  = (ka - layout.kette_a) * gw if not rtl \
+                ez_x_left = (ka - layout.kette_a) * gw if not rtl \
                     else (dx - (ka - layout.kette_a)) * gw
                 ez_x_right = (kb + 1 - layout.kette_a) * gw if not rtl \
                     else (dx - (kb + 1 - layout.kette_a)) * gw
-                ez_top    = einzug_y0
+                ez_top = einzug_y0
                 ez_bottom = einzug_y0 + shafts * gh
-                t.line(ez_x_left,  ez_top, ez_x_left,  ez_bottom, red, width=2)
+                t.line(ez_x_left, ez_top, ez_x_left, ez_bottom, red, width=2)
                 t.line(ez_x_right, ez_top, ez_x_right, ez_bottom, red, width=2)
             # Horizontal boundary lines in trittfolge strip (only when shown).
             if b.show_side:
-                tf_x_left  = b.side_x
+                tf_x_left = b.side_x
                 tf_x_right = b.side_x + treadles * gw
-                tf_y_top    = gewebe_y0 + (dy - (sb + 1 - layout.schuesse_a)) * gh
-                tf_y_bottom = gewebe_y0 + (dy - (sa - layout.schuesse_a)) * gh
-                t.line(tf_x_left,  tf_y_top,    tf_x_right, tf_y_top,    red, width=2)
-                t.line(tf_x_left,  tf_y_bottom, tf_x_right, tf_y_bottom, red, width=2)
+                tf_y_top = (
+                    gewebe_y0 + (dy - (sb + 1 - layout.schuesse_a)) * gh
+                )
+                tf_y_bottom = (
+                    gewebe_y0 + (dy - (sa - layout.schuesse_a)) * gh
+                )
+                t.line(
+                    tf_x_left, tf_y_top, tf_x_right, tf_y_top, red, width=2
+                )
+                t.line(
+                    tf_x_left, tf_y_bottom, tf_x_right, tf_y_bottom, red,
+                    width=2
+                )
             # Re-stroke the gewebe outline so the red overlay doesn't
             # leave a gap where it covered the existing border.
             t.stroke_rect(x0, y0, dx * gw, dy * gh, BLACK)
@@ -844,15 +862,27 @@ def print_pdf(data, title=None,
     # on the layout. Convert from 1-based inclusive UI values to the
     # 0-based half-open view the painter uses.
     if warp_from is not None or warp_to is not None:
-        a = layout.kette_a if warp_from is None else max(0, int(warp_from) - 1)
-        b = (layout.kette_a + layout.dx - 1) if warp_to is None else max(0, int(warp_to) - 1)
+        a = (
+            layout.kette_a if warp_from is None
+            else max(0, int(warp_from) - 1)
+        )
+        b = (
+            (layout.kette_a + layout.dx - 1) if warp_to is None
+            else max(0, int(warp_to) - 1)
+        )
         if b < a:
             a, b = b, a
         layout.kette_a = a
         layout.dx = b - a + 1
     if weft_from is not None or weft_to is not None:
-        a = layout.schuesse_a if weft_from is None else max(0, int(weft_from) - 1)
-        b = (layout.schuesse_a + layout.dy - 1) if weft_to is None else max(0, int(weft_to) - 1)
+        a = (
+            layout.schuesse_a if weft_from is None
+            else max(0, int(weft_from) - 1)
+        )
+        b = (
+            (layout.schuesse_a + layout.dy - 1) if weft_to is None
+            else max(0, int(weft_to) - 1)
+        )
         if b < a:
             a, b = b, a
         layout.schuesse_a = a
@@ -866,8 +896,14 @@ def print_pdf(data, title=None,
             layout.shafts_a = 0
             layout.shafts = 0
         else:
-            a = layout.shafts_a if harness_from is None else max(0, int(harness_from) - 1)
-            b = (layout.shafts_a + layout.shafts - 1) if harness_to is None else max(0, int(harness_to) - 1)
+            a = (
+                layout.shafts_a if harness_from is None
+                else max(0, int(harness_from) - 1)
+            )
+            b = (
+                (layout.shafts_a + layout.shafts - 1) if harness_to is None
+                else max(0, int(harness_to) - 1)
+            )
             if b < a:
                 a, b = b, a
             layout.shafts_a = a
@@ -877,8 +913,15 @@ def print_pdf(data, title=None,
             layout.treadles_a = 0
             layout.treadles = 0
         else:
-            a = layout.treadles_a if treadle_from is None else max(0, int(treadle_from) - 1)
-            b = (layout.treadles_a + layout.treadles - 1) if treadle_to is None else max(0, int(treadle_to) - 1)
+            a = (
+                layout.treadles_a if treadle_from is None
+                else max(0, int(treadle_from) - 1)
+            )
+            b = (
+                (layout.treadles_a + layout.treadles - 1)
+                if treadle_to is None
+                else max(0, int(treadle_to) - 1)
+            )
             if b < a:
                 a, b = b, a
             layout.treadles_a = a
@@ -897,7 +940,7 @@ def print_pdf(data, title=None,
     # gw vs. gh).
     base = max(1, min(layout.gw, layout.gh))
     pt_per_logical = (cell_mm / base) * mm
-    total_pt_w = layout.width  * pt_per_logical
+    total_pt_w = layout.width * pt_per_logical
     total_pt_h = layout.height * pt_per_logical
 
     # Number of pages along each axis. Always at least 1.
@@ -939,7 +982,9 @@ def print_pdf(data, title=None,
                 c.drawString(margin, page_h - margin / 2, header)
             if total_pages > 1:
                 page_str = f"{page_idx} / {total_pages}"
-                c.drawRightString(page_w - margin, page_h - margin / 2, page_str)
+                c.drawRightString(
+                    page_w - margin, page_h - margin / 2, page_str
+                )
             if footer:
                 c.drawString(margin, margin / 2, footer)
             p = c.beginPath()

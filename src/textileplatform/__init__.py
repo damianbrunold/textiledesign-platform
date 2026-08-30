@@ -161,7 +161,7 @@ def clean_up_non_verified_users():
             if user.mypatterns:
                 continue
             # only clean up 24 hours after account creation
-            if user.verify_date: 
+            if user.verify_date:
                 now = datetime.datetime.now(datetime.timezone.utc)
                 delta = now - user.verify_date
                 if delta.days < 1:
@@ -216,9 +216,9 @@ def delete_user_pattern(user_name, pattern_name):
             return
         pattern = (
             Pattern.query
-                .filter(Pattern.name == pattern_name)
-                .filter(Pattern.owner_id == user.id)
-                .first()
+            .filter(Pattern.name == pattern_name)
+            .filter(Pattern.owner_id == user.id)
+            .first()
         )
         if not pattern:
             print("pattern not found")

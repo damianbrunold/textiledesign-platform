@@ -476,8 +476,8 @@ class BeadListPart(PartPrinter):
     text always fits."""
 
     PILL_H = _FONT_SIZE + 8
-    GAP_V  = 3
-    GAP_H  = 4
+    GAP_V = 3
+    GAP_H = 4
     # "Start here" arrow drawn to the left of the first column. Mirrors
     # the on-screen ViewBeadList arrow (jbead.js:467-474).
     ARROW_W = 12.0
@@ -564,7 +564,7 @@ class BeadListPart(PartPrinter):
 # coarse pt-per-char estimate based on Helvetica/DejaVu averages
 # (≈ 0.55 × font-size for digits/lowercase). This is the same trick
 # the desktop uses indirectly via its FontMetrics estimator.
-_CHAR_W_BODY  = _FONT_SIZE * 0.65
+_CHAR_W_BODY = _FONT_SIZE * 0.65
 _CHAR_W_TITLE = _TITLE_FONT_SIZE * 0.7
 
 
@@ -977,7 +977,9 @@ def _export_raster(data, fmt, jpeg_quality=92):
     # we shift them by (margin, margin) to keep a printable border.
     # PILTarget has no transform stack; emulate by passing offset
     # placements.
-    offset_placements = [(p, ci, x + margin, w) for (p, ci, x, w) in placements]
+    offset_placements = [
+        (p, ci, x + margin, w) for (p, ci, x, w) in placements
+    ]
     _render_strip_at(target, m, view, paint_h, offset_placements, margin)
     buf = io.BytesIO()
     save_kwargs = {}
@@ -1006,6 +1008,8 @@ def export_svg(data) -> bytes:
     view = data.get("view") or {}
     img_w, img_h, margin, paint_h, placements = _export_image_size(view, m)
     target = SVGTarget(max(64, img_w), max(64, img_h))
-    offset_placements = [(p, ci, x + margin, w) for (p, ci, x, w) in placements]
+    offset_placements = [
+        (p, ci, x + margin, w) for (p, ci, x, w) in placements
+    ]
     _render_strip_at(target, m, view, paint_h, offset_placements, margin)
     return svg_document(target)

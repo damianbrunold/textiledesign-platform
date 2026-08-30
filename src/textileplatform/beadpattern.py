@@ -77,7 +77,7 @@ def _parse_jbb_into_struct(data):
             current = child
         elif line.endswith(")))"):
             key, value = _parse_key_value(line[1:-3])
-            if type(current) == list:
+            if isinstance(current, list):
                 current.append(value)
             else:
                 current[key] = value
@@ -85,14 +85,14 @@ def _parse_jbb_into_struct(data):
             break
         elif line.endswith("))"):
             key, value = _parse_key_value(line[1:-2])
-            if type(current) == list:
+            if isinstance(current, list):
                 current.append(value)
             else:
                 current[key] = value
             current = stack.pop()
         else:
             key, value = _parse_key_value(line[1:-1])
-            if type(current) == list:
+            if isinstance(current, list):
                 current.append(value)
             else:
                 current[key] = value

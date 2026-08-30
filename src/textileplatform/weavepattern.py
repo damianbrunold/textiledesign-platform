@@ -385,7 +385,9 @@ def _apply_platform_to_raw(raw, pattern):
     pal['data2'] = _enhex_colors(palette)
 
     # ----- data.blockmuster / bereichmuster -------------------------------
-    blockmuster = pattern.get('data_blockmuster') or [[0] * 144 for _ in range(10)]
+    blockmuster = (
+        pattern.get('data_blockmuster') or [[0] * 144 for _ in range(10)]
+    )
     bm = data_section.setdefault('blockmuster', {})
     for k in range(10):
         slot = blockmuster[k] if k < len(blockmuster) else [0] * 144
@@ -393,7 +395,9 @@ def _apply_platform_to_raw(raw, pattern):
     bm.setdefault('einzugz', '0')
     bm.setdefault('trittfolgez', '0')
 
-    bereichmuster = pattern.get('data_bereichmuster') or [[0] * 144 for _ in range(10)]
+    bereichmuster = (
+        pattern.get('data_bereichmuster') or [[0] * 144 for _ in range(10)]
+    )
     bem = data_section.setdefault('bereichmuster', {})
     for k in range(10):
         slot = bereichmuster[k] if k < len(bereichmuster) else [0] * 144

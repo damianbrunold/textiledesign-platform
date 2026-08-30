@@ -41,6 +41,7 @@ from textileplatform import export as exporter
 from textileplatform import beadexport as bead_exporter
 
 from importlib.metadata import version
+import base64
 import datetime
 import io
 import json
@@ -385,10 +386,15 @@ def login_required(view):
     def wrapped_view(**kwargs):
         if g.user is None:
             if _is_api_request():
-                return jsonify({"status": "NOK", "message": "Not authenticated"}), 401
+                return jsonify(
+                    {"status": "NOK", "message": "Not authenticated"}
+                ), 401
             nxt = None
             if request.method == "GET":
-                path = request.full_path if request.query_string else request.path
+                path = (
+                    request.full_path if request.query_string
+                    else request.path
+                )
                 nxt = _safe_next_url(path)
             if nxt:
                 return redirect(url_for("login", next=nxt))
@@ -857,6 +863,7 @@ def user(user_name):
                 "can_write": can_write,
             })
             patterns_by_group[m.group.name] = patterns
+
         # Order: primary personal first, then other personal groups
         # (alphabetical), then shared groups (alphabetical).
         def _group_sort_key(gr):
@@ -1041,7 +1048,6 @@ def status():
 
 @app.route("/<string:user_name>/<string:pattern_name>/download")
 def download_pattern(user_name, pattern_name):
-    origin = request.args.get("origin", "")
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
         return redirect(url_for("index"))
@@ -1189,7 +1195,9 @@ def export_pattern(user_name, pattern_name, fmt):
     try:
         body = render(pattern_data, **kwargs)
     except Exception as e:  # pragma: no cover — surface as 500
-        logging.exception("Export %s for %s/%s failed", fmt, user_name, pattern_name)
+        logging.exception(
+            "Export %s for %s/%s failed", fmt, user_name, pattern_name
+        )
         return f"Export failed: {e}", 500
     return send_file(
         io.BytesIO(body),
@@ -1240,24 +1248,24 @@ def print_pattern(user_name, pattern_name):
             if not isinstance(pattern_data, dict):
                 return "Missing 'contents' object in body", 400
         warp_from = payload.get("warp_from")
-        warp_to   = payload.get("warp_to")
+        warp_to = payload.get("warp_to")
         weft_from = payload.get("weft_from")
-        weft_to   = payload.get("weft_to")
+        weft_to = payload.get("weft_to")
         harness_from = payload.get("harness_from")
-        harness_to   = payload.get("harness_to")
+        harness_to = payload.get("harness_to")
         treadle_from = payload.get("treadle_from")
-        treadle_to   = payload.get("treadle_to")
+        treadle_to = payload.get("treadle_to")
         full_pattern = payload.get("full_pattern", True)
     else:
         pattern_data = json.loads(pattern.contents)
         warp_from = request.args.get("warp_from", type=int)
-        warp_to   = request.args.get("warp_to",   type=int)
+        warp_to = request.args.get("warp_to", type=int)
         weft_from = request.args.get("weft_from", type=int)
-        weft_to   = request.args.get("weft_to",   type=int)
+        weft_to = request.args.get("weft_to", type=int)
         harness_from = request.args.get("harness_from", type=int)
-        harness_to   = request.args.get("harness_to",   type=int)
+        harness_to = request.args.get("harness_to", type=int)
         treadle_from = request.args.get("treadle_from", type=int)
-        treadle_to   = request.args.get("treadle_to",   type=int)
+        treadle_to = request.args.get("treadle_to", type=int)
         full_pattern = request.args.get("full_pattern", "1") != "0"
 
     try:
@@ -1293,7 +1301,6 @@ def print_pattern(user_name, pattern_name):
 
 @app.route("/<string:user_name>/<string:pattern_name>/source")
 def source_pattern(user_name, pattern_name):
-    origin = request.args.get("origin", "")
     user = User.query.filter(User.name == user_name.lower()).first()
     if not user:
         return redirect(url_for("index"))
@@ -1844,11 +1851,11 @@ def create_pattern():
             dbw_prefs.get("direction_toptobottom", False))
         pattern["direction_entering_at_bottom"] = bool(
             dbw_prefs.get("entering_at_bottom", False))
-        pattern["entering_style"]  = dbw_prefs.get("entering_style",  "vdash")
+        pattern["entering_style"] = dbw_prefs.get("entering_style", "vdash")
         pattern["treadling_style"] = dbw_prefs.get("treadling_style", "dot")
-        pattern["tieup_style"]     = dbw_prefs.get("tieup_style",     "cross")
-        pattern["pegplan_style"]   = dbw_prefs.get("pegplan_style",   "filled")
-        pattern["sinking_shed"]    = bool(dbw_prefs.get("sinking_shed", False))
+        pattern["tieup_style"] = dbw_prefs.get("tieup_style", "cross")
+        pattern["pegplan_style"] = dbw_prefs.get("pegplan_style", "filled")
+        pattern["sinking_shed"] = bool(dbw_prefs.get("sinking_shed", False))
         pattern["single_treadling"] = bool(
             dbw_prefs.get("single_treadling", True))
 
@@ -1938,12 +1945,12 @@ def create_pattern():
             return bool(v) if v is not None else default
 
         view = dict()
-        view["draft-visible"]      = _pref_bool("draft-visible", True)
-        view["corrected-visible"]  = _pref_bool("corrected-visible", True)
+        view["draft-visible"] = _pref_bool("draft-visible", True)
+        view["corrected-visible"] = _pref_bool("corrected-visible", True)
         view["simulation-visible"] = _pref_bool("simulation-visible", True)
-        view["report-visible"]     = _pref_bool("report-visible", True)
-        view["draw-colors"]        = _pref_bool("draw-colors", True)
-        view["draw-symbols"]       = _pref_bool("draw-symbols", False)
+        view["report-visible"] = _pref_bool("report-visible", True)
+        view["draw-colors"] = _pref_bool("draw-colors", True)
+        view["draw-symbols"] = _pref_bool("draw-symbols", False)
         # Zoom is the cell size in pixels — must be in [4, 48] or
         # the editor falls back to its default. 12 matches the
         # editor's ViewSettings() default (dx=12).
@@ -2038,7 +2045,9 @@ def delete(pattern_name):
     return render_template("delete_pattern.html", pattern=pattern)
 
 
-@app.route("/patterns/assignments/<string:pattern_name>", methods=("GET", "POST"))
+@app.route(
+    "/patterns/assignments/<string:pattern_name>", methods=("GET", "POST")
+)
 @login_required
 def assignments(pattern_name):
     pattern = (
@@ -2144,7 +2153,10 @@ def edit_group(group_name):
         user=g.user,
         group=group,
         role=role,
-        is_owner=(role == "owner") or (is_personal and group.owner_id == g.user.id),
+        is_owner=(
+            (role == "owner")
+            or (is_personal and group.owner_id == g.user.id)
+        ),
         is_personal=is_personal,
         is_primary=is_primary,
     )
@@ -3087,7 +3099,9 @@ def investigate_pattern(owner_name, pattern_name):
     if not src:
         abort(404, description="Pattern not found")
     support_user = g.user
-    suffix = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
+    suffix = datetime.datetime.now(
+        datetime.timezone.utc
+    ).strftime("%Y%m%d%H%M%S")
     base_label = f"{src.label} [{owner.label}]"
     label = f"{base_label} {suffix}"
     name = from_label(label)
@@ -3400,7 +3414,9 @@ def login():
             user.access_date = now
             db.session.commit()
 
-            nxt = _safe_next_url(request.form.get("next") or request.args.get("next"))
+            nxt = _safe_next_url(
+                request.form.get("next") or request.args.get("next")
+            )
             if nxt:
                 return redirect(nxt)
             return redirect(url_for("user", user_name=user.name))
@@ -3635,7 +3651,10 @@ def update_pattern(user_name, pattern_name):
         if not pattern:
             return respond("NOK", "Pattern not found", 404)
         superuser = g.user and g.user.name == SUPPORT_USERNAME
-        if not superuser and not pattern.public and (not g.user or user.name != g.user.name):
+        if (
+            not superuser and not pattern.public
+            and (not g.user or user.name != g.user.name)
+        ):
             return respond("NOK", "Invalid user", 403)
         data = request.get_json()
         action = data["action"]
@@ -3745,8 +3764,6 @@ def update_pattern(user_name, pattern_name):
 
 # --- Thumbnails ------------------------------------------------------------
 
-import base64 as _base64
-
 
 def _decode_data_url_png(value):
     """Accept a 'data:image/png;base64,...' string and return raw bytes,
@@ -3758,7 +3775,7 @@ def _decode_data_url_png(value):
     if not value.startswith(prefix):
         return None
     try:
-        return _base64.b64decode(value[len(prefix):], validate=True)
+        return base64.b64decode(value[len(prefix):], validate=True)
     except Exception:
         return None
 

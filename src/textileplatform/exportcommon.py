@@ -18,16 +18,16 @@ GRID_LINE = (105, 105, 105)
 # Symbol "darstellung" names used by `_paint_cell`. Kept as bare string
 # constants so JSON pattern data flows through unchanged.
 DARST_FILLED = "filled"
-DARST_DOT    = "dot"
-DARST_CROSS  = "cross"
+DARST_DOT = "dot"
+DARST_CROSS = "cross"
 DARST_CIRCLE = "circle"
 DARST_RISING = "rising"
 DARST_FALLING = "falling"
-DARST_VDASH  = "vdash"
-DARST_DASH   = "dash"
-DARST_HDASH  = "hdash"
-DARST_PLUS   = "plus"
-DARST_SMALLCROSS  = "smallcross"
+DARST_VDASH = "vdash"
+DARST_DASH = "dash"
+DARST_HDASH = "hdash"
+DARST_PLUS = "plus"
+DARST_SMALLCROSS = "smallcross"
 DARST_SMALLCIRCLE = "smallcircle"
 DARST_NUMBER = "number"
 
@@ -225,7 +225,8 @@ class SVGTarget(DrawTarget):
     def stroke_rect(self, x, y, w, h, color, width=1):
         self.parts.append(
             f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
-            f'fill="none" stroke="{self._color(color)}" stroke-width="{width}"/>'
+            f'fill="none" stroke="{self._color(color)}" '
+            f'stroke-width="{width}"/>'
         )
 
     def line(self, x1, y1, x2, y2, color, width=1):
@@ -243,21 +244,24 @@ class SVGTarget(DrawTarget):
     def ellipse_outlined(self, cx, cy, rx, ry, color, width=1):
         self.parts.append(
             f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" '
-            f'fill="none" stroke="{self._color(color)}" stroke-width="{width}"/>'
+            f'fill="none" stroke="{self._color(color)}" '
+            f'stroke-width="{width}"/>'
         )
 
     def text_centered(self, x, y, w, h, text, color):
         self.parts.append(
             f'<text x="{x + w // 2}" y="{y + h - 2}" '
             f'text-anchor="middle" font-family="sans-serif" '
-            f'font-size="{max(6, h - 4)}" fill="{self._color(color)}">{text}</text>'
+            f'font-size="{max(6, h - 4)}" '
+            f'fill="{self._color(color)}">{text}</text>'
         )
 
     def text_left(self, x, y, h, text, color):
         self.parts.append(
             f'<text x="{x}" y="{y + h - 2}" '
             f'text-anchor="start" font-family="sans-serif" '
-            f'font-size="{max(6, h - 4)}" fill="{self._color(color)}">{text}</text>'
+            f'font-size="{max(6, h - 4)}" '
+            f'fill="{self._color(color)}">{text}</text>'
         )
 
 
