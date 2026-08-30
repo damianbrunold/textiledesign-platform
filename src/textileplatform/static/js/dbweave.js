@@ -5096,6 +5096,7 @@ function saveSettings(data, settings) {
     data["display_repeat"] = settings.display_repeat;
     data["display_entering"] = settings.display_entering;
     data["display_treadling"] = settings.display_treadling;
+    data["pattern_only"] = settings.pattern_only;
     data["current_range"] = settings.current_range;
     data["inverse_repeat"] = settings.inverse_repeat;
     data["threading_arrangement"] = settings.threading_arrangement;
