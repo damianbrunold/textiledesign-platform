@@ -769,6 +769,14 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
         kb = int(data.get("rapport_k_b", -1))
         sa = int(data.get("rapport_s_a", 0))
         sb = int(data.get("rapport_s_b", -1))
+        # The bounds are computed and persisted by the editor. Clamp them
+        # to the drawn extent so a stale rapport (saved before the extent
+        # of a pattern starting mid-grid was tracked correctly) cannot
+        # place its boundary lines outside the pattern.
+        ka = max(ka, layout.kette_a)
+        kb = min(kb, layout.kette_a + dx - 1)
+        sa = max(sa, layout.schuesse_a)
+        sb = min(sb, layout.schuesse_a + dy - 1)
         if kb >= ka and sb >= sa:
             inv = bool(data.get("inverse_repeat"))
             red = (0xdd, 0, 0)

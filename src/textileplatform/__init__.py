@@ -97,6 +97,49 @@ def inject_support_username():
     return {"SUPPORT_USERNAME": SUPPORT_USERNAME}
 
 
+# Cache busting for static assets. The editors are large JS files that
+# browsers happily keep cached, so after a deploy users would keep
+# running the old code until a hard reload. Appending the file's mtime
+# as ?v=... makes every changed asset a new URL while unchanged ones
+# stay cached.
+_static_versions = {}
+
+
+def _static_version(filename):
+    """mtime of a file in the static folder, or None if it isn't one."""
+    if filename in _static_versions:
+        return _static_versions[filename]
+    version = None
+    try:
+        path = os.path.join(app.static_folder, filename)
+        if os.path.isfile(path):
+            version = str(int(os.stat(path).st_mtime))
+    except OSError:
+        version = None
+    if not app.debug:
+        # Files don't change under a running production server, so the
+        # lookup is worth caching; in debug we re-stat every time.
+        _static_versions[filename] = version
+    return version
+
+
+@app.url_defaults
+def add_static_version(endpoint, values):
+    if endpoint != "static":
+        return
+    filename = values.get("filename")
+    # Some templates use url_for('static', filename='img/icons16/') as a
+    # bare directory prefix and concatenate the file name in Jinja — a
+    # query parameter would land in the middle of the URL there. Those
+    # don't name a real file, so _static_version returns None and the
+    # URL is left alone.
+    if not filename:
+        return
+    version = _static_version(filename)
+    if version:
+        values["v"] = version
+
+
 db.init_app(app)
 Migrate(app, db)
 csrf = CSRFProtect(app)

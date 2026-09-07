@@ -1951,6 +1951,22 @@ class Pattern {
         if (this.firstfree  > newW) this.firstfree  = newW;
     }
 
+    // Seed the active-pattern extent for a fresh scan. "Empty" is
+    // encoded as min > max (same convention as recalc_weave_extent), so
+    // a pattern that starts in the middle of the grid keeps its real
+    // left/top bound: seeding min at 0 would drag the leading empty
+    // warps/wefts into the extent and make rapport detection, the info
+    // dialog and the print ranges span the whole grid.
+    _resetExtent() {
+        this.min_x = this.weave.width;  this.max_x = 0;
+        this.min_y = this.weave.height; this.max_y = 0;
+    }
+
+    // True when the pattern has at least one used warp and weft.
+    hasExtent() {
+        return this.min_x <= this.max_x && this.min_y <= this.max_y;
+    }
+
     recalc_weave() {
         // Dispatch based on the active mode. In pegplan mode the weave is
         // derived from shaft-up data directly (no treadle indirection).
@@ -1964,8 +1980,7 @@ class Pattern {
 
     _recalc_weave_from_treadling() {
         this.weave.data.fill(0);
-        this.min_x = this.max_x = 0;
-        this.min_y = this.max_y = 0;
+        this._resetExtent();
         for (let i = 0; i < this.weave.width; i++) {
             const shaft = this.entering.get_shaft(i);
             if (shaft <= 0) continue;
@@ -1987,8 +2002,7 @@ class Pattern {
 
     _recalc_weave_from_pegplan() {
         this.weave.data.fill(0);
-        this.min_x = this.max_x = 0;
-        this.min_y = this.max_y = 0;
+        this._resetExtent();
         for (let i = 0; i < this.weave.width; i++) {
             const shaft = this.entering.get_shaft(i);
             if (shaft <= 0) continue;
@@ -2149,10 +2163,7 @@ class Pattern {
     }
 
     recalc_weave_extent() {
-        this.min_x = this.weave.width;
-        this.max_x = 0;
-        this.min_y = this.weave.height;
-        this.max_y = 0;
+        this._resetExtent();
         for (let i = 0; i < this.weave.width; i++) {
             if (!this.weave.isColEmpty(i)) {
                 this.min_x = Math.min(this.min_x, i);
@@ -4761,10 +4772,13 @@ function showPrintPartDialog() {
     const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
     const w = pattern.weave.width;
     const h = pattern.weave.height;
-    const wa = (pattern.min_x | 0) + 1;
-    const wb = (pattern.max_x | 0) + 1;
-    const sa = (pattern.min_y | 0) + 1;
-    const sb = (pattern.max_y | 0) + 1;
+    // Default to the active pattern extent; an empty pattern (no extent)
+    // falls back to the full grid.
+    const hasExt = pattern.hasExtent();
+    const wa = hasExt ? (pattern.min_x | 0) + 1 : 1;
+    const wb = hasExt ? (pattern.max_x | 0) + 1 : w;
+    const sa = hasExt ? (pattern.min_y | 0) + 1 : 1;
+    const sb = hasExt ? (pattern.max_y | 0) + 1 : h;
     // Highest shaft / treadle actually used — defaults for the new
     // harness / treadle range groups, mirroring desktop's
     // CalcSchaefte / CalcTritte.
@@ -5133,7 +5147,10 @@ function initPatternData(data, pattern) {
         pattern.color_weft.set(0, j, data.colors_weft[j]);
     }
 
-    let min_pattern_x = 0;
+    // Seed as "empty" (min > max) rather than 0 so a pattern whose first
+    // used warp/weft sits in the middle of the grid reloads with the same
+    // extent it had while being edited.
+    let min_pattern_x = data.width;
     let max_pattern_x = 0;
     for (let i = 0; i < data.width; i++) {
         if (data.data_entering[i] > 0) {
@@ -5144,7 +5161,7 @@ function initPatternData(data, pattern) {
     pattern.min_x = min_pattern_x;
     pattern.max_x = max_pattern_x;
 
-    let min_pattern_y = 0;
+    let min_pattern_y = data.height;
     let max_pattern_y = 0;
     for (let j = 0; j < data.height; j++) {
         for (let i = 0; i < data.max_treadles; i++) {
@@ -12648,8 +12665,9 @@ function updateStatusBar() {
 
     let rap = "";
     if (typeof pattern !== "undefined" && pattern) {
-        const kw = (pattern.max_x - pattern.min_x + 1) || 0;
-        const sw = (pattern.max_y - pattern.min_y + 1) || 0;
+        const hasExt = pattern.hasExtent();
+        const kw = hasExt ? (pattern.max_x - pattern.min_x + 1) : 0;
+        const sw = hasExt ? (pattern.max_y - pattern.min_y + 1) : 0;
         if (kw > 0 || sw > 0) {
             rap = L("statusbar.size", "Size") + " " + kw + "×" + sw;
         }
