@@ -151,9 +151,10 @@ class Bands:
     editor shows. All offsets are in logical pixels.
 
         [warp colour bar ..] [.................]
+        [..................] [.................]
         [einzug ...........] [gap] [aufknuepfung]
         [reed .............] [.................]
-        [gewebe ...........] [gap] [trittfolge .] [weft colour bar]
+        [gewebe ...........] [gap] [trittfolge .] [gap] [weft colours]
 
     ``entering_at_bottom`` flips the vertical order (gewebe on top)."""
     width: int
@@ -201,22 +202,29 @@ def _bands(data, layout: "Layout") -> "Bands":
 
     # Row groups, top to bottom (heights in cells), separated by one-cell
     # gaps like the pre-band layout's ``sdy``. ``gap_h`` separates the
-    # threading (warp colour bar + einzug) from the reed/fabric and is
-    # present only when the threading is shown; ``reed_gap_h`` separates
-    # the reed from the gewebe and is present only when the reed is
-    # shown. So the reed floats between two gaps when visible, and when
-    # it is hidden the pair collapses to a single einzug↔gewebe gap.
+    # threading (einzug) from the reed/fabric and is present only when
+    # the threading is shown; ``reed_gap_h`` separates the reed from the
+    # gewebe and is present only when the reed is shown. So the reed
+    # floats between two gaps when visible, and when it is hidden the
+    # pair collapses to a single einzug<->gewebe gap. ``warp_gap_h``
+    # keeps the warp colour bar off the einzug — the legacy export
+    # reserved two rows for the colour bar (``clry``, exportbitmap.cpp)
+    # and the editor separates the panes by a PANE_GAP, so the bar never
+    # sits flush against the threading.
     # einzugunten puts the gewebe on top and the threading below it.
     warp_h = 1 if show_warpbar else 0
     einz_h = shafts if show_einzug else 0
     reed_h = 1 if show_reed else 0
     gap_h = 1 if show_einzug else 0
     reed_gap_h = 1 if show_reed else 0
+    warp_gap_h = 1 if show_warpbar else 0
     if einzugunten:
         order = (("gewebe", dy), ("_reedgap", reed_gap_h), ("reed", reed_h),
-                 ("_gap", gap_h), ("einzug", einz_h), ("warpbar", warp_h))
+                 ("_gap", gap_h), ("einzug", einz_h),
+                 ("_warpgap", warp_gap_h), ("warpbar", warp_h))
     else:
-        order = (("warpbar", warp_h), ("einzug", einz_h), ("_gap", gap_h),
+        order = (("warpbar", warp_h), ("_warpgap", warp_gap_h),
+                 ("einzug", einz_h), ("_gap", gap_h),
                  ("reed", reed_h), ("_reedgap", reed_gap_h), ("gewebe", dy))
     y = {}
     cy = 0
@@ -225,16 +233,19 @@ def _bands(data, layout: "Layout") -> "Bands":
         cy += h
     total_rows = cy
 
-    # Column groups: main (dx) | gap | side pane | weft colour bar. The
-    # one-cell gap (the former ``tdx``) separates the drawdown/threading
-    # from the treadling/tie-up, and is present only when the side pane
-    # is shown.
+    # Column groups: main (dx) | gap | side pane | gap | weft colour bar.
+    # The first one-cell gap (the former ``tdx``) separates the
+    # drawdown/threading from the treadling/tie-up and is present only
+    # when the side pane is shown; the second keeps the weft colour bar
+    # off the trittfolge, mirroring the legacy export's ``clrx`` and the
+    # editor's PANE_GAP.
     side_w = treadles if show_side else 0
     weft_w = 1 if show_weftbar else 0
     gap_w = 1 if show_side else 0
+    weft_gap_w = 1 if show_weftbar else 0
     side_x = (dx + gap_w) * gw
-    weft_x = (dx + gap_w + side_w) * gw
-    total_cols = dx + gap_w + side_w + weft_w
+    weft_x = (dx + gap_w + side_w + weft_gap_w) * gw
+    total_cols = dx + gap_w + side_w + weft_gap_w + weft_w
 
     width = gw * total_cols + 1
     height = gh * total_rows + 1
@@ -413,6 +424,17 @@ def _get_reed(data, i):
     return int(arr[i]) if 0 <= i < len(arr) else 0
 
 
+def _is_empty_weft(data, j):
+    """True when weft row ``j`` has no treadling (no pegplan cell, in
+    pegplan mode) set at all. Port of legacy ``IsEmptyTrittfolge``:
+    such rows weave nothing, so the fabric leaves them blank."""
+    if bool(data.get("display_pegplan")):
+        ms = int(data.get("max_shafts", 0))
+        return not any(_get_pegplan(data, i, j) > 0 for i in range(ms))
+    mt = int(data.get("max_treadles", 0))
+    return not any(_get_treadling(data, i, j) > 0 for i in range(mt))
+
+
 def _calc_weave(data, i, j):
     """Recompute weave[i,j] from entering+treadling+tieup. Direct
     port of _recalc_weave_from_treadling in dbweave.js. In pegplan
@@ -495,7 +517,9 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
     if b.show_warpbar:
         y0 = b.y_warpbar
         for i in range(dx):
-            t.fill_rect(_warp_x(i), y0, gw, gh, _warp_col(layout.kette_a + i))
+            t.fill_tile(
+                _warp_x(i), y0, gw, gh, _warp_col(layout.kette_a + i)
+            )
         _hstrip_grid(y0)
 
     # Einzug — top-left in standard layout, bottom-left when einzugunten.
@@ -568,9 +592,9 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
         for i in range(dx):
             x = _warp_x(i)
             if _get_reed(data, layout.kette_a + i) > 0:
-                t.fill_rect(x, y0, gw, half, BLACK)
+                t.fill_tile(x, y0, gw, half, BLACK)
             else:
-                t.fill_rect(x, y0 + gh - half, gw, half, BLACK)
+                t.fill_tile(x, y0 + gh - half, gw, half, BLACK)
         _hstrip_grid(y0)
 
     # Trittfolge — shares the gewebe row group, in the side column.
@@ -614,7 +638,7 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
         y0 = gewebe_y0
         for j in range(dy):
             y = y0 + (dy - j - 1) * gh
-            t.fill_rect(x0, y, gw, gh, _weft_col(layout.schuesse_a + j))
+            t.fill_tile(x0, y, gw, gh, _weft_col(layout.schuesse_a + j))
         for j in range(dy + 1):
             t.line(x0, y0 + j * gh, x0 + gw, y0 + j * gh, GRID_LINE)
         t.line(x0, y0, x0, y0 + dy * gh, GRID_LINE)
@@ -623,20 +647,63 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
 
     # Gewebe — bottom-left in standard layout, top-left when einzugunten.
     x0, y0 = 0, gewebe_y0
-    for i in range(dx + 1):
-        t.line(x0 + i * gw, y0, x0 + i * gw, y0 + dy * gh, GRID_LINE)
-    for j in range(dy + 1):
-        t.line(x0, y0 + j * gh, x0 + dx * gw, y0 + j * gh, GRID_LINE)
     style = data.get("weave_style", "draft")
     sinking_shed = bool(data.get("sinking_shed"))
 
+    # Farbeffekt and simulation fill their cells edge to edge, so a grid
+    # underneath only survives as a stray seam between the threads and
+    # breaks up the woven surface. The desktop suppresses the grid on
+    # exactly those cells (patterncanvas.cpp: cells drawn by
+    # DrawGewebeSimulation never get a grid overlay, DrawGewebeFarbeffekt
+    # cells only with "Farbeffekt mit Raster"), while cells that stay
+    # blank keep theirs. A cell is blank when its warp column carries no
+    # threading or its weft row no treadling — legacy's IsEmptyEinzug /
+    # IsEmptyTrittfolge.
+    covering = style in ("color", "simulation")
+
+    def _cell_x(i):
+        return x0 + (dx - i - 1) * gw if rtl else x0 + i * gw
+
+    if covering:
+        blank_warp = [
+            _get_entering(data, layout.kette_a + i) == 0 for i in range(dx)
+        ]
+        blank_weft = [
+            _is_empty_weft(data, layout.schuesse_a + j) for j in range(dy)
+        ]
+        if any(blank_warp) or any(blank_weft):
+            for i in range(dx):
+                for j in range(dy):
+                    if not (blank_warp[i] or blank_weft[j]):
+                        continue
+                    t.stroke_rect(
+                        _cell_x(i), y0 + (dy - j - 1) * gh, gw, gh, GRID_LINE
+                    )
+    else:
+        for i in range(dx + 1):
+            t.line(x0 + i * gw, y0, x0 + i * gw, y0 + dy * gh, GRID_LINE)
+        for j in range(dy + 1):
+            t.line(x0, y0 + j * gh, x0 + dx * gw, y0 + j * gh, GRID_LINE)
+
     if style not in ("empty", "invisible"):
+        # Patrone cells are drawn with a small margin so the grid stays
+        # visible around them, matching the editor (bxf/byf = 0.15 in
+        # dbweave.js) and the desktop's AUSGEFUELLT inset.
+        bx = max(1, gw * 15 // 100)
+        by = max(1, gh * 15 // 100)
+        # The anbindung / abbindung background sits between the cell
+        # border and its symbol, so it uses half the margin (bxf / 2 in
+        # dbweave.js) and stays clear of the glyph drawn on top.
+        hbx = max(1, bx // 2)
+        hby = max(1, by // 2)
         for i in range(dx):
             for j in range(dy):
                 i_abs = layout.kette_a + i
                 j_abs = layout.schuesse_a + j
+                if covering and (blank_warp[i] or blank_weft[j]):
+                    continue
                 s = _calc_weave(data, i_abs, j_abs)
-                x = x0 + (dx - i - 1) * gw if rtl else x0 + i * gw
+                x = _cell_x(i)
                 y = y0 + (dy - j - 1) * gh
                 if style == "color":
                     # Farbeffekt: every cell filled edge-to-edge in
@@ -646,7 +713,7 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
                     if sinking_shed:
                         hebung = not hebung
                     col = _warp_col(i_abs) if hebung else _weft_col(j_abs)
-                    t.fill_rect(x, y, gw, gh, col)
+                    t.fill_tile(x, y, gw, gh, col)
                     continue
                 if style == "simulation":
                     # Simulated thread render: warp/weft on top with
@@ -660,32 +727,35 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
                     sw = max(1, gw // 5)
                     sh = max(1, gh // 5)
                     if hebung:
-                        t.fill_rect(x + sw, y, gw - 2 * sw, gh, kc)
-                        t.fill_rect(x, y + sh, sw, gh - 2 * sh, sc)
-                        t.fill_rect(x + gw - sw, y + sh, sw, gh - 2 * sh, sc)
+                        t.fill_tile(x + sw, y, gw - 2 * sw, gh, kc)
+                        t.fill_tile(x, y + sh, sw, gh - 2 * sh, sc)
+                        t.fill_tile(x + gw - sw, y + sh, sw, gh - 2 * sh, sc)
                         t.line(x + gw - sw, y + sh,
                                x + gw - sw, y + gh - sh, BLACK)
                     else:
-                        t.fill_rect(x, y + sh, gw, gh - 2 * sh, sc)
-                        t.fill_rect(x + sw, y, gw - 2 * sw, sh, kc)
-                        t.fill_rect(x + sw, y + gh - sh, gw - 2 * sw, sh, kc)
+                        t.fill_tile(x, y + sh, gw, gh - 2 * sh, sc)
+                        t.fill_tile(x + sw, y, gw - 2 * sw, sh, kc)
+                        t.fill_tile(x + sw, y + gh - sh, gw - 2 * sw, sh, kc)
                         t.line(x + sw, y + gh - sh,
                                x + gw - sw, y + gh - sh, BLACK)
                     continue
-                # draft (default): symbol/range-coloured cells.
+                # draft (default): symbol/range-coloured cells, inset
+                # so neighbouring cells stay separated by the grid.
                 if s <= 0:
                     continue
                 if s == AUSHEBUNG and aus_darst != DARST_FILLED:
                     _paint_cell(t, aus_darst, x, y, gw, gh, BLACK)
                 elif s == ANBINDUNG and anb_darst != DARST_FILLED:
-                    t.fill_rect(x, y, gw, gh, RANGE_COLORS[ANBINDUNG])
+                    t.fill_cell(x, y, gw, gh, hbx, hby,
+                                RANGE_COLORS[ANBINDUNG])
                     _paint_cell(t, anb_darst, x, y, gw, gh, BLACK)
                 elif s == ABBINDUNG and abb_darst != DARST_FILLED:
-                    t.fill_rect(x, y, gw, gh, RANGE_COLORS[ABBINDUNG])
+                    t.fill_cell(x, y, gw, gh, hbx, hby,
+                                RANGE_COLORS[ABBINDUNG])
                     _paint_cell(t, abb_darst, x, y, gw, gh, BLACK)
                 else:
                     col = RANGE_COLORS[s] if 1 <= s <= 12 else BLACK
-                    t.fill_rect(x, y, gw, gh, col)
+                    t.fill_cell(x, y, gw, gh, bx, by, col)
     t.stroke_rect(x0, y0, dx * gw, dy * gh, BLACK)
 
     # ---- Rapport overlay --------------------------------------------
@@ -721,8 +791,7 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
                         if s > 0 and s != ABBINDUNG:
                             bx = max(1, gw * 15 // 100)
                             by = max(1, gh * 15 // 100)
-                            t.fill_rect(x + bx, y + by,
-                                        gw - 2 * bx, gh - 2 * by, red)
+                            t.fill_cell(x, y, gw, gh, bx, by, red)
             # Vertical boundary lines in einzug strip (only when shown).
             if b.show_einzug:
                 ez_x_left = (ka - layout.kette_a) * gw if not rtl \

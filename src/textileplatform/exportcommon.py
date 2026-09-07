@@ -42,6 +42,28 @@ class DrawTarget:
     def fill_rect(self, x, y, w, h, color):
         raise NotImplementedError
 
+    # Two named variants of fill_rect that let the backends compensate
+    # for how they rasterise. Callers use them to say what the rectangle
+    # *is*, and each backend decides what that has to mean in its own
+    # coordinate system.
+
+    def fill_tile(self, x, y, w, h, color):
+        """Fill a rectangle that butts up against its neighbours (fabric
+        cells, colour bars, the simulation's thread bands). A renderer
+        that antialiases two abutting rectangles separately leaves a
+        pale seam along the join, so the vector backends take care to
+        cover the shared edge; the raster one lands on whole pixels and
+        needs nothing."""
+        self.fill_rect(x, y, w, h, color)
+
+    def fill_cell(self, x, y, w, h, bx, by, color):
+        """Fill the inside of the cell at ``(x, y, w, h)``, leaving a
+        margin of ``bx`` / ``by`` on all four sides so the grid stays
+        visible around it. Backends whose grid line sits *inside* the
+        cell footprint (the raster one) shift the block to keep the
+        margin even on every side."""
+        self.fill_rect(x + bx, y + by, w - 2 * bx, h - 2 * by, color)
+
     def stroke_rect(self, x, y, w, h, color, width=1):
         raise NotImplementedError
 
@@ -67,14 +89,16 @@ class DrawTarget:
 
 def paint_cell(t: DrawTarget, darst, x, y, gw, gh, color):
     """Render one cell in the requested ``darstellung``. ``DARST_FILLED``
-    fills the full footprint (so neighbouring filled cells merge); the
-    symbol variants leave the background untouched. Direct port of the
+    fills a block inset by the same margin the symbol variants use, so
+    the grid stays visible around it (cellPainterFilled in dbweave.js
+    insets by bxf/byf, and the desktop's AUSGEFUELLT by two pixels); the
+    symbol variants leave the background untouched. Port of the
     paintExportCell lambda in exportbitmap.cpp:189-196."""
-    if darst == DARST_FILLED:
-        t.fill_rect(x, y, gw, gh, color)
-        return
     bx = max(1, gw * 15 // 100)
     by = max(1, gh * 15 // 100)
+    if darst == DARST_FILLED:
+        t.fill_cell(x, y, gw, gh, bx, by, color)
+        return
     if darst == DARST_DOT:
         rx = max(1, (gw - 2 * bx) // 4)
         ry = max(1, (gh - 2 * by) // 4)
@@ -158,6 +182,17 @@ class PILTarget(DrawTarget):
     def fill_rect(self, x, y, w, h, color):
         self.draw.rectangle([x, y, x + w - 1, y + h - 1], fill=color)
 
+    def fill_cell(self, x, y, w, h, bx, by, color):
+        # A grid line lands on whole pixels, so the one along the cell's
+        # left/top edge eats the first pixel column/row of the footprint
+        # while the one along the right/bottom edge belongs to the next
+        # cell. Filling [x+bx, x+w-bx) would therefore leave bx-1 pixels
+        # of margin on the left and bx on the right. Start one pixel in
+        # and end one pixel short so both margins come out as bx.
+        x1, y1 = x + bx + 1, y + by + 1
+        x2, y2 = max(x1, x + w - bx - 1), max(y1, y + h - by - 1)
+        self.draw.rectangle([x1, y1, x2, y2], fill=color)
+
     def stroke_rect(self, x, y, w, h, color, width=1):
         self.draw.rectangle([x, y, x + w, y + h], outline=color, width=width)
 
@@ -220,6 +255,19 @@ class SVGTarget(DrawTarget):
         self.parts.append(
             f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
             f'fill="{self._color(color)}" stroke="none"/>'
+        )
+
+    def fill_tile(self, x, y, w, h, color):
+        # ``crispEdges`` turns antialiasing off for this rectangle, so
+        # its edge snaps to the device grid instead of being blended
+        # over the boundary pixel. Without it two abutting blocks are
+        # each blended half-way into the pixel they share and leave a
+        # pale hairline between them — visible right across the fabric
+        # in the farbeffekt and simulation renders.
+        self.parts.append(
+            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
+            f'fill="{self._color(color)}" stroke="none" '
+            f'shape-rendering="crispEdges"/>'
         )
 
     def stroke_rect(self, x, y, w, h, color, width=1):
@@ -308,6 +356,19 @@ class PDFTarget(DrawTarget):
         self._set_color(color, fill=True)
         self.c.rect(x, self._y(y + h), w, h, stroke=0, fill=1)
 
+    def fill_tile(self, x, y, w, h, color):
+        # Outline the block in its own colour with a zero-width line.
+        # PDF renders width 0 as the thinnest line the device can draw —
+        # exactly one device pixel, at any zoom or resolution — which is
+        # precisely what is needed here: two rectangles that merely abut
+        # are antialiased independently, so neither covers their shared
+        # pixel fully and a pale hairline shows through the fabric. The
+        # hairline outline covers that pixel without changing geometry.
+        self._set_color(color, fill=True)
+        self._set_color(color, fill=False)
+        self.c.setLineWidth(0)
+        self.c.rect(x, self._y(y + h), w, h, stroke=1, fill=1)
+
     def stroke_rect(self, x, y, w, h, color, width=1):
         self._set_color(color, fill=False)
         self.c.setLineWidth(width)
@@ -367,6 +428,13 @@ class PDFTargetNoFlip(DrawTarget):
     def fill_rect(self, x, y, w, h, color):
         self._set_color(color, fill=True)
         self.c.rect(x, y, w, h, stroke=0, fill=1)
+
+    def fill_tile(self, x, y, w, h, color):
+        # Zero-width outline in the fill colour — see PDFTarget.fill_tile.
+        self._set_color(color, fill=True)
+        self._set_color(color, fill=False)
+        self.c.setLineWidth(0)
+        self.c.rect(x, y, w, h, stroke=1, fill=1)
 
     def stroke_rect(self, x, y, w, h, color, width=1):
         self._set_color(color, fill=False)
