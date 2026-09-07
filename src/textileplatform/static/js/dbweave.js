@@ -2960,24 +2960,47 @@ class PatternView {
                 fillRect(ctx, x1, y1, x2, y2);
             }
         }
-        // Redraw gray minor grid lines where we painted so cells get
-        // their usual borders back (the full-cell clear above wiped out
-        // the grid lines painted earlier by weave.drawGrid).
+        // Redraw the grid lines where we painted so cells get their usual
+        // borders back (the full-cell clear above wiped out the lines
+        // painted earlier by weave.drawGrid). Both tiers have to come
+        // back: the gray minor lines around every cell AND the dark
+        // major "Schienen" every unit_width / unit_height cells --
+        // otherwise the unit raster disappears inside the rapport.
+        // The major/minor test mirrors GridView.drawGrid: an edge is
+        // major when its GLOBAL cell index is a multiple of the unit.
         if (paintSet.length) {
-            ctx.strokeStyle = s.darcula ? "#aaa" : "#777";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (const [li, lj] of paintSet) {
+            const uw = s.unit_width > 0 ? s.unit_width : 0;
+            const uh = s.unit_height > 0 ? s.unit_height : 0;
+            const minor = [], major = [];
+            for (const [li, lj, di, dj] of paintSet) {
                 const x1 = weavePane.calc_x(li);
                 const y1 = weavePane.calc_y(lj);
                 const x2 = weavePane.calc_x(li + 1);
                 const y2 = weavePane.calc_y(lj + 1);
-                ctx.moveTo(x1, y1); ctx.lineTo(x2, y1);
-                ctx.moveTo(x2, y1); ctx.lineTo(x2, y2);
-                ctx.moveTo(x2, y2); ctx.lineTo(x1, y2);
-                ctx.moveTo(x1, y2); ctx.lineTo(x1, y1);
+                (uw && di % uw === 0 ? major : minor)
+                    .push([x1, y1, x1, y2]);
+                (uw && (di + 1) % uw === 0 ? major : minor)
+                    .push([x2, y1, x2, y2]);
+                (uh && dj % uh === 0 ? major : minor)
+                    .push([x1, y1, x2, y1]);
+                (uh && (dj + 1) % uh === 0 ? major : minor)
+                    .push([x1, y2, x2, y2]);
             }
-            ctx.stroke();
+            ctx.lineWidth = 1;
+            // Minor first, major on top so the Schienen win where a
+            // major and a minor edge coincide.
+            for (const [segs, color] of [
+                [minor, s.darcula ? "#aaa" : "#777"],
+                [major, s.darcula ? "#fff" : "#000"],
+            ]) {
+                if (!segs.length) continue;
+                ctx.strokeStyle = color;
+                ctx.beginPath();
+                for (const [ax, ay, bx, by] of segs) {
+                    ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+                }
+                ctx.stroke();
+            }
         }
 
         // ---- Vertical boundary lines in the entering strip ----
