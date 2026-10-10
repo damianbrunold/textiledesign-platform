@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-06-14 20:36+0200\n"
+"POT-Creation-Date: 2026-10-10 12:09+0200\n"
 "PO-Revision-Date: 2024-04-26 12:14+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -76,45 +76,45 @@ msgstr "Anzahl Reihen:"
 msgid "Total beads:"
 msgstr "Total Perlen:"
 
-#: src/textileplatform/controller.py:532
+#: src/textileplatform/controller.py:539
 msgid "Label is required"
 msgstr "Die Bezeichnung ist erforderlich"
 
-#: src/textileplatform/controller.py:533
+#: src/textileplatform/controller.py:540
 msgid "Label is too long"
 msgstr "Die Bezeichnung ist zu lang"
 
-#: src/textileplatform/controller.py:534
+#: src/textileplatform/controller.py:541
 msgid "Another group already uses this name"
 msgstr "Eine andere Gruppe verwendet diesen Namen bereits"
 
-#: src/textileplatform/controller.py:1336
+#: src/textileplatform/controller.py:1344
 msgid "Display name updated"
 msgstr "Anzeigename aktualisiert"
 
-#: src/textileplatform/controller.py:1340
-#: src/textileplatform/controller.py:1378
-#: src/textileplatform/controller.py:1412
+#: src/textileplatform/controller.py:1348
+#: src/textileplatform/controller.py:1386
+#: src/textileplatform/controller.py:1420
 msgid "Changes could not be saved"
 msgstr "Änderungen konnten nicht gespeichert werden"
 
-#: src/textileplatform/controller.py:1348
+#: src/textileplatform/controller.py:1356
 msgid "Current password is incorrect"
 msgstr "Aktuelles Passwort ist nicht korrekt"
 
-#: src/textileplatform/controller.py:1350
+#: src/textileplatform/controller.py:1358
 msgid "Password cannot be empty"
 msgstr "Passwort darf nicht leer sein"
 
-#: src/textileplatform/controller.py:1352
-#: src/textileplatform/controller.py:3243
-#: src/textileplatform/controller.py:3551
+#: src/textileplatform/controller.py:1360
+#: src/textileplatform/controller.py:3258
+#: src/textileplatform/controller.py:3590
 msgid "Passwords do not match"
 msgstr "Passwörter stimmen nicht überein"
 
-#: src/textileplatform/controller.py:1357
-#: src/textileplatform/controller.py:3248
-#: src/textileplatform/controller.py:3556
+#: src/textileplatform/controller.py:1365
+#: src/textileplatform/controller.py:3263
+#: src/textileplatform/controller.py:3595
 msgid ""
 "Password must be at least 8 characters and not a common or trivial "
 "password"
@@ -122,326 +122,339 @@ msgstr ""
 "Das Passwort muss mindestens 8 Zeichen lang sein und darf kein häufiges "
 "oder triviales Passwort sein"
 
-#: src/textileplatform/controller.py:1375
+#: src/textileplatform/controller.py:1383
 msgid "Password changed"
 msgstr "Passwort geändert"
 
-#: src/textileplatform/controller.py:1409
+#: src/textileplatform/controller.py:1417
 msgid "Profile updated"
 msgstr "Profil aktualisiert"
 
-#: src/textileplatform/controller.py:1637
-#: src/textileplatform/controller.py:2795
+#: src/textileplatform/controller.py:1645
+#: src/textileplatform/controller.py:2808
 msgid "The support account cannot be deleted."
 msgstr "Das Support-Konto kann nicht gelöscht werden."
 
-#: src/textileplatform/controller.py:1642
+#: src/textileplatform/controller.py:1650
 msgid "Please type \"DELETE\" to confirm."
-msgstr "Bitte tippe \"DELETE\" ein, um zu bestätigen."
+msgstr "Bitte geben Sie \"DELETE\" ein, um zu bestätigen."
 
-#: src/textileplatform/controller.py:1645
+#: src/textileplatform/controller.py:1653
 msgid "Incorrect password."
 msgstr "Falsches Passwort."
 
-#: src/textileplatform/controller.py:1653
+#: src/textileplatform/controller.py:1661
 msgid "The account could not be deleted."
 msgstr "Das Konto konnte nicht gelöscht werden."
 
-#: src/textileplatform/controller.py:1656
+#: src/textileplatform/controller.py:1664
 msgid "Your account and all related data have been deleted."
-msgstr "Dein Konto und alle zugehörigen Daten wurden gelöscht."
+msgstr "Ihr Konto und alle zugehörigen Daten wurden gelöscht."
 
-#: src/textileplatform/controller.py:1763
-#: src/textileplatform/controller.py:1886
+#: src/textileplatform/controller.py:1771
+#: src/textileplatform/controller.py:1894
 msgid "Please provide a name for the pattern"
 msgstr "Bitte geben Sie den Musternamen an"
 
-#: src/textileplatform/controller.py:1769
-#: src/textileplatform/controller.py:1772
+#: src/textileplatform/controller.py:1777
+#: src/textileplatform/controller.py:1780
 msgid "Width must be between 10 and 1000"
 msgstr "Die Breite muss zwischen 10 und 1000 sein"
 
-#: src/textileplatform/controller.py:1778
-#: src/textileplatform/controller.py:1781
+#: src/textileplatform/controller.py:1786
+#: src/textileplatform/controller.py:1789
 msgid "Height must be between 10 and 1000"
 msgstr "Die Höhe muss zwischen 10 und 1000 sein"
 
-#: src/textileplatform/controller.py:1876
-#: src/textileplatform/controller.py:1995
+#: src/textileplatform/controller.py:1884
+#: src/textileplatform/controller.py:2003
 msgid "Failed to create pattern"
 msgstr "Konnte Muster nicht erstellen"
 
-#: src/textileplatform/controller.py:1892
-#: src/textileplatform/controller.py:1895
+#: src/textileplatform/controller.py:1900
+#: src/textileplatform/controller.py:1903
 msgid "Width must be between 6 and 100"
 msgstr "Die Breite muss zwischen 6 und 100 sein"
 
-#: src/textileplatform/controller.py:1901
-#: src/textileplatform/controller.py:1904
+#: src/textileplatform/controller.py:1909
+#: src/textileplatform/controller.py:1912
 msgid "Height must be between 5 and 5000"
 msgstr "Die Höhe muss zwischen 5 und 5000 sein"
 
-#: src/textileplatform/controller.py:2032
+#: src/textileplatform/controller.py:2040
 msgid "Pattern could not be deleted."
 msgstr "Das Muster konnte nicht gelöscht werden."
 
-#: src/textileplatform/controller.py:2111
+#: src/textileplatform/controller.py:2121
 msgid "Assignments could not be saved."
 msgstr "Änderungen konnten nicht gespeichert werden"
 
-#: src/textileplatform/controller.py:2163
+#: src/textileplatform/controller.py:2176
 msgid "Cannot edit your primary group"
 msgstr "Ihre primäre Gruppe kann nicht bearbeitet werden"
 
-#: src/textileplatform/controller.py:2175
+#: src/textileplatform/controller.py:2188
 msgid "Group updated"
 msgstr "Gruppe aktualisiert"
 
-#: src/textileplatform/controller.py:2189
+#: src/textileplatform/controller.py:2202
 msgid "Cannot change visibility of your primary group"
 msgstr "Die Sichtbarkeit Ihrer primären Gruppe kann nicht geändert werden"
 
-#: src/textileplatform/controller.py:2207
+#: src/textileplatform/controller.py:2220
 msgid "Cannot invite to a personal group"
 msgstr "Persönliche Gruppen können keine Einladungen empfangen"
 
-#: src/textileplatform/controller.py:2215
-#: src/textileplatform/controller.py:2332
+#: src/textileplatform/controller.py:2228
+#: src/textileplatform/controller.py:2345
 msgid "Invalid role"
 msgstr "Ungültige Rolle"
 
-#: src/textileplatform/controller.py:2220
-#: src/textileplatform/controller.py:2223
-#: src/textileplatform/controller.py:2226
+#: src/textileplatform/controller.py:2233
+#: src/textileplatform/controller.py:2236
+#: src/textileplatform/controller.py:2239
 msgid "User not found"
 msgstr "Benutzer nicht gefunden"
 
-#: src/textileplatform/controller.py:2232
+#: src/textileplatform/controller.py:2245
 msgid "User is already a member"
 msgstr "Benutzer ist bereits Mitglied"
 
-#: src/textileplatform/controller.py:2234
+#: src/textileplatform/controller.py:2247
 msgid "User has already been invited"
 msgstr "Benutzer wurde bereits eingeladen"
 
-#: src/textileplatform/controller.py:2241
-#: src/textileplatform/controller.py:2253
+#: src/textileplatform/controller.py:2254
+#: src/textileplatform/controller.py:2266
 msgid "Invitation sent"
 msgstr "Einladung gesendet"
 
-#: src/textileplatform/controller.py:2279
+#: src/textileplatform/controller.py:2292
 msgid "Invitation accepted"
 msgstr "Einladung angenommen"
 
-#: src/textileplatform/controller.py:2294
+#: src/textileplatform/controller.py:2307
 msgid "Invitation declined"
 msgstr "Einladung abgelehnt"
 
-#: src/textileplatform/controller.py:2323
+#: src/textileplatform/controller.py:2336
 msgid "Cannot remove the last owner of a group"
 msgstr "Der letzte Eigentümer einer Gruppe kann nicht entfernt werden"
 
-#: src/textileplatform/controller.py:2328
+#: src/textileplatform/controller.py:2341
 msgid "Member removed"
 msgstr "Mitglied entfernt"
 
-#: src/textileplatform/controller.py:2339
+#: src/textileplatform/controller.py:2352
 msgid "Cannot demote the last owner of a group"
 msgstr "Der letzte Eigentümer einer Gruppe kann nicht herabgestuft werden"
 
-#: src/textileplatform/controller.py:2344
+#: src/textileplatform/controller.py:2357
 msgid "Role updated"
 msgstr "Rolle aktualisiert"
 
-#: src/textileplatform/controller.py:2357
+#: src/textileplatform/controller.py:2370
 msgid "Cannot delete your primary group"
 msgstr "Ihre primäre Gruppe kann nicht gelöscht werden"
 
-#: src/textileplatform/controller.py:2375
+#: src/textileplatform/controller.py:2388
 #, python-format
 msgid "Group \"%(label)s\" deleted"
 msgstr "Gruppe „%(label)s“ gelöscht"
 
-#: src/textileplatform/controller.py:2386
+#: src/textileplatform/controller.py:2399
 msgid "Cannot leave a personal group"
 msgstr "Eine persönliche Gruppe kann nicht verlassen werden"
 
-#: src/textileplatform/controller.py:2393
+#: src/textileplatform/controller.py:2406
 msgid "You are the last owner. Promote another owner before leaving."
 msgstr ""
 "Sie sind der letzte Eigentümer. Befördern Sie zuerst einen anderen "
 "Eigentümer."
 
-#: src/textileplatform/controller.py:2399
+#: src/textileplatform/controller.py:2412
 msgid "You left the group"
 msgstr "Sie haben die Gruppe verlassen"
 
-#: src/textileplatform/controller.py:2479
+#: src/textileplatform/controller.py:2492
 msgid "Cannot impersonate a disabled user"
 msgstr "Deaktivierter Benutzer kann nicht angenommen werden"
 
-#: src/textileplatform/controller.py:2533
+#: src/textileplatform/controller.py:2546
 msgid "Please choose a group kind"
 msgstr "Bitte wählen Sie eine Gruppenart aus"
 
-#: src/textileplatform/controller.py:2541
+#: src/textileplatform/controller.py:2554
 msgid "Group Name is required"
 msgstr "Der Gruppenname ist erforderlich"
 
-#: src/textileplatform/controller.py:2544
-#: src/textileplatform/controller.py:3261
+#: src/textileplatform/controller.py:2557
+#: src/textileplatform/controller.py:3298
 msgid "Name is invalid and cannot be used"
 msgstr "Der Name ist ungültig und kann nicht verwendet werden"
 
-#: src/textileplatform/controller.py:2551
+#: src/textileplatform/controller.py:2564
 msgid "Group already exists"
 msgstr "Die Gruppe existiert bereits"
 
-#: src/textileplatform/controller.py:2560
+#: src/textileplatform/controller.py:2573
 msgid "You already have a group with this name"
 msgstr "Sie haben bereits eine Gruppe mit diesem Namen"
 
-#: src/textileplatform/controller.py:2567
+#: src/textileplatform/controller.py:2580
 msgid "A shared group already uses this name. Choose another."
 msgstr ""
 "Eine gemeinsame Gruppe verwendet diesen Namen bereits. Bitte wählen Sie "
 "einen anderen."
 
-#: src/textileplatform/controller.py:2764
+#: src/textileplatform/controller.py:2777
 msgid "The support account cannot be disabled."
 msgstr "Das Support-Konto kann nicht deaktiviert werden."
 
-#: src/textileplatform/controller.py:2767
+#: src/textileplatform/controller.py:2780
 msgid "You cannot disable your own account."
 msgstr "Sie können Ihr eigenes Konto nicht deaktivieren."
 
-#: src/textileplatform/controller.py:2778
+#: src/textileplatform/controller.py:2791
 msgid "Could not update the account state."
 msgstr "Der Konto-Status konnte nicht aktualisiert werden."
 
-#: src/textileplatform/controller.py:2781
+#: src/textileplatform/controller.py:2794
 msgid "Account disabled."
 msgstr "Konto deaktiviert."
 
-#: src/textileplatform/controller.py:2783
+#: src/textileplatform/controller.py:2796
 msgid "Account enabled."
 msgstr "Konto aktiviert."
 
-#: src/textileplatform/controller.py:2798
+#: src/textileplatform/controller.py:2811
 msgid "You cannot delete your own account from here."
 msgstr "Sie können Ihr eigenes Konto nicht von hier aus löschen."
 
-#: src/textileplatform/controller.py:2803
+#: src/textileplatform/controller.py:2816
 msgid "Please type the user's name exactly to confirm deletion."
 msgstr ""
 "Bitte tippen Sie den Benutzernamen exakt ein, um die Löschung zu "
 "bestätigen."
 
-#: src/textileplatform/controller.py:2813
-#: src/textileplatform/controller.py:2947
+#: src/textileplatform/controller.py:2826
+#: src/textileplatform/controller.py:2960
 msgid "Could not delete the account."
 msgstr "Das Konto konnte nicht gelöscht werden."
 
-#: src/textileplatform/controller.py:2815
-#: src/textileplatform/controller.py:2949
+#: src/textileplatform/controller.py:2828
+#: src/textileplatform/controller.py:2962
 #, python-format
 msgid "Account \"%(label)s\" deleted."
 msgstr "Konto „%(label)s“ gelöscht."
 
-#: src/textileplatform/controller.py:2839
+#: src/textileplatform/controller.py:2852
 msgid "Another account already uses this e-mail address"
 msgstr "Ein anderes Konto verwendet diese E-Mail-Adresse bereits"
 
-#: src/textileplatform/controller.py:2844
+#: src/textileplatform/controller.py:2857
 msgid "Could not update the e-mail."
 msgstr "Die E-Mail-Adresse konnte nicht aktualisiert werden."
 
-#: src/textileplatform/controller.py:2856
+#: src/textileplatform/controller.py:2869
 msgid "E-Mail updated."
 msgstr "E-Mail-Adresse aktualisiert."
 
-#: src/textileplatform/controller.py:2870
+#: src/textileplatform/controller.py:2883
 msgid "The support account cannot be renamed."
 msgstr "Das Support-Konto kann nicht umbenannt werden."
 
-#: src/textileplatform/controller.py:2873
+#: src/textileplatform/controller.py:2886
 msgid "You cannot rename your own account from here."
 msgstr "Sie können Ihr eigenes Konto nicht von hier aus umbenennen."
 
-#: src/textileplatform/controller.py:2886
+#: src/textileplatform/controller.py:2899
 msgid "Another account already uses this name"
 msgstr "Ein anderes Konto verwendet diesen Namen bereits"
 
-#: src/textileplatform/controller.py:2891
+#: src/textileplatform/controller.py:2904
 msgid "Could not update the name."
 msgstr "Der Name konnte nicht aktualisiert werden."
 
-#: src/textileplatform/controller.py:2900
+#: src/textileplatform/controller.py:2913
 msgid "Name updated."
 msgstr "Name aktualisiert."
 
-#: src/textileplatform/controller.py:2938
+#: src/textileplatform/controller.py:2951
 msgid "Only non-verified accounts can be deleted here."
 msgstr "Hier können nur nicht verifizierte Konten gelöscht werden."
 
-#: src/textileplatform/controller.py:2963
+#: src/textileplatform/controller.py:2976
 msgid "This account is already verified."
 msgstr "Dieses Konto ist bereits verifiziert."
 
-#: src/textileplatform/controller.py:2973
+#: src/textileplatform/controller.py:2986
 msgid "Could not send the verification e-mail."
 msgstr "Die Verifikations-E-Mail konnte nicht gesendet werden."
 
-#: src/textileplatform/controller.py:2976
+#: src/textileplatform/controller.py:2989
 #, python-format
 msgid "Verification e-mail sent to %(email)s."
 msgstr "Verifikations-E-Mail an %(email)s gesendet."
 
-#: src/textileplatform/controller.py:3018
+#: src/textileplatform/controller.py:3031
 msgid "Both German and English text are required."
 msgstr "Deutscher und englischer Text sind erforderlich."
 
-#: src/textileplatform/controller.py:3021
+#: src/textileplatform/controller.py:3034
 msgid "Duration must be between 1 and 365 days."
 msgstr "Die Dauer muss zwischen 1 und 365 Tagen liegen."
 
-#: src/textileplatform/controller.py:3033
+#: src/textileplatform/controller.py:3046
 msgid "Announcement published."
 msgstr "Ankündigung veröffentlicht."
 
-#: src/textileplatform/controller.py:3045
+#: src/textileplatform/controller.py:3058
 msgid "Announcement retired."
 msgstr "Ankündigung zurückgezogen."
 
-#: src/textileplatform/controller.py:3121
+#: src/textileplatform/controller.py:3136
 msgid "Investigation copy created"
 msgstr "Untersuchungskopie erstellt"
 
-#: src/textileplatform/controller.py:3142
+#: src/textileplatform/controller.py:3157
 msgid "Investigation copy deleted"
 msgstr "Untersuchungskopie gelöscht"
 
-#: src/textileplatform/controller.py:3235
+#: src/textileplatform/controller.py:3250
 msgid "Name is required"
 msgstr "Der Name ist erforderlich"
 
-#: src/textileplatform/controller.py:3237
+#: src/textileplatform/controller.py:3252
 msgid "E-Mail is required"
 msgstr "Die E-Mail ist erforderlich"
 
-#: src/textileplatform/controller.py:3239
+#: src/textileplatform/controller.py:3254
 msgid "E-Mail is not valid"
 msgstr "E-Mail ist nicht gültig"
 
-#: src/textileplatform/controller.py:3241
+#: src/textileplatform/controller.py:3256
 msgid "Password is required"
 msgstr "Das Passwort ist erforderlich"
 
-#: src/textileplatform/controller.py:3245
+#: src/textileplatform/controller.py:3260
 msgid "Calculation result required"
 msgstr "Berechnungsresultat ist erforderlich"
 
-#: src/textileplatform/controller.py:3278
+#: src/textileplatform/controller.py:3281
+#: src/textileplatform/templates/register.html:56
+#, python-format
+msgid ""
+"That looks like an e-mail address. To keep it private, we have entered "
+"“%(name)s” as your name instead. Please check it now and adjust it in the"
+" Name field if needed, before you click “Create”."
+msgstr ""
+"Das sieht nach einer E-Mail-Adresse aus. Damit sie privat bleibt, haben "
+"wir stattdessen „%(name)s“ als Ihren Namen eingetragen. Bitte prüfen Sie "
+"ihn jetzt und passen Sie ihn bei Bedarf im Feld „Name“ an, bevor Sie auf "
+"„Erstellen“ klicken."
+
+#: src/textileplatform/controller.py:3315
 #, python-format
 msgid ""
 "The handle “%(taken)s” is already in use. We can register you as "
@@ -452,38 +465,38 @@ msgstr ""
 "„%(proposed)s“ registrieren und „%(label)s“ als Anzeigenamen beibehalten."
 " Passen Sie das Kürzel unten bei Bedarf an und senden Sie erneut."
 
-#: src/textileplatform/controller.py:3287
-#: src/textileplatform/controller.py:3345
+#: src/textileplatform/controller.py:3324
+#: src/textileplatform/controller.py:3382
 msgid "Name or E-Mail is already used"
 msgstr "Name oder E-Mail werden bereits verwendet"
 
-#: src/textileplatform/controller.py:3350
-#: src/textileplatform/controller.py:3388
+#: src/textileplatform/controller.py:3387
+#: src/textileplatform/controller.py:3425
 msgid "System error"
 msgstr "Systemfehler"
 
-#: src/textileplatform/controller.py:3376
-#: src/textileplatform/controller.py:3379
+#: src/textileplatform/controller.py:3413
+#: src/textileplatform/controller.py:3416
 msgid "Login data are not correct"
 msgstr "Die Anmeldedaten sind nicht korrekt"
 
-#: src/textileplatform/controller.py:3381
+#: src/textileplatform/controller.py:3418
 msgid "Account verification is pending"
 msgstr "Die Verifikation des Kontos is hängig"
 
-#: src/textileplatform/controller.py:3383
+#: src/textileplatform/controller.py:3420
 msgid "Account is disabled"
 msgstr "Das Konto ist gesperrt"
 
-#: src/textileplatform/controller.py:3461
+#: src/textileplatform/controller.py:3500
 msgid "E-Mail is required."
 msgstr "Die E-Mail ist erforderlich."
 
-#: src/textileplatform/controller.py:3549
+#: src/textileplatform/controller.py:3588
 msgid "Password is required."
 msgstr "Das Passwort ist erforderlich."
 
-#: src/textileplatform/controller.py:3574
+#: src/textileplatform/controller.py:3613
 msgid "Could not save changes."
 msgstr "Die Änderungen konnten nicht gespeichert werden."
 
@@ -794,7 +807,7 @@ msgid ""
 "modified. Delete copies once you are done."
 msgstr ""
 "Arbeitskopien von Benutzermustern zur Fehlersuche. Die Originale werden "
-"nicht verändert. Lösche die Kopien, sobald du fertig bist."
+"nicht verändert. Löschen Sie die Kopien, sobald Sie fertig sind."
 
 #: src/textileplatform/templates/admin-console.html:69
 #, fuzzy
@@ -897,7 +910,7 @@ msgid ""
 "No investigation copies. Use \"Investigate\" on a user pattern to create "
 "one."
 msgstr ""
-"Keine Untersuchungskopien. Verwende «Untersuchen» auf einem "
+"Keine Untersuchungskopien. Verwenden Sie «Untersuchen» auf einem "
 "Benutzermuster, um eine zu erstellen."
 
 #: src/textileplatform/templates/admin-edit-user.html:13
@@ -949,7 +962,7 @@ msgstr ""
 #: src/textileplatform/templates/login.html:15
 #: src/textileplatform/templates/profile.html:26
 #: src/textileplatform/templates/recover.html:15
-#: src/textileplatform/templates/register.html:32
+#: src/textileplatform/templates/register.html:33
 msgid "E-Mail"
 msgstr "E-Mail"
 
@@ -1219,7 +1232,9 @@ msgstr "Verifikation erneut senden"
 
 #: src/textileplatform/templates/admin-pending.html:37
 msgid "Delete this non-verified account? This cannot be undone."
-msgstr "Dieses nicht verifizierte Konto löschen? Dies kann nicht rückgängig gemacht werden."
+msgstr ""
+"Dieses nicht verifizierte Konto löschen? Dies kann nicht rückgängig "
+"gemacht werden."
 
 #: src/textileplatform/templates/admin-pending.html:73
 msgid "No accounts awaiting verification."
@@ -3564,7 +3579,7 @@ msgstr "Bead Muster"
 
 #: src/textileplatform/templates/examples.html:43
 msgid "Go to my patterns"
-msgstr "Gehe zu meinen Mustern"
+msgstr "Zu meinen Mustern"
 
 #: src/textileplatform/templates/group.html:28
 #: src/textileplatform/templates/user_public.html:61
@@ -3604,7 +3619,7 @@ msgstr "Keine offenen Einladungen."
 
 #: src/textileplatform/templates/login.html:19
 #: src/textileplatform/templates/recover_set_password.html:15
-#: src/textileplatform/templates/register.html:36
+#: src/textileplatform/templates/register.html:37
 msgid "Password"
 msgstr "Passwort"
 
@@ -3701,7 +3716,9 @@ msgstr "Einladungen und Direktnachrichten von anderen Benutzern blockieren"
 
 #: src/textileplatform/templates/profile.html:73
 msgid "Share this URL to let anyone view your public patterns."
-msgstr "Teile diese URL, damit andere deine öffentlichen Muster ansehen können."
+msgstr ""
+"Teilen Sie diese URL, damit andere Ihre öffentlichen Muster ansehen "
+"können."
 
 #: src/textileplatform/templates/profile.html:86
 msgid "Session"
@@ -3748,7 +3765,7 @@ msgid ""
 "Download a ZIP archive containing your profile, all your patterns, group "
 "memberships, and conversation history."
 msgstr ""
-"Lade ein ZIP-Archiv herunter, das dein Profil, alle deine Muster, "
+"Laden Sie ein ZIP-Archiv herunter, das Ihr Profil, alle Ihre Muster, "
 "Gruppenmitgliedschaften und den Nachrichtenverlauf enthält."
 
 #: src/textileplatform/templates/profile.html:135
@@ -3760,7 +3777,7 @@ msgid ""
 "Deleting your account will permanently remove your patterns, your group "
 "memberships, and your messages. This cannot be undone."
 msgstr ""
-"Beim Löschen des Kontos werden deine Muster, Gruppenmitgliedschaften und "
+"Beim Löschen des Kontos werden Ihre Muster, Gruppenmitgliedschaften und "
 "Nachrichten unwiderruflich entfernt. Dies kann nicht rückgängig gemacht "
 "werden."
 
@@ -3770,7 +3787,7 @@ msgstr "Konto endgültig löschen? Dies kann nicht rückgängig gemacht werden."
 
 #: src/textileplatform/templates/profile.html:151
 msgid "Type DELETE to confirm"
-msgstr "Tippe DELETE ein, um zu bestätigen"
+msgstr "Geben Sie DELETE ein, um zu bestätigen"
 
 #: src/textileplatform/templates/profile.html:155
 msgid "Delete my account"
@@ -3824,7 +3841,7 @@ msgid "Please choose a new password for your account."
 msgstr "Bitte wählen Sie ein neues Passwort für Ihr Konto."
 
 #: src/textileplatform/templates/recover_set_password.html:19
-#: src/textileplatform/templates/register.html:40
+#: src/textileplatform/templates/register.html:41
 msgid "Confirm Password"
 msgstr "Passwort bestätigen"
 
@@ -3842,15 +3859,15 @@ msgstr "Ihr Passwort wurde erfolgreich zurückgesetzt. Bitte melden Sie sich an.
 msgid "Create Account"
 msgstr "Konto erstellen"
 
-#: src/textileplatform/templates/register.html:21
+#: src/textileplatform/templates/register.html:22
 msgid "Shown to other users. Can be shared with other accounts."
 msgstr "Wird anderen Benutzern angezeigt. Kann mit anderen Konten geteilt werden."
 
-#: src/textileplatform/templates/register.html:26
+#: src/textileplatform/templates/register.html:27
 msgid "URL handle"
 msgstr "URL-Kürzel"
 
-#: src/textileplatform/templates/register.html:28
+#: src/textileplatform/templates/register.html:29
 msgid ""
 "Appears in your pattern URLs and must be unique. Lowercase letters, "
 "digits, and hyphens."
@@ -3858,11 +3875,11 @@ msgstr ""
 "Erscheint in den URLs Ihrer Muster und muss eindeutig sein. "
 "Kleinbuchstaben, Ziffern und Bindestriche."
 
-#: src/textileplatform/templates/register.html:44
+#: src/textileplatform/templates/register.html:45
 msgid "Please enter the result of the following calculation"
 msgstr "Bitte geben Sie das Ergebnis der folgenden Rechnung ein"
 
-#: src/textileplatform/templates/register.html:48
+#: src/textileplatform/templates/register.html:49
 #: src/textileplatform/templates/user_private.html:566
 msgid "Create"
 msgstr "Erstellen"

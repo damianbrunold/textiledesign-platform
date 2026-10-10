@@ -16,7 +16,8 @@
         <input type="hidden" name="mode" value="{{ 'two' if two_field else 'one' }}">
         <div class="field">
             <label for="label">{{ gettext('Name') }}</label>
-            <input type="text" name="label" id="label" required aria-required="true" autocomplete="username" value="{{ form_label if form_label is defined else request.form.get('label', '') }}">
+            <input type="text" name="label" id="label" required aria-required="true" autocomplete="nickname" value="{{ form_label if form_label is defined else request.form.get('label', '') }}">
+            <div id="label-notice" class="form-notice" role="status" aria-live="polite" hidden></div>
             {% if two_field %}
             <small class="muted">{{ gettext('Shown to other users. Can be shared with other accounts.') }}</small>
             {% endif %}
@@ -49,4 +50,45 @@
         </div>
     </form>
 </div>
+<script nonce="{{ csp_nonce }}">
+    (function () {
+        const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+        const message = {{ gettext('That looks like an e-mail address. To keep it private, we have entered “%(name)s” as your name instead. Please check it now and adjust it in the Name field if needed, before you click “Create”.', name='{name}')|tojson }};
+        const label = document.getElementById("label");
+        const email = document.getElementById("email");
+        const notice = document.getElementById("label-notice");
+
+        // Keep in sync with label_from_email() in name.py.
+        function labelFromEmail(address) {
+            const localPart = address.slice(0, address.indexOf("@"));
+            const words = localPart.split("+")[0].split(/[._-]+/).filter(Boolean);
+            if (words.length === 0) return localPart;
+            if (localPart === localPart.toLowerCase()) {
+                return words.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+            }
+            return words.join(" ");
+        }
+
+        function rewriteEmailLabel() {
+            const value = label.value.trim();
+            if (!EMAIL_RE.test(value)) {
+                notice.hidden = true;
+                return;
+            }
+            const suggested = labelFromEmail(value);
+            label.value = suggested;
+            if (!email.value.trim()) email.value = value;
+            notice.textContent = message.replace("{name}", suggested);
+            notice.hidden = false;
+            // Restart the fade-out animation if the notice is shown again.
+            notice.classList.remove("auto-fade");
+            void notice.offsetWidth;
+            notice.classList.add("auto-fade");
+        }
+
+        label.addEventListener("change", rewriteEmailLabel);
+        // Handle values restored or autofilled by the browser on load.
+        rewriteEmailLabel();
+    })();
+</script>
 {% endblock %}

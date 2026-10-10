@@ -27,6 +27,7 @@ from textileplatform.patterns import clone_pattern
 from textileplatform.patterns import format_pattern_source
 from textileplatform.name import from_label
 from textileplatform.name import is_valid
+from textileplatform.name import label_from_email
 from textileplatform.mail import send_verification_mail
 from textileplatform.mail import send_admin_notification_mail
 from textileplatform.mail import send_email_changed_notice
@@ -3261,6 +3262,28 @@ def register():
             error = gettext(
                 "Password must be at least 8 characters and not a "
                 "common or trivial password"
+            )
+
+        # People often type (or autofill) their e-mail address as their
+        # name, which turns into a handle like `xyzgmail.com` and leaks
+        # the address into public URLs. Suggest a name derived from it
+        # and let the user confirm. The register page does the same
+        # client-side; this covers clients without JavaScript.
+        if error is None and is_valid_email(label):
+            suggested = label_from_email(label)
+            return render_template(
+                "register.html",
+                captcha_question=_new_captcha(),
+                form_label=suggested,
+                form_name=handle_raw if two_field else "",
+                two_field=two_field,
+                conflict_notice=gettext(
+                    "That looks like an e-mail address. To keep it "
+                    "private, we have entered “%(name)s” as your name "
+                    "instead. Please check it now and adjust it in the "
+                    "Name field if needed, before you click “Create”.",
+                    name=suggested,
+                ),
             )
 
         # In two-field mode the user controls the handle directly; in
