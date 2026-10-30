@@ -313,7 +313,9 @@ def reset_password(user_name):
         if not user:
             print("user not found")
             return
-        psw = input("new password: ")
+        psw = click.prompt(
+            "new password", hide_input=True, confirmation_prompt=True,
+        )
         user.password = generate_password_hash(psw)
         db.session.commit()
 

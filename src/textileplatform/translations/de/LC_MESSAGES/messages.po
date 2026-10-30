@@ -84,6 +84,9 @@ msgstr "Die Bezeichnung ist erforderlich"
 msgid "Label is too long"
 msgstr "Die Bezeichnung ist zu lang"
 
+msgid "Description is too long"
+msgstr "Die Beschreibung ist zu lang"
+
 #: src/textileplatform/controller.py:541
 msgid "Another group already uses this name"
 msgstr "Eine andere Gruppe verwendet diesen Namen bereits"

@@ -1,5 +1,6 @@
 import datetime
 from email import message
+import logging
 import smtplib
 
 from flask import url_for
@@ -179,11 +180,16 @@ def send_email_changed_notice(user, old_email):
 
 
 def send_admin_notification_mail(user, message):
-    send_mail(
-        SUPPORT_ADDRESS,
-        "Textile-Platform admin notification",
-        f"{user.name} <{user.email}>: {message}",
-    )
+    """Best effort: a lost notification must never fail the action that
+    triggered it, so errors are logged, not raised."""
+    try:
+        send_mail(
+            SUPPORT_ADDRESS,
+            "Textile-Platform admin notification",
+            f"{user.name} <{user.email}>: {message}",
+        )
+    except Exception:
+        logging.exception("admin notification failed: %s", message)
 
 
 def send_support_dm_mail(sender, message_body, conversation_url):

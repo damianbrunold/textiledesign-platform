@@ -85,7 +85,10 @@
   <div class="profile-section">
     <h2>{{ gettext('Session') }}</h2>
     <div class="profile-actions">
-      <a class="btn" href="{{ url_for('logout') }}">{{ gettext('Log out') }}</a>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn">{{ gettext('Log out') }}</button>
+      </form>
     </div>
   </div>
 

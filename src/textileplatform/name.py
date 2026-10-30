@@ -15,43 +15,33 @@ def label_from_email(email):
     return " ".join(words)
 
 
+# Characters that would break or change the meaning of a URL path
+# segment (or of the .dbw/.jbb names derived from it).
+_UNSAFE = re.compile(r"[\s/\\?#%&<>\"'`:;@=+!]")
+
+# User and group names live at /<name>, next to the app's own routes.
+RESERVED_NAMES = frozenset({
+    "admin", "api", "auth", "groups", "imprint", "invitations",
+    "messages", "patterns", "preview", "privacy", "profile", "static",
+    "terms", "thumbnail",
+    "support",     # the administrator account (Support)
+    "examples",    # example patterns (en)
+    "beispiele",   # example patterns (de)
+})
+
+
 def from_label(label):
-    return (
-        label.lower()
-        .replace("..", "")
-        .replace("/", "")
-        .replace("\\", "")
-        .replace("@", "")
-        .replace(":", "")
-        .replace(";", "")
-        .replace("?", "")
-        .replace("<", "")
-        .replace(">", "")
-        .replace("&", "")
-        .replace(" ", "-")
-        .replace("_", "-")
-        .replace("\t", "-")
-        .replace("\n", "-")
-        .replace("\r", "-")
-        .replace("----", "-")
-        .replace("---", "-")
-        .replace("--", "-")
-    )
+    """URL handle for a user-visible label: lower case, whitespace and
+    underscores become dashes, unsafe characters are dropped."""
+    name = label.lower().replace("..", "")
+    name = re.sub(r"[\s_]+", "-", name)
+    name = _UNSAFE.sub("", name)
+    return re.sub(r"-{2,}", "-", name)
 
 
 def is_valid(name, max_len=100):
-    for ch in "@/\\:?;!<>&=":
-        if ch in name:
-            return False
-    if len(name) > max_len:
+    if not name or len(name) > max_len:
         return False
-    return name not in [
-        "api",
-        "admin",
-        "groups",
-        "patterns",
-        "auth",
-        "profile",
-        "support",    # reserved name for administrator (Support)
-        "examples",   # reserved name for examples
-    ]
+    if _UNSAFE.search(name) or name.strip(".") == "":
+        return False
+    return name not in RESERVED_NAMES

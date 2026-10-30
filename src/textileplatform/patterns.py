@@ -158,6 +158,9 @@ def _insert_pattern(user, label, make):
     ``label``; while that name is taken, try "label - 1" … "label - 10".
     ``make(name, label)`` builds the Pattern. Commits; returns the name."""
     group = primary_group(user)
+    if not from_label(label).strip("-"):
+        # Only punctuation / whitespace: nothing to build a handle from.
+        label = "Pattern"
     for suffix in range(_MAX_NAME_SUFFIX + 1):
         candidate = f"{label} - {suffix}" if suffix else label
         name = from_label(candidate)

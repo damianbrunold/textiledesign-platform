@@ -160,7 +160,7 @@ def load_logged_in_user():
                         session["session_token_version"] = user_ver
                     elif session_ver != user_ver:
                         session.clear()
-                        return redirect(url_for("login"))
+                        return _auth_redirect_or_401()
                 now = datetime.datetime.now(datetime.timezone.utc)
 
                 # we force logout after a month of inactivity (skip while
@@ -191,7 +191,12 @@ def load_logged_in_user():
                         g.usage_pending = True
                         g.usage_now = now
         except Exception:
+            # Treat the request as anonymous, but don't hide the cause
+            # or leave the session in a failed transaction.
+            logging.exception("loading the logged-in user failed")
+            db.session.rollback()
             g.user = None
+            g.usage_pending = False
 
 
 def _pattern_has_data(contents, pattern_type):
@@ -1299,12 +1304,15 @@ def profile():
                     user.session_token_version = (
                         (user.session_token_version or 0) + 1
                     )
+                    db.session.commit()
+                    # Only after the commit: otherwise a failed save
+                    # would log this session out too.
                     session["session_token_version"] = (
                         user.session_token_version
                     )
-                    db.session.commit()
                     flash(gettext("Password changed"))
                 except Exception:
+                    db.session.rollback()
                     logging.exception("Password change failed")
                     flash(gettext("Changes could not be saved"))
             return redirect(url_for("profile"))
@@ -1957,9 +1965,13 @@ def update_group(group_name):
         if not g.user.is_owner_of(group):
             abort(403)
     label = (request.form.get("label") or "").strip()
+    description = (request.form.get("description") or "").strip()
+    error = _group_text_error(label, description)
+    if error:
+        flash(error)
+        return redirect(url_for("edit_group", group_name=group.name))
     if label:
         group.label = label
-    description = (request.form.get("description") or "").strip()
     group.description = description
     _touch_group(group)
     db.session.commit()
@@ -2230,7 +2242,10 @@ def api_users_search():
         return jsonify({"status": "OK", "users": []})
     query = (
         User.query
-        .filter(User.name.ilike(f"%{q}%") | User.label.ilike(f"%{q}%"))
+        .filter(
+            User.name.icontains(q, autoescape=True)
+            | User.label.icontains(q, autoescape=True)
+        )
         .filter(User.verified.is_(True))
         .filter((User.disabled.is_(False)) | (User.disabled.is_(None)))
     )
@@ -2311,6 +2326,18 @@ def inject_invitation_count():
     return {"invitation_count": 0}
 
 
+_MAX_GROUP_LABEL = 50          # txgroup.label is VARCHAR(50)
+_MAX_GROUP_DESCRIPTION = 5000
+
+
+def _group_text_error(label, description):
+    if len(label) > _MAX_GROUP_LABEL:
+        return gettext("Label is too long")
+    if len(description) > _MAX_GROUP_DESCRIPTION:
+        return gettext("Description is too long")
+    return None
+
+
 @app.route("/groups/add", methods=("GET", "POST"))
 @login_required
 def add_group():
@@ -2326,6 +2353,10 @@ def add_group():
 
         if not label:
             flash(gettext("Group Name is required"))
+            return render_template("add_group.html", form=request.form)
+        error = _group_text_error(label, description)
+        if error:
+            flash(error)
             return render_template("add_group.html", form=request.form)
         if not name or not is_valid(name, max_len=50):
             flash(gettext("Name is invalid and cannot be used"))
@@ -2678,12 +2709,9 @@ def admin_set_user_name(user_name):
         flash(gettext("Could not update the name."))
         return redirect(url_for("edit_user", user_name=old_name))
     if changed:
-        try:
-            send_admin_notification_mail(
-                target, f"Admin changed name from {old_name}",
-            )
-        except Exception:
-            logging.exception("name-change notification failed")
+        send_admin_notification_mail(
+            target, f"Admin changed name from {old_name}",
+        )
     flash(gettext("Name updated."))
     return redirect(url_for("edit_user", user_name=target.name))
 
@@ -3139,7 +3167,12 @@ def register():
                 ensure_group_conversation(group)
                 db.session.commit()
 
-                send_verification_mail(user)
+                try:
+                    send_verification_mail(user)
+                except Exception:
+                    # The account exists; support can resend the mail
+                    # from the pending-accounts page.
+                    logging.exception("verification mail failed")
                 send_admin_notification_mail(user, "User created account")
                 return render_template(
                     "verification_pending.html",
@@ -3224,7 +3257,9 @@ def login():
     return render_template("login.html", next_url=next_url)
 
 
-@app.route("/auth/logout", methods=("GET", "POST"))
+# POST only (CSRF-protected): a GET logout could be triggered by any
+# other site embedding the URL.
+@app.route("/auth/logout", methods=("POST",))
 def logout():
     session.clear()
     return redirect(url_for("index"))
@@ -3254,15 +3289,9 @@ def verify(user_name, verification_code):
             db.session.rollback()
             return render_template("verification_failed.html")
         _seed_starter_patterns(user)
-        # The account is verified at this point; a failing admin
-        # notification must not turn that into an error page.
-        try:
-            send_admin_notification_mail(
-                user,
-                "User completed email account verification step",
-            )
-        except Exception:
-            logging.exception("admin notification after verify failed")
+        send_admin_notification_mail(
+            user, "User completed email account verification step",
+        )
         return render_template("verification_successful.html")
     except HTTPException:
         raise
@@ -3385,13 +3414,14 @@ def reset_password(user_name, verification_code):
                         (user.session_token_version or 0) + 1
                     )
                     db.session.commit()
-                    send_admin_notification_mail(
-                        user,
-                        "User successfully reset password",
-                    )
-                except IntegrityError:
+                except Exception:
+                    db.session.rollback()
+                    logging.exception("password reset failed")
                     error = gettext("Could not save changes.")
                 else:
+                    send_admin_notification_mail(
+                        user, "User successfully reset password",
+                    )
                     return render_template("recover_success.html")
 
             flash(error)
@@ -3669,18 +3699,23 @@ def _serialize_conversation(conv, user):
 @app.route("/api/conversations")
 @login_required
 def api_conversations():
-    convs = conversations_for_user(g.user)
-    convs.sort(
-        key=lambda c: (
-            c.messages[-1].created if c.messages else c.created
-            or datetime.datetime.min
-        ),
-        reverse=True,
+    def last_activity(conv):
+        when = conv.messages[-1].created if conv.messages else conv.created
+        return when.timestamp() if when else 0
+
+    convs = sorted(
+        conversations_for_user(g.user), key=last_activity, reverse=True,
     )
     return jsonify({
         "status": "OK",
         "conversations": [_serialize_conversation(c, g.user) for c in convs],
     })
+
+
+def _history_limit():
+    """Page size for message history: ?limit=, 1..200, default 50."""
+    limit = request.args.get("limit", 50, type=int) or 50
+    return min(max(limit, 1), 200)
 
 
 def _conversation_history(conv, before_id, limit):
@@ -3755,7 +3790,7 @@ def api_direct_conversation(user_name):
             "blocked": bool(target.block_invitations),
         })
     before = request.args.get("before", type=int)
-    limit = min(int(request.args.get("limit", 50) or 50), 200)
+    limit = _history_limit()
     msgs = _conversation_history(conv, before, limit)
     return jsonify({
         "status": "OK",
@@ -3791,7 +3826,7 @@ def api_group_conversation(group_name):
         })
 
     before = request.args.get("before", type=int)
-    limit = min(int(request.args.get("limit", 50) or 50), 200)
+    limit = _history_limit()
     msgs = _conversation_history(conv, before, limit)
     return jsonify({
         "status": "OK",

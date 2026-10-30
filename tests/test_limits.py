@@ -286,7 +286,7 @@ class TestPrimaryGroupScoping:
         _login_as(c, bob)
         r = c.post("/groups/add", data={"kind": "personal", "name": "alice"})
         assert r.status_code == 302
-        c.get("/auth/logout")
+        c.post("/auth/logout")
         _login_as(c, alice)
         r = c.post("/patterns/create", data={
             "pattern_type": "JBead Pattern", "name": "Mine",

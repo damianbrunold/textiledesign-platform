@@ -62,8 +62,9 @@ def test_ensure_db_contents_creates_owner_memberships(app):
         owner = User.query.filter_by(name=name).one()
         group = Group.query.filter_by(owner_id=owner.id, name=name).one()
         (m,) = group.memberships
-        assert (m.user_id, m.role, m.state) == (owner.id, "owner",
-                                                 "accepted")
+        assert (m.user_id, m.role, m.state) == (
+            owner.id, "owner", "accepted",
+        )
 
 
 def test_create_pattern_commands(app):

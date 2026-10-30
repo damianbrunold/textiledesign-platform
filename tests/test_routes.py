@@ -107,7 +107,7 @@ def test_editor_is_readonly_for_viewers(csrf_disabled_client, world):
     owner_page = _as(csrf_disabled_client, world, "alice").get(
         "/alice/twill").get_data(as_text=True)
     assert 'id="readonly" value="False"' in owner_page
-    csrf_disabled_client.get("/auth/logout")
+    csrf_disabled_client.post("/auth/logout")
     member_page = _as(csrf_disabled_client, world, "carla").get(
         "/alice/twill").get_data(as_text=True)
     assert 'id="readonly" value="True"' in member_page
