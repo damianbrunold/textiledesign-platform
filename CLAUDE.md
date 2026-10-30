@@ -105,7 +105,7 @@ Leaving an editor with unsaved changes never saves to the server implicitly: the
 
 ### Authentication
 
-Session-based, CSRF-protected (Flask-WTF), with login/registration rate limits. `support` is the reserved admin username; it can impersonate users. Users must verify their e-mail before logging in. Sessions last 14 days and end after 30 days of inactivity; a password change invalidates other sessions (`session_token_version`).
+Session-based, CSRF-protected (Flask-WTF), with login/registration rate limits. `support` is the reserved admin username; it can impersonate users. Users must verify their e-mail before logging in. Sessions end after 30 days of inactivity (`PERMANENT_SESSION_LIFETIME`, used for both the cookie and the account-activity check); a password change invalidates other sessions (`session_token_version`).
 
 ### Migrations
 

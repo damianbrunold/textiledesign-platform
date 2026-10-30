@@ -162,13 +162,16 @@ def load_logged_in_user():
                         session.clear()
                         return _auth_redirect_or_401()
                 now = datetime.datetime.now(datetime.timezone.utc)
+                last = _as_utc(g.user.access_date)
 
-                # we force logout after a month of inactivity (skip while
-                # impersonating — superuser may be testing dormant users)
+                # Log out after PERMANENT_SESSION_LIFETIME without any
+                # activity on the account (on any device; the session
+                # cookie itself only tracks this browser). Skipped while
+                # impersonating — support may be looking at dormant users.
                 if (
                     not impersonating
-                    and g.user.access_date
-                    and (now - g.user.access_date).days > 30
+                    and last is not None
+                    and now - last > app.permanent_session_lifetime
                 ):
                     session.clear()
                     return _auth_redirect_or_401()
@@ -182,7 +185,6 @@ def load_logged_in_user():
                 # next request would see the same stale date and bump the
                 # day counter a second time.
                 if not impersonating:
-                    last = g.user.access_date
                     if (
                         last is None
                         or last.date() != now.date()
@@ -197,6 +199,14 @@ def load_logged_in_user():
             db.session.rollback()
             g.user = None
             g.usage_pending = False
+
+
+def _as_utc(dt):
+    """Timestamps are stored in UTC; SQLite (tests) returns them without
+    tzinfo."""
+    if dt is not None and dt.tzinfo is None:
+        return dt.replace(tzinfo=datetime.timezone.utc)
+    return dt
 
 
 def _pattern_has_data(contents, pattern_type):

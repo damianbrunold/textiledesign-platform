@@ -34,7 +34,10 @@ app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=14),
+    # Inactivity limit: the session cookie expires this long after the
+    # last request, and load_logged_in_user logs a user out after this
+    # long without activity on the account.
+    PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=30),
     MAX_CONTENT_LENGTH=8 * 1024 * 1024,
     SQLALCHEMY_DATABASE_URI=os.environ["DATABASE"],
     SQLALCHEMY_TRACK_MODIFICATIONS=False,

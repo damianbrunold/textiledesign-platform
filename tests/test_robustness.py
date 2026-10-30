@@ -145,3 +145,36 @@ def test_registration_survives_failing_verification_mail(
     })
     assert r.status_code == 200
     assert User.query.filter_by(name="zoe").count() == 1
+
+
+class TestInactivityLogout:
+    """One limit for the session cookie and the account-inactivity check
+    (it used to be 14 vs. 30 days, so the 30-day check never applied)."""
+
+    def _set_last_access(self, user, days_ago):
+        import datetime
+        user.access_date = (
+            datetime.datetime.now(datetime.timezone.utc)
+            - datetime.timedelta(days=days_ago)
+        )
+        db.session.commit()
+
+    def test_cookie_and_check_use_30_days(self, app):
+        import datetime
+        assert app.permanent_session_lifetime == datetime.timedelta(days=30)
+
+    def test_active_within_30_days_stays_logged_in(self, csrf_disabled_client):
+        user = _make_user()
+        _login_as(csrf_disabled_client, user)
+        self._set_last_access(user, 29)
+        assert csrf_disabled_client.get("/profile").status_code == 200
+
+    def test_inactive_for_31_days_is_logged_out(self, csrf_disabled_client):
+        user = _make_user()
+        _login_as(csrf_disabled_client, user)
+        self._set_last_access(user, 31)
+        r = csrf_disabled_client.get("/profile")
+        assert r.status_code == 302
+        assert "/auth/login" in r.headers["Location"]
+        with csrf_disabled_client.session_transaction() as s:
+            assert "user_name" not in s
