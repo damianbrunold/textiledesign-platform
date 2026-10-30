@@ -134,6 +134,11 @@
                 <a class="icon" href="{{ url_for('download_pattern_legacy', user_name=p.owner_name, pattern_name=p.name) }}" aria-label="{{ gettext('Download') }} {{ p.label }}" title="{{ gettext('Download') }}">⤓</a>
                 <button type="button" class="act-clone" aria-label="{{ gettext('Clone pattern') }} {{ p.label }}" title="{{ gettext('Clone pattern') }}">⎘</button>
                 <button type="button" class="act-delete" aria-label="{{ gettext('Delete') }} {{ p.label }}" title="{{ gettext('Delete') }}">🗑</button>
+                {% else %}
+                {# Another member's pattern shared into this group: members
+                   may view, download and clone it, but not change it. #}
+                <a class="icon" href="{{ url_for('download_pattern_legacy', user_name=p.owner_name, pattern_name=p.name) }}" aria-label="{{ gettext('Download') }} {{ p.label }}" title="{{ gettext('Download') }}">⤓</a>
+                <button type="button" class="act-clone" aria-label="{{ gettext('Clone to my patterns') }} {{ p.label }}" title="{{ gettext('Clone to my patterns') }}">⎘</button>
                 {% endif %}
             </div>
         </div>

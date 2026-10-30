@@ -145,3 +145,75 @@ class TestVerify:
         frank = User.query.filter_by(name="frank").one()
         assert frank.verified
         assert frank.verify_date is not None
+
+
+# ---------- group access to shared patterns --------------------------
+
+
+def _shared_setup():
+    """Anna owns a private bead pattern shared into group 'course';
+    Carla is an accepted member, Dora is not."""
+    from textileplatform.models import Assignment
+    anna = _make_user(name="anna", email="anna@example.com")
+    carla = _make_user(name="carla", email="carla@example.com")
+    _make_user(name="dora", email="dora@example.com")
+    course = Group(name="course", label="Course", description="")
+    db.session.add_all([
+        course,
+        Membership(user=anna, group=course, role="owner",
+                   state="accepted"),
+        Membership(user=carla, group=course, role="reader",
+                   state="accepted"),
+    ])
+    p = Pattern(
+        name="rope", label="Rope", owner=anna,
+        pattern_type="JBead Pattern", public=False,
+        contents=json.dumps({"name": "Rope", "notes": "",
+                             "model": [[1, 2]], "colors": [],
+                             "view": {}}),
+    )
+    db.session.add(p)
+    db.session.add(Assignment(pattern=p, group=course))
+    db.session.commit()
+    return anna, carla
+
+
+class TestGroupAccess:
+    def _as(self, client, name):
+        _reset_access_date(User.query.filter_by(name=name).one())
+        _login(client, email=f"{name}@example.com")
+        _reset_access_date(User.query.filter_by(name=name).one())
+
+    def test_member_can_view_and_clone_private_shared_pattern(
+        self, csrf_disabled_client
+    ):
+        _shared_setup()
+        self._as(csrf_disabled_client, "carla")
+        r = csrf_disabled_client.get("/api/pattern/anna/rope")
+        assert r.status_code == 200
+        _reset_access_date(User.query.filter_by(name="carla").one())
+        r = csrf_disabled_client.put("/api/pattern/anna/rope", json={
+            "action": "clone-pattern",
+        })
+        assert r.get_json()["status"] == "OK"
+        carla = User.query.filter_by(name="carla").one()
+        assert Pattern.query.filter_by(owner_id=carla.id).count() == 1
+
+    def test_member_cannot_save(self, csrf_disabled_client):
+        _shared_setup()
+        self._as(csrf_disabled_client, "carla")
+        r = csrf_disabled_client.put("/api/pattern/anna/rope", json={
+            "action": "save-pattern", "contents": {},
+        })
+        assert r.status_code == 403
+
+    def test_non_member_cannot_view(self, csrf_disabled_client):
+        _shared_setup()
+        self._as(csrf_disabled_client, "dora")
+        r = csrf_disabled_client.get("/api/pattern/anna/rope")
+        assert r.status_code == 403
+
+    def test_anonymous_cannot_view(self, client):
+        _shared_setup()
+        r = client.get("/api/pattern/anna/rope")
+        assert r.status_code in (401, 403)

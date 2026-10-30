@@ -404,6 +404,29 @@ def login_required(view):
     return wrapped_view
 
 
+def _can_view_pattern(pattern, owner):
+    """Whether the current user may view (read-only) and clone a pattern.
+
+    True for the owner, the support user, public patterns, and accepted
+    members of any group the pattern is shared into. Editing stays
+    owner-only; callers check that separately.
+    """
+    if pattern.public:
+        return True
+    if not g.user:
+        return False
+    if g.user.name == SUPPORT_USERNAME or g.user.id == owner.id:
+        return True
+    group_ids = {a.group_id for a in pattern.assignments}
+    if not group_ids:
+        return False
+    return Membership.query.filter(
+        Membership.user_id == g.user.id,
+        Membership.state == "accepted",
+        Membership.group_id.in_(group_ids),
+    ).first() is not None
+
+
 def support_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
@@ -955,8 +978,7 @@ def edit_pattern(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if not superuser and readonly and not pattern.public:
+    if readonly and not _can_view_pattern(pattern, user):
         return redirect(url_for("user", user_name=user_name))
     if not readonly:
         _bump_pattern_view(pattern.pattern_type)
@@ -1062,8 +1084,7 @@ def download_pattern(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if not superuser and readonly and not pattern.public:
+    if readonly and not _can_view_pattern(pattern, user):
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
     return send_file(
@@ -1095,8 +1116,7 @@ def download_pattern_legacy(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if not superuser and readonly and not pattern.public:
+    if readonly and not _can_view_pattern(pattern, user):
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
     if pattern.pattern_type == "DB-WEAVE Pattern":
@@ -1170,7 +1190,7 @@ def export_pattern(user_name, pattern_name, fmt):
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
     superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if not superuser and readonly and not pattern.public:
+    if readonly and not _can_view_pattern(pattern, user):
         return redirect(url_for("user", user_name=user_name))
     table = _export_table_for(pattern)
     if table is None:
@@ -1235,7 +1255,7 @@ def print_pattern(user_name, pattern_name):
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
     superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if not superuser and readonly and not pattern.public:
+    if readonly and not _can_view_pattern(pattern, user):
         return redirect(url_for("user", user_name=user_name))
     if pattern.pattern_type not in ("DB-WEAVE Pattern", "JBead Pattern"):
         return "Print not available for this pattern type", 400
@@ -1315,8 +1335,7 @@ def source_pattern(user_name, pattern_name):
     if not pattern:
         return redirect(url_for("user", user_name=user_name))
     readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if not superuser and readonly and not pattern.public:
+    if readonly and not _can_view_pattern(pattern, user):
         return redirect(url_for("user", user_name=user_name))
     pattern.pattern = json.loads(pattern.contents)
     return render_template(
@@ -3664,12 +3683,7 @@ def get_pattern(user_name, pattern_name):
         )
         if not pattern:
             return respond("NOK", "Pattern not found", 404)
-        superuser = g.user and g.user.name == SUPPORT_USERNAME
-        if (
-            not superuser
-            and not pattern.public
-            and (not g.user or user.name != g.user.name)
-        ):
+        if not _can_view_pattern(pattern, user):
             return respond("NOK", "Invalid user", 403)
         contents = json.loads(pattern.contents)
         return jsonify({
@@ -3698,11 +3712,7 @@ def update_pattern(user_name, pattern_name):
         )
         if not pattern:
             return respond("NOK", "Pattern not found", 404)
-        superuser = g.user and g.user.name == SUPPORT_USERNAME
-        if (
-            not superuser and not pattern.public
-            and (not g.user or user.name != g.user.name)
-        ):
+        if not _can_view_pattern(pattern, user):
             return respond("NOK", "Invalid user", 403)
         data = request.get_json()
         action = data["action"]
@@ -3853,13 +3863,8 @@ def _serve_pattern_image(user_name, pattern_name, attr):
     )
     if not pattern:
         abort(404)
-    superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if (
-        not superuser
-        and not pattern.public
-        and (not g.user or user.name != g.user.name)
-    ):
-        # Non-owner can fetch images for public patterns; private 403.
+    if not _can_view_pattern(pattern, user):
+        # Images follow the same rule as the pattern itself.
         abort(403)
     img = getattr(pattern, attr)
     if not img:
