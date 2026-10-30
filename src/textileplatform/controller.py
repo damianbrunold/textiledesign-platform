@@ -13,7 +13,7 @@ from textileplatform.messaging import (
     get_or_create_group_participant,
     can_access_conversation,
     post_message,
-    unread_count,
+    inbox,
     unread_total,
     conversations_for_user,
 )
@@ -3676,16 +3676,11 @@ def _serialize_message(msg):
     }
 
 
-def _serialize_conversation(conv, user):
-    last_msg = None
-    for m in reversed(conv.messages):
-        if not m.deleted:
-            last_msg = m
-            break
+def _serialize_conversation(conv, user, last_msg, unread):
     base = {
         "id": conv.id,
         "kind": conv.kind,
-        "unread": unread_count(conv, user),
+        "unread": unread,
         "last_message": _serialize_message(last_msg) if last_msg else None,
     }
     if conv.kind == "group":
@@ -3709,16 +3704,12 @@ def _serialize_conversation(conv, user):
 @app.route("/api/conversations")
 @login_required
 def api_conversations():
-    def last_activity(conv):
-        when = conv.messages[-1].created if conv.messages else conv.created
-        return when.timestamp() if when else 0
-
-    convs = sorted(
-        conversations_for_user(g.user), key=last_activity, reverse=True,
-    )
     return jsonify({
         "status": "OK",
-        "conversations": [_serialize_conversation(c, g.user) for c in convs],
+        "conversations": [
+            _serialize_conversation(conv, g.user, last_msg, unread)
+            for conv, last_msg, unread in inbox(g.user)
+        ],
     })
 
 
