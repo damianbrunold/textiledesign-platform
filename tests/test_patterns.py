@@ -142,4 +142,6 @@ class TestVerify:
         db.session.commit()
         r = client.get("/auth/verify/frank/abc123")
         assert r.status_code == 200
-        assert User.query.filter_by(name="frank").one().verified
+        frank = User.query.filter_by(name="frank").one()
+        assert frank.verified
+        assert frank.verify_date is not None

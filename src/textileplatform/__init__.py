@@ -205,9 +205,9 @@ def clean_up_non_verified_users():
             if user.mypatterns:
                 continue
             # only clean up 24 hours after account creation
-            if user.verify_date:
+            if user.create_date:
                 now = datetime.datetime.now(datetime.timezone.utc)
-                delta = now - user.verify_date
+                delta = now - user.create_date
                 if delta.days < 1:
                     continue
             todelete.append(user)

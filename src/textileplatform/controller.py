@@ -3491,6 +3491,7 @@ def verify(user_name, verification_code):
             return render_template("verification_failed.html")
         user.verified = True
         user.verification_code = None
+        user.verify_date = datetime.datetime.now(datetime.timezone.utc)
         logging.info("user_id=%s successfully verified", user.id)
         try:
             db.session.commit()
