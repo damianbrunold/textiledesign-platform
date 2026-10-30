@@ -45,6 +45,7 @@ from textileplatform.exportcommon import TooLargeError
 
 from importlib.metadata import version
 import base64
+import codecs
 import datetime
 import io
 import json
@@ -1120,23 +1121,31 @@ def download_pattern_legacy(user_name, pattern_name):
     readonly = not g.user or g.user.name != user.name
     if readonly and not _can_view_pattern(pattern, user):
         return redirect(url_for("user", user_name=user_name))
-    pattern.pattern = json.loads(pattern.contents)
-    if pattern.pattern_type == "DB-WEAVE Pattern":
-        return send_file(
-            io.BytesIO(render_dbw_data(pattern.pattern).encode("utf8")),
-            mimetype="application/octet-stream",
-            as_attachment=True,
-            download_name=f"{user_name}-{pattern_name}.dbw",
-        )
-    elif pattern.pattern_type == "JBead Pattern":
-        return send_file(
-            io.BytesIO(render_jbb_data(pattern.pattern).encode("utf8")),
-            mimetype="application/octet-stream",
-            as_attachment=True,
-            download_name=f"{user_name}-{pattern_name}.jbb",
-        )
-    else:
+    renderers = {
+        "DB-WEAVE Pattern": (render_dbw_data, "dbw"),
+        "JBead Pattern": (render_jbb_data, "jbb"),
+    }
+    if pattern.pattern_type not in renderers:
         return redirect(url_for("user", user_name=user_name))
+    render, ext = renderers[pattern.pattern_type]
+    try:
+        data = json.loads(pattern.contents)
+        validate_pattern(data, pattern.pattern_type)
+        # UTF-8, as both desktop apps read it.
+        body = render(data).encode("utf8")
+    except PatternError as e:
+        return _plain_error(f"Download not possible: {e}", 400)
+    except Exception:
+        logging.exception(
+            "Legacy download for %s/%s failed", user_name, pattern_name
+        )
+        return _plain_error("Download failed", 500)
+    return send_file(
+        io.BytesIO(body),
+        mimetype="application/octet-stream",
+        as_attachment=True,
+        download_name=f"{user_name}-{pattern_name}.{ext}",
+    )
 
 
 _WEAVE_EXPORT = {
@@ -1711,6 +1720,18 @@ def profile_delete():
     return redirect(url_for("index"))
 
 
+def _decode_upload(raw):
+    """Pattern files from the current desktop apps (and our own legacy
+    downloads) are UTF-8; files from the old Windows DB-WEAVE are
+    Windows-1252."""
+    if raw.startswith(codecs.BOM_UTF8):
+        raw = raw[len(codecs.BOM_UTF8):]
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw.decode("cp1252", "replace")
+
+
 @app.route("/patterns/upload", methods=("GET", "POST"))
 @login_required
 def upload_pattern():
@@ -1732,8 +1753,7 @@ def upload_pattern():
                     name = os.path.splitext(file.filename)[0]
                 else:
                     name = f"unnamed {idx+1}"
-            bytedata = file.read()
-            data = bytedata.decode("latin-1", "ignore")
+            data = _decode_upload(file.read())
             saved = None
             saved_kind = None
             try:
@@ -1744,7 +1764,7 @@ def upload_pattern():
                     contents = parse_jbb_data(data, name)
                     saved_kind = "JBead Pattern"
                 else:
-                    contents = json.loads(bytedata.decode("utf-8", "ignore"))
+                    contents = json.loads(data)
                     if not isinstance(contents, dict):
                         raise ValueError("not a pattern")
                     if "name" not in contents:

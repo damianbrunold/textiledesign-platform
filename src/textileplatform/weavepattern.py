@@ -40,6 +40,7 @@ Limitations
 
 import array
 import copy
+import re
 import sys
 
 from textileplatform.palette import default_weave_palette
@@ -73,7 +74,10 @@ def render_dbw_data(pattern):
     every known field from the platform dict.
     """
     raw = pattern.get('_dbw_raw')
-    raw = copy.deepcopy(raw) if raw else _default_skeleton(pattern)
+    raw = (
+        copy.deepcopy(raw) if raw and isinstance(raw, dict)
+        else _default_skeleton(pattern)
+    )
     _apply_platform_to_raw(raw, pattern)
     return _render_struct(raw)
 
@@ -101,11 +105,13 @@ def _parse_dbw_into_struct(data):
             key, _, value = line.partition("==")
             current[key] = value
         elif line == "}":
+            if not stack:
+                raise PatternError("unbalanced '}' in .dbw")
             current = stack.pop()
         elif line == "":
             continue
         else:
-            raise RuntimeError(f"unexpected line in .dbw: {line!r}")
+            raise PatternError(f"unexpected line in .dbw: {line[:40]!r}")
     return result
 
 
@@ -127,6 +133,15 @@ def _unsplit_lines(lines):
 # ---------------------------------------------------------------------------
 # Helpers — dict navigation + simple type coercion
 # ---------------------------------------------------------------------------
+
+def _section(parent, key):
+    """parent[key] as a dict, replacing a missing or scalar entry (a
+    malformed or hand-edited _dbw_raw) with an empty section."""
+    child = parent.get(key)
+    if not isinstance(child, dict):
+        child = parent[key] = {}
+    return child
+
 
 def _dig(d, *path, default=None):
     cur = d
@@ -167,7 +182,8 @@ def _map_raw_to_platform(raw, name):
     result['organization'] = (
         _dig(raw, 'properties', 'organization', default='') or ''
     )
-    result['notes'] = _dig(raw, 'properties', 'remarks', default='') or ''
+    result['notes'] = _remarks_to_notes(
+        _dig(raw, 'properties', 'remarks', default=''))
 
     # Sizes (with sensible fallbacks).
     size = _dig(raw, 'data', 'size', default={}) or {}
@@ -333,40 +349,42 @@ def _apply_platform_to_raw(raw, pattern):
     max_treadles = int(pattern.get('max_treadles') or 0)
 
     # ----- properties ------------------------------------------------------
-    props = raw.setdefault('properties', {})
-    props['author'] = pattern.get('author', '') or ''
-    props['organization'] = pattern.get('organization', '') or ''
-    props['remarks'] = pattern.get('notes', '') or ''
+    props = _section(raw, 'properties')
+    props['author'] = str(pattern.get('author') or '')
+    props['organization'] = str(pattern.get('organization') or '')
+    # Remarks are the one multi-line field; the value itself is passed
+    # through _format_value like every other.
+    props['remarks'] = _notes_to_remarks(pattern.get('notes'))
 
     # ----- data.size -------------------------------------------------------
-    data_section = raw.setdefault('data', {})
-    size = data_section.setdefault('size', {})
+    data_section = _section(raw, 'data')
+    size = _section(data_section, 'size')
     size['maxx1'] = str(width)
     size['maxy1'] = str(max_treadles)
     size['maxx2'] = str(max_shafts)
     size['maxy2'] = str(height)
 
     # ----- data.fields -----------------------------------------------------
-    fields = data_section.setdefault('fields', {})
-    einzug = fields.setdefault('einzug', {})
+    fields = _section(data_section, 'fields')
+    einzug = _section(fields, 'einzug')
     einzug['size'] = str(width)
     einzug['data'] = _enhex_short(_pad(pattern.get('data_entering'), width))
     einzug.setdefault('dummy', '0')
 
-    aufk = fields.setdefault('aufknuepfung', {})
+    aufk = _section(fields, 'aufknuepfung')
     aufk['sizex'] = str(max_treadles)
     aufk['sizey'] = str(max_shafts)
     aufk['data'] = _enhex_byte(
         _pad(pattern.get('data_tieup'), max_treadles * max_shafts))
 
-    tf_outer = fields.setdefault('trittfolge', {})
-    tf_inner = tf_outer.setdefault('trittfolge', {})
+    tf_outer = _section(fields, 'trittfolge')
+    tf_inner = _section(tf_outer, 'trittfolge')
     treadling = _pad(pattern.get('data_treadling'), max_treadles * height)
     tf_inner['sizex'] = str(max_treadles)
     tf_inner['sizey'] = str(height)
     tf_inner['data'] = _enhex_byte(treadling)
     # Derived: per-row "is empty" cache.
-    isempty = tf_outer.setdefault('isempty', {})
+    isempty = _section(tf_outer, 'isempty')
     isempty_bytes = []
     if max_treadles > 0:
         for j in range(height):
@@ -375,17 +393,17 @@ def _apply_platform_to_raw(raw, pattern):
     isempty['size'] = str(height)
     isempty['data'] = _enhex_byte(isempty_bytes)
 
-    kf = fields.setdefault('kettfarben', {})
+    kf = _section(fields, 'kettfarben')
     kf['size'] = str(width)
     kf['data'] = _enhex_ubyte(_pad(pattern.get('colors_warp'), width))
-    sf = fields.setdefault('schussfarben', {})
+    sf = _section(fields, 'schussfarben')
     sf['size'] = str(height)
     sf['data'] = _enhex_ubyte(_pad(pattern.get('colors_weft'), height))
-    be = fields.setdefault('blatteinzug', {})
+    be = _section(fields, 'blatteinzug')
     be['size'] = str(width)
     be['data'] = _enhex_byte(_pad(pattern.get('data_reed'), width))
 
-    fe = fields.setdefault('fixeinzug', {})
+    fe = _section(fields, 'fixeinzug')
     fe['fixeinzug'] = _enhex_short(
         _pad(pattern.get('data_fixeinzug'), width))
     fe['fixsize'] = str(int(pattern.get('fixsize') or 0))
@@ -396,7 +414,7 @@ def _apply_platform_to_raw(raw, pattern):
 
     # ----- data.palette ---------------------------------------------------
     palette = pattern.get('palette') or list(default_weave_palette)
-    pal = data_section.setdefault('palette', {})
+    pal = _section(data_section, 'palette')
     pal['size'] = str(len(palette))
     pal['data2'] = _enhex_colors(palette)
 
@@ -404,7 +422,7 @@ def _apply_platform_to_raw(raw, pattern):
     blockmuster = (
         pattern.get('data_blockmuster') or [[0] * 144 for _ in range(10)]
     )
-    bm = data_section.setdefault('blockmuster', {})
+    bm = _section(data_section, 'blockmuster')
     for k in range(10):
         slot = blockmuster[k] if k < len(blockmuster) else [0] * 144
         bm[f'bindung{k}'] = _enhex_byte(_pad(slot, 144))
@@ -414,7 +432,7 @@ def _apply_platform_to_raw(raw, pattern):
     bereichmuster = (
         pattern.get('data_bereichmuster') or [[0] * 144 for _ in range(10)]
     )
-    bem = data_section.setdefault('bereichmuster', {})
+    bem = _section(data_section, 'bereichmuster')
     for k in range(10):
         slot = bereichmuster[k] if k < len(bereichmuster) else [0] * 144
         bem[f'bindung{k}'] = _enhex_byte(_pad(slot, 144))
@@ -424,7 +442,9 @@ def _apply_platform_to_raw(raw, pattern):
     # imported, leave the raw bytes verbatim (preserves any uninitialised
     # padding bytes the desktop may have written). Otherwise encode the
     # platform's current list — the desktop accepts zeroed padding.
-    hl = data_section.setdefault('hilfslinien', {'count': '0', 'list': ''})
+    hl = _section(data_section, 'hilfslinien')
+    hl.setdefault('count', '0')
+    hl.setdefault('list', '')
     raw_count = _str_int(hl.get('count'))
     raw_list = hl.get('list') or ''
     raw_decoded = _decode_hlines(raw_list, raw_count)
@@ -434,8 +454,8 @@ def _apply_platform_to_raw(raw, pattern):
         hl['list'] = _encode_hlines(plat_hlines)
 
     # ----- view ----------------------------------------------------------
-    view = raw.setdefault('view', {})
-    general = view.setdefault('general', {})
+    view = _section(raw, 'view')
+    general = _section(view, 'general')
     general.setdefault('strongcolor', '0')
     general['hebung'] = '0' if pattern.get('warp_lifting', True) else '1'
     general['zoom'] = str(int(pattern.get('zoom') or 0))
@@ -457,7 +477,7 @@ def _apply_platform_to_raw(raw, pattern):
     general['viewpalette'] = '1' if pattern.get('display_palette') else '0'
     general['viewpegplan'] = '1' if pattern.get('display_pegplan') else '0'
 
-    einzug_view = view.setdefault('einzug', {})
+    einzug_view = _section(view, 'einzug')
     einzug_view['visible'] = (
         '1' if pattern.get('display_entering') else '0'
     )
@@ -470,12 +490,12 @@ def _apply_platform_to_raw(raw, pattern):
     einzug_view['hvisible'] = str(int(pattern.get('visible_shafts') or 12))
     einzug_view.setdefault('style', '1')
 
-    aufk_view = view.setdefault('aufknuepfung', {})
+    aufk_view = _section(view, 'aufknuepfung')
     _write_viewtype(aufk_view, pattern.get('tieup_style', 'filled'))
     aufk_view.setdefault('stronglinex', '4')
     aufk_view.setdefault('strongliney', '4')
 
-    tf_view = view.setdefault('trittfolge', {})
+    tf_view = _section(view, 'trittfolge')
     tf_view['visible'] = (
         '1' if pattern.get('display_treadling') else '0'
     )
@@ -488,7 +508,7 @@ def _apply_platform_to_raw(raw, pattern):
     tf_view['wvisible'] = str(int(pattern.get('visible_treadles') or 12))
     tf_view.setdefault('style', '0')
 
-    gewebe_view = view.setdefault('gewebe', {})
+    gewebe_view = _section(view, 'gewebe')
     state_map = {
         'draft': '0', 'color': '1', 'simulation': '2', 'invisible': '3'
     }
@@ -501,13 +521,13 @@ def _apply_platform_to_raw(raw, pattern):
         '1' if pattern.get('color_effect_with_grid') else '0'
     )
 
-    blatt_view = view.setdefault('blatteinzug', {})
+    blatt_view = _section(view, 'blatteinzug')
     blatt_view['visible'] = '1' if pattern.get('display_reed') else '0'
-    kf_view = view.setdefault('kettfarben', {})
+    kf_view = _section(view, 'kettfarben')
     kf_view['visible'] = (
         '1' if pattern.get('display_colors_warp') else '0'
     )
-    sf_view = view.setdefault('schussfarben', {})
+    sf_view = _section(view, 'schussfarben')
     sf_view['visible'] = (
         '1' if pattern.get('display_colors_weft') else '0'
     )
@@ -603,6 +623,8 @@ def _render_struct(d):
     lines = ['@dbw3:file']
     first = True
     for key, value in d.items():
+        if not _is_valid_key(key):
+            continue
         comment = _TOP_LEVEL_COMMENTS.get(key)
         if comment:
             if not first:
@@ -626,6 +648,8 @@ def _render_struct(d):
 def _render_dict_into(d, lines, indent):
     pad = '    ' * indent
     for key, value in d.items():
+        if not _is_valid_key(key):
+            continue
         if isinstance(value, dict):
             lines.append(f'{pad}\\{key}{{')
             _render_dict_into(value, lines, indent + 1)
@@ -642,8 +666,37 @@ def _format_value(v):
         return ''
     s = str(v)
     if len(s) <= 70 or not _looks_like_long_hex(s):
-        return s
+        return _single_line(s)
     return '\\\r\n'.join(s[i:i + 70] for i in range(0, len(s), 70))
+
+
+def _single_line(s):
+    """A value ends at the line break, and a backslash right before it
+    means "continued on the next line" — so a written value must not
+    contain line breaks or end in a backslash."""
+    s = s.replace('\r\n', ' ').replace('\r', ' ').replace('\n', ' ')
+    return s.rstrip('\\')
+
+
+_KEY_RE = re.compile(r'[^\s\\{}=;@]+')
+
+
+def _is_valid_key(key):
+    """Keys come from the stored _dbw_raw; skip anything that would not
+    read back as a single section or field name."""
+    return isinstance(key, str) and _KEY_RE.fullmatch(key) is not None
+
+
+def _notes_to_remarks(notes):
+    """Desktop FileProperties::RemoveNL: line breaks are stored as a
+    single backslash."""
+    notes = str(notes or '').replace('\r\n', '\n').replace('\r', '\n')
+    return notes.rstrip('\n').replace('\n', '\\')
+
+
+def _remarks_to_notes(remarks):
+    """Desktop FileProperties::InsertNL."""
+    return remarks.replace('\\', '\n') if isinstance(remarks, str) else ''
 
 
 def _looks_like_long_hex(s):
@@ -665,42 +718,41 @@ def _pad(seq, n):
     return seq
 
 
+def _clamped(v, lo, hi):
+    """Cell value as an int within [lo, hi]. Out-of-range values used to
+    emit extra hex digits and shift every following cell."""
+    try:
+        v = int(v or 0)
+    except (TypeError, ValueError):
+        v = 0
+    return min(max(v, lo), hi)
+
+
 def _enhex_short(values):
-    parts = []
+    # Signed or unsigned 16-bit, written little-endian.
+    raw = bytearray()
     for v in values:
-        if v is None:
-            v = 0
-        if v < 0:
-            v += 65536
-        lo = v & 0xff
-        hi = (v >> 8) & 0xff
-        parts.append(f'{lo:02x}{hi:02x}')
-    return ''.join(parts)
+        v = _clamped(v, -32768, 65535) & 0xffff
+        raw += bytes((v & 0xff, v >> 8))
+    return raw.hex()
 
 
 def _enhex_byte(values):
-    parts = []
-    for v in values:
-        if v is None:
-            v = 0
-        if v < 0:
-            v += 256
-        parts.append(f'{v:02x}')
-    return ''.join(parts)
+    # Signed or unsigned 8-bit.
+    return bytes(_clamped(v, -128, 255) & 0xff for v in values).hex()
 
 
 def _enhex_ubyte(values):
-    return ''.join(f'{v:02x}' if v is not None else '00' for v in values)
+    return bytes(_clamped(v, 0, 255) for v in values).hex()
 
 
 def _enhex_colors(colors):
-    parts = []
+    raw = bytearray()
     for c in colors:
-        if len(c) >= 4:
-            parts.append(f'{c[0]:02x}{c[1]:02x}{c[2]:02x}{c[3]:02x}')
-        else:
-            parts.append(f'{c[0]:02x}{c[1]:02x}{c[2]:02x}00')
-    return ''.join(parts)
+        c = list(c)[:4] if isinstance(c, (list, tuple)) else []
+        c += [0] * (4 - len(c))
+        raw += bytes(_clamped(v, 0, 255) for v in c)
+    return raw.hex()
 
 
 def _hex_bytes(data):

@@ -1,3 +1,34 @@
+r"""JBead (.jbb) import / export.
+
+The .jbb format is the S-expression the desktop JBead writes through its
+ObjectModel (jbead/src/io/objectmodel.cpp, jbeadmemento.cpp)::
+
+    (jbb
+        (version 1)
+        (author "...")
+        (organization "...")
+        (notes "...")
+        (colors
+            (rgb r g b a)
+            ...)
+        (view
+            (draft-visible true)
+            ...
+            (symbols "..."))
+        (model
+            (row b0 b1 ...)
+            ...))
+
+Strings are double-quoted with ``\`` escaping the next character, may
+span lines, and the file is UTF-8. ``#`` starts a comment. A node either
+holds child nodes or is a leaf holding a list of values (int, bool,
+string). This module mirrors the desktop lexer, parser and formatter.
+"""
+import re
+
+from textileplatform.validation import PatternError
+
+
 def smallest_period(seq):
     """Length of the shortest period p of ``seq`` (seq[k] == seq[k - p]
     for every k >= p), or len(seq) if there is none. 0 for an empty
@@ -17,119 +48,259 @@ def smallest_period(seq):
     return n - prefix[-1]
 
 
+# The desktop stores a zoom *index* into this table of cell sizes; the
+# platform editor stores the cell size in pixels.
+DESKTOP_ZOOM_TABLE = (6, 8, 10, 12, 14, 16, 18, 20)
+DEFAULT_ZOOM = 12
+
+VIEW_KEYS = (
+    'draft-visible', 'corrected-visible', 'simulation-visible',
+    'report-visible', 'selected-tool', 'selected-color',
+    'zoom', 'scroll', 'shift',
+    'draw-colors', 'draw-symbols', 'symbols',
+)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
 def parse_jbb_data(jbbdata, name=''):
-    contents = _parse_jbb_into_struct(jbbdata)
-    result = dict()
-    result['name'] = name
-    result['author'] = contents['author']
-    result['organization'] = ''
-    result['notes'] = contents['notes']
-    result['colors'] = contents['colors']
-    result['view'] = contents['view']
-    result['model'] = contents['model']
-    return result
+    """Parse a .jbb file into the platform's bead pattern dict. Raises
+    PatternError on syntax errors. Missing sections fall back to the
+    same defaults the desktop uses."""
+    root = _parse(_tokenize(jbbdata))
+    if not isinstance(root, _Node) or root.name != 'jbb':
+        raise PatternError("not a JBead file")
+
+    view = {}
+    view_node = root.find('view')
+    if isinstance(view_node, _Node):
+        for leaf in view_node.children:
+            if isinstance(leaf, _Leaf) and leaf.values:
+                view[leaf.name] = (
+                    leaf.values[0] if len(leaf.values) == 1 else leaf.values
+                )
+    if 'zoom' in view:
+        view['zoom'] = _zoom_from_desktop(view['zoom'])
+
+    return {
+        'name': name,
+        'author': root.string('author'),
+        'organization': root.string('organization'),
+        'notes': root.string('notes'),
+        'colors': [
+            leaf.values for leaf in root.leaves('colors', 'rgb')
+            if len(leaf.values) >= 3
+        ],
+        'view': view,
+        'model': _rectangular(
+            [leaf.values for leaf in root.leaves('model', 'row')]
+        ),
+    }
 
 
 def render_jbb_data(pattern):
+    """Render a platform bead pattern dict as .jbb text, in the layout
+    the desktop writes."""
+    view = pattern.get('view') or {}
+    view_leaves = []
+    for key in VIEW_KEYS:
+        if key not in view:
+            # Patterns saved before a slot existed don't carry it.
+            continue
+        value = view[key]
+        if value is None:
+            continue
+        if key == 'zoom':
+            value = _zoom_to_desktop(value)
+        if isinstance(value, list):
+            view_leaves.append((key, *value))
+        else:
+            view_leaves.append((key, value))
+
     lines = ['(jbb']
-    lines.append('    (version 1)')
-    lines.append(f'    (author {_render_value(pattern["author"])})')
-    lines.append(f'    (notes {_render_value(pattern["notes"])})')
-
-    colors = pattern['colors']
-    lines.append('    (colors')
-    for i, color in enumerate(colors):
-        r, g, b = color[0], color[1], color[2]
-        close = '))' if i == len(colors) - 1 else ')'
-        lines.append(f'        (rgb {r} {g} {b}{close}')
-
-    view = pattern['view']
-    view_keys = [
-        'draft-visible', 'corrected-visible', 'simulation-visible',
-        'report-visible', 'selected-tool', 'selected-color',
-        'zoom', 'scroll', 'shift',
-        'draw-colors', 'draw-symbols', 'symbols',
-    ]
-    # Skip keys that the file doesn't carry — keeps backward
-    # compatibility with patterns saved before these slots existed.
-    view_keys = [k for k in view_keys if k in view]
-    lines.append('    (view')
-    for i, key in enumerate(view_keys):
-        close = '))' if i == len(view_keys) - 1 else ')'
-        lines.append(f'        ({key} {_render_value(view[key])}{close}')
-
-    model = pattern['model']
-    lines.append('    (model')
-    for i, row in enumerate(model):
-        row_str = ' '.join(str(v) for v in row)
-        close = ')))' if i == len(model) - 1 else ')'
-        lines.append(f'        (row {row_str}{close}')
-
+    _leaf(lines, 1, 'version', 1)
+    _leaf(lines, 1, 'author', str(pattern.get('author') or ''))
+    _leaf(lines, 1, 'organization', str(pattern.get('organization') or ''))
+    _leaf(lines, 1, 'notes', str(pattern.get('notes') or ''))
+    _node(lines, 1, 'colors', [
+        ('rgb', *color) for color in pattern.get('colors') or []
+    ])
+    _node(lines, 1, 'view', view_leaves)
+    _node(lines, 1, 'model', [
+        ('row', *row) for row in pattern.get('model') or []
+    ])
+    lines[-1] += ')'
     return '\n'.join(lines) + '\n'
 
+
+# ---------------------------------------------------------------------------
+# Rendering helpers
+# ---------------------------------------------------------------------------
 
 def _render_value(value):
     if isinstance(value, bool):
         return 'true' if value else 'false'
-    elif isinstance(value, str):
-        return f'"{value}"'
-    else:
-        return str(value)
+    if isinstance(value, str):
+        escaped = value.replace('\\', '\\\\').replace('"', '\\"')
+        return f'"{escaped}"'
+    return str(int(value))
 
 
-def _parse_jbb_into_struct(data):
-    lines = [line.strip() for line in data.splitlines()
-             if not line.startswith(";")]
-    if lines[0] == '(jbb':
-        lines = lines[1:]  # skip file identification line
-    result = dict()
-    current = result
-    stack = []
-    for line in lines:
-        if not line or line.startswith(";"):
-            pass
-        elif line.startswith("(") and not line.endswith(")"):
-            name = line[1:]
-            child = [] if name in ("model", "colors") else dict()
-            current[name] = child
-            stack.append(current)
-            current = child
-        elif line.endswith(")))"):
-            key, value = _parse_key_value(line[1:-3])
-            if isinstance(current, list):
-                current.append(value)
+def _leaf(lines, depth, name, *values):
+    rendered = ''.join(' ' + _render_value(v) for v in values)
+    lines.append(f"{'    ' * depth}({name}{rendered})")
+
+
+def _node(lines, depth, name, leaves):
+    lines.append(f"{'    ' * depth}({name}")
+    for leaf_name, *values in leaves:
+        _leaf(lines, depth + 1, leaf_name, *values)
+    lines[-1] += ')'
+
+
+def _zoom_to_desktop(pixels):
+    """Platform cell size → index of the nearest desktop zoom step."""
+    if not isinstance(pixels, int) or isinstance(pixels, bool):
+        pixels = DEFAULT_ZOOM
+    return min(
+        range(len(DESKTOP_ZOOM_TABLE)),
+        key=lambda i: abs(DESKTOP_ZOOM_TABLE[i] - pixels),
+    )
+
+
+def _zoom_from_desktop(index):
+    if (
+        isinstance(index, int) and not isinstance(index, bool)
+        and 0 <= index < len(DESKTOP_ZOOM_TABLE)
+    ):
+        return DESKTOP_ZOOM_TABLE[index]
+    return DEFAULT_ZOOM
+
+
+def _rectangular(rows):
+    """Pad or cut every row to the width of the first, as the desktop
+    reader does (it takes the width from the first row)."""
+    if not rows:
+        return []
+    width = len(rows[0])
+    return [(row + [0] * width)[:width] for row in rows]
+
+
+# ---------------------------------------------------------------------------
+# Lexer + parser (mirrors jbead/src/io/objectmodel.cpp)
+# ---------------------------------------------------------------------------
+
+_OPEN = object()
+_CLOSE = object()
+
+_TOKEN_RE = re.compile(
+    r'(?P<space>\s+)'
+    r'|(?P<comment>[#;][^\n]*)'
+    r'|(?P<paren>[()])'
+    r'|"(?P<string>(?:[^"\\]|\\.)*)"'
+    r'|(?P<general>[^ \n\r()"][^ \n\r()]*)',
+    re.DOTALL,
+)
+_UNESCAPE_RE = re.compile(r'\\(.)', re.DOTALL)
+_INT_RE = re.compile(r'[+-]?\d+')
+
+
+def _tokenize(text):
+    tokens = []
+    pos = 0
+    end = len(text)
+    while pos < end:
+        m = _TOKEN_RE.match(text, pos)
+        if m is None:
+            raise PatternError(f"unterminated string at offset {pos}")
+        pos = m.end()
+        kind = m.lastgroup
+        if kind == 'paren':
+            tokens.append(_OPEN if m.group('paren') == '(' else _CLOSE)
+        elif kind == 'string':
+            tokens.append(_UNESCAPE_RE.sub(r'\1', m.group('string')))
+        elif kind == 'general':
+            tok = m.group('general')
+            if tok == 'true':
+                tokens.append(True)
+            elif tok == 'false':
+                tokens.append(False)
+            elif _INT_RE.fullmatch(tok):
+                tokens.append(int(tok))
             else:
-                current[key] = value
-            current = stack.pop()
-            break
-        elif line.endswith("))"):
-            key, value = _parse_key_value(line[1:-2])
-            if isinstance(current, list):
-                current.append(value)
-            else:
-                current[key] = value
-            current = stack.pop()
-        else:
-            key, value = _parse_key_value(line[1:-1])
-            if isinstance(current, list):
-                current.append(value)
-            else:
-                current[key] = value
-    return result
+                tokens.append(tok)
+    return tokens
 
 
-def _parse_key_value(line):
-    key, *values = line.split()
-    values = [_parse_value(value) for value in values]
-    return key, values[0] if len(values) == 1 else values
+class _Node:
+    def __init__(self, name):
+        self.name = name
+        self.children = []
+
+    def find(self, name):
+        for child in self.children:
+            if child.name == name:
+                return child
+        return None
+
+    def leaves(self, node_name, leaf_name):
+        node = self.find(node_name)
+        if not isinstance(node, _Node):
+            return []
+        return [
+            c for c in node.children
+            if isinstance(c, _Leaf) and c.name == leaf_name
+        ]
+
+    def string(self, name, default=''):
+        leaf = self.find(name)
+        if isinstance(leaf, _Leaf) and leaf.values:
+            return str(leaf.values[0])
+        return default
 
 
-def _parse_value(value):
-    if value.startswith('"') or value.startswith("'"):
-        return value[1:-1]
-    elif value == 'true':
-        return True
-    elif value == 'false':
-        return False
-    else:
-        return int(value)
+class _Leaf:
+    def __init__(self, name):
+        self.name = name
+        self.values = []
+
+
+def _parse(tokens):
+    pos = 0
+
+    def next_token():
+        nonlocal pos
+        if pos >= len(tokens):
+            raise PatternError("unexpected end of file")
+        token = tokens[pos]
+        pos += 1
+        return token
+
+    def parse_node(token):
+        if token is not _OPEN:
+            raise PatternError("syntax error, expected (")
+        name = next_token()
+        if not isinstance(name, str):
+            raise PatternError("syntax error, expected a node name")
+        token = next_token()
+        if token is _CLOSE:
+            return _Node(name)
+        if token is _OPEN:
+            node = _Node(name)
+            while token is not _CLOSE:
+                node.children.append(parse_node(token))
+                token = next_token()
+            return node
+        leaf = _Leaf(name)
+        while token is not _CLOSE:
+            if token is _OPEN:
+                raise PatternError(f"syntax error in ({name} ...)")
+            leaf.values.append(token)
+            token = next_token()
+        return leaf
+
+    if not tokens:
+        raise PatternError("empty file")
+    return parse_node(next_token())

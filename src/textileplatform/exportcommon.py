@@ -8,6 +8,8 @@ Pillow / SVG / reportlab back-ends without circular imports.
 
 from __future__ import annotations
 
+from xml.sax.saxutils import escape as xml_escape
+
 
 class TooLargeError(ValueError):
     """The requested output would be too large to render. Callers turn
@@ -306,7 +308,7 @@ class SVGTarget(DrawTarget):
             f'<text x="{x + w // 2}" y="{y + h - 2}" '
             f'text-anchor="middle" font-family="sans-serif" '
             f'font-size="{max(6, h - 4)}" '
-            f'fill="{self._color(color)}">{text}</text>'
+            f'fill="{self._color(color)}">{_xml_text(text)}</text>'
         )
 
     def text_left(self, x, y, h, text, color):
@@ -314,8 +316,16 @@ class SVGTarget(DrawTarget):
             f'<text x="{x}" y="{y + h - 2}" '
             f'text-anchor="start" font-family="sans-serif" '
             f'font-size="{max(6, h - 4)}" '
-            f'fill="{self._color(color)}">{text}</text>'
+            f'fill="{self._color(color)}">{_xml_text(text)}</text>'
         )
+
+
+def _xml_text(text) -> str:
+    """Escape user text (author, notes, bead symbols) for SVG <text>,
+    dropping control characters XML 1.0 cannot carry."""
+    return xml_escape("".join(
+        ch for ch in str(text) if ch >= " " or ch in "\t\n\r"
+    ))
 
 
 def svg_document(target: SVGTarget) -> bytes:
