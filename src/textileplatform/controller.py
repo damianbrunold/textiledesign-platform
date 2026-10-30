@@ -1813,8 +1813,6 @@ def delete(pattern_name):
         return redirect(url_for("user", user_name=g.user.name))
 
     if request.method == "POST":
-        error = None
-
         try:
             _bump_pattern_edit(pattern.pattern_type)
             for assignment in pattern.assignments:
@@ -1822,12 +1820,14 @@ def delete(pattern_name):
             db.session.delete(pattern)
             db.session.commit()
         except Exception:
+            db.session.rollback()
             logging.exception("Pattern could not be deleted")
-            error = gettext("Pattern could not be deleted.")
-        else:
-            return redirect(url_for("user", user_name=g.user.name))
-
-        flash(error)
+            flash(gettext("Pattern could not be deleted."))
+            # Error status, so the listing's fetch() sees the failure.
+            return render_template(
+                "delete_pattern.html", pattern=pattern,
+            ), 500
+        return redirect(url_for("user", user_name=g.user.name))
 
     return render_template("delete_pattern.html", pattern=pattern)
 

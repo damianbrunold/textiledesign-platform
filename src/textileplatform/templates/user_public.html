@@ -108,7 +108,7 @@
             const row = btn.closest('.pattern-row');
             const owner = row.dataset.ownerName;
             const name = row.dataset.patternName;
-            if (!confirm("{{ gettext('Clone this pattern into your patterns?') }}")) return;
+            if (!confirm({{ gettext('Clone this pattern into your patterns?') | tojson }})) return;
             try {
                 const res = await fetch(`/api/pattern/${owner}/${name}`, {
                     method: 'PUT',
@@ -120,9 +120,13 @@
                     btn.textContent = '✓';
                     btn.disabled = true;
                 } else {
-                    alert(data.message || "{{ gettext('Clone failed') }}");
+                    alert(data.message || {{ gettext('Clone failed') | tojson }});
                 }
-            } catch (e) { alert(e); }
+            } catch (e) {
+                // Network error or an HTML error page instead of JSON.
+                console.error(e);
+                alert({{ gettext('Clone failed') | tojson }});
+            }
         });
     });
 

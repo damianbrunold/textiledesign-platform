@@ -240,7 +240,7 @@
 
     // ---- Filter ----------------------------------------------------
     const crossGroupHint = document.getElementById('cross-group-hint');
-    const ALSO_IN_LABEL = "{{ gettext('Also in') }}";
+    const ALSO_IN_LABEL = {{ gettext('Also in') | tojson }};
 
     function applyFilter() {
         const q = filterInput.value.trim().toLowerCase();
@@ -369,23 +369,54 @@
         }
     });
 
+    // Parse a JSON API reply; error pages (CSRF 400, 500, …) come back
+    // as HTML and turn into a NOK result instead of a SyntaxError.
+    async function readJson(res) {
+        try {
+            return await res.json();
+        } catch (e) {
+            return { status: 'NOK', message: null };
+        }
+    }
+
     async function cloneRow(row) {
         const owner = row.dataset.ownerName;
         const name = row.dataset.patternName;
-        if (!confirm("{{ gettext('Clone this pattern?') }}")) return;
+        if (!confirm({{ gettext('Clone this pattern?') | tojson }})) return;
+        let data = { status: 'NOK' };
         try {
             const res = await fetch(`/api/pattern/${owner}/${name}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'clone-pattern' }),
             });
-            const data = await res.json();
-            if (data.status === 'OK') {
-                window.location.reload();
-            } else {
-                alert(data.message || "{{ gettext('Clone failed') }}");
+            data = await readJson(res);
+        } catch (e) { console.error(e); }
+        if (data.status === 'OK') {
+            window.location.reload();
+        } else {
+            alert(data.message || {{ gettext('Clone failed') | tojson }});
+        }
+    }
+
+    // Replace the path segment that names the pattern — the one right
+    // after the owner (/owner/name/…, /thumbnail/owner/name) or after
+    // /patterns/<action>/ — not just any occurrence of the old name.
+    function renamedUrl(url, owner, oldName, newName) {
+        const u = new URL(url, window.location.href);
+        const oldSeg = encodeURIComponent(oldName);
+        const parts = u.pathname.split('/');
+        for (let i = 1; i < parts.length; i++) {
+            const prev = parts[i - 1];
+            const afterOwner = prev === encodeURIComponent(owner);
+            const afterAction = parts[1] === 'patterns' && i === 3;
+            if (parts[i] === oldSeg && (afterOwner || afterAction)) {
+                parts[i] = encodeURIComponent(newName);
+                break;
             }
-        } catch (e) { alert(e); }
+        }
+        u.pathname = parts.join('/');
+        return u.href;
     }
 
     function startRename(row) {
@@ -401,13 +432,18 @@
         nameEl.appendChild(input);
         input.focus();
         input.select();
+        let done = false;
         const finish = async (commit) => {
+            // Removing the input fires blur; only the first call counts.
+            if (done) return;
+            done = true;
             const newLabel = input.value.trim();
             input.remove();
             linkEl.style.display = '';
             if (!commit || !newLabel || newLabel === original) return;
             const owner = row.dataset.ownerName;
             const oldName = row.dataset.patternName;
+            let data = { status: 'NOK' };
             try {
                 const res = await fetch(`/api/pattern/${owner}/${oldName}`, {
                     method: 'PUT',
@@ -417,35 +453,21 @@
                         label: newLabel,
                     }),
                 });
-                const data = await res.json();
-                if (data.status === 'OK') {
-                    row.dataset.patternName = data.name;
-                    row.dataset.label = data.label;
-                    linkEl.textContent = data.label;
-                    // Update edit link href.
-                    linkEl.href = linkEl.href.replace(
-                        encodeURIComponent(oldName),
-                        encodeURIComponent(data.name));
-                    // Update other action links.
-                    row.querySelectorAll('a.icon').forEach(a => {
-                        a.href = a.href.replace(
-                            encodeURIComponent(oldName),
-                            encodeURIComponent(data.name));
-                    });
-                    // Update thumbnail src.
-                    const thumb = row.querySelector('.thumb');
-                    if (thumb) {
-                        thumb.src = thumb.src.replace(
-                            encodeURIComponent(oldName),
-                            encodeURIComponent(data.name));
-                    }
-                    applySort();
-                } else {
-                    alert(data.message || "{{ gettext('Rename failed') }}");
-                }
-            } catch (err) {
-                alert(err);
+                data = await readJson(res);
+            } catch (err) { console.error(err); }
+            if (data.status !== 'OK') {
+                alert(data.message || {{ gettext('Rename failed') | tojson }});
+                return;
             }
+            row.dataset.patternName = data.name;
+            row.dataset.label = data.label;
+            linkEl.textContent = data.label;
+            row.querySelectorAll('a[href]').forEach(a => {
+                a.href = renamedUrl(a.href, owner, oldName, data.name);
+            });
+            const thumb = row.querySelector('.thumb');
+            if (thumb) thumb.src = renamedUrl(thumb.src, owner, oldName, data.name);
+            applySort();
         };
         input.addEventListener('keydown', e => {
             if (e.key === 'Enter')   { e.preventDefault(); finish(true);  }
@@ -458,44 +480,54 @@
         const owner = row.dataset.ownerName;
         const name  = row.dataset.patternName;
         const next  = !row.classList.contains('is-public');
-        const res = await fetch(`/api/pattern/${owner}/${name}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'set-publication-state',
-                publication_state: next,
-            }),
-        });
-        const data = await res.json();
-        if (data.status === 'OK') {
-            row.classList.toggle('is-public', next);
-            const btn = row.querySelector('.act-publish');
-            if (btn) {
-                btn.textContent = next ? '🌐' : '🔒';
-                btn.setAttribute('aria-pressed', next ? 'true' : 'false');
-            }
-            const tag = row.querySelector('.meta-public');
-            if (tag) tag.textContent = next ? "{{ gettext('Public') }}" : "{{ gettext('Private') }}";
-        } else {
-            alert(data.message || "{{ gettext('Failed') }}");
+        let data = { status: 'NOK' };
+        try {
+            const res = await fetch(`/api/pattern/${owner}/${name}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'set-publication-state',
+                    publication_state: next,
+                }),
+            });
+            data = await readJson(res);
+        } catch (e) { console.error(e); }
+        if (data.status !== 'OK') {
+            alert(data.message || {{ gettext('Failed') | tojson }});
+            return;
+        }
+        row.classList.toggle('is-public', next);
+        const btn = row.querySelector('.act-publish');
+        if (btn) {
+            btn.textContent = next ? '🌐' : '🔒';
+            btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+        }
+        const tag = row.querySelector('.meta-public');
+        if (tag) {
+            tag.textContent = next ? {{ gettext('Public') | tojson }}
+                                   : {{ gettext('Private') | tojson }};
         }
     }
 
     async function deleteRow(row) {
         const label = row.dataset.label;
-        if (!confirm("{{ gettext('Delete pattern') }} \"" + label + "\"?")) return;
+        if (!confirm({{ gettext('Delete pattern') | tojson }} + ' "' + label + '"?')) return;
         const name = row.dataset.patternName;
-        // Reuse the existing /patterns/delete/<name> POST endpoint.
-        const form = new FormData();
-        const res = await fetch(`/patterns/delete/${encodeURIComponent(name)}`, {
-            method: 'POST',
-            body: form,
-            credentials: 'same-origin',
-        });
-        if (res.ok || res.redirected) {
+        // The /patterns/delete/<name> form endpoint: it redirects on
+        // success and answers with an error status otherwise.
+        let ok = false;
+        try {
+            const res = await fetch(`/patterns/delete/${encodeURIComponent(name)}`, {
+                method: 'POST',
+                body: new FormData(),
+                credentials: 'same-origin',
+            });
+            ok = res.ok;
+        } catch (e) { console.error(e); }
+        if (ok) {
             row.remove();
         } else {
-            alert("{{ gettext('Delete failed') }}");
+            alert({{ gettext('Delete failed') | tojson }});
         }
     }
 
@@ -565,13 +597,13 @@
         form.className = 'inline-new-form open';
         const input = document.createElement('input');
         input.type = 'text';
-        input.placeholder = "{{ gettext('Pattern name') }}";
+        input.placeholder = {{ gettext('Pattern name') | tojson }};
         const submit = document.createElement('button');
         submit.type = 'button';
-        submit.textContent = "{{ gettext('Create') }}";
+        submit.textContent = {{ gettext('Create') | tojson }};
         const cancel = document.createElement('button');
         cancel.type = 'button';
-        cancel.textContent = "{{ gettext('Cancel') }}";
+        cancel.textContent = {{ gettext('Cancel') | tojson }};
         form.appendChild(input);
         form.appendChild(submit);
         form.appendChild(cancel);

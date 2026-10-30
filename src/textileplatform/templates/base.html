@@ -15,11 +15,14 @@
                 init = init || {};
                 var method = (init.method || 'GET').toUpperCase();
                 if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-                    var url = (typeof input === 'string') ? input : (input && input.url) || '';
-                    var sameOrigin = (
-                        url.indexOf('/') === 0 ||
-                        url.indexOf(window.location.origin) === 0
-                    );
+                    // Resolve strings, URL and Request objects alike, so
+                    // "//other.host/x" doesn't pass for a local path.
+                    var raw = (input && input.url) || String(input);
+                    var sameOrigin = false;
+                    try {
+                        sameOrigin = new URL(raw, window.location.href).origin
+                            === window.location.origin;
+                    } catch (e) { sameOrigin = false; }
                     if (sameOrigin) {
                         var headers = new Headers(init.headers || {});
                         if (!headers.has('X-CSRFToken')) {

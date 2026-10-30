@@ -2517,6 +2517,12 @@ msgstr "Das Muster konnte nicht geladen werden. Bitte die Seite neu laden."
 msgid "The pattern could not be cloned."
 msgstr "Das Muster konnte nicht geklont werden."
 
+msgid "Export failed."
+msgstr "Der Export ist fehlgeschlagen."
+
+msgid "Print failed."
+msgstr "Das Drucken ist fehlgeschlagen."
+
 msgid ""
 "These local edits are based on an older version of the pattern, which "
 "has been saved again since. Recovering them replaces the newer version "

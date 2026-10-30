@@ -863,19 +863,22 @@ function _jbeadPrefsRead() {
     return _jbeadPrefsCache;
 }
 
+let _jbeadPrefsTimer = null;
+
 function _jbeadPrefsSave(partial) {
     _jbeadPrefsCache = Object.assign({}, _jbeadPrefsRead(), partial);
     if (typeof readonly !== "undefined" && readonly) return;
-    try {
+    // Debounced: zooming step by step would otherwise send one request
+    // per step.
+    clearTimeout(_jbeadPrefsTimer);
+    _jbeadPrefsTimer = setTimeout(() => {
         fetch("/api/user/settings", {
             method: "PUT",
             credentials: "same-origin",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ jbead: _jbeadPrefsCache }),
         }).catch((e) => console.warn("settings save failed", e));
-    } catch (e) {
-        console.warn("settings save failed", e);
-    }
+    }, 500);
 }
 
 
@@ -2833,16 +2836,10 @@ async function _printPattern() {
         saveSettings(data, settings);
         savePatternData(data, pattern);
     }
-    const user = document.getElementById("user").value;
-    const name = document.getElementById("pattern").value;
-    const resp = await fetch(`/${user}/${name}/print`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: data, full_pattern: true }),
-    });
-    if (!resp.ok) { alert(`Print failed: ${resp.status}`); return; }
-    const blob = await resp.blob();
-    _downloadBlob(blob, `${name}.pdf`);
+    await downloadRendered(
+        "print", { contents: data, full_pattern: true },
+        `${document.getElementById("pattern").value}.pdf`,
+        _prompt("printFailed", "Print failed."));
 }
 
 async function _exportPattern(fmt) {
@@ -2850,28 +2847,11 @@ async function _exportPattern(fmt) {
         saveSettings(data, settings);
         savePatternData(data, pattern);
     }
-    const user = document.getElementById("user").value;
-    const name = document.getElementById("pattern").value;
-    const resp = await fetch(`/${user}/${name}/export/${fmt}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: data }),
-    });
-    if (!resp.ok) { alert(`Export failed: ${resp.status}`); return; }
-    const blob = await resp.blob();
     const ext = fmt === "jpeg" ? "jpg" : fmt;
-    _downloadBlob(blob, `${name}.${ext}`);
-}
-
-function _downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    await downloadRendered(
+        `export/${fmt}`, { contents: data },
+        `${document.getElementById("pattern").value}.${ext}`,
+        _prompt("exportFailed", "Export failed."));
 }
 
 function _setZoom(dx) {

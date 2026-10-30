@@ -192,7 +192,7 @@ function select_part(part, x1, y1, x2, y2) {
         cursor.selected_pattern = pattern.reed;
         cursor.selected_view = view.reed;
     } else {
-        console.log("ERR: cannot select part", part);
+        console.error("cannot select part", part);
     }
     if (typeof ActionRegistry !== "undefined") ActionRegistry.notify();
 }
@@ -4050,7 +4050,6 @@ function init() {
         trackSavedState(commandBus);
     }
 
-    // console.log(data);
     initSettings(data, settings);
     initPatternData(data, pattern);
     _applyAspectRatio(settings);
@@ -4186,51 +4185,15 @@ function val(data, prop, defval) {
 // modified state. The server renders the document and returns the
 // file; we wrap it in a Blob and trigger a download via an anchor.
 async function _exportDownload(fmt) {
-    const userEl = document.getElementById("user");
-    const patEl  = document.getElementById("pattern");
-    if (!userEl || !patEl) return;
     // Mutate `data` *in memory only* so it reflects the latest
     // settings + pattern grids; the request body uses this snapshot.
     saveSettings(data, settings);
     savePatternData(data, pattern);
-    const url = `/${encodeURIComponent(userEl.value)}/`
-              + `${encodeURIComponent(patEl.value)}/export/${fmt}`;
-    let blob, filename;
-    try {
-        const resp = await fetch(url, {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: data }),
-        });
-        if (!resp.ok) {
-            const txt = await resp.text();
-            alert("Export failed: " + (txt || resp.status));
-            return;
-        }
-        // Pull the suggested filename out of Content-Disposition; fall
-        // back to a reasonable default.
-        const cd = resp.headers.get("Content-Disposition") || "";
-        const m = /filename="?([^";]+)"?/i.exec(cd);
-        filename = (m && m[1])
-            || `${userEl.value}-${patEl.value}.${fmt === "jpeg" ? "jpg" : fmt}`;
-        blob = await resp.blob();
-    } catch (e) {
-        alert("Export failed: " + e);
-        return;
-    }
-    const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objUrl;
-    a.download = filename;
-    a.rel = "noopener";
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-        if (a.parentNode) a.parentNode.removeChild(a);
-        URL.revokeObjectURL(objUrl);
-    }, 0);
+    const ext = fmt === "jpeg" ? "jpg" : fmt;
+    await downloadRendered(
+        `export/${fmt}`, { contents: data },
+        `${document.getElementById("pattern").value}.${ext}`,
+        _prompt("exportFailed", "Export failed."));
 }
 
 // ---- Phase 10: properties + pattern info -------------------------
@@ -4713,10 +4676,9 @@ function showPatternInfoDialog() {
         a.style.display = "none";
         document.body.appendChild(a);
         a.click();
-        setTimeout(() => {
-            if (a.parentNode) a.parentNode.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, 0);
+        a.remove();
+        // Revoking right away can cancel the download in some browsers.
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
     };
 
     modal = Modal.open({
@@ -4736,46 +4698,12 @@ function showPatternInfoDialog() {
 // server-side; in-memory state is POSTed so unsaved edits are
 // reflected without auto-saving.
 async function _printDownload(opts) {
-    const userEl = document.getElementById("user");
-    const patEl  = document.getElementById("pattern");
-    if (!userEl || !patEl) return;
     saveSettings(data, settings);
     savePatternData(data, pattern);
-    const url = `/${encodeURIComponent(userEl.value)}/`
-              + `${encodeURIComponent(patEl.value)}/print`;
-    let blob, filename;
-    try {
-        const resp = await fetch(url, {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(Object.assign({ contents: data }, opts || {})),
-        });
-        if (!resp.ok) {
-            const txt = await resp.text();
-            alert("Print failed: " + (txt || resp.status));
-            return;
-        }
-        const cd = resp.headers.get("Content-Disposition") || "";
-        const m = /filename="?([^";]+)"?/i.exec(cd);
-        filename = (m && m[1]) || `${userEl.value}-${patEl.value}.pdf`;
-        blob = await resp.blob();
-    } catch (e) {
-        alert("Print failed: " + e);
-        return;
-    }
-    const objUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objUrl;
-    a.download = filename;
-    a.rel = "noopener";
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-        if (a.parentNode) a.parentNode.removeChild(a);
-        URL.revokeObjectURL(objUrl);
-    }, 0);
+    await downloadRendered(
+        "print", Object.assign({ contents: data }, opts || {}),
+        `${document.getElementById("pattern").value}.pdf`,
+        _prompt("printFailed", "Print failed."));
 }
 
 // Print part — range dialog (warp + weft + harness + treadle) →
@@ -9505,313 +9433,18 @@ function _paletteRestore(snap) {
 }
 
 // Tiny RGB <-> HSV helpers. H ∈ [0,360), S,V ∈ [0,1].
-function _rgbToHsv(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
-    const d = mx - mn;
-    let h = 0;
-    if (d > 0) {
-        if (mx === r)      h = ((g - b) / d) % 6;
-        else if (mx === g) h = (b - r) / d + 2;
-        else               h = (r - g) / d + 4;
-        h *= 60; if (h < 0) h += 360;
-    }
-    const s = mx === 0 ? 0 : d / mx;
-    return [h, s, mx];
-}
-function _hsvToRgb(h, s, v) {
-    const c = v * s;
-    const hh = (h % 360 + 360) % 360 / 60;
-    const x = c * (1 - Math.abs(hh % 2 - 1));
-    let r1 = 0, g1 = 0, b1 = 0;
-    if (hh < 1)      { r1 = c; g1 = x; }
-    else if (hh < 2) { r1 = x; g1 = c; }
-    else if (hh < 3) { g1 = c; b1 = x; }
-    else if (hh < 4) { g1 = x; b1 = c; }
-    else if (hh < 5) { r1 = x; b1 = c; }
-    else             { r1 = c; b1 = x; }
-    const m = v - c;
-    return [Math.round((r1 + m) * 255),
-            Math.round((g1 + m) * 255),
-            Math.round((b1 + m) * 255)];
-}
-function _rgbToHex(r, g, b) {
-    const h = (n) => Math.max(0, Math.min(255, n | 0)).toString(16).padStart(2, "0");
-    return "#" + h(r) + h(g) + h(b);
-}
-function _hexToRgb(hex) {
-    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-    if (!m) return [0, 0, 0];
-    return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
-}
+// Colour conversions and the RGB / HSV pickers are shared with the
+// bead editor (colorpicker.js).
+const _rgbToHsv = ColorPicker.rgbToHsv;
+const _hsvToRgb = ColorPicker.hsvToRgb;
+const _rgbToHex = ColorPicker.rgbToHex;
+const _hexToRgb = ColorPicker.hexToRgb;
+const _pickColorRGB = ColorPicker.pickRGB;
 
-// Native <input type="color"> picker, wrapped in a callback contract.
-// Modern browsers (Safari/Chrome/Firefox) all expose this RGB picker.
-function _pickColorRGB(initialRgb, onAccept) {
-    const inp = document.createElement("input");
-    inp.type = "color";
-    inp.value = _rgbToHex(initialRgb[0], initialRgb[1], initialRgb[2]);
-    inp.style.position = "fixed";
-    inp.style.left = "-9999px";
-    document.body.appendChild(inp);
-    let resolved = false;
-    const cleanup = () => { if (inp.parentNode) inp.parentNode.removeChild(inp); };
-    inp.addEventListener("input", () => {
-        if (resolved) return;
-        resolved = true;
-        const rgb = _hexToRgb(inp.value);
-        cleanup();
-        onAccept(rgb);
-    });
-    inp.addEventListener("change", () => {
-        if (resolved) return;
-        resolved = true;
-        const rgb = _hexToRgb(inp.value);
-        cleanup();
-        onAccept(rgb);
-    });
-    // Fallback cleanup in case the user cancels (no input/change fires).
-    setTimeout(() => {
-        if (!resolved && !document.activeElement) {
-            resolved = true; cleanup();
-        }
-    }, 60000);
-    inp.click();
-}
-
-// HSV picker dialog: three sliders + numeric inputs + live swatch.
 function _pickColorHSV(initialRgb, onAccept) {
     const i18n = _getI18n();
-    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
-    let [h, s, v] = _rgbToHsv(initialRgb[0], initialRgb[1], initialRgb[2]);
-
-    // Wheel geometry: square canvas, outer ring = hue, inner disc =
-    // S/V square inscribed in the inner ring. Matches the legacy
-    // farbauswahl_form (hue wheel + S/V patch).
-    const SIZE = 240;
-    const RING_OUTER = SIZE / 2 - 4;
-    const RING_INNER = RING_OUTER - 22;
-    // Inner SV square inscribed in the inner ring.
-    const SV_HALF = Math.floor(RING_INNER * Math.SQRT1_2) - 2;
-
-    const body = document.createElement("div");
-    body.style.display = "flex";
-    body.style.gap = "1rem";
-    body.style.minWidth = "560px";
-    body.innerHTML = `
-        <div>
-            <canvas id="tx-hsv-wheel" width="${SIZE}" height="${SIZE}"
-                    style="display:block;cursor:crosshair"></canvas>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:0.4rem">
-            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0.4rem 0.6rem;align-items:center">
-                <label>${L("color.hue", "Hue:")}</label>
-                <input id="tx-hsv-h" type="range" min="0" max="359" step="1">
-                <input id="tx-hsv-h-num" type="number" min="0" max="359" step="1" style="width:5rem">
-                <label>${L("color.sat", "Saturation:")}</label>
-                <input id="tx-hsv-s" type="range" min="0" max="100" step="1">
-                <input id="tx-hsv-s-num" type="number" min="0" max="100" step="1" style="width:5rem">
-                <label>${L("color.val", "Value:")}</label>
-                <input id="tx-hsv-v" type="range" min="0" max="100" step="1">
-                <input id="tx-hsv-v-num" type="number" min="0" max="100" step="1" style="width:5rem">
-            </div>
-            <div style="display:grid;grid-template-columns:auto 1fr;gap:0.3rem 0.6rem;font-family:monospace">
-                <span>R:</span><span id="tx-hsv-r"></span>
-                <span>G:</span><span id="tx-hsv-g"></span>
-                <span>B:</span><span id="tx-hsv-b"></span>
-            </div>
-            <div id="tx-hsv-swatch" style="margin-top:0.4rem;height:48px;border:1px solid #888"></div>
-        </div>`;
-    const $ = (sel) => body.querySelector(sel);
-    const wheel = $("#tx-hsv-wheel");
-    const ctx = wheel.getContext("2d");
-
-    // Cache the hue ring as an offscreen image (it never changes).
-    let ringCache = null;
-    const buildRingCache = () => {
-        const off = document.createElement("canvas");
-        off.width = SIZE; off.height = SIZE;
-        const c = off.getContext("2d");
-        const cx = SIZE / 2, cy = SIZE / 2;
-        const img = c.createImageData(SIZE, SIZE);
-        for (let y = 0; y < SIZE; y++) {
-            for (let x = 0; x < SIZE; x++) {
-                const dx = x - cx, dy = y - cy;
-                const d = Math.sqrt(dx * dx + dy * dy);
-                if (d < RING_INNER || d > RING_OUTER) continue;
-                let ang = Math.atan2(-dy, dx) * 180 / Math.PI;
-                if (ang < 0) ang += 360;
-                const [r, g, b] = _hsvToRgb(ang, 1, 1);
-                const i = (y * SIZE + x) * 4;
-                img.data[i] = r;
-                img.data[i + 1] = g;
-                img.data[i + 2] = b;
-                img.data[i + 3] = 255;
-            }
-        }
-        c.putImageData(img, 0, 0);
-        ringCache = off;
-    };
-
-    const drawSV = () => {
-        // Inner square: x→saturation (0..1), y→value (0..1, top is 1).
-        const cx = SIZE / 2, cy = SIZE / 2;
-        const x0 = cx - SV_HALF, y0 = cy - SV_HALF;
-        const w = SV_HALF * 2, hgt = SV_HALF * 2;
-        // Base: hue at full saturation/value.
-        const [hr, hg, hb] = _hsvToRgb(h, 1, 1);
-        // Horizontal: white → hue.
-        const grad1 = ctx.createLinearGradient(x0, 0, x0 + w, 0);
-        grad1.addColorStop(0, "#fff");
-        grad1.addColorStop(1, `rgb(${hr}, ${hg}, ${hb})`);
-        ctx.fillStyle = grad1;
-        ctx.fillRect(x0, y0, w, hgt);
-        // Vertical: transparent → black.
-        const grad2 = ctx.createLinearGradient(0, y0, 0, y0 + hgt);
-        grad2.addColorStop(0, "rgba(0,0,0,0)");
-        grad2.addColorStop(1, "#000");
-        ctx.fillStyle = grad2;
-        ctx.fillRect(x0, y0, w, hgt);
-        ctx.strokeStyle = "#444";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, hgt - 1);
-
-        // SV cursor.
-        const sx = x0 + s * w;
-        const sy = y0 + (1 - v) * hgt;
-        ctx.beginPath();
-        ctx.arc(sx, sy, 5, 0, Math.PI * 2);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#000";
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(sx, sy, 5, 0, Math.PI * 2);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "#fff";
-        ctx.stroke();
-    };
-
-    const drawHueCursor = () => {
-        const cx = SIZE / 2, cy = SIZE / 2;
-        const r = (RING_INNER + RING_OUTER) / 2;
-        const ang = h * Math.PI / 180;
-        const x = cx + r * Math.cos(ang);
-        const y = cy - r * Math.sin(ang);
-        ctx.beginPath();
-        ctx.arc(x, y, 7, 0, Math.PI * 2);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#000";
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(x, y, 7, 0, Math.PI * 2);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "#fff";
-        ctx.stroke();
-    };
-
-    const drawWheel = () => {
-        if (!ringCache) buildRingCache();
-        ctx.clearRect(0, 0, SIZE, SIZE);
-        ctx.drawImage(ringCache, 0, 0);
-        drawSV();
-        drawHueCursor();
-    };
-
-    const sync = () => {
-        $("#tx-hsv-h").value = Math.round(h);
-        $("#tx-hsv-h-num").value = Math.round(h);
-        $("#tx-hsv-s").value = Math.round(s * 100);
-        $("#tx-hsv-s-num").value = Math.round(s * 100);
-        $("#tx-hsv-v").value = Math.round(v * 100);
-        $("#tx-hsv-v-num").value = Math.round(v * 100);
-        const [r, g, b] = _hsvToRgb(h, s, v);
-        $("#tx-hsv-r").textContent = r;
-        $("#tx-hsv-g").textContent = g;
-        $("#tx-hsv-b").textContent = b;
-        $("#tx-hsv-swatch").style.background = `rgb(${r}, ${g}, ${b})`;
-        drawWheel();
-    };
-
-    body.addEventListener("input", (e) => {
-        const id = e.target.id;
-        if (id === "tx-hsv-h" || id === "tx-hsv-h-num") h = +e.target.value;
-        else if (id === "tx-hsv-s" || id === "tx-hsv-s-num") s = (+e.target.value) / 100;
-        else if (id === "tx-hsv-v" || id === "tx-hsv-v-num") v = (+e.target.value) / 100;
-        sync();
-    });
-
-    // Wheel hit-testing: ring vs SV square. Drag tracks within the
-    // initially-engaged region until pointerup.
-    let drag = null;
-    const hitTest = (px, py) => {
-        const cx = SIZE / 2, cy = SIZE / 2;
-        const dx = px - cx, dy = py - cy;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d >= RING_INNER && d <= RING_OUTER) return "ring";
-        if (Math.abs(dx) <= SV_HALF && Math.abs(dy) <= SV_HALF) return "sv";
-        return null;
-    };
-    const updateFromPos = (px, py, mode) => {
-        const cx = SIZE / 2, cy = SIZE / 2;
-        if (mode === "ring") {
-            const dx = px - cx, dy = py - cy;
-            let ang = Math.atan2(-dy, dx) * 180 / Math.PI;
-            if (ang < 0) ang += 360;
-            h = ang;
-        } else if (mode === "sv") {
-            const x0 = cx - SV_HALF, y0 = cy - SV_HALF;
-            const w = SV_HALF * 2;
-            s = Math.max(0, Math.min(1, (px - x0) / w));
-            v = Math.max(0, Math.min(1, 1 - (py - y0) / w));
-        }
-        sync();
-    };
-    const wheelPos = (e) => {
-        const rect = wheel.getBoundingClientRect();
-        const cx = ((e.touches ? e.touches[0].clientX : e.clientX) - rect.left)
-                   * (SIZE / rect.width);
-        const cy = ((e.touches ? e.touches[0].clientY : e.clientY) - rect.top)
-                   * (SIZE / rect.height);
-        return [cx, cy];
-    };
-    wheel.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        const [px, py] = wheelPos(e);
-        const mode = hitTest(px, py);
-        if (!mode) return;
-        drag = mode;
-        updateFromPos(px, py, mode);
-    });
-    const onWinMove = (e) => {
-        if (!drag) return;
-        const [px, py] = wheelPos(e);
-        updateFromPos(px, py, drag);
-    };
-    const onWinUp = () => { drag = null; };
-    window.addEventListener("mousemove", onWinMove);
-    window.addEventListener("mouseup", onWinUp);
-
-    sync();
-
-    let modal;
-    modal = Modal.open({
-        title: L("color.hsv-title", "HSV color picker"),
-        body,
-        buttons: [
-            { label: L("btn.cancel", "Cancel"), role: "cancel" },
-            { label: L("btn.ok", "OK"), role: "primary", onClick: () => {
-                const rgb = _hsvToRgb(h, s, v);
-                modal.close();
-                onAccept(rgb);
-            }},
-        ],
-    });
-    const origClose = modal.close;
-    modal.close = function () {
-        window.removeEventListener("mousemove", onWinMove);
-        window.removeEventListener("mouseup", onWinUp);
-        return origClose.apply(modal, arguments);
-    };
+    ColorPicker.pickHSV(initialRgb, onAccept,
+        (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb);
 }
 
 // Palette editor. 19×13 grid, MAX_PAL_ENTRY-clamped. Cancel/Escape

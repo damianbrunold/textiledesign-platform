@@ -180,16 +180,21 @@
         const input = document.getElementById('invite-user');
         const box = document.getElementById('user-suggestions');
         let timer = null;
+        let seq = 0;
         input.addEventListener('input', () => {
             clearTimeout(timer);
+            const mine = ++seq;
             const q = input.value.trim();
             if (q.length < 2) { box.style.display = 'none'; return; }
             timer = setTimeout(async () => {
-                const url = '{{ url_for("api_users_search") }}?q='
-                    + encodeURIComponent(q)
-                    + '&group={{ group.name }}';
+                const url = {{ url_for("api_users_search") | tojson }}
+                    + '?q=' + encodeURIComponent(q)
+                    + '&group=' + encodeURIComponent({{ group.name | tojson }});
                 const res = await fetch(url);
-                const data = await res.json();
+                let data = {};
+                try { data = await res.json(); } catch (e) { /* error page */ }
+                // An older, slower request must not overwrite newer results.
+                if (mine !== seq) return;
                 box.innerHTML = '';
                 if (!data.users || data.users.length === 0) {
                     box.style.display = 'none';
@@ -349,9 +354,13 @@
                     btn.textContent = next ? '🌐' : '🔒';
                     btn.setAttribute('aria-pressed', next ? 'true' : 'false');
                 } else {
-                    alert(data.message || "{{ gettext('Failed') }}");
+                    alert(data.message || {{ gettext('Failed') | tojson }});
                 }
-            } catch (err) { alert(err); }
+            } catch (err) {
+                // Network error or an HTML error page instead of JSON.
+                console.error(err);
+                alert({{ gettext('Failed') | tojson }});
+            }
         });
     })();
     </script>

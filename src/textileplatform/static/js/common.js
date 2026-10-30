@@ -529,6 +529,51 @@ async function clonePattern() {
 }
 
 
+// POST `body` to /<user>/<pattern>/<route> (export/<fmt> or print) and
+// save the returned file. On failure show `failMessage`, plus the
+// server's short reason when it sent one as plain text (size limits).
+async function downloadRendered(route, body, fallbackName, failMessage) {
+    const user = document.getElementById("user").value;
+    const pattern = document.getElementById("pattern").value;
+    const url = `/${encodeURIComponent(user)}/${encodeURIComponent(pattern)}/${route}`;
+    let blob, filename;
+    try {
+        const resp = await fetch(url, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+        });
+        if (!resp.ok) {
+            const type = resp.headers.get("Content-Type") || "";
+            const reason = type.startsWith("text/plain")
+                ? (await resp.text()).slice(0, 300) : "";
+            alert(reason ? `${failMessage}\n\n${reason}` : failMessage);
+            return;
+        }
+        const cd = resp.headers.get("Content-Disposition") || "";
+        const m = /filename="?([^";]+)"?/i.exec(cd);
+        filename = (m && m[1]) || fallbackName;
+        blob = await resp.blob();
+    } catch (e) {
+        console.error(e);
+        alert(failMessage);
+        return;
+    }
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objUrl;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Revoking right away can cancel the download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
+}
+
+
 // ---- Startup ---------------------------------------------------------
 
 // Common editor startup. Expects the global `readonly` to be set.

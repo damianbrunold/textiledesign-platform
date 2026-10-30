@@ -31,8 +31,8 @@
     const empty = document.getElementById('inbox-empty');
     const btnRecent = document.getElementById('sort-recent');
     const btnName = document.getElementById('sort-name');
-    const KIND_GROUP = "{{ gettext('Group') }}";
-    const KIND_DIRECT = "{{ gettext('Direct') }}";
+    const KIND_GROUP = {{ gettext('Group') | tojson }};
+    const KIND_DIRECT = {{ gettext('Direct') | tojson }};
 
     let sortMode = localStorage.getItem('inboxSort') || 'recent';
     let items = [];
@@ -161,15 +161,20 @@
     const searchInput = document.getElementById('start-chat-input');
     const searchBox = document.getElementById('start-chat-suggestions');
     let searchTimer = null;
+    let searchSeq = 0;
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimer);
+        const seq = ++searchSeq;
         const q = searchInput.value.trim();
         if (q.length < 2) { searchBox.style.display = 'none'; return; }
         searchTimer = setTimeout(async () => {
             const res = await fetch(
                 '/api/users/search?q=' + encodeURIComponent(q));
             if (res.status === 401) { window.location.reload(); return; }
-            const data = await res.json();
+            let data = {};
+            try { data = await res.json(); } catch (e) { /* error page */ }
+            // An older, slower request must not overwrite newer results.
+            if (seq !== searchSeq) return;
             searchBox.innerHTML = '';
             if (!data.users || data.users.length === 0) {
                 searchBox.style.display = 'none';
