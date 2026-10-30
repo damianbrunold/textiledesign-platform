@@ -15,7 +15,7 @@
   - Die .dbw-Datei für das Desktop-Programm herunterladen.
 - **Demo-Vorbereitung:**
   - Lokale Video-Instanz (siehe README), Oberfläche auf Deutsch, helles Erscheinungsbild, Browserfenster 1920×1080.
-  - Angemeldet als **Anna Weber** (anna-weber@example.com).
+  - Angemeldet als **Anna Weber** (anna.weber@example.com).
   - Das Konto enthält das Startmuster **Doppelgewebe** (unverändert, Entwurfsansicht, Grundeinstellung Deutsch/Schweizerisch) sowie Grün Gelb Diagonal, Übung 1 und Übung 2 aus den früheren Videos. Geklonte Beispielmuster werden nicht benötigt.
   - Ohne Kamera vorbereitet: ein neues Webmuster **Blockübung** mit einer Profilpatrone aus zwei Blöcken in Bereich 1: Punkte bei Sp 1–2/Ze 1–2 und Sp 3–4/Ze 3–4 (acht Punkte). Die Plätze der Blockmusterung sind leer. Gespeichert, Entwurfsansicht, so gezoomt, dass das Profil gross erscheint.
   - Bereiche und Palette geschlossen. Die Paletteneinträge ab Index 200 werden von Doppelgewebe nicht verwendet (der Farbverlauf in Szene 9 schreibt dorthin).

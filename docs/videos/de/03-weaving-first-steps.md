@@ -14,7 +14,7 @@
   - Zoomen, rückgängig machen/wiederherstellen, speichern, einen lokalen Entwurf wiederherstellen und den Editor schliessen.
 - **Demo-Vorbereitung:**
   - Lokale Video-Instanz (siehe README), Oberfläche auf Deutsch, helles Erscheinungsbild, Browserfenster 1920×1080.
-  - Angemeldet als **Anna Weber** (anna-weber@example.com).
+  - Angemeldet als **Anna Weber** (anna.weber@example.com).
   - Das Konto enthält nur die beiden Startmuster **Doppelgewebe** und **Grün Gelb Diagonal**, beide unverändert. Ein Muster "Übung 1" existiert noch nicht (es wird in Szene 6 erstellt).
   - Extras ▸ Grundeinstellung steht auf **Deutsch/Schweizerisch** (Vorgabe), als Stil ist die Entwurfsansicht aktiv.
   - Szene 12 (lokalen Entwurf wiederherstellen) wird ohne Kamera vorbereitet: Nach Szene 11 noch eine Änderung in Übung 1 machen, in den Entwicklertools des Browsers Netzwerk ▸ Offline wählen, den Tab schliessen (Browser-Rückfrage "Website verlassen?" bestätigen), wieder auf Online schalten, Entwicklertools schliessen, die Musterliste öffnen und Übung 1 anklicken. Die Aufnahme fortsetzen, sobald der Dialog "Ungespeicherte Änderungen wiederherstellen?" sichtbar ist.

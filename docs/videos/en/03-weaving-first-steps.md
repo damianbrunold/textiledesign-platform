@@ -14,7 +14,7 @@
   - Zoom, undo/redo, save, recover a local draft and close the editor.
 - **Demo setup:**
   - Local video instance (see README), English UI, light appearance, browser window 1920×1080.
-  - Logged in as **Anna Weaver** (anna-weaver@example.com).
+  - Logged in as **Anna Weaver** (anna.weaver@example.com).
   - Her account contains only the two starter patterns **Double Weave** and **Green Yellow Diagonal**, both unchanged. No pattern named "Exercise 1" exists yet (it is created in scene 6).
   - Extras ▸ Base settings is **German/Swiss** (the default) and the weave style is Draft view.
   - Scene 12 (local draft recovery) is staged off camera: after scene 11, make one more change in Exercise 1, open the browser DevTools ▸ Network ▸ Offline, close the tab (confirm the browser's "Leave site?" prompt), switch back to Online, close DevTools, open the pattern list and click Exercise 1. Resume recording when the dialog "Recover unsaved changes?" is visible.

@@ -83,6 +83,43 @@ Video 01 registers the "new user" live; all other accounts are prepared
 beforehand. Each script's header lists the exact state it needs
 (patterns, group members, pending invitations, unread messages, …).
 
+All demo users have the e-mail address `firstname.lastname@example.com`
+(e.g. `anna.weaver@example.com`, `ben.perle@example.com`) and share one
+local test password, which is never committed.
+
+## Preparing the demo state: `demo_setup.py`
+
+Before each recording, reset the demo users to the state that video
+needs. Run from the repository root, with the video environment loaded
+(`DATABASE` must point at `textile_video`, otherwise the tool refuses to
+run):
+
+```bash
+DEMO_PASSWORD=... python docs/videos/demo_setup.py <video> <en|de> [--files DIR]
+# examples
+DEMO_PASSWORD=... python docs/videos/demo_setup.py 09 en
+DEMO_PASSWORD=... python docs/videos/demo_setup.py 02 de --files "C:/Users/me/Textil Demo"
+```
+
+What it does:
+
+- Deletes the three demo users of that language with all their patterns,
+  groups and chats (including the shared course group), then recreates
+  them as freshly verified accounts (welcome popup dismissed, light
+  appearance, language of the video) with the production starter patterns.
+- Adds what the video needs: copies of public example patterns under the
+  names used in the script, generated exercise patterns, groups with roles,
+  chat messages with the right read state.
+- Videos 02 and 10: writes the `.dbw` / `.jbb` files for the upload scenes,
+  plus the deliberately broken file, to `--files`.
+- Prints links (`…?autosave=1`) for generated patterns: open each once in
+  the browser, logged in as its owner, so the list shows a preview image.
+
+Things the tool does not do (do them by hand, as described in the script):
+clearing the browser's site data, resetting per-user editor settings after
+rehearsals, staging the draft-recovery scene in video 03, zooming or
+scrolling the editor before a take.
+
 ## Glossary EN ↔ DE
 
 Use these terms consistently in narration; they match the UI.

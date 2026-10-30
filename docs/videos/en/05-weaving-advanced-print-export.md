@@ -15,7 +15,7 @@
   - Download the .dbw file for the desktop program.
 - **Demo setup:**
   - Local video instance (see README), English UI, light appearance, browser window 1920×1080.
-  - Logged in as **Anna Weaver** (anna-weaver@example.com).
+  - Logged in as **Anna Weaver** (anna.weaver@example.com).
   - Her account contains the starter **Double Weave** (unchanged, Draft view, base setting German/Swiss), plus Green Yellow Diagonal, Exercise 1 and Exercise 2 from the earlier videos. No cloned example patterns are needed.
   - Prepared off camera: a new weave pattern **Block Exercise** containing a two-block profile drawn in range 1: points at Col 1–2/Row 1–2 and Col 3–4/Row 3–4 (eight points). Its Block patterns slots are empty. Saved, Draft view, zoomed in so the profile is large.
   - Ranges and Palette panels closed. The palette entries from index 200 onwards are not used by Double Weave (the color blending in scene 9 writes there).

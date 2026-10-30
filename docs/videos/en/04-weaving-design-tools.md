@@ -15,7 +15,7 @@
   - Use Highlight Dependents (F12), Overview (F4) and keyboard drawing.
 - **Demo setup:**
   - Local video instance (see README), English UI, light appearance, browser window 1920×1080.
-  - Logged in as **Anna Weaver** (anna-weaver@example.com).
+  - Logged in as **Anna Weaver** (anna.weaver@example.com).
   - Her account contains Double Weave, Green Yellow Diagonal and Exercise 1 (state at the end of video 03) plus an **empty** weave pattern **Exercise 2**, created off camera with + (Add new pattern).
   - In Exercise 2: Draft view, base setting German/Swiss, current range 1, Tools and Palette panels closed, zoom so that about 60 warp threads and 30 picks are visible.
   - Positions below refer to the status bar (Col/Row). Use the menus for Slope and Repeat visible, because Ctrl+H and Ctrl+R are also browser shortcuts.

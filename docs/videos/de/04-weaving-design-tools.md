@@ -15,7 +15,7 @@
   - Abhängige hervorheben (F12), Übersicht (F4) und Zeichnen mit der Tastatur nutzen.
 - **Demo-Vorbereitung:**
   - Lokale Video-Instanz (siehe README), Oberfläche auf Deutsch, helles Erscheinungsbild, Browserfenster 1920×1080.
-  - Angemeldet als **Anna Weber** (anna-weber@example.com).
+  - Angemeldet als **Anna Weber** (anna.weber@example.com).
   - Das Konto enthält Doppelgewebe, Grün Gelb Diagonal und Übung 1 (Stand am Ende von Video 03) sowie ein **leeres** Webmuster **Übung 2**, ohne Kamera mit + (Neues Muster hinzufügen) erstellt.
   - In Übung 2: Entwurfsansicht, Grundeinstellung Deutsch/Schweizerisch, aktueller Bereich 1, Werkzeuge und Palette geschlossen, so gezoomt, dass etwa 60 Kettfäden und 30 Schüsse sichtbar sind.
   - Die Positionen unten beziehen sich auf die Statusleiste (Sp/Ze). Für Steigung und Rapport sichtbar die Menüs verwenden, weil Strg+H und Strg+R auch Browser-Tastenkürzel sind.
