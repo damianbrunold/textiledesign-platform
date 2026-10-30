@@ -12,45 +12,50 @@ def get_cmd(tool):
         return f"venv/bin/{tool}"
 
 
-def get_version():
+def get_project():
     with open("pyproject.toml", "rb") as infile:
-        data = tomllib.load(infile)
-        return data["project"]["version"]
+        return tomllib.load(infile)["project"]
 
 
-def get_name():
-    with open("pyproject.toml", "rb") as infile:
-        data = tomllib.load(infile)
-        return data["project"]["name"]
+def run(step, cmd):
+    """Run one deploy step; stop the whole deploy if it fails."""
+    print(f"==> {step}", flush=True)
+    try:
+        subprocess.run(cmd, check=True)
+    except (subprocess.CalledProcessError, OSError) as exc:
+        print(f"\nDEPLOY FAILED at step '{step}': {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
+def tool(name):
+    path = shutil.which(name)
+    if path is None:
+        print(f"DEPLOY FAILED: '{name}' not found on PATH", file=sys.stderr)
+        sys.exit(1)
+    return path
 
 
 def deploy_to_server(dest):
     basepath = "/home/webapps/textile"
+    project = get_project()
+    wheelname = f"{project['name']}-{project['version']}-py3-none-any.whl"
     shutil.rmtree("build", ignore_errors=True)
-    subprocess.run([get_cmd("python"), "-m", "build"])
-    version = get_version()
-    name = get_name()
-    wheelname = f"{name}-{version}-py3-none-any.whl"
-    wheel = f"dist/{wheelname}"
-    subprocess.run([
-        shutil.which("scp"),
-        wheel,
-        f"{dest}:/home/webapps/dist/",
+    run("build wheel", [get_cmd("python"), "-m", "build"])
+    run("copy wheel", [
+        tool("scp"), f"dist/{wheelname}", f"{dest}:/home/webapps/dist/",
     ])
-    subprocess.run([
-        shutil.which("scp"),
-        "-r",
-        "migrations",
-        "requirements.txt",
-        "update_server.py",
+    run("copy migrations and requirements", [
+        tool("scp"), "-r",
+        "migrations", "requirements.txt", "update_server.py",
         f"{dest}:{basepath}/",
     ])
-    subprocess.run([
-        shutil.which("ssh"),
-        dest,
+    # update_server.py exits non-zero on failure, which ssh passes on.
+    run("update server", [
+        tool("ssh"), dest,
         "/usr/bin/sudo -u webapps "
         f"python {basepath}/update_server.py {basepath} {wheelname}",
     ])
+    print(f"\nDeployed {wheelname} to {dest}.")
 
 
 if __name__ == "__main__":
