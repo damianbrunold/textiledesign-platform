@@ -2520,6 +2520,18 @@ msgstr "Das Muster konnte nicht geklont werden."
 msgid "Export failed."
 msgstr "Der Export ist fehlgeschlagen."
 
+msgid "RGB color picker"
+msgstr "RGB-Farbauswahl"
+
+msgid "Red:"
+msgstr "Rot:"
+
+msgid "Green:"
+msgstr "Grün:"
+
+msgid "Blue:"
+msgstr "Blau:"
+
 msgid "Print failed."
 msgstr "Das Drucken ist fehlgeschlagen."
 

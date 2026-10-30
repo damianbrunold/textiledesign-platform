@@ -9439,12 +9439,17 @@ const _rgbToHsv = ColorPicker.rgbToHsv;
 const _hsvToRgb = ColorPicker.hsvToRgb;
 const _rgbToHex = ColorPicker.rgbToHex;
 const _hexToRgb = ColorPicker.hexToRgb;
-const _pickColorRGB = ColorPicker.pickRGB;
+function _colorLabel(k, fb) {
+    const a = _getI18n().actions[k];
+    return (a && a.label) || fb;
+}
+
+function _pickColorRGB(initialRgb, onAccept) {
+    ColorPicker.pickRGB(initialRgb, onAccept, _colorLabel);
+}
 
 function _pickColorHSV(initialRgb, onAccept) {
-    const i18n = _getI18n();
-    ColorPicker.pickHSV(initialRgb, onAccept,
-        (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb);
+    ColorPicker.pickHSV(initialRgb, onAccept, _colorLabel);
 }
 
 // Palette editor. 19×13 grid, MAX_PAL_ENTRY-clamped. Cancel/Escape
@@ -9768,23 +9773,17 @@ function showColorBlendDialog() {
     const onChangeColor = (which) => {
         const cur = (which === "start") ? startC : endC;
         // Mini popup: HSV / RGB / Palette / Copy other.
+        // Colours come from editor-menu(-dark).css, so the popup follows
+        // the app's light / dark mode.
         const menu = document.createElement("div");
-        menu.style.position = "fixed";
-        menu.style.background = "#fff";
-        menu.style.border = "1px solid #888";
-        menu.style.boxShadow = "2px 2px 6px rgba(0,0,0,0.3)";
-        menu.style.padding = "4px 0";
-        menu.style.zIndex = "10000";
+        menu.className = "tx-popup-menu";
         const r = (which === "start" ? $("#tx-bl-start") : $("#tx-bl-end")).getBoundingClientRect();
         menu.style.left = r.left + "px";
         menu.style.top = (r.bottom + 2) + "px";
         const item = (lbl, fn) => {
             const it = document.createElement("div");
+            it.className = "tx-popup-item";
             it.textContent = lbl;
-            it.style.padding = "0.3rem 0.8rem";
-            it.style.cursor = "pointer";
-            it.addEventListener("mouseenter", () => it.style.background = "#eef");
-            it.addEventListener("mouseleave", () => it.style.background = "");
             it.addEventListener("click", () => { document.body.removeChild(menu); fn(); });
             menu.appendChild(it);
             return it;

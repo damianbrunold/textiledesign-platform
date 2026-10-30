@@ -194,3 +194,23 @@
     .tx-menubar .tx-menu-dropdown { min-width: 240px; }
     .tx-menubar .tx-menu-separator { margin: 0.35rem 0.3rem; }
 }
+
+/* Small popup menu anchored to a control (e.g. the start / end colour
+   buttons of the colour-blend dialog). */
+.tx-popup-menu {
+    position: fixed;
+    z-index: 10000;
+    padding: 0.25rem 0;
+    background: #fff;
+    color: #222;
+    border: 1px solid #bbb;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.15);
+}
+.tx-popup-item {
+    padding: 0.3rem 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.tx-popup-item:hover {
+    background: #d0e4ff;
+}

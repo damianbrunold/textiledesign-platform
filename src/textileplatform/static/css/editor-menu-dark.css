@@ -93,3 +93,12 @@
     border-top-color: #222;
     color: #ddd;
 }
+.tx-popup-menu {
+    background: #2e2e2e;
+    border-color: #111;
+    color: #ddd;
+}
+.tx-popup-item:hover {
+    background: #355a8a;
+    color: #fff;
+}

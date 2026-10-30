@@ -3,9 +3,9 @@
 // Shared colour-picker primitives. Used by the bead editor (jbead.js)
 // and ports the same dialogs the weave editor (dbweave.js) ships:
 //
-//   - ColorPicker.pickRGB(initialRgb, onAccept)
-//       Native <input type="color"> picker, wrapped in an accept(rgb)
-//       callback contract.
+//   - ColorPicker.pickRGB(initialRgb, onAccept, getLabel)
+//       Modal RGB picker — R/G/B sliders, numeric and hex input, live
+//       swatch.
 //
 //   - ColorPicker.pickHSV(initialRgb, onAccept, getLabel)
 //       Modal HSV picker — hue ring + S/V square + numeric sliders +
@@ -73,31 +73,83 @@ const ColorPicker = (function () {
 
     // ---- Native RGB picker ---------------------------------------
 
-    function pickRGB(initialRgb, onAccept) {
-        const inp = document.createElement("input");
-        inp.type = "color";
-        inp.value = rgbToHex(initialRgb[0], initialRgb[1], initialRgb[2]);
-        inp.style.position = "fixed";
-        inp.style.left = "-9999px";
-        document.body.appendChild(inp);
-        let resolved = false;
-        const cleanup = () => { if (inp.parentNode) inp.remove(); };
-        const handle = () => {
-            if (resolved) return;
-            resolved = true;
-            const rgb = hexToRgb(inp.value);
-            cleanup();
-            onAccept(rgb);
+    // In-app RGB dialog. The native <input type="color"> opens the
+    // operating system's colour dialog in some browsers (Firefox on
+    // Windows), which ignores the app's dark mode.
+    function pickRGB(initialRgb, onAccept, getLabel) {
+        const L = (k, fb) =>
+            (typeof getLabel === "function") ? getLabel(k, fb) : fb;
+        const rgb = initialRgb.slice(0, 3).map(c => clamp255(c));
+
+        const body = document.createElement("div");
+        body.style.display = "flex";
+        body.style.flexDirection = "column";
+        body.style.gap = "0.6rem";
+        body.style.minWidth = "360px";
+        const channels = [
+            ["r", L("color.red", "Red:")],
+            ["g", L("color.green", "Green:")],
+            ["b", L("color.blue", "Blue:")],
+        ];
+        body.innerHTML = `
+            <div style="display:grid;grid-template-columns:auto 1fr auto;gap:0.4rem 0.6rem;align-items:center">
+                ${channels.map(([c]) => `
+                    <label for="tx-rgb-${c}"></label>
+                    <input id="tx-rgb-${c}" type="range" min="0" max="255" step="1">
+                    <input id="tx-rgb-${c}-num" type="number" min="0" max="255" step="1" style="width:5rem">
+                `).join("")}
+                <label for="tx-rgb-hex">Hex:</label>
+                <input id="tx-rgb-hex" type="text" maxlength="7" spellcheck="false" style="font-family:monospace">
+                <span></span>
+            </div>
+            <div id="tx-rgb-swatch" style="height:48px;border:1px solid #888"></div>`;
+        // Labels via textContent: translations are text, not markup.
+        body.querySelectorAll("label[for^='tx-rgb-']").forEach((lbl, i) => {
+            if (i < channels.length) lbl.textContent = channels[i][1];
+        });
+        const $ = (sel) => body.querySelector(sel);
+
+        const sync = (skip) => {
+            ["r", "g", "b"].forEach((c, i) => {
+                $(`#tx-rgb-${c}`).value = rgb[i];
+                $(`#tx-rgb-${c}-num`).value = rgb[i];
+            });
+            if (skip !== "hex") $("#tx-rgb-hex").value = rgbToHex(...rgb);
+            $("#tx-rgb-swatch").style.background =
+                `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
         };
-        inp.addEventListener("input", handle);
-        inp.addEventListener("change", handle);
-        // Browser-cancel safety net.
-        setTimeout(() => {
-            if (!resolved && !document.activeElement) {
-                resolved = true; cleanup();
+        body.addEventListener("input", (e) => {
+            const m = /^tx-rgb-([rgb])(-num)?$/.exec(e.target.id);
+            if (m) {
+                rgb["rgb".indexOf(m[1])] = clamp255(+e.target.value);
+                sync();
+            } else if (e.target.id === "tx-rgb-hex"
+                       && /^#?[0-9a-f]{6}$/i.test(e.target.value.trim())) {
+                hexToRgb(e.target.value.trim())
+                    .forEach((c, i) => { rgb[i] = c; });
+                sync("hex");
             }
-        }, 60000);
-        inp.click();
+        });
+        sync();
+
+        const modal = Modal.open({
+            title: L("color.rgb-picker-title", "RGB color picker"),
+            body,
+            buttons: [
+                { label: L("btn.cancel", "Cancel"), role: "cancel" },
+                {
+                    label: L("btn.ok", "OK"), role: "primary",
+                    onClick: () => {
+                        modal.close();
+                        onAccept(rgb.slice());
+                    },
+                },
+            ],
+        });
+    }
+
+    function clamp255(v) {
+        return Math.max(0, Math.min(255, Math.round(+v || 0)));
     }
 
     // ---- HSV picker ---------------------------------------------
@@ -433,7 +485,7 @@ const ColorPicker = (function () {
         const editRGB = () => pickRGB(draft[cur], (rgb) => {
             draft[cur] = [rgb[0] | 0, rgb[1] | 0, rgb[2] | 0];
             refresh();
-        });
+        }, getLabel);
         const editHSV = () => pickHSV(draft[cur], (rgb) => {
             draft[cur] = [rgb[0] | 0, rgb[1] | 0, rgb[2] | 0];
             refresh();
