@@ -373,8 +373,10 @@ class TestCSRF:
 
 class TestRateLimit:
     def test_login_rate_limited(self, app):
+        from textileplatform.app import limiter
+
         # Re-enable the limiter for this test only.
-        app.config["RATELIMIT_ENABLED"] = True
+        limiter.enabled = True
         app.config["WTF_CSRF_ENABLED"] = False
         try:
             client = app.test_client()
@@ -387,5 +389,5 @@ class TestRateLimit:
                 })
             assert last.status_code == 429
         finally:
-            app.config["RATELIMIT_ENABLED"] = False
+            limiter.enabled = False
             app.config["WTF_CSRF_ENABLED"] = True

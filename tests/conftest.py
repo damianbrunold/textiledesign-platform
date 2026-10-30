@@ -18,6 +18,7 @@ os.environ.setdefault("SHOW_VERIFICATION_CODE", "1")
 import pytest
 
 from textileplatform import app as flask_app  # noqa: E402
+from textileplatform.app import limiter  # noqa: E402
 from textileplatform.db import db  # noqa: E402
 from textileplatform import mail as mail_module  # noqa: E402
 
@@ -56,8 +57,11 @@ def app():
         ).StaticPool,
     }
     # Limiter must not block tests: we disable it by default and
-    # re-enable explicitly in the rate-limit test.
-    flask_app.config["RATELIMIT_ENABLED"] = False
+    # re-enable explicitly in the rate-limit test. The config key is
+    # only read at init time, so switch the extension itself, and
+    # start every test with empty counters.
+    limiter.enabled = False
+    limiter.reset()
     # CSRF is enabled by default so tests catch regressions; individual
     # tests can disable it by setting WTF_CSRF_ENABLED=False on the
     # client.

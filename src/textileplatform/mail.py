@@ -8,6 +8,10 @@ from flask_babel import force_locale, get_locale, gettext
 
 SUPPORT_ADDRESS = "support@textil-plattform.ch"
 
+# Seconds to wait for the local MTA. Mail is sent inside the request,
+# so a hung SMTP server must not hold the worker indefinitely.
+SMTP_TIMEOUT = 10
+
 
 def send_mail(receiver, subject, content):
     msg = message.EmailMessage()
@@ -15,9 +19,8 @@ def send_mail(receiver, subject, content):
     msg["Subject"] = subject
     msg["From"] = SUPPORT_ADDRESS
     msg["To"] = receiver
-    s = smtplib.SMTP("localhost")
-    s.send_message(msg)
-    s.quit()
+    with smtplib.SMTP("localhost", timeout=SMTP_TIMEOUT) as s:
+        s.send_message(msg)
 
 
 def _greeting(user):

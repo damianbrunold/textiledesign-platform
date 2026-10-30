@@ -38,8 +38,10 @@ from textileplatform.support import is_support
 from textileplatform.palette import default_weave_palette
 from textileplatform.palette import default_bead_palette
 from textileplatform.weavepattern import parse_dbw_data, render_dbw_data
+from textileplatform.validation import PatternError, validate_pattern
 from textileplatform import export as exporter
 from textileplatform import beadexport as bead_exporter
+from textileplatform.exportcommon import TooLargeError
 
 from importlib.metadata import version
 import base64
@@ -1154,6 +1156,26 @@ _BEAD_EXPORT = {
 }
 
 
+_PRINT_RANGE_KEYS = (
+    "warp_from", "warp_to", "weft_from", "weft_to",
+    "harness_from", "harness_to", "treadle_from", "treadle_to",
+)
+
+
+def _optional_int(value):
+    """None stays None; ints and integer strings become int; anything
+    else raises ValueError."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        raise ValueError(value)
+    return int(value)
+
+
+def _plain_error(message, status):
+    return message, status, {"Content-Type": "text/plain; charset=utf-8"}
+
+
 def _export_table_for(pattern):
     if pattern.pattern_type == "DB-WEAVE Pattern":
         return _WEAVE_EXPORT
@@ -1214,12 +1236,15 @@ def export_pattern(user_name, pattern_name, fmt):
     if fmt == "pdf":
         kwargs["title"] = pattern.label or pattern_name
     try:
+        validate_pattern(pattern_data, pattern.pattern_type)
         body = render(pattern_data, **kwargs)
-    except Exception as e:  # pragma: no cover — surface as 500
+    except (PatternError, TooLargeError) as e:
+        return _plain_error(f"Export not possible: {e}", 400)
+    except Exception:
         logging.exception(
             "Export %s for %s/%s failed", fmt, user_name, pattern_name
         )
-        return f"Export failed: {e}", 500
+        return _plain_error("Export failed", 500)
     return send_file(
         io.BytesIO(body),
         mimetype=mime,
@@ -1268,14 +1293,13 @@ def print_pattern(user_name, pattern_name):
             pattern_data = payload.get("contents")
             if not isinstance(pattern_data, dict):
                 return "Missing 'contents' object in body", 400
-        warp_from = payload.get("warp_from")
-        warp_to = payload.get("warp_to")
-        weft_from = payload.get("weft_from")
-        weft_to = payload.get("weft_to")
-        harness_from = payload.get("harness_from")
-        harness_to = payload.get("harness_to")
-        treadle_from = payload.get("treadle_from")
-        treadle_to = payload.get("treadle_to")
+        try:
+            (
+                warp_from, warp_to, weft_from, weft_to,
+                harness_from, harness_to, treadle_from, treadle_to,
+            ) = (_optional_int(payload.get(key)) for key in _PRINT_RANGE_KEYS)
+        except (ValueError, TypeError, OverflowError):
+            return _plain_error("Print ranges must be integers", 400)
         full_pattern = payload.get("full_pattern", True)
     else:
         pattern_data = json.loads(pattern.contents)
@@ -1290,6 +1314,7 @@ def print_pattern(user_name, pattern_name):
         full_pattern = request.args.get("full_pattern", "1") != "0"
 
     try:
+        validate_pattern(pattern_data, pattern.pattern_type)
         if pattern.pattern_type == "DB-WEAVE Pattern":
             body = exporter.print_pdf(
                 pattern_data,
@@ -1305,9 +1330,11 @@ def print_pattern(user_name, pattern_name):
                 title=pattern.label or pattern_name,
                 full_pattern=bool(full_pattern),
             )
-    except Exception as e:  # pragma: no cover
+    except (PatternError, TooLargeError) as e:
+        return _plain_error(f"Print not possible: {e}", 400)
+    except Exception:
         logging.exception("Print for %s/%s failed", user_name, pattern_name)
-        return f"Print failed: {e}", 500
+        return _plain_error("Print failed", 500)
     suffix = "-part" if any(v is not None for v in (
         warp_from, warp_to, weft_from, weft_to,
         harness_from, harness_to, treadle_from, treadle_to,
@@ -1711,27 +1738,30 @@ def upload_pattern():
             saved_kind = None
             try:
                 if data.startswith("@dbw3:"):
-                    saved = add_weave_pattern(
-                        parse_dbw_data(data, name), g.user
-                    )
+                    contents = parse_dbw_data(data, name)
                     saved_kind = "DB-WEAVE Pattern"
                 elif data.startswith("(jbb"):
-                    saved = add_bead_pattern(
-                        parse_jbb_data(data, name), g.user
-                    )
+                    contents = parse_jbb_data(data, name)
                     saved_kind = "JBead Pattern"
                 else:
-                    jsondata = json.loads(bytedata.decode("utf-8", "ignore"))
-                    if not isinstance(jsondata, dict):
+                    contents = json.loads(bytedata.decode("utf-8", "ignore"))
+                    if not isinstance(contents, dict):
                         raise ValueError("not a pattern")
-                    if "name" not in jsondata:
-                        jsondata["name"] = name
-                    if "max_shafts" in jsondata:
-                        saved = add_weave_pattern(jsondata, g.user)
-                        saved_kind = "DB-WEAVE Pattern"
-                    else:
-                        saved = add_bead_pattern(jsondata, g.user)
-                        saved_kind = "JBead Pattern"
+                    if "name" not in contents:
+                        contents["name"] = name
+                    saved_kind = (
+                        "DB-WEAVE Pattern" if "max_shafts" in contents
+                        else "JBead Pattern"
+                    )
+                validate_pattern(contents, saved_kind)
+                if saved_kind == "DB-WEAVE Pattern":
+                    saved = add_weave_pattern(contents, g.user)
+                else:
+                    saved = add_bead_pattern(contents, g.user)
+            except PatternError as e:
+                logging.info("upload of %r rejected: %s", file.filename, e)
+                db.session.rollback()
+                saved = None
             except Exception:
                 logging.exception("upload of %r failed", file.filename)
                 db.session.rollback()
@@ -3726,6 +3756,10 @@ def update_pattern(user_name, pattern_name):
             if not g.user or user.name != g.user.name:
                 return respond("NOK", "Invalid user", 403)
             contents = data["contents"]
+            try:
+                validate_pattern(contents, pattern.pattern_type)
+            except PatternError as e:
+                return respond("NOK", f"Invalid pattern: {e}", 400)
             # Tripwire: if the existing pattern has real data and the
             # incoming save would empty it, stash the prior contents to
             # contents_salvage and log a warning. The client-side
@@ -3772,6 +3806,11 @@ def update_pattern(user_name, pattern_name):
             # Inline clone (from the profile list) doesn't send the
             # pattern body — fall back to the persisted contents.
             payload = data.get("contents")
+            if payload is not None:
+                try:
+                    validate_pattern(payload, pattern.pattern_type)
+                except PatternError as e:
+                    return respond("NOK", f"Invalid pattern: {e}", 400)
             contents = (
                 json.dumps(payload) if payload is not None
                 else pattern.contents

@@ -35,12 +35,18 @@ except Exception:
     def gettext(s):
         return s
 
+from textileplatform.beadpattern import smallest_period
 from textileplatform.exportcommon import (
     BLACK, WHITE,
     DrawTarget, PILTarget, SVGTarget, PDFTargetNoFlip,
+    TooLargeError,
     page_size as _page_size,
     svg_document,
 )
+
+# Printing costs roughly 70 µs per bead; this keeps a full print of the
+# largest pattern the UI creates (100 × 5000) well inside the limit.
+MAX_PRINT_BEADS = 1_000_000
 
 
 # ---------- Bead model wrapper -----------------------------------
@@ -164,21 +170,10 @@ def _compute_repeat(m: BeadModel) -> None:
     m.repeat = n
     if n <= 0:
         return
-    # Flatten the used portion into a 1-D array of palette indices.
     flat = []
     for j in range(m.used_height):
         flat.extend(m.rows[j])
-    for i in range(1, n):
-        if flat[i] != flat[0]:
-            continue
-        ok = True
-        for k in range(i + 1, n):
-            if flat[(k - i) % i] != flat[k]:
-                ok = False
-                break
-        if ok:
-            m.repeat = i
-            return
+    m.repeat = smallest_period(flat)
 
 
 def _compute_bead_list(m: BeadModel) -> None:
@@ -209,15 +204,25 @@ def _correct_y_for_index(width: int, idx: int) -> Tuple[int, int]:
     """Return (x_corr, y_corr) for linear bead index ``idx`` in the
     hexagonally corrected grid, where rows alternate widths
     [width, width+1, width, ...]. Mirrors Model.correct."""
-    m1 = width
-    m2 = width + 1
-    k = 0
-    m = m1
-    while idx >= m:
-        idx -= m
-        k += 1
-        m = m1 if k % 2 == 0 else m2
-    return idx, k
+    pair, rest = divmod(idx, 2 * width + 1)
+    if rest < width:
+        return rest, 2 * pair
+    return rest - width, 2 * pair + 1
+
+
+def _first_index_of_row(width: int, row: int) -> int:
+    """Inverse of _correct_y_for_index: linear index of the first bead
+    on corrected row ``row``."""
+    pair, odd = divmod(row, 2)
+    return pair * (2 * width + 1) + (width if odd else 0)
+
+
+def _column_indices(width: int, n: int, start: int, end: int, offset=0):
+    """Linear bead indices (before ``offset`` is added) that land on
+    corrected rows [start, end), clipped to [0, n)."""
+    lo = max(0, _first_index_of_row(width, start) - offset)
+    hi = min(n, _first_index_of_row(width, end) - offset)
+    return range(lo, max(lo, hi))
 
 
 # ---------- Painters --------------------------------------------
@@ -374,7 +379,7 @@ class CorrectedPart(_GridPart):
         # and a tighter cap would clip the last partial row.
         n = self._printable_rows(page_h) * self.m.width
         x_grid = x + _BORDER + _GX / 2
-        for idx in range(n):
+        for idx in _column_indices(self.m.width, n, start, end):
             xi, yj = _correct_y_for_index(self.m.width, idx)
             if yj < start or yj >= end:
                 continue
@@ -431,7 +436,9 @@ class SimulationPart(_GridPart):
         # linear index before the spiral fold, mirroring desktop's
         # SimulationPanel + BeadPoint::shifted. The colour stays with
         # the bead, the position moves diagonally with the seam.
-        for idx in range(n):
+        for idx in _column_indices(
+            self.m.width, n, start, end, self.m.shift,
+        ):
             xi, yj = _correct_y_for_index(self.m.width, idx + self.m.shift)
             if yj < start or yj >= end:
                 continue
@@ -834,6 +841,11 @@ def _paginated_pdf(data, title, full_pattern, fit_single_page):
     from reportlab.pdfgen import canvas
 
     m = load_model(data)
+    if not fit_single_page and m.used_height * m.width > MAX_PRINT_BEADS:
+        raise TooLargeError(
+            f"{m.used_height * m.width} beads are too many to print "
+            f"(limit {MAX_PRINT_BEADS})"
+        )
     if title:
         m.title = title
     view = data.get("view") or {}

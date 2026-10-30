@@ -21,11 +21,18 @@ def _make_user(name="alice", email="alice@example.com",
         disabled=False,
         session_token_version=0,
     )
-    group = Group(name=name, label=name.capitalize(), description="")
+    db.session.add(user)
+    db.session.flush()
+    # Like registration: the primary group is a personal group owned by
+    # the user and named after them.
+    group = Group(
+        name=name, label=name.capitalize(), description="",
+        owner_id=user.id,
+    )
     membership = Membership(
         user=user, group=group, role="owner", state="accepted",
     )
-    db.session.add_all([user, group, membership])
+    db.session.add_all([group, membership])
     db.session.commit()
     return user
 

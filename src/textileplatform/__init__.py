@@ -587,6 +587,24 @@ def refresh_pattern_metadata():
         print(f"refreshed {count} pattern(s)")
 
 
+@click.command("validate-patterns")
+def validate_patterns():
+    """List stored patterns that fail validation (size limits, shape).
+    Such patterns cannot be exported or saved until fixed. Read-only."""
+    from textileplatform.validation import PatternError, validate_pattern
+    with app.app_context():
+        bad = 0
+        for p in Pattern.query.order_by(Pattern.id).all():
+            owner = p.owner.name if p.owner else "?"
+            try:
+                validate_pattern(json.loads(p.contents or "{}"),
+                                 p.pattern_type)
+            except (PatternError, ValueError) as exc:
+                bad += 1
+                print(f"{owner}/{p.name}: {exc}")
+        print(f"{bad} invalid pattern(s)")
+
+
 @click.command("ensure-primary-groups")
 def ensure_primary_groups():
     with app.app_context():
@@ -594,7 +612,9 @@ def ensure_primary_groups():
         for user in User.query.order_by(User.id).all():
             if user.name == SUPPORT_USERNAME:
                 continue
-            group = Group.query.filter(Group.name == user.name).one_or_none()
+            group = Group.query.filter(
+                Group.owner_id == user.id, Group.name == user.name,
+            ).one_or_none()
             if group:
                 continue
             print(f"create primary group for {user.name}")
@@ -602,6 +622,7 @@ def ensure_primary_groups():
                 name=user.name,
                 label=user.label,
                 description='',
+                owner_id=user.id,
                 created=datetime.datetime.now(datetime.timezone.utc),
             )
             membership = Membership(
@@ -634,5 +655,6 @@ app.cli.add_command(seed_starter_patterns_cmd)
 app.cli.add_command(list_pattern_salvage)
 app.cli.add_command(restore_pattern_salvage)
 app.cli.add_command(refresh_pattern_metadata)
+app.cli.add_command(validate_patterns)
 
 application = app

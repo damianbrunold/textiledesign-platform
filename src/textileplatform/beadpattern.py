@@ -1,3 +1,22 @@
+def smallest_period(seq):
+    """Length of the shortest period p of ``seq`` (seq[k] == seq[k - p]
+    for every k >= p), or len(seq) if there is none. 0 for an empty
+    sequence. Linear time via the KMP prefix function; this is the bead
+    repeat that jbead.js BeadList.updateRepeat computes."""
+    n = len(seq)
+    if n == 0:
+        return 0
+    prefix = [0] * n
+    k = 0
+    for i in range(1, n):
+        while k and seq[i] != seq[k]:
+            k = prefix[k - 1]
+        if seq[i] == seq[k]:
+            k += 1
+        prefix[i] = k
+    return n - prefix[-1]
+
+
 def parse_jbb_data(jbbdata, name=''):
     contents = _parse_jbb_into_struct(jbbdata)
     result = dict()

@@ -32,10 +32,21 @@ from textileplatform.exportcommon import (
     DARST_FILLED, DARST_DOT, DARST_CROSS, DARST_CIRCLE,
     DARST_RISING, DARST_VDASH,
     DrawTarget, PILTarget, SVGTarget, PDFTarget, PDFTargetNoFlip,
+    TooLargeError,
     paint_cell as _paint_cell,
     page_size as _page_size,
     svg_document,
 )
+
+# Rendering limits. Painting costs roughly 10 µs per cell, so the cell
+# budget keeps a single export in the range of seconds; larger patterns
+# can still be printed in parts. Raster images shrink their cell size
+# to stay under the pixel limit (~120 MB of RGB).
+MAX_EXPORT_CELLS = 2_000_000
+MAX_RASTER_PIXELS = 40_000_000
+MAX_PRINT_PAGES = 500
+# Largest warp/weft stretch ratio honoured by the layout.
+MAX_FACTOR_RATIO = 20.0
 
 # Range colours. Keep in sync with the JS rangecolors["light"] table —
 # exports are always rendered on a white background, so the dark-mode
@@ -270,11 +281,11 @@ def _apply_ratio(base, warp_factor, weft_factor):
     ratio. Returns (gw, gh)."""
     gw = base
     gh = base
-    if warp_factor > 0 and weft_factor > 0:
+    if 0 < warp_factor < float("inf") and 0 < weft_factor < float("inf"):
         if weft_factor > warp_factor:
-            gh = int(base * weft_factor / warp_factor)
+            gh = int(base * min(weft_factor / warp_factor, MAX_FACTOR_RATIO))
         elif warp_factor > weft_factor:
-            gw = int(base * warp_factor / weft_factor)
+            gw = int(base * min(warp_factor / weft_factor, MAX_FACTOR_RATIO))
     return gw, gh
 
 
@@ -834,8 +845,29 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
 
 # ---------- Raster (PNG / JPEG) ----------------------------------
 
+def _check_cell_budget(layout):
+    if layout.dx * layout.dy > MAX_EXPORT_CELLS:
+        raise TooLargeError(
+            f"{layout.dx} x {layout.dy} cells is too large to export "
+            f"(limit {MAX_EXPORT_CELLS} cells)"
+        )
+
+
+def _raster_layout(data):
+    """Layout at the default 16-px cell size, shrunk so the image stays
+    within MAX_RASTER_PIXELS."""
+    base = 16
+    layout = _pattern_layout(data, base)
+    _check_cell_budget(layout)
+    area = layout.width * layout.height
+    if area > MAX_RASTER_PIXELS:
+        base = max(1, int(base * (MAX_RASTER_PIXELS / area) ** 0.5))
+        layout = _pattern_layout(data, base)
+    return layout
+
+
 def _export_raster(data, fmt: str, jpeg_quality=92):
-    layout = _pattern_layout(data)
+    layout = _raster_layout(data)
     target = PILTarget(layout.width, layout.height)
     paint_pattern(target, data, layout)
     buf = io.BytesIO()
@@ -859,6 +891,7 @@ def export_jpeg(data) -> bytes:
 
 def export_svg(data) -> bytes:
     layout = _pattern_layout(data)
+    _check_cell_budget(layout)
     target = SVGTarget(layout.width, layout.height)
     paint_pattern(target, data, layout)
     return svg_document(target)
@@ -874,6 +907,7 @@ def export_pdf(data, title=None) -> bytes:
     from reportlab.lib.units import mm
 
     layout = _pattern_layout(data)
+    _check_cell_budget(layout)
     page_w, page_h = _page_size()
     margin = 10 * mm
     paint_w = page_w - 2 * margin
@@ -911,6 +945,21 @@ def export_pdf(data, title=None) -> bytes:
 
 # ---------- Print (multi-page tiled PDF) -------------------------
 
+def _clamp_range(first, last, default_a, default_n, upper):
+    """Turn a 1-based inclusive [first, last] UI range (either end may
+    be None = keep the current window) into a 0-based (start, count)
+    clipped to [0, upper)."""
+    if upper <= 0:
+        return 0, 0
+    a = default_a if first is None else int(first) - 1
+    b = default_a + default_n - 1 if last is None else int(last) - 1
+    if b < a:
+        a, b = b, a
+    a = min(max(a, 0), upper - 1)
+    b = min(max(b, 0), upper - 1)
+    return a, b - a + 1
+
+
 def print_pdf(data, title=None,
               warp_from=None, warp_to=None,
               weft_from=None, weft_to=None,
@@ -936,34 +985,23 @@ def print_pdf(data, title=None,
     layout = _pattern_layout(data)
 
     # Apply optional ranges by overriding kette_a/dx and schuesse_a/dy
-    # on the layout. Convert from 1-based inclusive UI values to the
-    # 0-based half-open view the painter uses.
+    # on the layout. Ranges are clipped to the pattern's dimensions so
+    # a request can't make us paint (and paginate) beyond the data.
+    max_shafts = int(data.get("max_shafts", 0))
+    side_count = (
+        max_shafts if data.get("display_pegplan")
+        else int(data.get("max_treadles", 0))
+    )
     if warp_from is not None or warp_to is not None:
-        a = (
-            layout.kette_a if warp_from is None
-            else max(0, int(warp_from) - 1)
+        layout.kette_a, layout.dx = _clamp_range(
+            warp_from, warp_to, layout.kette_a, layout.dx,
+            int(data.get("width", 0)),
         )
-        b = (
-            (layout.kette_a + layout.dx - 1) if warp_to is None
-            else max(0, int(warp_to) - 1)
-        )
-        if b < a:
-            a, b = b, a
-        layout.kette_a = a
-        layout.dx = b - a + 1
     if weft_from is not None or weft_to is not None:
-        a = (
-            layout.schuesse_a if weft_from is None
-            else max(0, int(weft_from) - 1)
+        layout.schuesse_a, layout.dy = _clamp_range(
+            weft_from, weft_to, layout.schuesse_a, layout.dy,
+            int(data.get("height", 0)),
         )
-        b = (
-            (layout.schuesse_a + layout.dy - 1) if weft_to is None
-            else max(0, int(weft_to) - 1)
-        )
-        if b < a:
-            a, b = b, a
-        layout.schuesse_a = a
-        layout.dy = b - a + 1
     # Harness / treadle ranges. Sentinel (None, None) keeps the auto-
     # detected count; explicit values clip to that window. A value of
     # 0 in both fields is the desktop "skip section" marker — collapse
@@ -973,36 +1011,20 @@ def print_pdf(data, title=None,
             layout.shafts_a = 0
             layout.shafts = 0
         else:
-            a = (
-                layout.shafts_a if harness_from is None
-                else max(0, int(harness_from) - 1)
+            layout.shafts_a, layout.shafts = _clamp_range(
+                harness_from, harness_to, layout.shafts_a, layout.shafts,
+                max_shafts,
             )
-            b = (
-                (layout.shafts_a + layout.shafts - 1) if harness_to is None
-                else max(0, int(harness_to) - 1)
-            )
-            if b < a:
-                a, b = b, a
-            layout.shafts_a = a
-            layout.shafts = b - a + 1
     if treadle_from is not None or treadle_to is not None:
         if (treadle_from == 0 and treadle_to == 0):
             layout.treadles_a = 0
             layout.treadles = 0
         else:
-            a = (
-                layout.treadles_a if treadle_from is None
-                else max(0, int(treadle_from) - 1)
+            layout.treadles_a, layout.treadles = _clamp_range(
+                treadle_from, treadle_to,
+                layout.treadles_a, layout.treadles, side_count,
             )
-            b = (
-                (layout.treadles_a + layout.treadles - 1)
-                if treadle_to is None
-                else max(0, int(treadle_to) - 1)
-            )
-            if b < a:
-                a, b = b, a
-            layout.treadles_a = a
-            layout.treadles = b - a + 1
+    _check_cell_budget(layout)
     bands = _bands(data, layout)
     layout.width = bands.width
     layout.height = bands.height
@@ -1023,6 +1045,11 @@ def print_pdf(data, title=None,
     # Number of pages along each axis. Always at least 1.
     cols = max(1, int(-(-total_pt_w // paint_w)))   # ceil-div
     rows = max(1, int(-(-total_pt_h // paint_h)))
+    if cols * rows > MAX_PRINT_PAGES:
+        raise TooLargeError(
+            f"print would need {cols * rows} pages "
+            f"(limit {MAX_PRINT_PAGES})"
+        )
 
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(page_w, page_h))
@@ -1037,6 +1064,17 @@ def print_pdf(data, title=None,
         header_tpl = DEFAULT_HEADER_TEXT
     footer_tpl = data.get("footer_text") or ""
     total_pages = cols * rows
+
+    # Paint the pattern once into a form XObject in logical coordinates;
+    # every page then just places that form, clipped to its slice.
+    # Repainting the whole pattern per page made the cost grow with
+    # pages × cells.
+    c.beginForm(
+        "pattern", lowerx=0, lowery=0,
+        upperx=max(1, layout.width), uppery=max(1, layout.height),
+    )
+    paint_pattern(PDFTargetNoFlip(c), data, layout)
+    c.endForm()
 
     for row in range(rows):
         for col in range(cols):
@@ -1069,8 +1107,7 @@ def print_pdf(data, title=None,
             c.clipPath(p, stroke=0, fill=0)
             c.translate(margin - page_x_pt, page_h - margin + page_y_pt)
             c.scale(pt_per_logical, -pt_per_logical)
-            target = PDFTargetNoFlip(c)
-            paint_pattern(target, data, layout)
+            c.doForm("pattern")
             c.restoreState()
             c.showPage()
     c.save()

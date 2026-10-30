@@ -38,8 +38,14 @@ Limitations
   platform get sensible defaults for these.
 """
 
+import array
 import copy
+import sys
+
 from textileplatform.palette import default_weave_palette
+from textileplatform.validation import (
+    PatternError, WEAVE_MAX_SHAFTS, WEAVE_MAX_SIZE,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +175,16 @@ def _map_raw_to_platform(raw, name):
     height = _str_int(size.get('maxy2')) or 50
     max_shafts = _str_int(size.get('maxx2')) or 32
     max_treadles = _str_int(size.get('maxy1')) or 32
+    # Check before the fallback arrays below are allocated from these.
+    if not (
+        0 < width <= WEAVE_MAX_SIZE and 0 < height <= WEAVE_MAX_SIZE
+        and 0 < max_shafts <= WEAVE_MAX_SHAFTS
+        and 0 < max_treadles <= WEAVE_MAX_SHAFTS
+    ):
+        raise PatternError(
+            f"pattern size {width} x {height} with {max_shafts} shafts / "
+            f"{max_treadles} treadles is out of range"
+        )
     result['width'] = width
     result['height'] = height
     result['max_shafts'] = max_shafts
@@ -627,12 +643,7 @@ def _format_value(v):
     s = str(v)
     if len(s) <= 70 or not _looks_like_long_hex(s):
         return s
-    out = []
-    while len(s) > 70:
-        out.append(s[:70] + '\\')
-        s = s[70:]
-    out.append(s)
-    return '\r\n'.join(out)
+    return '\\\r\n'.join(s[i:i + 70] for i in range(0, len(s), 70))
 
 
 def _looks_like_long_hex(s):
@@ -692,49 +703,35 @@ def _enhex_colors(colors):
     return ''.join(parts)
 
 
+def _hex_bytes(data):
+    """Decode a hex string. A trailing odd nibble is read as a byte of
+    its own, as the original per-character decoder did."""
+    if len(data) % 2:
+        data = data[:-1] + '0' + data[-1]
+    return bytes.fromhex(data)
+
+
 def _dehex_byte(data):
-    result = []
-    while data:
-        v = int(data[0:2], 16)
-        if v < 128:
-            result.append(v)
-        else:
-            result.append(v - 256)
-        data = data[2:]
-    return result
+    return array.array('b', _hex_bytes(data)).tolist()
 
 
 def _dehex_ubyte(data):
-    result = []
-    while data:
-        result.append(int(data[0:2], 16))
-        data = data[2:]
-    return result
+    return list(_hex_bytes(data))
 
 
 def _dehex_short(data):
-    result = []
-    while data:
-        v = int(data[2:4] + data[0:2], 16)
-        if v < 32768:
-            result.append(v)
-        else:
-            result.append(v - 65536)
-        data = data[4:]
-    return result
+    raw = _hex_bytes(data)
+    if len(raw) % 2:
+        raw += bytes(1)
+    values = array.array('h', raw)
+    if sys.byteorder == 'big':
+        values.byteswap()
+    return values.tolist()
 
 
 def _dehex_colors(data):
-    result = []
-    while data:
-        result.append([
-            int(data[0:2], 16),
-            int(data[2:4], 16),
-            int(data[4:6], 16),
-            int(data[6:8], 16)
-        ])
-        data = data[8:]
-    return result
+    raw = _hex_bytes(data)
+    return [list(raw[i:i + 4]) for i in range(0, len(raw) - 3, 4)]
 
 
 # ---------------------------------------------------------------------------

@@ -9,6 +9,11 @@ Pillow / SVG / reportlab back-ends without circular imports.
 from __future__ import annotations
 
 
+class TooLargeError(ValueError):
+    """The requested output would be too large to render. Callers turn
+    this into a 400 so the user learns to export or print a part."""
+
+
 # Common colour constants used by both exporters.
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)

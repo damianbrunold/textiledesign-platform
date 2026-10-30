@@ -1,3 +1,4 @@
+from textileplatform.beadpattern import smallest_period
 from textileplatform.db import db
 from textileplatform.models import Assignment
 from textileplatform.models import Group
@@ -35,14 +36,7 @@ def _bead_repeat(model):
             used_h = j + 1
     if used_h == 0:
         return None
-    beads = [c for row in model[:used_h] for c in row]
-    n = len(beads)
-    for i in range(1, n):
-        if beads[i] != beads[0]:
-            continue
-        if all(beads[k % i] == beads[k] for k in range(i + 1, n)):
-            return i
-    return n
+    return smallest_period([c for row in model[:used_h] for c in row])
 
 
 def extract_pattern_metadata(pattern_dict, pattern_type):
@@ -141,11 +135,21 @@ def apply_pattern_metadata(pattern, pattern_dict):
         setattr(pattern, key, value)
 
 
-def add_weave_pattern(pattern, user):
-    group = Group.query.filter(Group.name == user.name).one_or_none()
+def primary_group(user):
+    """The user's primary personal group: owned by the user and named
+    like them. Other users may own personal groups with the same name,
+    so the lookup has to be scoped to the owner."""
+    group = Group.query.filter(
+        Group.owner_id == user.id, Group.name == user.name,
+    ).one_or_none()
     if not group:
         logging.error(f"User {user.name} does not have primary group")
         abort(500)
+    return group
+
+
+def add_weave_pattern(pattern, user):
+    group = primary_group(user)
     suffix = None
     now = datetime.datetime.now(datetime.timezone.utc)
     while True:
@@ -160,7 +164,7 @@ def add_weave_pattern(pattern, user):
             p = Pattern(
                 name=name,
                 label=label,
-                description=pattern["notes"],
+                description=pattern.get("notes", ""),
                 pattern_type="DB-WEAVE Pattern",
                 contents=json.dumps(pattern),
                 created=now,
@@ -186,10 +190,7 @@ def add_weave_pattern(pattern, user):
 
 
 def add_bead_pattern(pattern, user):
-    group = Group.query.filter(Group.name == user.name).one_or_none()
-    if not group:
-        logging.error(f"User {user.name} does not have primary group")
-        abort(500)
+    group = primary_group(user)
     suffix = None
     now = datetime.datetime.now(datetime.timezone.utc)
     while True:
@@ -204,7 +205,7 @@ def add_bead_pattern(pattern, user):
             p = Pattern(
                 name=name,
                 label=label,
-                description=pattern["notes"],
+                description=pattern.get("notes", ""),
                 pattern_type="JBead Pattern",
                 contents=json.dumps(pattern),
                 created=now,
@@ -234,7 +235,7 @@ def get_patterns_for_user(user, only_public=False):
         return (
             Pattern.query
             .filter(Pattern.owner_id == user.id)
-            .filter(Pattern.public is True)
+            .filter(Pattern.public.is_(True))
             .order_by(Pattern.label)
             .all()
         )
@@ -317,10 +318,7 @@ def _fmt_flat_list(lst, indent, max_width):
 
 
 def clone_pattern(user, pattern, contents):
-    group = Group.query.filter(Group.name == user.name).one_or_none()
-    if not group:
-        logging.error(f"User {user.name} does not have primary group")
-        abort(500)
+    group = primary_group(user)
     suffix = None
     while True:
         if suffix and suffix > 10:
