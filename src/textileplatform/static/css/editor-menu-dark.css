@@ -102,3 +102,16 @@
     background: #355a8a;
     color: #fff;
 }
+
+.tx-cd-btn {
+    border-color: #666;
+    background: #3a3a3a;
+    color: #ddd;
+}
+.tx-cd-btn.on {
+    background: #355a8a;
+    border-color: #6b8db8;
+    color: #fff;
+}
+
+.tx-hint { color: #aaa; }

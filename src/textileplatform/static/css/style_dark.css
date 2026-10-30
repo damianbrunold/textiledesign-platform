@@ -341,3 +341,32 @@ ul.inbox .preview { color: #aaa; }
     color: #eee;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
+
+/* Base look for form controls the page CSS doesn't style itself
+   (dialog buttons, plain inputs, selects). :where() keeps these at zero
+   specificity, so every specific rule still wins. color-scheme on the
+   controls only makes native parts (checkboxes, sliders, spinners,
+   dropdown lists) dark without changing the page's text colours. */
+:where(input, select, textarea, button) {
+    color-scheme: dark;
+}
+:where(button, input[type=button], input[type=submit], input[type=reset]) {
+    background-color: #3a3a3a;
+    color: #ddd;
+    border: 1px solid #5a5a5a;
+}
+:where(button, input[type=button], input[type=submit], input[type=reset]):hover:not(:disabled) {
+    background-color: #4a4a4a;
+}
+:where(button, input[type=button], input[type=submit], input[type=reset]):disabled {
+    color: #777;
+}
+:where(input:not([type]), input[type=text], input[type=number],
+       input[type=email], input[type=password], input[type=search],
+       input[type=url], input[type=tel], select, textarea) {
+    background-color: #2a2a2a;
+    color: #ddd;
+    border: 1px solid #5a5a5a;
+}
+
+.group-tab .role-tag { color: #aaa; }

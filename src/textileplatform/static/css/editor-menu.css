@@ -214,3 +214,22 @@
 .tx-popup-item:hover {
     background: #d0e4ff;
 }
+
+/* Direction toggles in the cursor-movement dialog. */
+.tx-cd-btn {
+    cursor: pointer;
+    border: 1px solid #888;
+    border-radius: 3px;
+    background: #f4f4f4;
+    color: #222;
+}
+.tx-cd-btn.on {
+    background: #c4d4ec;
+    border-color: #6b8db8;
+}
+
+/* Secondary explanatory text in editor dialogs. */
+.tx-hint {
+    font-size: 0.85em;
+    color: #666;
+}

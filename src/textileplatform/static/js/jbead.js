@@ -1871,7 +1871,7 @@ function _openPageSetupDialog() {
             <label>${_actionLabel("page-setup.footer", "Footer:")}</label>
             <input id="tx-ps-footer" type="text" style="width:100%">
         </div>
-        <p style="margin-top:0.6rem;font-size:0.85em;color:#666">${tokenHelp}</p>`;
+        <p class="tx-hint" style="margin-top:0.6rem">${tokenHelp}</p>`;
     const $ = (sel) => body.querySelector(sel);
     $("#tx-ps-header").value = curHeader;
     $("#tx-ps-footer").value = curFooter;

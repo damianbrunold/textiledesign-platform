@@ -4304,7 +4304,7 @@ function showPageSetupDialog() {
             <label>${L("page-setup.footer", "Footer:")}</label>
             <input id="tx-ps-footer" type="text" style="width:100%">
         </div>
-        <p style="margin-top:0.6rem;font-size:0.85em;color:#666">${tokenHelp}</p>`;
+        <p class="tx-hint" style="margin-top:0.6rem">${tokenHelp}</p>`;
     const $ = (sel) => body.querySelector(sel);
     $("#tx-ps-header").value = curHeader;
     $("#tx-ps-footer").value = curFooter;
@@ -10900,18 +10900,13 @@ function showCursorMovementDialog() {
         [CD_RIGHT]: $("#tx-cd-right"),
     };
     let dir = settings.cursor_dir | 0;
+    // Look (incl. the "on" state) comes from editor-menu(-dark).css.
     const refresh = () => {
         for (const [bit, b] of Object.entries(btns)) {
-            const on = (dir & (+bit)) !== 0;
-            b.style.background = on ? "#c4d4ec" : "";
-            b.style.borderColor = on ? "#6b8db8" : "";
+            b.classList.toggle("on", (dir & (+bit)) !== 0);
         }
     };
     for (const [bit, b] of Object.entries(btns)) {
-        b.style.cursor = "pointer";
-        b.style.border = "1px solid #888";
-        b.style.borderRadius = "3px";
-        b.style.background = "#f4f4f4";
         b.addEventListener("click", (e) => {
             const mask = +bit;
             // Alt-click clears the opposite axis bit, matching desktop.
