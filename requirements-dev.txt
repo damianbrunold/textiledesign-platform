@@ -1,0 +1,24 @@
+# Development and test tools on top of the runtime pins:
+#   pip install -r requirements-dev.txt -e .
+-r requirements.txt
+autopep8==2.3.2
+build==1.6.1
+cfgv==3.5.0
+colorama==0.4.6
+distlib==0.4.4
+filelock==4.2.5
+flake8==7.5.0
+identify==2.6.20
+iniconfig==2.3.1
+mccabe==0.7.0
+nodeenv==1.11.1
+platformdirs==4.14.0
+pluggy==1.7.0
+pre_commit==4.7.0
+pycodestyle==2.15.0
+pyflakes==4.1.0
+Pygments==2.21.0
+pyproject_hooks==1.3.3
+pytest==9.2.0
+PyYAML==6.0.3
+virtualenv==21.15.2

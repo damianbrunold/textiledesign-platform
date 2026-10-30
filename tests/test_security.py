@@ -8,7 +8,6 @@ enforcement on a representative endpoint.
 import re
 
 import pytest
-from flask import session
 
 from textileplatform.controller import (
     change_user_email,
@@ -104,7 +103,7 @@ class TestChangeUserEmail:
         assert u.email == "ed@example.com"
 
     def test_collision_rejected(self, app):
-        a = _make_user(name="aa", email="a@example.com")
+        _make_user(name="aa", email="a@example.com")
         b = _make_user(name="bb", email="b@example.com")
         err = change_user_email(b, "a@example.com")
         assert err is not None
@@ -187,8 +186,6 @@ class TestChangeUserEmail:
 
 class TestRegistrationCaptcha:
     def test_captcha_is_randomized(self, csrf_disabled_client):
-        r1 = csrf_disabled_client.get("/auth/register")
-        r2 = csrf_disabled_client.get("/auth/register")
         # Different sessions => independently sampled questions; over
         # many calls this should differ at least sometimes.
         questions = set()

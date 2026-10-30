@@ -146,7 +146,7 @@ class BeadList {
 	    }
 	}
     }
-    
+
     updateRepeat() {
 	this.repeat = this.usedHeight * this.data.width;
 	for (let i = 1; i < this.usedHeight * this.data.width; i++) {
@@ -184,7 +184,7 @@ class BeadList {
 	}
 	this.list.push([color, count]);
     }
-    
+
     update() {
 	this.updateUsedHeight();
 	this.updateRepeat();

@@ -1,4 +1,3 @@
-import os
 import platform
 import shutil
 import subprocess
@@ -55,8 +54,8 @@ def deploy_to_server(dest):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 1 or not sys.argv[1]:
+    if len(sys.argv) < 2 or not sys.argv[1]:
         print("python deploy_to_server.py <user@server>")
-        exit(1)
+        sys.exit(1)
     print("deploy to", sys.argv[1])
     deploy_to_server(sys.argv[1])

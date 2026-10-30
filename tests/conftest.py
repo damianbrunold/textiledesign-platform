@@ -7,7 +7,6 @@ schema with `db.create_all()` rather than running Alembic migrations —
 the goal is to test app behavior, not the migration chain.
 """
 import os
-import sys
 
 # Configure the app for testing BEFORE importing it.
 os.environ.setdefault("DATABASE", "sqlite:///:memory:")
@@ -15,7 +14,7 @@ os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
 os.environ.setdefault("ADMIN_PASSWORD", "test-admin-password")
 os.environ.setdefault("SHOW_VERIFICATION_CODE", "1")
 
-import pytest
+import pytest  # noqa: E402
 
 from textileplatform import app as flask_app  # noqa: E402
 from textileplatform.app import limiter  # noqa: E402

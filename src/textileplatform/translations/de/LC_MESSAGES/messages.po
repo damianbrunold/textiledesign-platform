@@ -4311,4 +4311,3 @@ msgstr "Ihr Konto ist nun verifiziert. Bitte melden Sie sich an."
 
 #~ msgid "Name ↑"
 #~ msgstr "Name"
-

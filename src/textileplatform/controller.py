@@ -4191,9 +4191,10 @@ def api_mark_read(conversation_id):
     ).first()
     if not conv or not can_access_conversation(conv, g.user):
         return respond("NOK", "Conversation not found", 404)
-    p = get_or_create_group_participant(conv, g.user) \
-        if conv.kind == "group" \
-        else next(
+    if conv.kind == "group":
+        p = get_or_create_group_participant(conv, g.user)
+    else:
+        p = next(
             (pp for pp in conv.participants if pp.user_id == g.user.id),
             None,
         )

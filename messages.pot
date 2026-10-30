@@ -3972,4 +3972,3 @@ msgstr ""
 #: src/textileplatform/templates/verification_successful.html:11
 msgid "Your account is now verified. Please log in."
 msgstr ""
-

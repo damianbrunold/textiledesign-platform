@@ -40,7 +40,11 @@ class User(db.Model):
     # whose id is greater than this value. NULL = nothing seen yet.
     last_seen_announcement_id = db.Column(
         db.Integer,
-        db.ForeignKey("txannouncement.id", ondelete="SET NULL"),
+        # txannouncement.author_id points back at txuser; use_alter
+        # lets create_all / drop_all order the two tables.
+        db.ForeignKey(
+            "txannouncement.id", ondelete="SET NULL", use_alter=True,
+        ),
         nullable=True,
     )
 
@@ -138,6 +142,19 @@ class Group(db.Model):
     )
     created = db.Column(db.DateTime(timezone=True))
     modified = db.Column(db.DateTime(timezone=True))
+
+    __table_args__ = (
+        db.Index(
+            "ix_txgroup_global_name", "name", unique=True,
+            postgresql_where=owner_id.is_(None),
+            sqlite_where=owner_id.is_(None),
+        ),
+        db.Index(
+            "ix_txgroup_personal_name", "owner_id", "name", unique=True,
+            postgresql_where=owner_id.isnot(None),
+            sqlite_where=owner_id.isnot(None),
+        ),
+    )
 
     owner = db.relationship("User", foreign_keys=[owner_id])
     memberships = db.relationship("Membership", back_populates="group")
@@ -392,7 +409,12 @@ class Pattern(db.Model):
     investigation_origin_label = db.Column(db.String(255), nullable=True)
     investigation_origin_public = db.Column(db.Boolean, nullable=True)
 
-    db.UniqueConstraint(owner_id, name)
+    __table_args__ = (
+        # Name as created by the initial migration (PostgreSQL default).
+        db.UniqueConstraint(
+            "owner_id", "name", name="txpattern_owner_id_name_key",
+        ),
+    )
 
     owner = db.relationship(
         "User", back_populates="mypatterns", foreign_keys=[owner_id],
