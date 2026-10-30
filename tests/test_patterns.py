@@ -217,3 +217,26 @@ class TestGroupAccess:
         _shared_setup()
         r = client.get("/api/pattern/anna/rope")
         assert r.status_code in (401, 403)
+
+
+# ---------- new weave pattern defaults --------------------------------
+
+
+class TestCreateWeave:
+    def test_threading_below_preference_is_kept(self, csrf_disabled_client):
+        user = _make_user()
+        user.settings = json.dumps({"dbweave": {"entering_at_bottom": True}})
+        db.session.commit()
+        _login(csrf_disabled_client)
+        _reset_access_date(user)
+        r = csrf_disabled_client.post("/patterns/create", data={
+            "pattern_type": "DB-WEAVE Pattern",
+            "name": "Below",
+            "width": "40",
+            "height": "40",
+        })
+        assert r.status_code in (301, 302)
+        p = Pattern.query.filter_by(name="below").one()
+        contents = json.loads(p.contents)
+        assert contents["entering_at_bottom"] is True
+        assert "direction_entering_at_bottom" not in contents

@@ -1888,7 +1888,7 @@ def create_pattern():
             dbw_prefs.get("direction_righttoleft", False))
         pattern["direction_toptobottom"] = bool(
             dbw_prefs.get("direction_toptobottom", False))
-        pattern["direction_entering_at_bottom"] = bool(
+        pattern["entering_at_bottom"] = bool(
             dbw_prefs.get("entering_at_bottom", False))
         pattern["entering_style"] = dbw_prefs.get("entering_style", "vdash")
         pattern["treadling_style"] = dbw_prefs.get("treadling_style", "dot")
