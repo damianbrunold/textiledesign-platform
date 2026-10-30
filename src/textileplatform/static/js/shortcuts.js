@@ -92,6 +92,12 @@ const Shortcuts = (function () {
             if (_isEditable(e.target)) return;
             const id = lookup(e);
             if (!id) return;
+            // While a dialog is open the pattern behind it is off limits;
+            // just keep Ctrl+S etc. from reaching the browser.
+            if (typeof editorDialogOpen === "function" && editorDialogOpen()) {
+                e.preventDefault();
+                return;
+            }
             const a = ActionRegistry.get(id);
             if (!a || (a.enabledWhen && !a.enabledWhen())) return;
             e.preventDefault();

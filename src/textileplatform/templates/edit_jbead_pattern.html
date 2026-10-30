@@ -52,6 +52,9 @@
             "file.revert":        {"label": {{ gettext('Discard changes') | tojson }}},
             "file.revert-confirm": {"label": {{ gettext('Discard all unsaved changes and reload the pattern from the server?') | tojson }}},
             "file.close":         {"label": {{ gettext('Close') | tojson }}},
+            "file.close-title":   {"label": {{ gettext('Close pattern') | tojson }}},
+            "file.close-prompt":  {"label": {{ gettext('The pattern has unsaved changes. Save before closing?') | tojson }}},
+            "file.discard":       {"label": {{ gettext("Don't save") | tojson }}},
             "file.print":         {"label": {{ gettext('Print…') | tojson }}},
             "file.export-png":    {"label": {{ gettext('PNG image…') | tojson }}},
             "file.export-jpeg":   {"label": {{ gettext('JPEG image…') | tojson }}},
@@ -153,9 +156,12 @@
             "discard":    {{ gettext('Discard and continue') | tojson }},
             "cancel":     {{ gettext('Cancel') | tojson }},
             "saveFailed": {{ gettext('Save failed. Please try again.') | tojson }},
+            "loadFailed": {{ gettext('The pattern could not be loaded. Please reload the page.') | tojson }},
+            "cloneFailed": {{ gettext('The pattern could not be cloned.') | tojson }},
             "draft": {
                 "title":   {{ gettext('Recover unsaved changes?') | tojson }},
                 "body":    {{ gettext('Local edits to this pattern from your last session were not saved on the server. Recover them?') | tojson }},
+                "staleBody": {{ gettext('These local edits are based on an older version of the pattern, which has been saved again since. Recovering them replaces the newer version when you save.') | tojson }},
                 "recover": {{ gettext('Recover') | tojson }},
                 "discard": {{ gettext('Discard local edits') | tojson }},
                 "cancel":  {{ gettext('Decide later') | tojson }}

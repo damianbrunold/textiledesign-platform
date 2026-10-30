@@ -4047,16 +4047,7 @@ function init() {
 
     if (typeof CommandBus !== "undefined") {
         commandBus = new CommandBus();
-        // Track which command represents the last saved state so that
-        // undo/redo back to that point can clear the modified flag.
-        // null = empty stack is the saved baseline (initial pristine
-        // load, or freshly reverted).
-        commandBus.savedMark = null;
-        commandBus.subscribe((bus) => {
-            const top = bus.undoStack[bus.undoStack.length - 1] || null;
-            if (top === bus.savedMark) clearModified();
-            else                       setModified();
-        });
+        trackSavedState(commandBus);
     }
 
     // console.log(data);
@@ -4903,14 +4894,17 @@ async function _revertChanges() {
     const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
     if (!window.confirm(L("file.revert-confirm",
         "Discard all unsaved changes and reload the pattern from the server?"))) return;
-    await getPattern();
+    try {
+        await getPattern();
+    } catch (e) {
+        console.error(e);
+        alert(_prompt("loadFailed",
+            "The pattern could not be loaded. Please reload the page."));
+        return;
+    }
     initSettings(data, settings);
     initPatternData(data, pattern);
-    if (commandBus) {
-        commandBus.undoStack.length = 0;
-        commandBus.redoStack.length = 0;
-        commandBus.savedMark = null;
-    }
+    if (commandBus) commandBus.clear();
     pattern.recalc_weave();
     if (view) {
         view.layout();
@@ -4924,55 +4918,6 @@ async function _revertChanges() {
     _rangesToolboxApply();
     clearModified();
     ActionRegistry.notify();
-}
-
-// Custom close prompt — port of the desktop's confirm-on-close dialog
-// (filehandling.cpp:424). Three choices: Save & close, discard & close,
-// cancel. When the pattern is unmodified or read-only, falls through
-// straight to the existing `closePattern()` navigation.
-function _closePatternGuarded() {
-    if (readonly || !modified) {
-        closePattern();
-        return;
-    }
-    const i18n = _getI18n();
-    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
-    const body = document.createElement("div");
-    body.style.minWidth = "360px";
-    body.textContent = L("file.close-prompt",
-        "The pattern has unsaved changes. Save before closing?");
-
-    let modal;
-    const doSave = async () => {
-        saveSettings(data, settings);
-        savePatternData(data, pattern);
-        try {
-            await savePattern();
-        } catch (e) {
-            console.error(e);
-            const p = (_getI18n().prompts) || {};
-            alert(p.saveFailed || "Save failed. Please try again.");
-            // Keep the dialog open so the user can retry or discard.
-            return;
-        }
-        _markSaved();
-        modal.close();
-        closePattern();
-    };
-    const doDiscard = () => {
-        clearModified();
-        modal.close();
-        closePattern();
-    };
-    modal = Modal.open({
-        title: L("file.close-title", "Close pattern"),
-        body,
-        buttons: [
-            { label: L("btn.cancel", "Cancel"),  role: "cancel" },
-            { label: L("file.discard", "Don't save"), onClick: doDiscard },
-            { label: L("file.save",    "Save"),  role: "primary", onClick: doSave },
-        ],
-    });
 }
 
 
@@ -5389,6 +5334,8 @@ function savePatternData(data, pattern) {
 
 
 function keyDown(e) {
+    // Keys typed into an open dialog must not edit the pattern behind it.
+    if (editorDialogOpen()) return;
     // Don't hijack keystrokes targeted at editable fields (modal inputs,
     // textareas). Lets Tab / Shift+Tab navigate, arrow keys adjust
     // numeric inputs, Space insert whitespace, etc.
@@ -6653,16 +6600,6 @@ function _isEmptyTrittfolge(j) {
         if (grid.get(i, j) > 0) return false;
     }
     return true;
-}
-
-// Mark the current top of the undo stack as the saved baseline. Undo /
-// redo back to this exact point will then clear the modified flag; any
-// further command (or returning to a different stack position) sets it.
-function _markSaved() {
-    if (!commandBus) { clearModified(); return; }
-    const top = commandBus.undoStack[commandBus.undoStack.length - 1] || null;
-    commandBus.savedMark = top;
-    clearModified();
 }
 
 // Generic snapshot-command helper for non-grid mutations (settings,
@@ -11762,10 +11699,7 @@ const _WEFT_PARTS = { weave: 1, treadling: 1, color_weft: 1 };
 // ---- Editor-wide action registration + menu setup ----
 
 function _getI18n() {
-    const el = document.getElementById("tx-i18n");
-    if (!el) return { actions: {}, menus: {} };
-    try { return JSON.parse(el.textContent); }
-    catch (e) { console.error("tx-i18n parse failed", e); return { actions: {}, menus: {} }; }
+    return editorI18n();
 }
 
 function _setWeaveStyle(style) {
@@ -11799,17 +11733,12 @@ function setupEditorActions() {
     // File
     R("file.save", "Ctrl+S", async () => {
         if (readonly) return;
-        saveSettings(data, settings);
-        savePatternData(data, pattern);
         try {
             await savePattern();
         } catch (e) {
             console.error(e);
-            const p = (_getI18n().prompts) || {};
-            alert(p.saveFailed || "Save failed. Please try again.");
-            return;
+            alert(_prompt("saveFailed", "Save failed. Please try again."));
         }
-        _markSaved();
     }, { enabledWhen: () => !readonly });
     R("file.revert", null, _revertChanges,
         { enabledWhen: () => !readonly && modified });
@@ -11828,7 +11757,7 @@ function setupEditorActions() {
     R("legal.terms",   null, () => LegalDialog.open("/terms",   L("legal.terms")   || "Terms",          L("btn.ok") || "OK"));
     R("legal.privacy", null, () => LegalDialog.open("/privacy", L("legal.privacy") || "Privacy Policy", L("btn.ok") || "OK"));
     R("legal.imprint", null, () => LegalDialog.open("/imprint", L("legal.imprint") || "Imprint",        L("btn.ok") || "OK"));
-    R("file.close", null, _closePatternGuarded);
+    R("file.close", null, closePatternGuarded);
 
     // Edit
     R("edit.undo", "Ctrl+Z", () => { if (commandBus) commandBus.undo(); },
@@ -12562,56 +12491,18 @@ function setupEditorActions() {
 
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    const preSave = !readonly ? () => {
-        saveSettings(data, settings);
-        savePatternData(data, pattern);
-    } : null;
-    // Register the draft-autosave preSave hook before any edit can fire,
-    // so setModified()'s debounced draft write captures fresh `data`.
-    if (!readonly) installDraftAutosave(preSave);
-    let _draftRecovered = false;
-    getPattern()
-        .then(async () => {
-            const dp = (_getI18n().prompts && _getI18n().prompts.draft) || {};
-            _draftRecovered = await maybeRecoverDraft(dp);
-        })
-        .then(init).then(setupEditorActions).then(setupToolbarAndStatusbar).then(() => {
-        if (_draftRecovered) {
-            // init() resets `modified`; restore it so the recovered
-            // edits are visibly unsaved and the nav guards engage.
-            setModified();
-        }
-        // Auto-save once after load (used by the upload flow to capture
-        // a thumbnail and persist auto-detected rapport bounds without
-        // requiring the user to click Save themselves).
-        const params = new URLSearchParams(window.location.search);
-        if (!readonly && params.get("autosave") === "1") {
-            // Defer one tick so layout/draw have settled.
-            setTimeout(() => {
-                // savePattern is async — `try` only catches sync errors,
-                // so attach a rejection handler explicitly.
-                Promise.resolve()
-                    .then(() => savePattern())
-                    .catch((e) => console.error("autosave failed", e));
-                // Strip the flag from the URL so a manual reload
-                // doesn't keep re-saving.
-                params.delete("autosave");
-                const url = window.location.pathname
-                    + (params.toString() ? "?" + params : "");
-                history.replaceState(null, "", url);
-            }, 100);
-        }
-    });
-    if (!readonly) {
-        installBeforeUnloadGuard(preSave);
-        installNavGuard(preSave, _getI18n().prompts || {});
-    }
-    const publicEl = document.getElementById("public");
-    if (!readonly && publicEl) publicEl.addEventListener("click", togglePublic);
-    const cloneEl = document.getElementById("clone");
-    if (cloneEl) cloneEl.addEventListener("click", clonePattern);
-    document.getElementById("close").addEventListener("click", _closePatternGuarded);
     window.addEventListener("keydown", keyDown);
+    startEditor({
+        preSave: () => {
+            saveSettings(data, settings);
+            savePatternData(data, pattern);
+        },
+        init: () => {
+            init();
+            setupEditorActions();
+            setupToolbarAndStatusbar();
+        },
+    });
 });
 
 // Wire every <button data-action="..."> in the toolbar to the matching

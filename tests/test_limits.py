@@ -337,6 +337,27 @@ class TestSaveValidation:
         assert r.status_code == 400
         assert json.loads(Pattern.query.one().contents) == _bead()
 
+    def test_api_reports_modification_time(self, csrf_disabled_client):
+        # Editors tag local drafts with the version they are based on.
+        user = _make_user()
+        db.session.add(Pattern(
+            name="rope", label="Rope", owner=user,
+            pattern_type="JBead Pattern", public=False,
+            contents=json.dumps(_bead()),
+        ))
+        db.session.commit()
+        _login_as(csrf_disabled_client, user)
+        loaded = csrf_disabled_client.get("/api/pattern/alice/rope")
+        assert "modified" in loaded.get_json()
+        _reset_access_date(user)
+        saved = csrf_disabled_client.put("/api/pattern/alice/rope", json={
+            "action": "save-pattern", "contents": _bead(),
+        }).get_json()
+        assert saved["modified"]
+        _reset_access_date(user)
+        again = csrf_disabled_client.get("/api/pattern/alice/rope")
+        assert again.get_json()["modified"] == saved["modified"]
+
     def test_valid_contents_are_saved(self, csrf_disabled_client):
         user = _make_user()
         db.session.add(Pattern(

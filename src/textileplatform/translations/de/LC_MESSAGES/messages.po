@@ -2508,6 +2508,21 @@ msgstr "Das Muster hat ungesicherte Änderungen. Vor dem Schliessen speichern?"
 msgid "Don't save"
 msgstr "Nicht speichern"
 
+msgid "The pattern could not be loaded. Please reload the page."
+msgstr "Das Muster konnte nicht geladen werden. Bitte die Seite neu laden."
+
+msgid "The pattern could not be cloned."
+msgstr "Das Muster konnte nicht geklont werden."
+
+msgid ""
+"These local edits are based on an older version of the pattern, which "
+"has been saved again since. Recovering them replaces the newer version "
+"when you save."
+msgstr ""
+"Diese lokalen Änderungen beruhen auf einer älteren Version des Musters, "
+"die seither erneut gespeichert wurde. Werden sie wiederhergestellt, "
+"ersetzen sie beim Speichern die neuere Version."
+
 #: src/textileplatform/templates/edit_dbweave_pattern.html:248
 msgid "Harnesses:"
 msgstr "Schäfte:"

@@ -3718,6 +3718,10 @@ def reset_password(user_name, verification_code):
         abort(500)
 
 
+def _iso(dt):
+    return dt.isoformat() if dt else None
+
+
 @app.route("/api/pattern/<user_name>/<pattern_name>")
 def get_pattern(user_name, pattern_name):
     try:
@@ -3739,6 +3743,8 @@ def get_pattern(user_name, pattern_name):
         return jsonify({
             "status": "OK",
             "pattern": contents,
+            # Editors record the version a local draft is based on.
+            "modified": _iso(pattern.modified),
         }), 200
     except HTTPException:
         raise
@@ -3819,7 +3825,9 @@ def update_pattern(user_name, pattern_name):
                     data.get("preview"))
             _bump_pattern_edit(pattern.pattern_type)
             db.session.commit()
-            return jsonify({"status": "OK"}), 200
+            return jsonify({
+                "status": "OK", "modified": _iso(pattern.modified),
+            }), 200
         elif action == "clone-pattern":
             if not g.user:
                 return respond("NOK", "Invalid user", 403)

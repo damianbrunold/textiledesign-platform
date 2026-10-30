@@ -12,20 +12,49 @@
 // the captured snapshot. This keeps memory predictable (no full pattern clones)
 // while keeping the call sites trivial.
 
+// Saved-state tracking: `savedMark` is the undo-stack top that matches
+// what the server has. null = the empty stack (pristine load or fresh
+// revert); CommandBus.UNREACHABLE = no stack position matches (recovered
+// draft, or the saved command was dropped off the bottom of the stack).
+
 class CommandBus {
     constructor(limit = 200) {
         this.undoStack = [];
         this.redoStack = [];
         this.limit = limit;
         this.listeners = [];
+        this.savedMark = null;
     }
 
     execute(cmd) {
         cmd.apply();
         this.undoStack.push(cmd);
-        if (this.undoStack.length > this.limit) this.undoStack.shift();
+        if (this.undoStack.length > this.limit) {
+            const dropped = this.undoStack.shift();
+            // Undoing all the way down no longer returns to the saved
+            // state once the command above it is gone.
+            if (this.savedMark === null || this.savedMark === dropped) {
+                this.savedMark = CommandBus.UNREACHABLE;
+            }
+        }
         this.redoStack.length = 0;
         this._notify();
+    }
+
+    top() {
+        return this.undoStack[this.undoStack.length - 1] || null;
+    }
+
+    isAtSavedState() {
+        return this.top() === this.savedMark;
+    }
+
+    markSaved(top = this.top()) {
+        this.savedMark = top;
+    }
+
+    markUnsaved() {
+        this.savedMark = CommandBus.UNREACHABLE;
     }
 
     undo() {
@@ -49,9 +78,12 @@ class CommandBus {
     canUndo() { return this.undoStack.length > 0; }
     canRedo() { return this.redoStack.length > 0; }
 
+    // Drop all history; the current state becomes the saved baseline
+    // (used after reloading the pattern from the server).
     clear() {
         this.undoStack.length = 0;
         this.redoStack.length = 0;
+        this.savedMark = null;
         this._notify();
     }
 
@@ -69,6 +101,8 @@ class CommandBus {
         }
     }
 }
+
+CommandBus.UNREACHABLE = Object.freeze({ label: "unreachable" });
 
 // Snapshot a rectangular region of a Grid-like object (supports get(i,j) and
 // set(i,j,value)). Returns an opaque snapshot; use restoreGridRegion to revert.

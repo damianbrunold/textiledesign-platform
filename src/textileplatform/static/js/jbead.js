@@ -940,15 +940,8 @@ function init() {
     beadlist.update();
 
     commandBus = new CommandBus();
-    // Track which command represents the last saved state so undo /
-    // redo back to that point can clear the modified flag. null =
-    // empty stack is the saved baseline (initial pristine load, or
-    // freshly reverted).
-    commandBus.savedMark = null;
-    commandBus.subscribe((bus) => {
-        const top = bus.undoStack[bus.undoStack.length - 1] || null;
-        if (top === bus.savedMark) clearModified();
-        else                       setModified();
+    trackSavedState(commandBus);
+    commandBus.subscribe(() => {
         if (typeof ActionRegistry !== "undefined") ActionRegistry.notify();
     });
 
@@ -2771,16 +2764,6 @@ function _updateStatusbar() {
     }
 }
 
-// Mark the current top of the undo stack as the saved baseline so
-// undo/redo back to this exact point clears the modified flag.
-function _markSaved() {
-    if (!commandBus) { clearModified(); return; }
-    const top = commandBus.undoStack[commandBus.undoStack.length - 1] || null;
-    commandBus.savedMark = top;
-    clearModified();
-}
-
-
 // Discard in-memory edits and reload the pattern from the server.
 // Mirrors weave's _revertChanges in dbweave.js.
 async function _revertChanges() {
@@ -2789,7 +2772,14 @@ async function _revertChanges() {
         "Discard all unsaved changes and reload the pattern from the server?"))) {
         return;
     }
-    await getPattern();
+    try {
+        await getPattern();
+    } catch (e) {
+        console.error(e);
+        alert(_prompt("loadFailed",
+            "The pattern could not be loaded. Please reload the page."));
+        return;
+    }
 
     // Rebuild the in-memory model from the freshly-loaded `data`.
     pattern = new Pattern(data.model[0].length, data.model.length);
@@ -2830,12 +2820,8 @@ async function _revertChanges() {
     view.layout();
     beadlist.update();
 
-    if (commandBus) {
-        commandBus.undoStack.length = 0;
-        commandBus.redoStack.length = 0;
-        commandBus.savedMark = null;
-    }
-    await clearModified();
+    if (commandBus) commandBus.clear();
+    clearModified();
     _refreshScrollbar();
     view.draw();
     _updateStatusbar();
@@ -2905,11 +2891,6 @@ function _setZoom(dx) {
 }
 
 function setupEditorActions() {
-    const i18nEl = document.getElementById("tx-i18n");
-    if (i18nEl) {
-        try { _i18n = JSON.parse(i18nEl.textContent); }
-        catch (e) { console.warn("tx-i18n parse failed", e); }
-    }
     const reg = (id, opts) => {
         ActionRegistry.registerAction({
             id,
@@ -2922,17 +2903,12 @@ function setupEditorActions() {
         shortcut: "Ctrl+S",
         enabledWhen: () => !readonly,
         handler: async () => {
-            saveSettings(data, settings);
-            savePatternData(data, pattern);
             try {
                 await savePattern();
             } catch (e) {
                 console.error(e);
-                const p = (_i18n && _i18n.prompts) || {};
-                alert(p.saveFailed || "Save failed. Please try again.");
-                return;
+                alert(_prompt("saveFailed", "Save failed. Please try again."));
             }
-            _markSaved();
         },
     });
     reg("file.revert", {
@@ -2955,7 +2931,7 @@ function setupEditorActions() {
     reg("file.export-jpeg", { handler: () => _exportPattern("jpeg") });
     reg("file.export-svg",  { handler: () => _exportPattern("svg")  });
     reg("file.export-pdf",  { handler: () => _exportPattern("pdf")  });
-    reg("file.close", { handler: () => closePattern() });
+    reg("file.close", { handler: () => closePatternGuarded() });
 
     reg("view.zoom-in",     { shortcut: "Ctrl+I",
         handler: () => _setZoom(settings.dx + 2) });
@@ -3178,6 +3154,7 @@ function setupEditorActions() {
     // generic Shortcuts dispatcher binds one combo per action so we
     // install a small auxiliary listener here for the digit keys.
     window.addEventListener("keydown", (e) => {
+        if (editorDialogOpen()) return;
         const t = e.target;
         if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA"
                   || t.isContentEditable)) return;
@@ -3298,55 +3275,19 @@ function setupEditorActions() {
 
 window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
-    const preSave = !readonly ? () => {
-        saveSettings(data, settings);
-        savePatternData(data, pattern);
-    } : null;
-    // Register the draft-autosave preSave hook before any edit can fire,
-    // so setModified()'s debounced draft write captures fresh `data`.
-    if (!readonly) installDraftAutosave(preSave);
-    let _draftRecovered = false;
-    getPattern()
-        .then(async () => {
-            const dp = (_i18n && _i18n.prompts && _i18n.prompts.draft) || {};
-            _draftRecovered = await maybeRecoverDraft(dp);
-        })
-        .then(init).then(() => {
-        if (_draftRecovered) {
-            // init() resets `modified`; restore it so the recovered
-            // edits are visibly unsaved and the nav guards engage.
-            setModified();
-        }
-        setupEditorActions();
-        _updateStatusbar();
-        const params = new URLSearchParams(window.location.search);
-        if (!readonly && params.get("autosave") === "1") {
-            setTimeout(() => {
-                try {
-                    saveSettings(data, settings);
-                    savePatternData(data, pattern);
-                } catch (e) { console.error(e); }
-                // savePattern is async — handle its rejection too.
-                Promise.resolve()
-                    .then(() => savePattern())
-                    .catch((e) => console.error("autosave failed", e));
-                params.delete("autosave");
-                const url = window.location.pathname
-                    + (params.toString() ? "?" + params : "");
-                history.replaceState(null, "", url);
-            }, 100);
-        }
+    // Parse the translations before anything can show a dialog.
+    _i18n = editorI18n();
+    startEditor({
+        preSave: () => {
+            saveSettings(data, settings);
+            savePatternData(data, pattern);
+        },
+        init: () => {
+            init();
+            setupEditorActions();
+            _updateStatusbar();
+        },
     });
-    if (!readonly) {
-        installBeforeUnloadGuard(preSave);
-        installNavGuard(preSave, (_i18n && _i18n.prompts) || {});
-        const pub = document.getElementById("public");
-        if (pub) pub.addEventListener("click", togglePublic);
-    } else {
-        const clone = document.getElementById("clone");
-        if (clone) clone.addEventListener("click", clonePattern);
-    }
-    document.getElementById("close").addEventListener("click", closePattern);
 });
 
 // ---- Thumbnail / preview capture --------------------------------

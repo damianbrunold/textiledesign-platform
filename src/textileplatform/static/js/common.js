@@ -1,11 +1,29 @@
 "use strict";
 
+// Shared editor plumbing for the DB-WEAVE and JBead editors: loading,
+// saving, the modified flag, local drafts, navigation guards, and the
+// startup sequence (startEditor).
+
 let data = null;
 let modified = false;
+// Server modification time of the pattern version `data` was loaded
+// from or last saved as (ISO string). Drafts record it so a draft based
+// on an older version can be recognised.
+let patternModified = null;
+
+// Bumped by every setModified(); a save only clears the modified flag
+// if no edit happened while it was in flight.
+let _editSeq = 0;
+// Flushes the editor's working state into `data` (registered by
+// startEditor for editable patterns).
+let _editorPreSave = null;
+// The editor's CommandBus, for saved-state tracking (trackSavedState).
+let _editorBus = null;
 
 
 function setModified() {
     modified = true;
+    _editSeq++;
     const m = document.getElementById("modified");
     if (m !== null) {
         m.className = "changed";
@@ -14,8 +32,12 @@ function setModified() {
 }
 
 
-async function clearModified() {
+// The editor matches the server again (saved, reverted, discarded or
+// undone back to the saved state), so any local draft is obsolete.
+function clearModified() {
     modified = false;
+    _cancelDraftSave();
+    _clearDraft();
     const m = document.getElementById("modified");
     if (m !== null) {
         m.className = "unchanged";
@@ -23,122 +45,134 @@ async function clearModified() {
 }
 
 
-function togglePublic() {
-    const el = document.getElementById("public");
-    let state;
-    // Modern markup: a text element (button/span) carrying the
-    // 🔒 / 🌐 emoji, matching the user-private listing page.
-    // Legacy markup: an <img> with src ending in icon-public/private.svg.
-    if (el.tagName === "IMG") {
-        if (el.src.endsWith("icon-public.svg")) {
-            el.src = el.src.replace("-public", "-private");
-            state = false;
-        } else {
-            el.src = el.src.replace("-private", "-public");
-            state = true;
-        }
-    } else {
-        const isPublic = el.textContent.indexOf("🌐") >= 0;
-        state = !isPublic;
-        el.textContent = state ? "🌐" : "🔒";
-    }
-    el.title = state
-        ? el.dataset.titlePublic  || "Public - visible to all users"
-        : el.dataset.titlePrivate || "Private - not visible to others";
+function _patternUrl() {
     const user = document.getElementById("user").value;
     const pattern = document.getElementById("pattern").value;
-    const request = {
-        action: "set-publication-state",
-        publication_state: state
-    };
-    fetch(`/api/pattern/${user}/${pattern}`, {
-        method: "PUT",
-        mode: 'cors',
-        cache: 'no-cache',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        redirect: 'follow',
-        body: JSON.stringify(request)
-    });
+    return `/api/pattern/${user}/${pattern}`;
 }
 
 
+function _putPattern(request, extra) {
+    // CSRFProtect on HTTPS rejects with 400 if the Referer header is
+    // missing (WTF_CSRF_SSL_STRICT). Don't override the document's
+    // referrer policy here — the page sets `Referrer-Policy: same-origin`
+    // already, which sends Referer for this same-origin call.
+    return fetch(_patternUrl(), Object.assign({
+        method: "PUT",
+        cache: "no-cache",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+    }, extra || {}));
+}
+
+
+// ---- i18n ----------------------------------------------------------
+
+let _editorI18nCache = null;
+
+// The #tx-i18n JSON block of the editor templates, parsed once.
+function editorI18n() {
+    if (_editorI18nCache === null) {
+        _editorI18nCache = { actions: {}, menus: {}, prompts: {} };
+        const el = document.getElementById("tx-i18n");
+        if (el) {
+            try {
+                _editorI18nCache = Object.assign(
+                    _editorI18nCache, JSON.parse(el.textContent));
+            } catch (e) { console.error("tx-i18n parse failed", e); }
+        }
+    }
+    return _editorI18nCache;
+}
+
+function _prompt(key, fallback) {
+    const p = editorI18n().prompts || {};
+    return p[key] || fallback;
+}
+
+function _actionText(id, fallback) {
+    const a = (editorI18n().actions || {})[id];
+    return (a && a.label) || fallback;
+}
+
+
+// ---- Load / save -----------------------------------------------------
+
 async function getPattern() {
-    const user = document.getElementById("user").value;
-    const pattern = document.getElementById("pattern").value;
-    let response = await fetch(`/api/pattern/${user}/${pattern}`);
-    let json_data = await response.json();
-    data = json_data["pattern"];
+    const resp = await fetch(_patternUrl(), { cache: "no-cache" });
+    if (!resp.ok) throw new Error("load-failed:" + resp.status);
+    const json = await resp.json();
+    data = json["pattern"];
+    patternModified = json["modified"] || null;
 }
 
 
 // Editor-specific code may register this to produce thumbnail/preview
-// PNG data URLs from the current `data` and runtime state. Returning
-// null/undefined for a key just omits it from the save payload.
+// PNG data URLs from the current `data` and runtime state. Keys that
+// are present (even with a null value) are sent; a failed capture
+// returns nothing, so the stored images are left untouched.
 window.captureThumbnails = window.captureThumbnails || null;
 
-async function _runCaptureThumbnails() {
+async function _runCaptureThumbnails(contents) {
     if (typeof window.captureThumbnails === "function") {
-        try { return (await window.captureThumbnails(data)) || {}; }
+        try { return (await window.captureThumbnails(contents)) || {}; }
         catch (e) { console.error("captureThumbnails failed", e); }
     }
     return {};
 }
 
 
+// Save the current editor state. Throws on failure (the editor stays
+// modified). If the user kept editing while the request was in flight,
+// the editor stays modified too — only the state at the start of the
+// save reached the server.
 async function savePattern() {
-    const user = document.getElementById("user").value;
-    const pattern = document.getElementById("pattern").value;
-    const thumbs = await _runCaptureThumbnails();
-    const request = {
-        action: "save-pattern",
-        contents: data,
-        thumbnail: thumbs.thumbnail || null,
-        preview: thumbs.preview || null,
-    };
-    // CSRFProtect on HTTPS rejects with 400 if the Referer header is
-    // missing (WTF_CSRF_SSL_STRICT). Don't override the document's
-    // referrer policy here — the page sets `Referrer-Policy: same-origin`
-    // already, which sends Referer for this same-origin call.
-    const resp = await fetch(`/api/pattern/${user}/${pattern}`, {
-        method: "PUT",
-        mode: 'cors',
-        cache: 'no-cache',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        redirect: 'follow',
-        body: JSON.stringify(request)
-    });
+    if (_editorPreSave) _editorPreSave();
+    const seq = _editSeq;
+    const savedTop = _editorBus ? _editorBus.top() : null;
+    const contents = structuredClone(data);
+    const thumbs = await _runCaptureThumbnails(contents);
+    const request = { action: "save-pattern", contents };
+    if ("thumbnail" in thumbs) request.thumbnail = thumbs.thumbnail || null;
+    if ("preview" in thumbs) request.preview = thumbs.preview || null;
+    const resp = await _putPattern(request);
     if (!resp.ok) {
-        // Leave `modified` set so the user is still warned on
-        // navigation and the next Save attempt isn't a no-op.
         throw new Error("save-failed:" + resp.status);
     }
-    _clearDraft();
-    await clearModified();
+    try {
+        patternModified = (await resp.json()).modified || patternModified;
+    } catch (e) { /* older server: no timestamp in the reply */ }
+    if (_editorBus) _editorBus.markSaved(savedTop);
+    if (seq === _editSeq) {
+        clearModified();
+    } else {
+        // Keep the newer edits in the draft.
+        _scheduleDraftSave();
+    }
+}
+
+
+// Wire a CommandBus into the modified flag: undo/redo back to the saved
+// state clears it, any other position sets it.
+function trackSavedState(bus) {
+    _editorBus = bus;
+    bus.subscribe((b) => {
+        if (b.isAtSavedState()) clearModified();
+        else setModified();
+    });
 }
 
 
 // ---- Local draft persistence ---------------------------------------
 // Per-pattern JSON snapshot of the in-memory state, written to
-// localStorage on every edit (debounced) and cleared after a confirmed
-// successful save. On editor open, the editor calls maybeRecoverDraft
-// between getPattern and init: if a local draft differs from what the
-// server returned (e.g. the previous session crashed, the tab was
-// closed before save, or the save failed silently), the user is asked
-// whether to restore the local copy.
-//
-// The editor must register a `preSave` callback via installDraftAutosave
-// that flushes the editor's working state into the `data` global —
-// `data` is otherwise stale until the user actually triggers a save.
+// localStorage on every edit (debounced) and when the page is left
+// with unsaved changes; removed whenever the editor matches the server
+// again. On editor open, startEditor offers to restore a draft that
+// differs from what the server returned.
 
-let _draftPreSave = null;
 let _draftTimer = null;
 const _DRAFT_DEBOUNCE_MS = 1000;
-
-function installDraftAutosave(preSave) {
-    _draftPreSave = preSave;
-}
 
 function _draftKey() {
     const u = document.getElementById("user");
@@ -150,11 +184,15 @@ function _draftKey() {
 function _writeDraftNow() {
     try {
         const k = _draftKey();
-        if (!k || data == null) return;
-        if (typeof _draftPreSave === "function") {
-            try { _draftPreSave(); } catch (e) { console.error(e); }
+        if (!k || data == null || !modified) return;
+        if (_editorPreSave) {
+            try { _editorPreSave(); } catch (e) { console.error(e); }
         }
-        const payload = { savedAt: Date.now(), contents: data };
+        const payload = {
+            savedAt: Date.now(),
+            base: patternModified,
+            contents: data,
+        };
         localStorage.setItem(k, JSON.stringify(payload));
     } catch (e) {
         // Quota exceeded, private mode, serialisation error, etc.
@@ -164,11 +202,18 @@ function _writeDraftNow() {
 }
 
 function _scheduleDraftSave() {
-    if (_draftTimer) return;
+    if (_draftTimer || !_editorPreSave) return;
     _draftTimer = setTimeout(() => {
         _draftTimer = null;
         _writeDraftNow();
     }, _DRAFT_DEBOUNCE_MS);
+}
+
+function _cancelDraftSave() {
+    if (_draftTimer) {
+        clearTimeout(_draftTimer);
+        _draftTimer = null;
+    }
 }
 
 function _clearDraft() {
@@ -191,10 +236,8 @@ function _readDraft() {
 }
 
 // Returns true if the user chose to recover (in which case `data` has
-// been replaced with the draft contents). The caller is responsible
-// for re-running setModified() after init clears it.
+// been replaced with the draft contents).
 async function maybeRecoverDraft(prompts) {
-    if (typeof readonly !== "undefined" && readonly) return false;
     const draft = _readDraft();
     if (!draft) return false;
     let serverJson, draftJson;
@@ -207,25 +250,34 @@ async function maybeRecoverDraft(prompts) {
         _clearDraft();
         return false;
     }
-    const choice = await _askRecoverDraft(prompts || {});
-    if (choice === "recover") {
+    // A draft based on an older server version (the pattern was saved
+    // elsewhere since) would overwrite those newer changes.
+    const stale = !!(draft.base && patternModified
+                     && draft.base !== patternModified);
+    const choice = await _threeButtonDialog({
+        title:   prompts.title   || "Recover unsaved changes?",
+        body:    stale
+            ? (prompts.staleBody || "These local edits are based on an older version of the pattern, which has been saved again since. Recovering them replaces the newer version when you save.")
+            : (prompts.body || "Local edits to this pattern from your last session were not saved on the server. Recover them?"),
+        primary: prompts.recover || "Recover",
+        middle:  prompts.discard || "Discard local edits",
+        cancel:  prompts.cancel  || "Decide later",
+    });
+    if (choice === "primary") {
         data = draft.contents;
         return true;
     }
-    if (choice === "discard") {
+    if (choice === "middle") {
         _clearDraft();
     }
     return false;
 }
 
-function _askRecoverDraft(prompts) {
-    const labels = {
-        title:   prompts.title   || "Recover unsaved changes?",
-        body:    prompts.body    || "Local edits to this pattern from your last session were not saved on the server. Recover them?",
-        recover: prompts.recover || "Recover",
-        discard: prompts.discard || "Discard local edits",
-        cancel:  prompts.cancel  || "Decide later",
-    };
+
+// Modal with cancel / middle / primary buttons; resolves to "cancel",
+// "middle" or "primary". `onPrimary` (optional, async) runs before the
+// dialog closes; if it returns false the dialog stays open.
+function _threeButtonDialog(labels, onPrimary) {
     return new Promise((resolve) => {
         const overlay = document.createElement("div");
         overlay.className = "navguard-overlay";
@@ -243,65 +295,62 @@ function _askRecoverDraft(prompts) {
         overlay.querySelector("h2").textContent = labels.title;
         overlay.querySelector("p").textContent  = labels.body;
         overlay.querySelector(".navguard-cancel").textContent  = labels.cancel;
-        overlay.querySelector(".navguard-discard").textContent = labels.discard;
-        overlay.querySelector(".navguard-save").textContent    = labels.recover;
+        overlay.querySelector(".navguard-discard").textContent = labels.middle;
+        overlay.querySelector(".navguard-save").textContent    = labels.primary;
         function close(result) {
-            document.removeEventListener("keydown", onKey);
+            document.removeEventListener("keydown", onKey, true);
             overlay.remove();
             resolve(result);
         }
-        function onKey(e) { if (e.key === "Escape") close("cancel"); }
+        function onKey(e) {
+            // The dialog owns the keyboard while it is open.
+            e.stopPropagation();
+            if (e.key === "Escape") close("cancel");
+        }
         modal.addEventListener("click", (e) => e.stopPropagation());
         overlay.addEventListener("click", (e) => {
             if (e.target === overlay) close("cancel");
         });
-        document.addEventListener("keydown", onKey);
+        document.addEventListener("keydown", onKey, true);
         overlay.querySelector(".navguard-cancel")
             .addEventListener("click", () => close("cancel"));
         overlay.querySelector(".navguard-discard")
-            .addEventListener("click", () => close("discard"));
-        overlay.querySelector(".navguard-save")
-            .addEventListener("click", () => close("recover"));
+            .addEventListener("click", () => close("middle"));
+        const primary = overlay.querySelector(".navguard-save");
+        primary.addEventListener("click", async () => {
+            if (onPrimary) {
+                primary.disabled = true;
+                const ok = await onPrimary();
+                primary.disabled = false;
+                if (ok === false) return;
+            }
+            close("primary");
+        });
         document.body.appendChild(overlay);
-        overlay.querySelector(".navguard-save").focus();
+        primary.focus();
     });
 }
 
 
-// Best-effort save during page-unload. Uses fetch with keepalive: true,
-// which is specifically designed to keep requests alive across document
-// unload. (navigator.sendBeacon can't be used here because it only sends
-// POST, but our save endpoint is PUT.)
-function sendBeaconSave() {
-    const user = document.getElementById("user").value;
-    const pattern = document.getElementById("pattern").value;
-    const body = JSON.stringify({ action: "save-pattern", contents: data });
-    const url = `/api/pattern/${user}/${pattern}`;
-    try {
-        fetch(url, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body,
-            keepalive: true,
-            credentials: "same-origin",
-        });
-        return true;
-    } catch (e) { return false; }
+// True while any editor dialog is open; keyboard shortcuts must not
+// reach the pattern behind it.
+function editorDialogOpen() {
+    if (typeof Modal !== "undefined" && Modal.topmost()) return true;
+    return document.querySelector(".navguard-overlay") !== null;
 }
 
 
-// Wire up F5/close protection. `preSave` should serialize in-memory editor
-// state into the `data` global (e.g. saveSettings + savePatternData). The
-// handler:
-//   1. If modified, flushes a beacon save (best-effort, no await).
-//   2. Sets the standard beforeunload prompt so the browser warns the user.
-function installBeforeUnloadGuard(preSave) {
+// ---- Leaving the editor --------------------------------------------
+
+// Tab close / reload / back with unsaved changes: keep them in the local
+// draft (offered for recovery next time) and let the browser ask. The
+// changes are not sent to the server — the user may be leaving
+// precisely to throw them away.
+function installBeforeUnloadGuard() {
     window.addEventListener("beforeunload", (e) => {
         if (!modified) return;
-        try { if (preSave) preSave(); } catch (err) { console.error(err); }
-        sendBeaconSave();
-        // Standard mechanism to trigger the browser's "leave site?" prompt.
-        // The actual message text is not customizable in modern browsers.
+        _cancelDraftSave();
+        _writeDraftNow();
         e.preventDefault();
         e.returnValue = "";
         return "";
@@ -309,16 +358,6 @@ function installBeforeUnloadGuard(preSave) {
 }
 
 
-// Intercept in-app navigation (clicks on links, non-GET form submits)
-// while the editor has unsaved changes, and show a localized modal
-// asking the user whether to save, discard, or cancel. The native
-// `beforeunload` prompt still fires for cases this can't reach (tab
-// close, browser refresh/back) — see installBeforeUnloadGuard above.
-//
-//   prompts = {
-//       title, body, save, discard, cancel,
-//       saveFailed   // optional, shown via alert() on save error
-//   }
 // Browsers may restore this page from the back/forward cache when the
 // user navigates back to the editor. The DOM is then preserved exactly
 // as it was at unload — including any unsaved edits the user may have
@@ -330,16 +369,44 @@ window.addEventListener("pageshow", (e) => {
 });
 
 
-function installNavGuard(preSave, prompts) {
-    prompts = prompts || {};
-    const labels = {
-        title:   prompts.title   || "Unsaved changes",
-        body:    prompts.body    || "You have unsaved changes. Save them before leaving this page?",
-        save:    prompts.save    || "Save and continue",
-        discard: prompts.discard || "Discard and continue",
-        cancel:  prompts.cancel  || "Cancel",
-        saveFailed: prompts.saveFailed || "Save failed. Please try again.",
+// Save / discard / cancel before leaving. Resolves to true if the
+// caller may navigate away.
+async function _confirmLeave(labels) {
+    if (!modified) return true;
+    const choice = await _threeButtonDialog(labels, async () => {
+        try {
+            await savePattern();
+            return true;
+        } catch (err) {
+            console.error(err);
+            alert(_prompt("saveFailed", "Save failed. Please try again."));
+            return false;
+        }
+    });
+    if (choice === "middle") {
+        clearModified();
+        return true;
+    }
+    return choice === "primary";
+}
+
+
+function _navLabels() {
+    return {
+        title:   _prompt("title", "Unsaved changes"),
+        body:    _prompt("body", "You have unsaved changes. Save them before leaving this page?"),
+        primary: _prompt("save", "Save and continue"),
+        middle:  _prompt("discard", "Discard and continue"),
+        cancel:  _prompt("cancel", "Cancel"),
     };
+}
+
+
+// Intercept in-app navigation (clicks on links, non-GET form submits)
+// while the editor has unsaved changes and ask whether to save, discard,
+// or cancel. installBeforeUnloadGuard covers what this can't reach
+// (tab close, browser refresh/back).
+function installNavGuard() {
     function isInternal(href) {
         if (!href) return false;
         if (href.startsWith("#")) return false;
@@ -354,62 +421,8 @@ function installNavGuard(preSave, prompts) {
             return true;
         } catch (e) { return false; }
     }
-    function buildModal() {
-        const overlay = document.createElement("div");
-        overlay.className = "navguard-overlay";
-        overlay.setAttribute("role", "dialog");
-        overlay.setAttribute("aria-modal", "true");
-        overlay.innerHTML =
-            '<div class="navguard-modal" role="document">'
-            + '<h2></h2><p></p>'
-            + '<div class="navguard-actions">'
-            + '<button type="button" class="btn navguard-cancel"></button>'
-            + '<button type="button" class="btn navguard-discard"></button>'
-            + '<button type="button" class="btn primary navguard-save"></button>'
-            + '</div></div>';
-        overlay.querySelector("h2").textContent = labels.title;
-        overlay.querySelector("p").textContent = labels.body;
-        overlay.querySelector(".navguard-cancel").textContent = labels.cancel;
-        overlay.querySelector(".navguard-discard").textContent = labels.discard;
-        overlay.querySelector(".navguard-save").textContent = labels.save;
-        return overlay;
-    }
-    function ask(navigate) {
-        const overlay = buildModal();
-        const modal = overlay.querySelector(".navguard-modal");
-        function close() {
-            document.removeEventListener("keydown", onKey);
-            overlay.remove();
-        }
-        function onKey(e) { if (e.key === "Escape") close(); }
-        overlay.addEventListener("click", (e) => {
-            if (e.target === overlay) close();
-        });
-        modal.addEventListener("click", (e) => e.stopPropagation());
-        document.addEventListener("keydown", onKey);
-        overlay.querySelector(".navguard-cancel")
-            .addEventListener("click", close);
-        overlay.querySelector(".navguard-discard")
-            .addEventListener("click", () => {
-                clearModified();
-                close();
-                navigate();
-            });
-        overlay.querySelector(".navguard-save")
-            .addEventListener("click", async () => {
-                try {
-                    if (preSave) preSave();
-                    await savePattern();
-                } catch (err) {
-                    console.error(err);
-                    alert(labels.saveFailed);
-                    return;
-                }
-                close();
-                navigate();
-            });
-        document.body.appendChild(overlay);
-        overlay.querySelector(".navguard-save").focus();
+    async function guard(navigate) {
+        if (await _confirmLeave(_navLabels())) navigate();
     }
     document.addEventListener("click", (e) => {
         if (!modified) return;
@@ -424,7 +437,7 @@ function installNavGuard(preSave, prompts) {
         const href = a.getAttribute("href");
         if (!isInternal(href)) return;
         e.preventDefault();
-        ask(() => { window.location.href = a.href; });
+        guard(() => { window.location.href = a.href; });
     }, true);
     document.addEventListener("submit", (e) => {
         if (!modified) return;
@@ -436,37 +449,24 @@ function installNavGuard(preSave, prompts) {
         const action = form.getAttribute("action");
         if (method === "GET" && !isInternal(action)) return;
         e.preventDefault();
-        ask(() => { form.submit(); });
+        guard(() => { form.submit(); });
     }, true);
 }
 
 
-async function clonePattern() {
-    const user = document.getElementById("user").value;
-    const viewer = document.getElementById("viewer").value;
-    const pattern = document.getElementById("pattern").value;
-    const request = {
-        action: "clone-pattern",
-        contents: data
-    };
-    const resp = await fetch(`/api/pattern/${user}/${pattern}`, {
-        method: "PUT",
-        mode: 'cors',
-        cache: 'no-cache',
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
-        redirect: 'follow',
-        body: JSON.stringify(request)
+// The editors' Close command: asks to save or discard unsaved changes
+// (desktop confirm-on-close), then returns to where the editor was
+// opened from.
+async function closePatternGuarded() {
+    const ok = (typeof readonly !== "undefined" && readonly) || await _confirmLeave({
+        title:   _actionText("file.close-title", "Close pattern"),
+        body:    _actionText("file.close-prompt",
+                             "The pattern has unsaved changes. Save before closing?"),
+        primary: _actionText("file.save", "Save"),
+        middle:  _actionText("file.discard", "Don't save"),
+        cancel:  _actionText("btn.cancel", "Cancel"),
     });
-    if (!resp.ok) {
-        throw new Error("clone-failed:" + resp.status);
-    }
-    await gotoUser(viewer);
-}
-
-
-async function gotoUser(user) {
-    window.location.href = "/" + user
+    if (ok) closePattern();
 }
 
 
@@ -484,6 +484,100 @@ function closePattern() {
     } else {
         const user = document.getElementById("user").value;
         window.location.href = "/" + user;
+    }
+}
+
+
+// ---- Toolbar actions -------------------------------------------------
+
+async function togglePublic() {
+    const el = document.getElementById("public");
+    const state = el.textContent.indexOf("🌐") < 0;
+    let ok = false;
+    try {
+        const resp = await _putPattern({
+            action: "set-publication-state",
+            publication_state: state,
+        });
+        ok = resp.ok;
+    } catch (e) { console.error(e); }
+    if (!ok) {
+        alert(_prompt("saveFailed", "Save failed. Please try again."));
+        return;
+    }
+    el.textContent = state ? "🌐" : "🔒";
+    el.title = state
+        ? el.dataset.titlePublic  || "Public - visible to all users"
+        : el.dataset.titlePrivate || "Private - not visible to others";
+}
+
+
+async function clonePattern() {
+    try {
+        if (_editorPreSave) _editorPreSave();
+        const resp = await _putPattern({
+            action: "clone-pattern",
+            contents: data,
+        });
+        if (!resp.ok) throw new Error("clone-failed:" + resp.status);
+    } catch (e) {
+        console.error(e);
+        alert(_prompt("cloneFailed", "The pattern could not be cloned."));
+        return;
+    }
+    window.location.href = "/" + document.getElementById("viewer").value;
+}
+
+
+// ---- Startup ---------------------------------------------------------
+
+// Common editor startup. Expects the global `readonly` to be set.
+//   preSave: flushes the editor's working state into `data`
+//   init:    builds the editor from `data` (may be async); must call
+//            trackSavedState(commandBus) for editable patterns
+async function startEditor({ preSave, init }) {
+    if (!readonly) {
+        // Before any edit can fire, so draft writes capture fresh data.
+        _editorPreSave = preSave;
+        installBeforeUnloadGuard();
+        installNavGuard();
+        const pub = document.getElementById("public");
+        if (pub) pub.addEventListener("click", togglePublic);
+    }
+    const clone = document.getElementById("clone");
+    if (clone) clone.addEventListener("click", clonePattern);
+    document.getElementById("close")
+        .addEventListener("click", closePatternGuarded);
+
+    try {
+        await getPattern();
+    } catch (e) {
+        console.error(e);
+        alert(_prompt("loadFailed",
+            "The pattern could not be loaded. Please reload the page."));
+        return;
+    }
+    const recovered = !readonly
+        && await maybeRecoverDraft(_prompt("draft", {}));
+    await init();
+    if (recovered) {
+        // The recovered state is not on the server: no undo position
+        // matches it, and it counts as modified.
+        if (_editorBus) _editorBus.markUnsaved();
+        setModified();
+    }
+
+    // Save once after load: the upload flow uses this to store the
+    // thumbnail and the auto-detected rapport without a manual save.
+    const params = new URLSearchParams(window.location.search);
+    if (!readonly && params.get("autosave") === "1") {
+        params.delete("autosave");
+        history.replaceState(null, "", window.location.pathname
+            + (params.toString() ? "?" + params : ""));
+        // Defer one tick so layout/draw have settled.
+        setTimeout(() => {
+            savePattern().catch((e) => console.error("autosave failed", e));
+        }, 100);
     }
 }
 
