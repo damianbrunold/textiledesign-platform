@@ -10,95 +10,64 @@ from werkzeug.security import generate_password_hash as gen_pw_hash
 import datetime
 
 
+# Accounts whose public patterns serve as examples for visitors.
+_EXAMPLE_USERS = (
+    ("examples", "Examples", "en"),
+    ("beispiele", "Beispiele", "de"),
+)
+
+
+def _add_primary_group(user, now):
+    group = Group(
+        name=user.name,
+        label=user.label,
+        description="",
+        owner_id=user.id,
+        created=now,
+    )
+    db.session.add(group)
+    db.session.add(Membership(
+        group=group, user=user, role="owner", state="accepted",
+    ))
+    return group
+
+
+def _add_account(app, name, label, email, locale, now):
+    user = User(
+        name=name,
+        label=label,
+        email=email,
+        email_lower=email.lower(),
+        darkmode=True,
+        verified=True,
+        disabled=False,
+        locale=locale,
+        timezone="CET",
+        password=gen_pw_hash(app.config["ADMIN_PASSWORD"]),
+        create_date=now,
+        verify_date=now,
+        access_date=None,
+    )
+    db.session.add(user)
+    db.session.flush()
+    return user
+
+
 def ensure_db_contents(app):
+    """Create the support and example accounts if missing, and give every
+    user (except support) a primary group holding their patterns."""
     with app.app_context():
         now = datetime.datetime.now(datetime.timezone.utc)
         if User.query.count() == 0:
-            db.session.add(User(
-                name=SUPPORT_USERNAME,
-                label="Support",
-                email="admin@textileplatform.ch",
-                email_lower="admin@textileplatform.ch",
-                darkmode=True,
-                verified=True,
-                disabled=False,
-                locale="en",
-                timezone="CET",
-                password=gen_pw_hash(app.config["ADMIN_PASSWORD"]),
-                create_date=now,
-                verify_date=now,
-                access_date=None,
-            ))
+            _add_account(app, SUPPORT_USERNAME, "Support",
+                         "admin@textileplatform.ch", "en", now)
             db.session.commit()
-        examples = User.query.filter(User.name == "examples").one_or_none()
-        if not examples:
-            examples = User(
-                name="examples",
-                label="Examples",
-                email="examples@textileplatform.ch",
-                email_lower="examples@textileplatform.ch",
-                darkmode=True,
-                verified=True,
-                disabled=False,
-                locale="en",
-                timezone="CET",
-                password=gen_pw_hash(app.config["ADMIN_PASSWORD"]),
-                create_date=now,
-                verify_date=now,
-                access_date=None,
-            )
-            db.session.add(examples)
-            db.session.flush()
-            group = Group(
-                name=examples.name,
-                label=examples.label,
-                description="",
-                owner_id=examples.id,
-                created=now,
-            )
-            db.session.add(group)
-            membership = Membership(
-                group=group,
-                user=examples,
-                role="owner",
-                state="accepted",
-            )
-            db.session.add(membership)
-            db.session.commit()
-        beispiele = User.query.filter(User.name == "beispiele").one_or_none()
-        if not beispiele:
-            beispiele = User(
-                name="beispiele",
-                label="Beispiele",
-                email="beispiele@textileplatform.ch",
-                email_lower="beispiele@textileplatform.ch",
-                darkmode=True,
-                verified=True,
-                disabled=False,
-                locale="de",
-                timezone="CET",
-                password=gen_pw_hash(app.config["ADMIN_PASSWORD"]),
-                create_date=now,
-                verify_date=now,
-                access_date=None,
-            )
-            db.session.add(beispiele)
-            db.session.flush()
-            group = Group(
-                name=beispiele.name,
-                label=beispiele.label,
-                description="",
-                owner_id=beispiele.id,
-                created=now,
-            )
-            db.session.add(group)
-            membership = Membership(
-                group=group,
-                user=beispiele,
-                role="owner",
-                state="accepted",
-            )
-            db.session.add(membership)
+        for name, label, locale in _EXAMPLE_USERS:
+            if User.query.filter(User.name == name).one_or_none():
+                continue
+            user = _add_account(app, name, label,
+                                f"{name}@textileplatform.ch", locale, now)
+            _add_primary_group(user, now)
             db.session.commit()
         for user in User.query.all():
             if user.name == SUPPORT_USERNAME:
@@ -107,26 +76,9 @@ def ensure_db_contents(app):
                 Group.owner_id == user.id,
                 Group.name == user.name,
             ).one_or_none()
-            if not group:
-                # Create default personal group for user and assign all
-                # owned patterns to it.
-                group = Group(
-                    name=user.name,
-                    label=user.label,
-                    description="",
-                    owner_id=user.id,
-                    created=now,
-                )
-                db.session.add(group)
-                membership = Membership(
-                    group=group,
-                    user=user,
-                )
-                db.session.add(membership)
-                for pattern in user.mypatterns:
-                    assignment = Assignment(
-                        group=group,
-                        pattern=pattern,
-                    )
-                    db.session.add(assignment)
-                db.session.commit()
+            if group:
+                continue
+            group = _add_primary_group(user, now)
+            for pattern in user.mypatterns:
+                db.session.add(Assignment(group=group, pattern=pattern))
+            db.session.commit()

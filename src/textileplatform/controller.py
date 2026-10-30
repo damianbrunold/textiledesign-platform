@@ -8,23 +8,26 @@ from textileplatform.models import Membership
 from textileplatform.models import Assignment
 from textileplatform.messaging import (
     ensure_group_conversation,
+    find_direct_conversation,
     get_or_create_direct_conversation,
     get_or_create_group_participant,
     can_access_conversation,
     post_message,
     unread_count,
+    unread_total,
     conversations_for_user,
 )
 from textileplatform.models import Conversation
 from textileplatform.models import ConversationParticipant
 from textileplatform.models import Message
 from textileplatform.models import Announcement
-from textileplatform.patterns import add_weave_pattern
-from textileplatform.patterns import add_bead_pattern
+from textileplatform.patterns import add_pattern
 from textileplatform.patterns import apply_pattern_metadata
 from textileplatform.patterns import get_patterns_for_user
 from textileplatform.patterns import clone_pattern
 from textileplatform.patterns import format_pattern_source
+from textileplatform.patterns import new_bead_pattern
+from textileplatform.patterns import new_weave_pattern
 from textileplatform.name import from_label
 from textileplatform.name import is_valid
 from textileplatform.name import label_from_email
@@ -35,8 +38,6 @@ from textileplatform.mail import send_recover_mail
 from textileplatform.mail import send_support_dm_mail
 from textileplatform.support import SUPPORT_USERNAME
 from textileplatform.support import is_support
-from textileplatform.palette import default_weave_palette
-from textileplatform.palette import default_bead_palette
 from textileplatform.weavepattern import parse_dbw_data, render_dbw_data
 from textileplatform.validation import PatternError, validate_pattern
 from textileplatform import export as exporter
@@ -52,6 +53,7 @@ import json
 import logging
 import zipfile
 import os
+import re
 import functools
 import secrets
 
@@ -374,7 +376,8 @@ def _safe_next_url(candidate):
         return None
     if not candidate.startswith("/"):
         return None
-    if candidate.startswith("//") or candidate.startswith("/\\"):
+    # Browsers treat "\" like "/", so "/\evil.com" is protocol-relative.
+    if candidate.startswith("//") or "\\" in candidate:
         return None
     try:
         login_path = url_for("login")
@@ -430,6 +433,95 @@ def _can_view_pattern(pattern, owner):
     ).first() is not None
 
 
+def _find_pattern(user_name, pattern_name):
+    """(owner, pattern) for the URL handles; either may be None."""
+    owner = User.query.filter(User.name == user_name.lower()).first()
+    if owner is None:
+        return None, None
+    pattern = Pattern.query.filter(
+        Pattern.owner_id == owner.id, Pattern.name == pattern_name,
+    ).first()
+    return owner, pattern
+
+
+def _viewable_pattern(user_name, pattern_name):
+    """(owner, pattern, readonly) for the HTML pattern routes. Unknown
+    users go to the start page; unknown or hidden patterns to the
+    owner's page."""
+    owner, pattern = _find_pattern(user_name, pattern_name)
+    if owner is None:
+        abort(redirect(url_for("index")))
+    readonly = g.user is None or g.user.id != owner.id
+    if pattern is None or (readonly and not _can_view_pattern(pattern, owner)):
+        abort(redirect(url_for("user", user_name=user_name)))
+    return owner, pattern, readonly
+
+
+def _api_pattern(user_name, pattern_name):
+    """(owner, pattern, None) for the pattern API, or an error response
+    in the third slot."""
+    owner, pattern = _find_pattern(user_name, pattern_name)
+    if owner is None:
+        return None, None, respond("NOK", "User not found", 404)
+    if pattern is None:
+        return owner, None, respond("NOK", "Pattern not found", 404)
+    if not _can_view_pattern(pattern, owner):
+        return owner, pattern, respond("NOK", "Invalid user", 403)
+    return owner, pattern, None
+
+
+def _render_source(pattern, readonly):
+    """Pattern data and parameters for export / print. GET renders the
+    stored pattern; a POST from the owner (or support) may send unsaved
+    editor state as `contents`. Data is None if a POST lacks it."""
+    if request.method != "POST":
+        return json.loads(pattern.contents), request.args
+    params = request.get_json(silent=True) or {}
+    if readonly and not is_support(g.user):
+        # Viewers render the stored version even if they POST.
+        return json.loads(pattern.contents), params
+    contents = params.get("contents")
+    return (contents if isinstance(contents, dict) else None), params
+
+
+def _user_settings(user):
+    """The user's stored editor/listing settings as a dict."""
+    if user is None or not user.settings:
+        return {}
+    try:
+        settings = json.loads(user.settings)
+    except ValueError:
+        return {}
+    return settings if isinstance(settings, dict) else {}
+
+
+def _pattern_entry(p, **extra):
+    """Pattern fields for the listing pages (rendered by their JS)."""
+    entry = {
+        "name": p.name,
+        "label": p.label,
+        "owner_name": p.owner.name,
+        "owner_label": p.owner.label,
+        "pattern_type": p.pattern_type,
+        "public": bool(p.public),
+        "modified": _iso(p.modified),
+        "created": _iso(p.created),
+        "author": p.author or "",
+        "organization": p.organization or "",
+        "notes": p.notes or "",
+        "pattern_width": p.pattern_width,
+        "pattern_height": p.pattern_height,
+        "rapport_width": p.rapport_width,
+        "rapport_height": p.rapport_height,
+    }
+    entry.update(extra)
+    return entry
+
+
+def _iso(dt):
+    return dt.isoformat() if dt else None
+
+
 def support_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
@@ -456,7 +548,7 @@ def respond(status, message, status_code=500):
 # we just want to bounce obvious garbage like "" or "foo" before it
 # hits the database. PostgreSQL's unique constraint and the verification
 # email are the real correctness gate.
-_EMAIL_RE = __import__("re").compile(
+_EMAIL_RE = re.compile(
     r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 )
 
@@ -685,23 +777,7 @@ def _group_view_payload(group):
             continue
         raw.append(p)
     raw.sort(key=lambda p: (p.label.lower(), p.name, p.owner.name, p.id))
-    patterns = [{
-        "name": p.name,
-        "label": p.label,
-        "owner_name": p.owner.name,
-        "owner_label": p.owner.label,
-        "pattern_type": p.pattern_type,
-        "public": bool(p.public),
-        "modified": p.modified.isoformat() if p.modified else None,
-        "created": p.created.isoformat() if p.created else None,
-        "author": p.author or "",
-        "organization": p.organization or "",
-        "notes": p.notes or "",
-        "pattern_width": p.pattern_width,
-        "pattern_height": p.pattern_height,
-        "rapport_width": p.rapport_width,
-        "rapport_height": p.rapport_height,
-    } for p in raw]
+    patterns = [_pattern_entry(p) for p in raw]
     return {
         "patterns_weave": [
             p for p in patterns if p["pattern_type"] == "DB-WEAVE Pattern"
@@ -858,27 +934,10 @@ def user(user_name):
                 ):
                     continue
                 # Owner of pattern can fully manage it; others can only
-                # view (or clone elsewhere). For pattern owned by THIS
-                # user (the profile owner), treat as writable.
-                pattern_is_mine = (p.owner_id == user.id)
-                patterns.append({
-                    "name": p.name,
-                    "label": p.label,
-                    "owner_name": p.owner.name,
-                    "owner_label": p.owner.label,
-                    "pattern_type": p.pattern_type,
-                    "public": bool(p.public),
-                    "modified": p.modified.isoformat() if p.modified else None,
-                    "created": p.created.isoformat() if p.created else None,
-                    "author": p.author or "",
-                    "organization": p.organization or "",
-                    "notes": p.notes or "",
-                    "pattern_width": p.pattern_width,
-                    "pattern_height": p.pattern_height,
-                    "rapport_width": p.rapport_width,
-                    "rapport_height": p.rapport_height,
-                    "is_mine": pattern_is_mine,
-                })
+                # view (or clone elsewhere).
+                patterns.append(
+                    _pattern_entry(p, is_mine=(p.owner_id == user.id))
+                )
             patterns.sort(key=lambda d: (d["label"].lower(), d["name"]))
             groups.append({
                 "name": m.group.name,
@@ -905,16 +964,6 @@ def user(user_name):
             active = user.name if user.name in patterns_by_group else (
                 groups[0]["name"] if groups else user.name
             )
-        try:
-            user_settings = (
-                json.loads(g.user.settings)
-                if g.user and g.user.settings
-                else {}
-            )
-            if not isinstance(user_settings, dict):
-                user_settings = {}
-        except Exception:
-            user_settings = {}
         return render_template(
             "user_private.html",
             user=user,
@@ -922,7 +971,7 @@ def user(user_name):
             groups=groups,
             patterns_by_group=patterns_by_group,
             active_group=active,
-            user_settings=user_settings,
+            user_settings=_user_settings(g.user),
         )
     else:
         # Public view: same metadata shape as the private view so the
@@ -940,23 +989,7 @@ def user(user_name):
                 if p.id in ids:
                     continue
                 ids.add(p.id)
-                patterns.append({
-                    "name": p.name,
-                    "label": p.label,
-                    "owner_name": p.owner.name,
-                    "owner_label": p.owner.label,
-                    "pattern_type": p.pattern_type,
-                    "public": True,
-                    "modified": p.modified.isoformat() if p.modified else None,
-                    "created": p.created.isoformat() if p.created else None,
-                    "author": p.author or "",
-                    "organization": p.organization or "",
-                    "notes": p.notes or "",
-                    "pattern_width": p.pattern_width,
-                    "pattern_height": p.pattern_height,
-                    "rapport_width": p.rapport_width,
-                    "rapport_height": p.rapport_height,
-                })
+                patterns.append(_pattern_entry(p))
         patterns.sort(key=lambda d: (d["label"].lower(), d["name"]))
         return render_template(
             "user_public.html",
@@ -967,22 +1000,13 @@ def user(user_name):
 
 @app.route("/<string:user_name>/<string:pattern_name>")
 def edit_pattern(user_name, pattern_name):
-    origin = request.args.get("origin", "")
-    user = User.query.filter(User.name == user_name.lower()).first()
-    if not user:
-        return redirect(url_for("index"))
-    pattern = (
-        Pattern.query
-        .join(User, Pattern.owner_id == User.id)
-        .filter(Pattern.name == pattern_name)
-        .filter(User.name == user_name.lower())
-        .first()
-    )
-    if not pattern:
-        return redirect(url_for("user", user_name=user_name))
-    readonly = not g.user or g.user.name != user.name
-    if readonly and not _can_view_pattern(pattern, user):
-        return redirect(url_for("user", user_name=user_name))
+    user, pattern, readonly = _viewable_pattern(user_name, pattern_name)
+    templates = {
+        "DB-WEAVE Pattern": "edit_dbweave_pattern.html",
+        "JBead Pattern": "edit_jbead_pattern.html",
+    }
+    if pattern.pattern_type not in templates:
+        return redirect(url_for("user", user_name=user.name))
     if not readonly:
         _bump_pattern_view(pattern.pattern_type)
         try:
@@ -990,62 +1014,15 @@ def edit_pattern(user_name, pattern_name):
         except Exception:
             db.session.rollback()
             logging.exception("failed to bump view count")
-    pattern.pattern = json.loads(pattern.contents)
-    if pattern.pattern_type == "DB-WEAVE Pattern":
-        # fix None in data
-        for idx, value in enumerate(pattern.pattern["data_entering"]):
-            if value is None:
-                pattern.pattern["data_entering"][idx] = 0
-        for idx, value in enumerate(pattern.pattern["data_tieup"]):
-            if value is None:
-                pattern.pattern["data_tieup"][idx] = 0
-        for idx, value in enumerate(pattern.pattern["data_treadling"]):
-            if value is None:
-                pattern.pattern["data_treadling"][idx] = 0
-        for idx, value in enumerate(pattern.pattern["data_reed"]):
-            if value is None:
-                pattern.pattern["data_reed"][idx] = 0
-        viewer = g.user
-        try:
-            user_settings = (
-                json.loads(viewer.settings)
-                if viewer and viewer.settings
-                else {}
-            )
-            if not isinstance(user_settings, dict):
-                user_settings = {}
-        except Exception:
-            user_settings = {}
-        return render_template(
-            "edit_dbweave_pattern.html",
-            user=user,
-            pattern=pattern,
-            readonly=readonly,
-            origin=origin,
-            user_settings=user_settings,
-        )
-    elif pattern.pattern_type == "JBead Pattern":
-        viewer = g.user
-        try:
-            user_settings = (
-                json.loads(viewer.settings)
-                if viewer and viewer.settings
-                else {}
-            )
-            if not isinstance(user_settings, dict):
-                user_settings = {}
-        except Exception:
-            user_settings = {}
-        return render_template(
-            "edit_jbead_pattern.html",
-            user=user,
-            pattern=pattern,
-            readonly=readonly,
-            origin=origin,
-            user_settings=user_settings,
-        )
-    else:
-        return redirect(url_for("user", user_name=user.name))
+    # The editor loads the pattern itself through the API.
+    return render_template(
+        templates[pattern.pattern_type],
+        user=user,
+        pattern=pattern,
+        readonly=readonly,
+        origin=request.args.get("origin", ""),
+        user_settings=_user_settings(g.user),
+    )
 
 
 @app.route("/terms")
@@ -1074,29 +1051,11 @@ def status():
 
 @app.route("/<string:user_name>/<string:pattern_name>/download")
 def download_pattern(user_name, pattern_name):
-    user = User.query.filter(User.name == user_name.lower()).first()
-    if not user:
-        return redirect(url_for("index"))
-    pattern = (
-        Pattern.query
-        .join(User, Pattern.owner_id == User.id)
-        .filter(Pattern.name == pattern_name)
-        .filter(User.name == user_name.lower())
-        .first()
-    )
-    if not pattern:
-        return redirect(url_for("user", user_name=user_name))
-    readonly = not g.user or g.user.name != user.name
-    if readonly and not _can_view_pattern(pattern, user):
-        return redirect(url_for("user", user_name=user_name))
-    pattern.pattern = json.loads(pattern.contents)
+    _, pattern, _ = _viewable_pattern(user_name, pattern_name)
+    contents = json.loads(pattern.contents)
     return send_file(
         io.BytesIO(
-            json.dumps(
-                pattern.pattern,
-                ensure_ascii=False,
-                indent=2,
-            ).encode("utf8")
+            json.dumps(contents, ensure_ascii=False, indent=2).encode("utf8")
         ),
         mimetype="application/json",
         as_attachment=True,
@@ -1106,21 +1065,7 @@ def download_pattern(user_name, pattern_name):
 
 @app.route("/<string:user_name>/<string:pattern_name>/download/legacy")
 def download_pattern_legacy(user_name, pattern_name):
-    user = User.query.filter(User.name == user_name.lower()).first()
-    if not user:
-        return redirect(url_for("index"))
-    pattern = (
-        Pattern.query
-        .join(User, Pattern.owner_id == User.id)
-        .filter(Pattern.name == pattern_name)
-        .filter(User.name == user_name.lower())
-        .first()
-    )
-    if not pattern:
-        return redirect(url_for("user", user_name=user_name))
-    readonly = not g.user or g.user.name != user.name
-    if readonly and not _can_view_pattern(pattern, user):
-        return redirect(url_for("user", user_name=user_name))
+    _, pattern, _ = _viewable_pattern(user_name, pattern_name)
     renderers = {
         "DB-WEAVE Pattern": (render_dbw_data, "dbw"),
         "JBead Pattern": (render_jbb_data, "jbb"),
@@ -1207,39 +1152,15 @@ def export_pattern(user_name, pattern_name, fmt):
     committed to the database.
     """
     fmt = fmt.lower()
-    user = User.query.filter(User.name == user_name.lower()).first()
-    if not user:
-        return redirect(url_for("index"))
-    pattern = (
-        Pattern.query
-        .join(User, Pattern.owner_id == User.id)
-        .filter(Pattern.name == pattern_name)
-        .filter(User.name == user_name.lower())
-        .first()
-    )
-    if not pattern:
-        return redirect(url_for("user", user_name=user_name))
-    readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if readonly and not _can_view_pattern(pattern, user):
-        return redirect(url_for("user", user_name=user_name))
+    _, pattern, readonly = _viewable_pattern(user_name, pattern_name)
     table = _export_table_for(pattern)
     if table is None:
-        return "Export not available for this pattern type", 400
+        return _plain_error("Export not available for this pattern type", 400)
     if fmt not in table:
-        return "Unsupported format", 400
-    if request.method == "POST":
-        # Owners can render in-memory state. Read-only viewers stay on
-        # the persisted version even if they POST.
-        if readonly and not superuser:
-            pattern_data = json.loads(pattern.contents)
-        else:
-            payload = request.get_json(silent=True) or {}
-            pattern_data = payload.get("contents")
-            if not isinstance(pattern_data, dict):
-                return "Missing 'contents' object in body", 400
-    else:
-        pattern_data = json.loads(pattern.contents)
+        return _plain_error("Unsupported format", 400)
+    pattern_data, _ = _render_source(pattern, readonly)
+    if pattern_data is None:
+        return _plain_error("Missing 'contents' object in body", 400)
     mime, ext, render = table[fmt]
     kwargs = {}
     if fmt == "pdf":
@@ -1275,63 +1196,27 @@ def print_pattern(user_name, pattern_name):
     Like ``/export``, POST allows the editor to send unsaved in-memory
     state in ``contents`` so the user doesn't have to save first.
     """
-    user = User.query.filter(User.name == user_name.lower()).first()
-    if not user:
-        return redirect(url_for("index"))
-    pattern = (
-        Pattern.query
-        .join(User, Pattern.owner_id == User.id)
-        .filter(Pattern.name == pattern_name)
-        .filter(User.name == user_name.lower())
-        .first()
-    )
-    if not pattern:
-        return redirect(url_for("user", user_name=user_name))
-    readonly = not g.user or g.user.name != user.name
-    superuser = g.user and g.user.name == SUPPORT_USERNAME
-    if readonly and not _can_view_pattern(pattern, user):
-        return redirect(url_for("user", user_name=user_name))
+    _, pattern, readonly = _viewable_pattern(user_name, pattern_name)
     if pattern.pattern_type not in ("DB-WEAVE Pattern", "JBead Pattern"):
-        return "Print not available for this pattern type", 400
-
-    if request.method == "POST":
-        payload = request.get_json(silent=True) or {}
-        if readonly and not superuser:
-            pattern_data = json.loads(pattern.contents)
-        else:
-            pattern_data = payload.get("contents")
-            if not isinstance(pattern_data, dict):
-                return "Missing 'contents' object in body", 400
-        try:
-            (
-                warp_from, warp_to, weft_from, weft_to,
-                harness_from, harness_to, treadle_from, treadle_to,
-            ) = (_optional_int(payload.get(key)) for key in _PRINT_RANGE_KEYS)
-        except (ValueError, TypeError, OverflowError):
-            return _plain_error("Print ranges must be integers", 400)
-        full_pattern = payload.get("full_pattern", True)
-    else:
-        pattern_data = json.loads(pattern.contents)
-        warp_from = request.args.get("warp_from", type=int)
-        warp_to = request.args.get("warp_to", type=int)
-        weft_from = request.args.get("weft_from", type=int)
-        weft_to = request.args.get("weft_to", type=int)
-        harness_from = request.args.get("harness_from", type=int)
-        harness_to = request.args.get("harness_to", type=int)
-        treadle_from = request.args.get("treadle_from", type=int)
-        treadle_to = request.args.get("treadle_to", type=int)
-        full_pattern = request.args.get("full_pattern", "1") != "0"
+        return _plain_error("Print not available for this pattern type", 400)
+    pattern_data, params = _render_source(pattern, readonly)
+    if pattern_data is None:
+        return _plain_error("Missing 'contents' object in body", 400)
+    try:
+        ranges = {
+            key: _optional_int(params.get(key)) for key in _PRINT_RANGE_KEYS
+        }
+    except (ValueError, TypeError, OverflowError):
+        return _plain_error("Print ranges must be integers", 400)
+    full_pattern = params.get("full_pattern", True)
+    if isinstance(full_pattern, str):
+        full_pattern = full_pattern != "0"
 
     try:
         validate_pattern(pattern_data, pattern.pattern_type)
         if pattern.pattern_type == "DB-WEAVE Pattern":
             body = exporter.print_pdf(
-                pattern_data,
-                title=pattern.label or pattern_name,
-                warp_from=warp_from, warp_to=warp_to,
-                weft_from=weft_from, weft_to=weft_to,
-                harness_from=harness_from, harness_to=harness_to,
-                treadle_from=treadle_from, treadle_to=treadle_to,
+                pattern_data, title=pattern.label or pattern_name, **ranges,
             )
         else:
             body = bead_exporter.print_pdf(
@@ -1344,10 +1229,8 @@ def print_pattern(user_name, pattern_name):
     except Exception:
         logging.exception("Print for %s/%s failed", user_name, pattern_name)
         return _plain_error("Print failed", 500)
-    suffix = "-part" if any(v is not None for v in (
-        warp_from, warp_to, weft_from, weft_to,
-        harness_from, harness_to, treadle_from, treadle_to,
-    )) else ""
+    partial = any(v is not None for v in ranges.values())
+    suffix = "-part" if partial else ""
     return send_file(
         io.BytesIO(body),
         mimetype="application/pdf",
@@ -1358,27 +1241,12 @@ def print_pattern(user_name, pattern_name):
 
 @app.route("/<string:user_name>/<string:pattern_name>/source")
 def source_pattern(user_name, pattern_name):
-    user = User.query.filter(User.name == user_name.lower()).first()
-    if not user:
-        return redirect(url_for("index"))
-    pattern = (
-        Pattern.query
-        .join(User, Pattern.owner_id == User.id)
-        .filter(Pattern.name == pattern_name)
-        .filter(User.name == user_name.lower())
-        .first()
-    )
-    if not pattern:
-        return redirect(url_for("user", user_name=user_name))
-    readonly = not g.user or g.user.name != user.name
-    if readonly and not _can_view_pattern(pattern, user):
-        return redirect(url_for("user", user_name=user_name))
-    pattern.pattern = json.loads(pattern.contents)
+    user, pattern, _ = _viewable_pattern(user_name, pattern_name)
     return render_template(
         "source-pattern.html",
         user=user,
         pattern=pattern,
-        contents=format_pattern_source(pattern.pattern),
+        contents=format_pattern_source(json.loads(pattern.contents)),
     )
 
 
@@ -1774,10 +1642,7 @@ def upload_pattern():
                         else "JBead Pattern"
                     )
                 validate_pattern(contents, saved_kind)
-                if saved_kind == "DB-WEAVE Pattern":
-                    saved = add_weave_pattern(contents, g.user)
-                else:
-                    saved = add_bead_pattern(contents, g.user)
+                saved = add_pattern(contents, g.user, saved_kind)
             except PatternError as e:
                 logging.info("upload of %r rejected: %s", file.filename, e)
                 db.session.rollback()
@@ -1840,6 +1705,32 @@ def upload_pattern():
     return render_template("upload_pattern.html", user=g.user)
 
 
+# pattern type -> (contents builder, settings key, width range,
+# height range) for patterns created from the listing page.
+_NEW_PATTERN = {
+    "DB-WEAVE Pattern": (new_weave_pattern, "dbweave", (10, 1000), (10, 1000)),
+    "JBead Pattern": (new_bead_pattern, "jbead", (6, 100), (5, 5000)),
+}
+
+
+def _size_error(pattern_type, axis):
+    # Spelled out so pybabel extracts each message.
+    if pattern_type == "DB-WEAVE Pattern":
+        if axis == "width":
+            return gettext("Width must be between 10 and 1000")
+        return gettext("Height must be between 10 and 1000")
+    if axis == "width":
+        return gettext("Width must be between 6 and 100")
+    return gettext("Height must be between 5 and 5000")
+
+
+def _form_int(key):
+    try:
+        return int(request.form.get(key, ""))
+    except ValueError:
+        return None
+
+
 @app.route("/patterns/create", methods=("POST",))
 @login_required
 def create_pattern():
@@ -1848,231 +1739,30 @@ def create_pattern():
     # the user's server-side editor settings on the listing template.
     pattern_type = request.form.get("pattern_type")
     extra_group = _resolve_extra_group(request.form.get("group"), g.user)
-    if pattern_type == "DB-WEAVE Pattern":
-        name = request.form["name"]
-        width = request.form["width"]
-        height = request.form["height"]
-
-        errors = False
-
-        if not name:
-            flash(gettext("Please provide a name for the pattern"))
-            errors = True
-
-        try:
-            width = int(width)
-            if width < 10 or 1000 < width:
-                flash(gettext("Width must be between 10 and 1000"))
-                errors = True
-        except ValueError:
-            flash(gettext("Width must be between 10 and 1000"))
-            errors = True
-
-        try:
-            height = int(height)
-            if height < 10 or 1000 < height:
-                flash(gettext("Height must be between 10 and 1000"))
-                errors = True
-        except ValueError:
-            flash(gettext("Height must be between 10 and 1000"))
-            errors = True
-
-        pattern = dict()
-        pattern["name"] = name
-        pattern["author"] = g.user.label
-        pattern["organization"] = ""
-        pattern["notes"] = ""
-
-        pattern["width"] = width
-        pattern["height"] = height
-        pattern["max_shafts"] = 32
-        pattern["max_treadles"] = 32
-
-        pattern["data_entering"] = [0] * width
-        pattern["data_tieup"] = (
-            [0] * (pattern["max_shafts"] * pattern["max_treadles"])
+    if pattern_type in _NEW_PATTERN:
+        build, prefs_key, (wmin, wmax), (hmin, hmax) = (
+            _NEW_PATTERN[pattern_type]
         )
-        pattern["data_treadling"] = (
-            [0] * (pattern["max_treadles"] * height)
-        )
-        pattern["data_reed"] = (
-            ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
-        )
-
-        # TODO use user default color
-        pattern["colors_warp"] = [55] * width
-        # TODO use user default color
-        pattern["colors_weft"] = [49] * height
-
-        # TODO use user default palette?
-        pattern["palette"] = default_weave_palette[:]
-
-        pattern["visible_shafts"] = 12
-        pattern["visible_treadles"] = 12
-        pattern["warp_lifting"] = True
-        pattern["zoom"] = 3
-
-        pattern["display_repeat"] = False
-        pattern["display_reed"] = True
-        pattern["display_colors_warp"] = True
-        pattern["display_colors_weft"] = True
-        pattern["display_entering"] = True
-        pattern["display_threading"] = True
-
-        # Style/direction defaults come from the user's saved dbweave
-        # prefs (Extras ▸ Grundeinstellung / Optionen ▸ Global…) so the
-        # American/Scandinavian/Swiss preset chosen in the editor flows
-        # through to subsequently created patterns. Falls back to the
-        # Swiss preset when no preference is stored.
-        try:
-            dbw_prefs = (
-                json.loads(g.user.settings).get("dbweave", {})
-                if g.user and g.user.settings else {}
-            )
-            if not isinstance(dbw_prefs, dict):
-                dbw_prefs = {}
-        except Exception:
-            dbw_prefs = {}
-
-        pattern["direction_righttoleft"] = bool(
-            dbw_prefs.get("direction_righttoleft", False))
-        pattern["direction_toptobottom"] = bool(
-            dbw_prefs.get("direction_toptobottom", False))
-        pattern["entering_at_bottom"] = bool(
-            dbw_prefs.get("entering_at_bottom", False))
-        pattern["entering_style"] = dbw_prefs.get("entering_style", "vdash")
-        pattern["treadling_style"] = dbw_prefs.get("treadling_style", "dot")
-        pattern["tieup_style"] = dbw_prefs.get("tieup_style", "cross")
-        pattern["pegplan_style"] = dbw_prefs.get("pegplan_style", "filled")
-        pattern["sinking_shed"] = bool(dbw_prefs.get("sinking_shed", False))
-        pattern["single_treadling"] = bool(
-            dbw_prefs.get("single_treadling", True))
-
-        pattern["weave_style"] = "draft"
-
-        if not errors:
-            try:
-                name = add_weave_pattern(pattern, g.user)
-                _bump_pattern_edit("DB-WEAVE Pattern")
-                _assign_new_pattern_to_group(name, extra_group)
-                db.session.commit()
-                return redirect(url_for(
-                    "edit_pattern",
-                    user_name=g.user.name,
-                    pattern_name=name,
-                    origin=(
-                        "user-tab-" + extra_group.name
-                        if extra_group is not None else ""
-                    ),
-                ))
-            except HTTPException:
-                raise
-            except Exception:
-                logging.exception("Failed to create pattern")
-                flash(gettext("Failed to create pattern"))
-
-    elif pattern_type == "JBead Pattern":
-        label = request.form["name"]
-        width = request.form["width"]
-        height = request.form["height"]
-
-        errors = False
-
+        label = request.form.get("name") or ""
+        width = _form_int("width")
+        height = _form_int("height")
+        errors = []
         if not label:
-            flash(gettext("Please provide a name for the pattern"))
-            errors = True
-
-        try:
-            width = int(width)
-            if width < 6 or 100 < width:
-                flash(gettext("Width must be between 6 and 100"))
-                errors = True
-        except ValueError:
-            flash(gettext("Width must be between 6 and 100"))
-            errors = True
-
-        try:
-            height = int(height)
-            if height < 5 or 5000 < height:
-                flash(gettext("Height must be between 5 and 5000"))
-                errors = True
-        except ValueError:
-            flash(gettext("Height must be between 5 and 5000"))
-            errors = True
-
-        pattern = dict()
-        pattern["name"] = label
-        pattern["author"] = g.user.label
-        pattern["organization"] = ""
-        pattern["notes"] = ""
-
-        # Each row must be a fresh list — `[[0]*width]*height`
-        # produces `height` references to the *same* inner list,
-        # so editing one row would mutate every row when the
-        # editor serializes the pattern back to JSON.
-        pattern["model"] = [[0] * width for _ in range(height)]
-
-        # TODO use user default palette?
-        pattern["colors"] = [list(c) for c in default_bead_palette]
-
-        # Pull the user's last toggled view-state choices in as
-        # defaults; explicit keys below still win.
-        try:
-            jb_prefs = (
-                json.loads(g.user.settings) if g.user and g.user.settings
-                else {}
-            )
-            jb_prefs = jb_prefs.get("jbead") if isinstance(
-                jb_prefs, dict) else {}
-            if not isinstance(jb_prefs, dict):
-                jb_prefs = {}
-        except Exception:
-            jb_prefs = {}
-
-        def _pref_bool(key, default):
-            v = jb_prefs.get(key)
-            return bool(v) if v is not None else default
-
-        view = dict()
-        view["draft-visible"] = _pref_bool("draft-visible", True)
-        view["corrected-visible"] = _pref_bool("corrected-visible", True)
-        view["simulation-visible"] = _pref_bool("simulation-visible", True)
-        view["report-visible"] = _pref_bool("report-visible", True)
-        view["draw-colors"] = _pref_bool("draw-colors", True)
-        view["draw-symbols"] = _pref_bool("draw-symbols", False)
-        # Zoom is the cell size in pixels — must be in [4, 48] or
-        # the editor falls back to its default. 12 matches the
-        # editor's ViewSettings() default (dx=12).
-        pref_zoom = jb_prefs.get("zoom")
-        view["zoom"] = (
-            int(pref_zoom)
-            if isinstance(pref_zoom, (int, float))
-            and 4 <= int(pref_zoom) <= 48
-            else 12)
-        view["shift"] = 0
-        view["scroll"] = 0
-        # Open new patterns in the pencil tool so the user can
-        # immediately click-and-paint. Saving "select" would put
-        # the editor into rectangular-selection mode on load,
-        # which makes clicks just create a 1×1 selection rather
-        # than draw.
-        view["selected-tool"] = "pencil"
-        view["selected-color"] = 1
-        # Default per-colour symbol glyphs (matches the desktop's
-        # BeadSymbols.DEFAULT_SYMBOLS). Slot 0 is the background
-        # and never drawn; the rest cycle through middle-dot +
-        # a..z + a few punctuation marks.
-        pref_symbols = jb_prefs.get("symbols")
-        view["symbols"] = (
-            pref_symbols
-            if isinstance(pref_symbols, str) and pref_symbols
-            else "·abcdefghijklmnopqrstuvwxyz+-/\\*")
-        pattern["view"] = view
-
+            errors.append(gettext("Please provide a name for the pattern"))
+        if width is None or not wmin <= width <= wmax:
+            errors.append(_size_error(pattern_type, "width"))
+        if height is None or not hmin <= height <= hmax:
+            errors.append(_size_error(pattern_type, "height"))
+        for error in errors:
+            flash(error)
         if not errors:
+            contents = build(
+                label, g.user.label, width, height,
+                _user_settings(g.user).get(prefs_key),
+            )
             try:
-                name = add_bead_pattern(pattern, g.user)
-                _bump_pattern_edit("JBead Pattern")
+                name = add_pattern(contents, g.user, pattern_type)
+                _bump_pattern_edit(pattern_type)
                 _assign_new_pattern_to_group(name, extra_group)
                 db.session.commit()
                 return redirect(url_for(
@@ -2584,12 +2274,8 @@ def impersonate(user_name):
     # Optional next_url so admin links can drop straight into a specific
     # page (e.g. the editor for a given pattern). Accept only relative,
     # same-origin paths to prevent open-redirect.
-    next_url = request.form.get("next_url") or ""
-    if (
-        next_url.startswith("/")
-        and not next_url.startswith("//")
-        and "\\" not in next_url
-    ):
+    next_url = _safe_next_url(request.form.get("next_url"))
+    if next_url:
         return redirect(next_url)
     return redirect(url_for("user", user_name=target.name))
 
@@ -3231,7 +2917,7 @@ def investigate_pattern(owner_name, pattern_name):
 @login_required
 @support_required
 def delete_investigation(pattern_id):
-    pattern = Pattern.query.get(pattern_id)
+    pattern = db.session.get(Pattern, pattern_id)
     if (
         not pattern
         or pattern.owner_id != g.user.id
@@ -3718,27 +3404,12 @@ def reset_password(user_name, verification_code):
         abort(500)
 
 
-def _iso(dt):
-    return dt.isoformat() if dt else None
-
-
 @app.route("/api/pattern/<user_name>/<pattern_name>")
 def get_pattern(user_name, pattern_name):
     try:
-        user = User.query.filter(User.name == user_name).first()
-        if not user:
-            return respond("NOK", "User not found", 404)
-        pattern = (
-            Pattern.query
-            .join(User, Pattern.owner_id == User.id)
-            .filter(Pattern.name == pattern_name)
-            .filter(User.name == user_name)
-            .first()
-        )
-        if not pattern:
-            return respond("NOK", "Pattern not found", 404)
-        if not _can_view_pattern(pattern, user):
-            return respond("NOK", "Invalid user", 403)
+        _, pattern, error = _api_pattern(user_name, pattern_name)
+        if error:
+            return error
         contents = json.loads(pattern.contents)
         return jsonify({
             "status": "OK",
@@ -3756,26 +3427,17 @@ def get_pattern(user_name, pattern_name):
 @app.route("/api/pattern/<user_name>/<pattern_name>", methods=("PUT",))
 def update_pattern(user_name, pattern_name):
     try:
-        user = User.query.filter(User.name == user_name).first()
-        if not user:
-            return respond("NOK", "User not found", 404)
-        pattern = (
-            Pattern.query
-            .join(User, Pattern.owner_id == User.id)
-            .filter(Pattern.name == pattern_name)
-            .filter(User.name == user_name)
-            .first()
-        )
-        if not pattern:
-            return respond("NOK", "Pattern not found", 404)
-        if not _can_view_pattern(pattern, user):
-            return respond("NOK", "Invalid user", 403)
-        data = request.get_json()
-        action = data["action"]
+        user, pattern, error = _api_pattern(user_name, pattern_name)
+        if error:
+            return error
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return respond("NOK", "Invalid request", 400)
+        action = data.get("action")
         if action == "set-publication-state":
             if not g.user or user.name != g.user.name:
                 return respond("NOK", "Invalid user", 403)
-            pattern.public = data["publication_state"]
+            pattern.public = bool(data.get("publication_state"))
             db.session.commit()
             return jsonify({"status": "OK"}), 200
         elif action == "save-pattern":
@@ -3918,17 +3580,8 @@ _PLACEHOLDER_SVG = (
 
 
 def _serve_pattern_image(user_name, pattern_name, attr):
-    user = User.query.filter(User.name == user_name.lower()).first()
-    if not user:
-        abort(404)
-    pattern = (
-        Pattern.query
-        .join(User, Pattern.owner_id == User.id)
-        .filter(Pattern.name == pattern_name)
-        .filter(User.name == user_name.lower())
-        .first()
-    )
-    if not pattern:
+    user, pattern = _find_pattern(user_name, pattern_name)
+    if pattern is None:
         abort(404)
     if not _can_view_pattern(pattern, user):
         # Images follow the same rule as the pattern itself.
@@ -4039,24 +3692,6 @@ def _conversation_history(conv, before_id, limit):
     return msgs
 
 
-def _find_direct_conversation(user_a, user_b):
-    convs = (
-        Conversation.query
-        .filter(Conversation.kind == "direct")
-        .join(
-            ConversationParticipant,
-            Conversation.id == ConversationParticipant.conversation_id,
-        )
-        .filter(ConversationParticipant.user_id == user_a.id)
-        .all()
-    )
-    for c in convs:
-        ids = {p.user_id for p in c.participants}
-        if ids == {user_a.id, user_b.id}:
-            return c
-    return None
-
-
 @app.route("/api/conversations/direct/<string:user_name>",
            methods=("GET", "POST"))
 @login_required
@@ -4066,7 +3701,7 @@ def api_direct_conversation(user_name):
         return respond("NOK", "User not found", 404)
     if target.id == g.user.id:
         return respond("NOK", "Cannot message yourself", 400)
-    conv = _find_direct_conversation(g.user, target)
+    conv = find_direct_conversation(g.user, target)
     # Disabled accounts (incl. the deleted-user placeholder) are read-only:
     # the existing chat history is viewable but no new messages may be sent.
     if target.disabled and conv is None:
@@ -4202,11 +3837,7 @@ def api_mark_read(conversation_id):
         return respond("NOK", "Not a participant", 403)
     p.last_read_at = datetime.datetime.now(datetime.timezone.utc)
     db.session.commit()
-    total = sum(
-        unread_count(c, g.user)
-        for c in conversations_for_user(g.user)
-    )
-    return jsonify({"status": "OK", "unread_total": total})
+    return jsonify({"status": "OK", "unread_total": unread_total(g.user)})
 
 
 @app.route("/api/intro/dismiss", methods=("POST",))
@@ -4221,9 +3852,10 @@ def api_intro_dismiss():
 def inject_unread_message_count():
     if g.get("user"):
         try:
-            convs = conversations_for_user(g.user)
-            count = sum(unread_count(c, g.user) for c in convs)
+            count = unread_total(g.user)
         except Exception:
+            logging.exception("unread count failed")
+            db.session.rollback()
             count = 0
         return {"unread_message_count": count}
     return {"unread_message_count": 0}
@@ -4245,7 +3877,7 @@ def messages_direct(user_name):
         return redirect(url_for("messages_inbox"))
     # Disabled targets (e.g. the deleted-user placeholder) are read-only
     # and only reachable if a conversation already exists.
-    if target.disabled and _find_direct_conversation(g.user, target) is None:
+    if target.disabled and find_direct_conversation(g.user, target) is None:
         return redirect(url_for("messages_inbox"))
     return render_template(
         "conversation.html",

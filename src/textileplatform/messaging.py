@@ -7,10 +7,14 @@ ad-hoc rows in txconversation_participant when the user first reads.
 """
 import datetime
 
+from sqlalchemy import and_, func, or_
+from sqlalchemy.orm import aliased
+
 from textileplatform.db import db
 from textileplatform.models import (
     Conversation,
     ConversationParticipant,
+    Membership,
     Message,
 )
 
@@ -33,28 +37,31 @@ def ensure_group_conversation(group):
     return conv
 
 
+def find_direct_conversation(user_a, user_b):
+    """The direct conversation between exactly these two users, or None."""
+    convs = (
+        Conversation.query
+        .filter(Conversation.kind == "direct")
+        .join(
+            ConversationParticipant,
+            Conversation.id == ConversationParticipant.conversation_id,
+        )
+        .filter(ConversationParticipant.user_id == user_a.id)
+        .all()
+    )
+    for conv in convs:
+        if {p.user_id for p in conv.participants} == {user_a.id, user_b.id}:
+            return conv
+    return None
+
+
 def get_or_create_direct_conversation(user_a, user_b):
     """Find the canonical direct conversation between two users."""
     if user_a.id == user_b.id:
         return None
-    # Look for an existing direct conversation that has both users.
-    a_conv_ids = {
-        p.conversation_id for p in
-        ConversationParticipant.query
-        .filter(ConversationParticipant.user_id == user_a.id)
-        .all()
-    }
-    if a_conv_ids:
-        candidate = (
-            Conversation.query
-            .filter(Conversation.kind == "direct")
-            .filter(Conversation.id.in_(a_conv_ids))
-            .all()
-        )
-        for conv in candidate:
-            user_ids = {p.user_id for p in conv.participants}
-            if user_ids == {user_a.id, user_b.id}:
-                return conv
+    conv = find_direct_conversation(user_a, user_b)
+    if conv is not None:
+        return conv
 
     conv = Conversation(
         kind="direct",
@@ -133,6 +140,46 @@ def unread_count(conversation, user):
     if last_read is not None:
         q = q.filter(Message.created > last_read)
     return q.count()
+
+
+def unread_total(user):
+    """Sum of unread_count over conversations_for_user, in one query
+    (it runs for every rendered page)."""
+    me = aliased(ConversationParticipant)
+    my_groups = (
+        db.select(Membership.group_id)
+        .where(Membership.user_id == user.id)
+        .where(Membership.state == "accepted")
+    )
+    # Group chats only exist for groups with at least two members.
+    chat_groups = (
+        db.select(Membership.group_id)
+        .where(Membership.state == "accepted")
+        .group_by(Membership.group_id)
+        .having(func.count(Membership.id) >= 2)
+    )
+    query = (
+        db.select(func.count(Message.id))
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .outerjoin(me, and_(
+            me.conversation_id == Conversation.id,
+            me.user_id == user.id,
+        ))
+        .where(Message.sender_id != user.id)
+        .where(Message.deleted.is_not(True))
+        .where(or_(
+            me.last_read_at.is_(None), Message.created > me.last_read_at,
+        ))
+        .where(or_(
+            and_(Conversation.kind == "direct", me.id.is_not(None)),
+            and_(
+                Conversation.kind == "group",
+                Conversation.group_id.in_(my_groups),
+                Conversation.group_id.in_(chat_groups),
+            ),
+        ))
+    )
+    return db.session.execute(query).scalar_one()
 
 
 def conversations_for_user(user):

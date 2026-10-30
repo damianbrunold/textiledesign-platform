@@ -10,7 +10,6 @@ from textileplatform.models import User
 
 
 SUPPORT_USERNAME = "support"
-SUPPORT_EMAIL = "support@textil-plattform.ch"
 
 
 def get_support_user():

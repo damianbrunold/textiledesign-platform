@@ -1,10 +1,9 @@
 from textileplatform.app import app
 from textileplatform.db import db
 from textileplatform.ensure import ensure_db_contents
-from textileplatform.patterns import add_weave_pattern
-from textileplatform.patterns import add_bead_pattern
-from textileplatform.palette import default_weave_palette
-from textileplatform.palette import default_bead_palette
+from textileplatform.patterns import add_pattern
+from textileplatform.patterns import new_bead_pattern
+from textileplatform.patterns import new_weave_pattern
 from textileplatform.models import User
 from textileplatform.models import Group
 from textileplatform.models import Membership
@@ -234,18 +233,17 @@ def delete_user(user_name):
         if not user:
             print("user not found")
             return
+        if user.name == SUPPORT_USERNAME:
+            print("the support account cannot be deleted")
+            return
         ok = input(f"Really delete user {user.name}? (y/N) ")
         if ok != "y":
             print("cancelled")
             return
-        for m in user.memberships:
-            if m.role == "owner":
-                for a in m.group.assignments:
-                    db.session.delete(a.pattern)
-                    db.session.delete(a)
-                db.session.delete(m.group)
-                db.session.delete(m)
-        db.session.delete(user)
+        # Same teardown as account deletion: owned patterns,
+        # personal groups, memberships; chat history goes to a
+        # placeholder user.
+        _delete_user_data(user)
         db.session.commit()
 
 
@@ -286,50 +284,10 @@ def create_weave_pattern(user_name, pattern_name):
         if not user:
             print("user not found")
             return
-        width = 300
-        height = 300
-        pattern = dict()
-        pattern["name"] = pattern_name
-        pattern["author"] = user.label
-        pattern["organization"] = ""
-        pattern["notes"] = ""
-        pattern["width"] = width
-        pattern["height"] = height
-        pattern["max_shafts"] = 32
-        pattern["max_treadles"] = 32
-        pattern["data_entering"] = [0] * width
-        pattern["data_tieup"] = (
-            [0] * (pattern["max_shafts"] * pattern["max_treadles"])
+        pattern = new_weave_pattern(
+            pattern_name, user.label, 300, 300,
         )
-        pattern["data_treadling"] = (
-            [0] * (pattern["max_treadles"] * height)
-        )
-        pattern["data_reed"] = (
-            ([0, 0, 1, 1] * ((width + 3) // 4))[0:width]
-        )
-        pattern["colors_warp"] = [55] * width
-        pattern["colors_weft"] = [49] * height
-        pattern["palette"] = default_weave_palette[:]
-        pattern["visible_shafts"] = 12
-        pattern["visible_treadles"] = 12
-        pattern["warp_lifting"] = True
-        pattern["zoom"] = 3
-        pattern["single_treadling"] = True
-        pattern["display_repeat"] = False
-        pattern["display_reed"] = True
-        pattern["display_colors_warp"] = True
-        pattern["display_colors_weft"] = True
-        pattern["display_entering"] = True
-        pattern["display_threading"] = True
-        pattern["direction_righttoleft"] = False
-        pattern["direction_toptobottom"] = False
-        pattern["entering_at_bottom"] = False
-        pattern["entering_style"] = "vdash"
-        pattern["treadling_style"] = "dot"
-        pattern["tieup_style"] = "cross"
-        pattern["weave_style"] = "draft"
-        add_weave_pattern(pattern, user)
-        db.session.commit()
+        add_pattern(pattern, user, "DB-WEAVE Pattern")
 
 
 @click.command("create-bead-pattern")
@@ -341,33 +299,10 @@ def create_bead_pattern(user_name, pattern_name):
         if not user:
             print("user not found")
             return
-        width = 12
-        height = 200
-        pattern = dict()
-        pattern["name"] = pattern_name
-        pattern["author"] = user.label
-        pattern["organization"] = ""
-        pattern["notes"] = ""
-        # See controller.create_pattern for why each row needs its
-        # own list and why the view defaults look the way they do.
-        pattern["model"] = [[0] * width for _ in range(height)]
-        pattern["colors"] = [list(c) for c in default_bead_palette]
-        view = dict()
-        view["draft-visible"] = True
-        view["corrected-visible"] = True
-        view["simulation-visible"] = True
-        view["report-visible"] = True
-        view["draw-colors"] = True
-        view["draw-symbols"] = False
-        view["zoom"] = 12
-        view["shift"] = 0
-        view["scroll"] = 0
-        view["selected-tool"] = "pencil"
-        view["selected-color"] = 1
-        view["symbols"] = "·abcdefghijklmnopqrstuvwxyz+-/\\*"
-        pattern["view"] = view
-        add_bead_pattern(pattern, user)
-        db.session.commit()
+        pattern = new_bead_pattern(
+            pattern_name, user.label, 12, 200,
+        )
+        add_pattern(pattern, user, "JBead Pattern")
 
 
 @click.command("reset-password")

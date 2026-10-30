@@ -160,16 +160,6 @@ class Group(db.Model):
     memberships = db.relationship("Membership", back_populates="group")
     assignments = db.relationship("Assignment", back_populates="group")
 
-    def user_label_list(self):
-        users = [membership.user.label for membership in self.memberships]
-        return ",".join(sorted(users))
-
-    def contains_user(self, user_id):
-        for m in self.memberships:
-            if m.user.id == user_id:
-                return True
-        return False
-
     def accepted_memberships(self):
         return [m for m in self.memberships if m.state == "accepted"]
 
@@ -197,69 +187,6 @@ class Group(db.Model):
             if assignment.pattern.id == pattern.id:
                 return True
         return False
-
-    def weave_patterns(self, public=False):
-        if public:
-            result = [
-                assignment.pattern
-                for assignment in self.assignments
-                if assignment.pattern.pattern_type == "DB-WEAVE Pattern"
-                and assignment.pattern.public
-            ]
-        else:
-            result = [
-                assignment.pattern
-                for assignment in self.assignments
-                if assignment.pattern.pattern_type == "DB-WEAVE Pattern"
-            ]
-        return sorted(
-            result,
-            key=lambda pattern: (pattern.owner.label, pattern.label)
-        )
-
-    def bead_patterns(self, public=False):
-        if public:
-            result = [
-                assignment.pattern
-                for assignment in self.assignments
-                if assignment.pattern.pattern_type == "JBead Pattern"
-                and assignment.pattern.public
-            ]
-        else:
-            result = [
-                assignment.pattern
-                for assignment in self.assignments
-                if assignment.pattern.pattern_type == "JBead Pattern"
-            ]
-        return sorted(
-            result,
-            key=lambda pattern: (pattern.owner.label, pattern.label)
-        )
-
-    def other_patterns(self, public=False):
-        if public:
-            result = [
-                assignment.pattern
-                for assignment in self.assignments
-                if assignment.pattern.pattern_type not in [
-                    "DB-WEAVE Pattern",
-                    "JBead Pattern",
-                ]
-                and assignment.pattern.public
-            ]
-        else:
-            result = [
-                assignment.pattern
-                for assignment in self.assignments
-                if assignment.pattern.pattern_type not in [
-                    "DB-WEAVE Pattern",
-                    "JBead Pattern",
-                ]
-            ]
-        return sorted(
-            result,
-            key=lambda pattern: (pattern.owner.label, pattern.label)
-        )
 
 
 class Assignment(db.Model):

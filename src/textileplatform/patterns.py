@@ -4,6 +4,8 @@ from textileplatform.models import Assignment
 from textileplatform.models import Group
 from textileplatform.models import Pattern
 from textileplatform.name import from_label
+from textileplatform.palette import default_bead_palette
+from textileplatform.palette import default_weave_palette
 
 import datetime
 import json
@@ -148,86 +150,174 @@ def primary_group(user):
     return group
 
 
-def add_weave_pattern(pattern, user):
+_MAX_NAME_SUFFIX = 10
+
+
+def _insert_pattern(user, label, make):
+    """Store a new pattern of ``user`` in their primary group, named after
+    ``label``; while that name is taken, try "label - 1" … "label - 10".
+    ``make(name, label)`` builds the Pattern. Commits; returns the name."""
     group = primary_group(user)
-    suffix = None
-    now = datetime.datetime.now(datetime.timezone.utc)
-    while True:
-        if suffix and suffix > 10:
-            break
-        if suffix:
-            label = pattern["name"] + " - " + str(suffix)
-        else:
-            label = pattern["name"]
-        name = from_label(label)
+    for suffix in range(_MAX_NAME_SUFFIX + 1):
+        candidate = f"{label} - {suffix}" if suffix else label
+        name = from_label(candidate)
+        pattern = make(name, candidate)
+        db.session.add(pattern)
+        db.session.add(Assignment(pattern=pattern, group=group))
         try:
-            p = Pattern(
-                name=name,
-                label=label,
-                description=pattern.get("notes", ""),
-                pattern_type="DB-WEAVE Pattern",
-                contents=json.dumps(pattern),
-                created=now,
-                modified=now,
-                public=False,
-                owner=user,
-            )
-            apply_pattern_metadata(p, pattern)
-            assignment = Assignment(
-                pattern=p,
-                group=group,
-            )
-            db.session.add(p)
-            db.session.add(assignment)
             db.session.commit()
             return name
         except IntegrityError:
             db.session.rollback()
-            if suffix:
-                suffix += 1
-            else:
-                suffix = 1
+    raise ValueError(f"no free pattern name for {label!r}")
 
 
-def add_bead_pattern(pattern, user):
-    group = primary_group(user)
-    suffix = None
+def add_pattern(contents, user, pattern_type):
+    """Store pattern JSON ``contents`` (with a "name") as a new private
+    pattern of ``user``. Returns the pattern name."""
     now = datetime.datetime.now(datetime.timezone.utc)
-    while True:
-        if suffix and suffix > 10:
-            break
-        if suffix:
-            label = pattern["name"] + " - " + str(suffix)
-        else:
-            label = pattern["name"]
-        name = from_label(label)
-        try:
-            p = Pattern(
-                name=name,
-                label=label,
-                description=pattern.get("notes", ""),
-                pattern_type="JBead Pattern",
-                contents=json.dumps(pattern),
-                created=now,
-                modified=now,
-                public=False,
-                owner=user,
-            )
-            apply_pattern_metadata(p, pattern)
-            assignment = Assignment(
-                pattern=p,
-                group=group,
-            )
-            db.session.add(p)
-            db.session.add(assignment)
-            db.session.commit()
-            return name
-        except IntegrityError:
-            db.session.rollback()
-            if suffix:
-                suffix += 1
-            else:
-                suffix = 1
+
+    def make(name, label):
+        p = Pattern(
+            name=name,
+            label=label,
+            description=contents.get("notes", ""),
+            pattern_type=pattern_type,
+            contents=json.dumps(contents),
+            created=now,
+            modified=now,
+            public=False,
+            owner=user,
+        )
+        apply_pattern_metadata(p, contents)
+        return p
+
+    return _insert_pattern(user, contents["name"], make)
+
+
+def clone_pattern(user, pattern, contents):
+    """Copy ``pattern`` (with the given JSON ``contents`` string) into
+    ``user``'s patterns. Returns the new pattern name."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    try:
+        parsed = json.loads(contents)
+    except (TypeError, ValueError):
+        parsed = None
+
+    def make(name, label):
+        p = Pattern(
+            name=name,
+            label=label,
+            description=pattern.description,
+            pattern_type=pattern.pattern_type,
+            contents=contents,
+            preview_image=pattern.preview_image,
+            thumbnail_image=pattern.thumbnail_image,
+            created=now,
+            modified=now,
+            public=False,
+            owner=user,
+        )
+        if isinstance(parsed, dict):
+            apply_pattern_metadata(p, parsed)
+        return p
+
+    return _insert_pattern(user, pattern.label, make)
+
+
+def new_weave_pattern(name, author, width, height, prefs=None):
+    """Contents of a new, empty DB-WEAVE pattern. ``prefs`` are the
+    user's saved dbweave settings (Extras ▸ Grundeinstellung / Optionen ▸
+    Global…), so the American / Scandinavian / Swiss preset chosen in the
+    editor carries over; without them the Swiss preset applies."""
+    prefs = prefs if isinstance(prefs, dict) else {}
+    max_shafts = max_treadles = 32
+    return {
+        "name": name,
+        "author": author,
+        "organization": "",
+        "notes": "",
+        "width": width,
+        "height": height,
+        "max_shafts": max_shafts,
+        "max_treadles": max_treadles,
+        "data_entering": [0] * width,
+        "data_tieup": [0] * (max_shafts * max_treadles),
+        "data_treadling": [0] * (max_treadles * height),
+        "data_reed": ([0, 0, 1, 1] * ((width + 3) // 4))[:width],
+        "colors_warp": [55] * width,
+        "colors_weft": [49] * height,
+        "palette": [list(c) for c in default_weave_palette],
+        "visible_shafts": 12,
+        "visible_treadles": 12,
+        "warp_lifting": True,
+        "zoom": 3,
+        "display_repeat": False,
+        "display_reed": True,
+        "display_colors_warp": True,
+        "display_colors_weft": True,
+        "display_entering": True,
+        "display_threading": True,
+        "direction_righttoleft": bool(
+            prefs.get("direction_righttoleft", False)),
+        "direction_toptobottom": bool(
+            prefs.get("direction_toptobottom", False)),
+        "entering_at_bottom": bool(prefs.get("entering_at_bottom", False)),
+        "entering_style": prefs.get("entering_style", "vdash"),
+        "treadling_style": prefs.get("treadling_style", "dot"),
+        "tieup_style": prefs.get("tieup_style", "cross"),
+        "pegplan_style": prefs.get("pegplan_style", "filled"),
+        "sinking_shed": bool(prefs.get("sinking_shed", False)),
+        "single_treadling": bool(prefs.get("single_treadling", True)),
+        "weave_style": "draft",
+    }
+
+
+# Default per-colour symbol glyphs (the desktop's
+# BeadSymbols.DEFAULT_SYMBOLS). Slot 0 is the background and never drawn.
+DEFAULT_BEAD_SYMBOLS = "·abcdefghijklmnopqrstuvwxyz+-/\\*"
+
+
+def new_bead_pattern(name, author, width, height, prefs=None):
+    """Contents of a new, empty JBead pattern. ``prefs`` are the user's
+    last view-state choices in the bead editor."""
+    prefs = prefs if isinstance(prefs, dict) else {}
+
+    def pref_bool(key, default):
+        v = prefs.get(key)
+        return bool(v) if v is not None else default
+
+    # Zoom is the cell size in pixels; the editor accepts 4..48.
+    zoom = prefs.get("zoom")
+    if not (isinstance(zoom, (int, float)) and 4 <= int(zoom) <= 48):
+        zoom = 12
+    symbols = prefs.get("symbols")
+    if not (isinstance(symbols, str) and symbols):
+        symbols = DEFAULT_BEAD_SYMBOLS
+    return {
+        "name": name,
+        "author": author,
+        "organization": "",
+        "notes": "",
+        # One list per row — `[[0] * width] * height` would share rows.
+        "model": [[0] * width for _ in range(height)],
+        "colors": [list(c) for c in default_bead_palette],
+        "view": {
+            "draft-visible": pref_bool("draft-visible", True),
+            "corrected-visible": pref_bool("corrected-visible", True),
+            "simulation-visible": pref_bool("simulation-visible", True),
+            "report-visible": pref_bool("report-visible", True),
+            "draw-colors": pref_bool("draw-colors", True),
+            "draw-symbols": pref_bool("draw-symbols", False),
+            "zoom": int(zoom),
+            "shift": 0,
+            "scroll": 0,
+            # New patterns open with the pencil so a click paints.
+            "selected-tool": "pencil",
+            "selected-color": 1,
+            "symbols": symbols,
+        },
+    }
 
 
 def get_patterns_for_user(user, only_public=False):
@@ -315,49 +405,3 @@ def _fmt_flat_list(lst, indent, max_width):
     if line:
         lines.append(line)
     return "[\n" + "\n".join(lines)
-
-
-def clone_pattern(user, pattern, contents):
-    group = primary_group(user)
-    suffix = None
-    while True:
-        if suffix and suffix > 10:
-            break
-        try:
-            now = datetime.datetime.now(datetime.timezone.utc)
-            if suffix:
-                label = pattern.label + " - " + str(suffix)
-            else:
-                label = pattern.label
-            name = from_label(label)
-            p = Pattern(
-                name=name,
-                label=label,
-                description=pattern.description,
-                pattern_type=pattern.pattern_type,
-                contents=contents,
-                preview_image=pattern.preview_image,
-                thumbnail_image=pattern.thumbnail_image,
-                created=now,
-                modified=now,
-                public=False,
-                owner=user,
-            )
-            try:
-                apply_pattern_metadata(p, json.loads(contents))
-            except Exception:
-                logging.exception("metadata extract on clone failed")
-            assignment = Assignment(
-                pattern=p,
-                group=group,
-            )
-            db.session.add(p)
-            db.session.add(assignment)
-            db.session.commit()
-            break
-        except IntegrityError:
-            db.session.rollback()
-            if not suffix:
-                suffix = 1
-            else:
-                suffix += 1
