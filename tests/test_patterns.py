@@ -119,3 +119,27 @@ class TestUpload:
         assert "junk.txt" in page
         p = Pattern.query.filter_by(pattern_type="JBead Pattern").one()
         assert p.rapport_height == 2
+
+
+# ---------- verification ---------------------------------------------
+
+
+class TestVerify:
+    def test_failing_admin_mail_does_not_break_verification(
+        self, client, monkeypatch
+    ):
+        import textileplatform.controller as controller
+
+        def _boom(*args, **kwargs):
+            raise ConnectionRefusedError("no smtp")
+
+        monkeypatch.setattr(
+            controller, "send_admin_notification_mail", _boom
+        )
+        user = _make_user(name="frank", email="frank@example.com")
+        user.verified = False
+        user.verification_code = "abc123"
+        db.session.commit()
+        r = client.get("/auth/verify/frank/abc123")
+        assert r.status_code == 200
+        assert User.query.filter_by(name="frank").one().verified

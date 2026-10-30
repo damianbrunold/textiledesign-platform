@@ -3497,11 +3497,16 @@ def verify(user_name, verification_code):
         except IntegrityError:
             db.session.rollback()
             return render_template("verification_failed.html")
-        send_admin_notification_mail(
-            user,
-            "User completed email account verification step",
-        )
         _seed_starter_patterns(user)
+        # The account is verified at this point; a failing admin
+        # notification must not turn that into an error page.
+        try:
+            send_admin_notification_mail(
+                user,
+                "User completed email account verification step",
+            )
+        except Exception:
+            logging.exception("admin notification after verify failed")
         return render_template("verification_successful.html")
     except HTTPException:
         raise
