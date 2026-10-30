@@ -8,14 +8,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-10 12:09+0200\n"
+"POT-Creation-Date: 2026-10-30 17:58+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.18.0\n"
+"Generated-By: Babel 2.17.0\n"
 
 #: src/textileplatform/beadexport.py:593 src/textileplatform/beadexport.py:608
 #: src/textileplatform/templates/edit_jbead_pattern.html:131
@@ -106,14 +106,14 @@ msgid "Password cannot be empty"
 msgstr ""
 
 #: src/textileplatform/controller.py:1360
-#: src/textileplatform/controller.py:3258
-#: src/textileplatform/controller.py:3590
+#: src/textileplatform/controller.py:3277
+#: src/textileplatform/controller.py:3609
 msgid "Passwords do not match"
 msgstr ""
 
 #: src/textileplatform/controller.py:1365
-#: src/textileplatform/controller.py:3263
-#: src/textileplatform/controller.py:3595
+#: src/textileplatform/controller.py:3282
+#: src/textileplatform/controller.py:3614
 msgid ""
 "Password must be at least 8 characters and not a common or trivial "
 "password"
@@ -128,7 +128,7 @@ msgid "Profile updated"
 msgstr ""
 
 #: src/textileplatform/controller.py:1645
-#: src/textileplatform/controller.py:2808
+#: src/textileplatform/controller.py:2827
 msgid "The support account cannot be deleted."
 msgstr ""
 
@@ -148,291 +148,296 @@ msgstr ""
 msgid "Your account and all related data have been deleted."
 msgstr ""
 
-#: src/textileplatform/controller.py:1771
-#: src/textileplatform/controller.py:1894
+#: src/textileplatform/controller.py:1748
+#, python-format
+msgid "These files could not be read as patterns: %(names)s"
+msgstr ""
+
+#: src/textileplatform/controller.py:1790
+#: src/textileplatform/controller.py:1913
 msgid "Please provide a name for the pattern"
 msgstr ""
 
-#: src/textileplatform/controller.py:1777
-#: src/textileplatform/controller.py:1780
+#: src/textileplatform/controller.py:1796
+#: src/textileplatform/controller.py:1799
 msgid "Width must be between 10 and 1000"
 msgstr ""
 
-#: src/textileplatform/controller.py:1786
-#: src/textileplatform/controller.py:1789
+#: src/textileplatform/controller.py:1805
+#: src/textileplatform/controller.py:1808
 msgid "Height must be between 10 and 1000"
 msgstr ""
 
-#: src/textileplatform/controller.py:1884
-#: src/textileplatform/controller.py:2003
+#: src/textileplatform/controller.py:1903
+#: src/textileplatform/controller.py:2022
 msgid "Failed to create pattern"
 msgstr ""
 
-#: src/textileplatform/controller.py:1900
-#: src/textileplatform/controller.py:1903
+#: src/textileplatform/controller.py:1919
+#: src/textileplatform/controller.py:1922
 msgid "Width must be between 6 and 100"
 msgstr ""
 
-#: src/textileplatform/controller.py:1909
-#: src/textileplatform/controller.py:1912
+#: src/textileplatform/controller.py:1928
+#: src/textileplatform/controller.py:1931
 msgid "Height must be between 5 and 5000"
 msgstr ""
 
-#: src/textileplatform/controller.py:2040
+#: src/textileplatform/controller.py:2059
 msgid "Pattern could not be deleted."
 msgstr ""
 
-#: src/textileplatform/controller.py:2121
+#: src/textileplatform/controller.py:2140
 msgid "Assignments could not be saved."
 msgstr ""
 
-#: src/textileplatform/controller.py:2176
+#: src/textileplatform/controller.py:2195
 msgid "Cannot edit your primary group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2188
+#: src/textileplatform/controller.py:2207
 msgid "Group updated"
 msgstr ""
 
-#: src/textileplatform/controller.py:2202
+#: src/textileplatform/controller.py:2221
 msgid "Cannot change visibility of your primary group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2220
+#: src/textileplatform/controller.py:2239
 msgid "Cannot invite to a personal group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2228
-#: src/textileplatform/controller.py:2345
+#: src/textileplatform/controller.py:2247
+#: src/textileplatform/controller.py:2364
 msgid "Invalid role"
 msgstr ""
 
-#: src/textileplatform/controller.py:2233
-#: src/textileplatform/controller.py:2236
-#: src/textileplatform/controller.py:2239
+#: src/textileplatform/controller.py:2252
+#: src/textileplatform/controller.py:2255
+#: src/textileplatform/controller.py:2258
 msgid "User not found"
 msgstr ""
 
-#: src/textileplatform/controller.py:2245
+#: src/textileplatform/controller.py:2264
 msgid "User is already a member"
 msgstr ""
 
-#: src/textileplatform/controller.py:2247
+#: src/textileplatform/controller.py:2266
 msgid "User has already been invited"
 msgstr ""
 
-#: src/textileplatform/controller.py:2254
-#: src/textileplatform/controller.py:2266
+#: src/textileplatform/controller.py:2273
+#: src/textileplatform/controller.py:2285
 msgid "Invitation sent"
 msgstr ""
 
-#: src/textileplatform/controller.py:2292
+#: src/textileplatform/controller.py:2311
 msgid "Invitation accepted"
 msgstr ""
 
-#: src/textileplatform/controller.py:2307
+#: src/textileplatform/controller.py:2326
 msgid "Invitation declined"
 msgstr ""
 
-#: src/textileplatform/controller.py:2336
+#: src/textileplatform/controller.py:2355
 msgid "Cannot remove the last owner of a group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2341
+#: src/textileplatform/controller.py:2360
 msgid "Member removed"
 msgstr ""
 
-#: src/textileplatform/controller.py:2352
+#: src/textileplatform/controller.py:2371
 msgid "Cannot demote the last owner of a group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2357
+#: src/textileplatform/controller.py:2376
 msgid "Role updated"
 msgstr ""
 
-#: src/textileplatform/controller.py:2370
+#: src/textileplatform/controller.py:2389
 msgid "Cannot delete your primary group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2388
+#: src/textileplatform/controller.py:2407
 #, python-format
 msgid "Group \"%(label)s\" deleted"
 msgstr ""
 
-#: src/textileplatform/controller.py:2399
+#: src/textileplatform/controller.py:2418
 msgid "Cannot leave a personal group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2406
+#: src/textileplatform/controller.py:2425
 msgid "You are the last owner. Promote another owner before leaving."
 msgstr ""
 
-#: src/textileplatform/controller.py:2412
+#: src/textileplatform/controller.py:2431
 msgid "You left the group"
 msgstr ""
 
-#: src/textileplatform/controller.py:2492
+#: src/textileplatform/controller.py:2511
 msgid "Cannot impersonate a disabled user"
 msgstr ""
 
-#: src/textileplatform/controller.py:2546
+#: src/textileplatform/controller.py:2565
 msgid "Please choose a group kind"
 msgstr ""
 
-#: src/textileplatform/controller.py:2554
+#: src/textileplatform/controller.py:2573
 msgid "Group Name is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:2557
-#: src/textileplatform/controller.py:3298
+#: src/textileplatform/controller.py:2576
+#: src/textileplatform/controller.py:3317
 msgid "Name is invalid and cannot be used"
 msgstr ""
 
-#: src/textileplatform/controller.py:2564
+#: src/textileplatform/controller.py:2583
 msgid "Group already exists"
 msgstr ""
 
-#: src/textileplatform/controller.py:2573
+#: src/textileplatform/controller.py:2592
 msgid "You already have a group with this name"
 msgstr ""
 
-#: src/textileplatform/controller.py:2580
+#: src/textileplatform/controller.py:2599
 msgid "A shared group already uses this name. Choose another."
 msgstr ""
 
-#: src/textileplatform/controller.py:2777
+#: src/textileplatform/controller.py:2796
 msgid "The support account cannot be disabled."
 msgstr ""
 
-#: src/textileplatform/controller.py:2780
+#: src/textileplatform/controller.py:2799
 msgid "You cannot disable your own account."
 msgstr ""
 
-#: src/textileplatform/controller.py:2791
+#: src/textileplatform/controller.py:2810
 msgid "Could not update the account state."
 msgstr ""
 
-#: src/textileplatform/controller.py:2794
+#: src/textileplatform/controller.py:2813
 msgid "Account disabled."
 msgstr ""
 
-#: src/textileplatform/controller.py:2796
+#: src/textileplatform/controller.py:2815
 msgid "Account enabled."
 msgstr ""
 
-#: src/textileplatform/controller.py:2811
+#: src/textileplatform/controller.py:2830
 msgid "You cannot delete your own account from here."
 msgstr ""
 
-#: src/textileplatform/controller.py:2816
+#: src/textileplatform/controller.py:2835
 msgid "Please type the user's name exactly to confirm deletion."
 msgstr ""
 
-#: src/textileplatform/controller.py:2826
-#: src/textileplatform/controller.py:2960
+#: src/textileplatform/controller.py:2845
+#: src/textileplatform/controller.py:2979
 msgid "Could not delete the account."
 msgstr ""
 
-#: src/textileplatform/controller.py:2828
-#: src/textileplatform/controller.py:2962
+#: src/textileplatform/controller.py:2847
+#: src/textileplatform/controller.py:2981
 #, python-format
 msgid "Account \"%(label)s\" deleted."
 msgstr ""
 
-#: src/textileplatform/controller.py:2852
+#: src/textileplatform/controller.py:2871
 msgid "Another account already uses this e-mail address"
 msgstr ""
 
-#: src/textileplatform/controller.py:2857
+#: src/textileplatform/controller.py:2876
 msgid "Could not update the e-mail."
 msgstr ""
 
-#: src/textileplatform/controller.py:2869
+#: src/textileplatform/controller.py:2888
 msgid "E-Mail updated."
 msgstr ""
 
-#: src/textileplatform/controller.py:2883
+#: src/textileplatform/controller.py:2902
 msgid "The support account cannot be renamed."
 msgstr ""
 
-#: src/textileplatform/controller.py:2886
+#: src/textileplatform/controller.py:2905
 msgid "You cannot rename your own account from here."
 msgstr ""
 
-#: src/textileplatform/controller.py:2899
+#: src/textileplatform/controller.py:2918
 msgid "Another account already uses this name"
 msgstr ""
 
-#: src/textileplatform/controller.py:2904
+#: src/textileplatform/controller.py:2923
 msgid "Could not update the name."
 msgstr ""
 
-#: src/textileplatform/controller.py:2913
+#: src/textileplatform/controller.py:2932
 msgid "Name updated."
 msgstr ""
 
-#: src/textileplatform/controller.py:2951
+#: src/textileplatform/controller.py:2970
 msgid "Only non-verified accounts can be deleted here."
 msgstr ""
 
-#: src/textileplatform/controller.py:2976
+#: src/textileplatform/controller.py:2995
 msgid "This account is already verified."
 msgstr ""
 
-#: src/textileplatform/controller.py:2986
+#: src/textileplatform/controller.py:3005
 msgid "Could not send the verification e-mail."
 msgstr ""
 
-#: src/textileplatform/controller.py:2989
+#: src/textileplatform/controller.py:3008
 #, python-format
 msgid "Verification e-mail sent to %(email)s."
 msgstr ""
 
-#: src/textileplatform/controller.py:3031
+#: src/textileplatform/controller.py:3050
 msgid "Both German and English text are required."
 msgstr ""
 
-#: src/textileplatform/controller.py:3034
+#: src/textileplatform/controller.py:3053
 msgid "Duration must be between 1 and 365 days."
 msgstr ""
 
-#: src/textileplatform/controller.py:3046
+#: src/textileplatform/controller.py:3065
 msgid "Announcement published."
 msgstr ""
 
-#: src/textileplatform/controller.py:3058
+#: src/textileplatform/controller.py:3077
 msgid "Announcement retired."
 msgstr ""
 
-#: src/textileplatform/controller.py:3136
+#: src/textileplatform/controller.py:3155
 msgid "Investigation copy created"
 msgstr ""
 
-#: src/textileplatform/controller.py:3157
+#: src/textileplatform/controller.py:3176
 msgid "Investigation copy deleted"
 msgstr ""
 
-#: src/textileplatform/controller.py:3250
+#: src/textileplatform/controller.py:3269
 msgid "Name is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:3252
+#: src/textileplatform/controller.py:3271
 msgid "E-Mail is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:3254
+#: src/textileplatform/controller.py:3273
 msgid "E-Mail is not valid"
 msgstr ""
 
-#: src/textileplatform/controller.py:3256
+#: src/textileplatform/controller.py:3275
 msgid "Password is required"
 msgstr ""
 
-#: src/textileplatform/controller.py:3260
+#: src/textileplatform/controller.py:3279
 msgid "Calculation result required"
 msgstr ""
 
-#: src/textileplatform/controller.py:3281
+#: src/textileplatform/controller.py:3300
 #: src/textileplatform/templates/register.html:56
 #, python-format
 msgid ""
@@ -441,7 +446,7 @@ msgid ""
 " Name field if needed, before you click “Create”."
 msgstr ""
 
-#: src/textileplatform/controller.py:3315
+#: src/textileplatform/controller.py:3334
 #, python-format
 msgid ""
 "The handle “%(taken)s” is already in use. We can register you as "
@@ -449,38 +454,38 @@ msgid ""
 "handle below if you prefer, then submit again."
 msgstr ""
 
-#: src/textileplatform/controller.py:3324
-#: src/textileplatform/controller.py:3382
+#: src/textileplatform/controller.py:3343
+#: src/textileplatform/controller.py:3401
 msgid "Name or E-Mail is already used"
 msgstr ""
 
-#: src/textileplatform/controller.py:3387
-#: src/textileplatform/controller.py:3425
+#: src/textileplatform/controller.py:3406
+#: src/textileplatform/controller.py:3444
 msgid "System error"
 msgstr ""
 
-#: src/textileplatform/controller.py:3413
-#: src/textileplatform/controller.py:3416
+#: src/textileplatform/controller.py:3432
+#: src/textileplatform/controller.py:3435
 msgid "Login data are not correct"
 msgstr ""
 
-#: src/textileplatform/controller.py:3418
+#: src/textileplatform/controller.py:3437
 msgid "Account verification is pending"
 msgstr ""
 
-#: src/textileplatform/controller.py:3420
+#: src/textileplatform/controller.py:3439
 msgid "Account is disabled"
 msgstr ""
 
-#: src/textileplatform/controller.py:3500
+#: src/textileplatform/controller.py:3519
 msgid "E-Mail is required."
 msgstr ""
 
-#: src/textileplatform/controller.py:3588
+#: src/textileplatform/controller.py:3607
 msgid "Password is required."
 msgstr ""
 
-#: src/textileplatform/controller.py:3613
+#: src/textileplatform/controller.py:3632
 msgid "Could not save changes."
 msgstr ""
 
@@ -656,7 +661,7 @@ msgstr ""
 #: src/textileplatform/templates/assignments_pattern.html:40
 #: src/textileplatform/templates/edit_dbweave_pattern.html:63
 #: src/textileplatform/templates/edit_dbweave_pattern.html:246
-#: src/textileplatform/templates/edit_dbweave_pattern.html:476
+#: src/textileplatform/templates/edit_dbweave_pattern.html:478
 #: src/textileplatform/templates/edit_group.html:34
 #: src/textileplatform/templates/edit_jbead_pattern.html:51
 #: src/textileplatform/templates/edit_jbead_pattern.html:171
@@ -672,7 +677,7 @@ msgid "Support Console"
 msgstr ""
 
 #: src/textileplatform/templates/admin-console.html:11
-#: src/textileplatform/templates/edit_dbweave_pattern.html:445
+#: src/textileplatform/templates/edit_dbweave_pattern.html:447
 msgid "Administration"
 msgstr ""
 
@@ -859,9 +864,9 @@ msgstr ""
 #: src/textileplatform/templates/edit_dbweave_pattern.html:106
 #: src/textileplatform/templates/edit_dbweave_pattern.html:124
 #: src/textileplatform/templates/edit_dbweave_pattern.html:127
-#: src/textileplatform/templates/edit_dbweave_pattern.html:324
-#: src/textileplatform/templates/edit_dbweave_pattern.html:356
-#: src/textileplatform/templates/edit_dbweave_pattern.html:425
+#: src/textileplatform/templates/edit_dbweave_pattern.html:326
+#: src/textileplatform/templates/edit_dbweave_pattern.html:358
+#: src/textileplatform/templates/edit_dbweave_pattern.html:427
 #: src/textileplatform/templates/user_private.html:136
 msgid "Delete"
 msgstr ""
@@ -883,7 +888,7 @@ msgstr ""
 
 #: src/textileplatform/templates/admin-edit-user.html:18
 #: src/textileplatform/templates/admin-edit-user.html:58
-#: src/textileplatform/templates/edit_dbweave_pattern.html:420
+#: src/textileplatform/templates/edit_dbweave_pattern.html:422
 #: src/textileplatform/templates/edit_group.html:18
 #: src/textileplatform/templates/edit_jbead_pattern.html:140
 msgid "Edit"
@@ -900,7 +905,7 @@ msgstr ""
 #: src/textileplatform/templates/assignments_pattern.html:41
 #: src/textileplatform/templates/delete_pattern.html:16
 #: src/textileplatform/templates/edit_dbweave_pattern.html:120
-#: src/textileplatform/templates/edit_dbweave_pattern.html:459
+#: src/textileplatform/templates/edit_dbweave_pattern.html:461
 #: src/textileplatform/templates/edit_group.html:35
 #: src/textileplatform/templates/edit_jbead_pattern.html:107
 #: src/textileplatform/templates/edit_jbead_pattern.html:154
@@ -1511,27 +1516,28 @@ msgid "Site"
 msgstr ""
 
 #: src/textileplatform/templates/base.html:150
-#: src/textileplatform/templates/edit_dbweave_pattern.html:414
+#: src/textileplatform/templates/edit_dbweave_pattern.html:416
 #: src/textileplatform/templates/edit_jbead_pattern.html:134
 msgid "Terms"
 msgstr ""
 
 #: src/textileplatform/templates/base.html:151
-#: src/textileplatform/templates/edit_dbweave_pattern.html:415
+#: src/textileplatform/templates/edit_dbweave_pattern.html:417
 #: src/textileplatform/templates/edit_jbead_pattern.html:135
 msgid "Privacy Policy"
 msgstr ""
 
 #: src/textileplatform/templates/base.html:152
-#: src/textileplatform/templates/edit_dbweave_pattern.html:416
+#: src/textileplatform/templates/edit_dbweave_pattern.html:418
 #: src/textileplatform/templates/edit_jbead_pattern.html:136
 msgid "Imprint"
 msgstr ""
 
 #: src/textileplatform/templates/base.html:160
 #: src/textileplatform/templates/edit_dbweave_pattern.html:64
-#: src/textileplatform/templates/edit_dbweave_pattern.html:326
-#: src/textileplatform/templates/edit_dbweave_pattern.html:518
+#: src/textileplatform/templates/edit_dbweave_pattern.html:323
+#: src/textileplatform/templates/edit_dbweave_pattern.html:328
+#: src/textileplatform/templates/edit_dbweave_pattern.html:520
 #: src/textileplatform/templates/edit_jbead_pattern.html:54
 #: src/textileplatform/templates/edit_jbead_pattern.html:204
 msgid "Close"
@@ -1636,28 +1642,28 @@ msgid "Do you really want to delete this pattern?"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:52
-#: src/textileplatform/templates/edit_dbweave_pattern.html:362
-#: src/textileplatform/templates/edit_dbweave_pattern.html:479
+#: src/textileplatform/templates/edit_dbweave_pattern.html:364
+#: src/textileplatform/templates/edit_dbweave_pattern.html:481
 #: src/textileplatform/templates/edit_jbead_pattern.html:73
 #: src/textileplatform/templates/edit_jbead_pattern.html:174
 msgid "Undo"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:53
-#: src/textileplatform/templates/edit_dbweave_pattern.html:363
-#: src/textileplatform/templates/edit_dbweave_pattern.html:480
+#: src/textileplatform/templates/edit_dbweave_pattern.html:365
+#: src/textileplatform/templates/edit_dbweave_pattern.html:482
 #: src/textileplatform/templates/edit_jbead_pattern.html:74
 #: src/textileplatform/templates/edit_jbead_pattern.html:175
 msgid "Redo"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:54
-#: src/textileplatform/templates/edit_dbweave_pattern.html:482
+#: src/textileplatform/templates/edit_dbweave_pattern.html:484
 msgid "Cut"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:55
-#: src/textileplatform/templates/edit_dbweave_pattern.html:483
+#: src/textileplatform/templates/edit_dbweave_pattern.html:485
 #: src/textileplatform/templates/edit_group.html:266
 #: src/textileplatform/templates/edit_group.html:267
 #: src/textileplatform/templates/profile.html:79
@@ -1666,7 +1672,7 @@ msgid "Copy"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:56
-#: src/textileplatform/templates/edit_dbweave_pattern.html:484
+#: src/textileplatform/templates/edit_dbweave_pattern.html:486
 msgid "Paste"
 msgstr ""
 
@@ -1676,8 +1682,8 @@ msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:59
 #: src/textileplatform/templates/edit_dbweave_pattern.html:104
-#: src/textileplatform/templates/edit_dbweave_pattern.html:360
-#: src/textileplatform/templates/edit_dbweave_pattern.html:496
+#: src/textileplatform/templates/edit_dbweave_pattern.html:362
+#: src/textileplatform/templates/edit_dbweave_pattern.html:498
 msgid "Invert"
 msgstr ""
 
@@ -1690,21 +1696,21 @@ msgid "Mirror Vertical"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:62
-#: src/textileplatform/templates/edit_dbweave_pattern.html:359
-#: src/textileplatform/templates/edit_dbweave_pattern.html:499
+#: src/textileplatform/templates/edit_dbweave_pattern.html:361
+#: src/textileplatform/templates/edit_dbweave_pattern.html:501
 #: src/textileplatform/templates/edit_jbead_pattern.html:78
 msgid "Rotate"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:65
-#: src/textileplatform/templates/edit_dbweave_pattern.html:487
+#: src/textileplatform/templates/edit_dbweave_pattern.html:489
 #: src/textileplatform/templates/edit_jbead_pattern.html:60
 #: src/textileplatform/templates/edit_jbead_pattern.html:181
 msgid "Zoom in"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:66
-#: src/textileplatform/templates/edit_dbweave_pattern.html:488
+#: src/textileplatform/templates/edit_dbweave_pattern.html:490
 #: src/textileplatform/templates/edit_jbead_pattern.html:61
 #: src/textileplatform/templates/edit_jbead_pattern.html:182
 msgid "Zoom out"
@@ -1859,7 +1865,7 @@ msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:103
 #: src/textileplatform/templates/edit_dbweave_pattern.html:171
-#: src/textileplatform/templates/edit_dbweave_pattern.html:430
+#: src/textileplatform/templates/edit_dbweave_pattern.html:432
 msgid "Pegplan"
 msgstr ""
 
@@ -1897,7 +1903,7 @@ msgid "Reduce"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:114
-#: src/textileplatform/templates/edit_dbweave_pattern.html:431
+#: src/textileplatform/templates/edit_dbweave_pattern.html:433
 #: src/textileplatform/templates/edit_jbead_pattern.html:130
 msgid "Repeat"
 msgstr ""
@@ -1941,22 +1947,22 @@ msgid "Copy from threading"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:129
-#: src/textileplatform/templates/edit_dbweave_pattern.html:328
+#: src/textileplatform/templates/edit_dbweave_pattern.html:330
 msgid "Normal rising"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:130
-#: src/textileplatform/templates/edit_dbweave_pattern.html:329
+#: src/textileplatform/templates/edit_dbweave_pattern.html:331
 msgid "Normal falling"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:131
-#: src/textileplatform/templates/edit_dbweave_pattern.html:370
+#: src/textileplatform/templates/edit_dbweave_pattern.html:372
 msgid "Straight rising"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:132
-#: src/textileplatform/templates/edit_dbweave_pattern.html:371
+#: src/textileplatform/templates/edit_dbweave_pattern.html:373
 msgid "Straight falling"
 msgstr ""
 
@@ -1986,13 +1992,13 @@ msgid "Palette"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:139
-#: src/textileplatform/templates/edit_dbweave_pattern.html:423
+#: src/textileplatform/templates/edit_dbweave_pattern.html:425
 #: src/textileplatform/templates/edit_jbead_pattern.html:142
 msgid "Tools"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:140
-#: src/textileplatform/templates/edit_dbweave_pattern.html:446
+#: src/textileplatform/templates/edit_dbweave_pattern.html:448
 msgid "Ranges"
 msgstr ""
 
@@ -2029,7 +2035,7 @@ msgid "Sizes"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:149
-#: src/textileplatform/templates/edit_dbweave_pattern.html:421
+#: src/textileplatform/templates/edit_dbweave_pattern.html:423
 #: src/textileplatform/templates/edit_jbead_pattern.html:141
 #: src/textileplatform/templates/user_private.html:57
 #: src/textileplatform/templates/user_private.html:61
@@ -2110,15 +2116,15 @@ msgid "PDF file…"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:166
-#: src/textileplatform/templates/edit_dbweave_pattern.html:477
+#: src/textileplatform/templates/edit_dbweave_pattern.html:479
 #: src/textileplatform/templates/edit_jbead_pattern.html:55
 #: src/textileplatform/templates/edit_jbead_pattern.html:172
 msgid "Print…"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:167
-#: src/textileplatform/templates/edit_dbweave_pattern.html:355
-#: src/textileplatform/templates/edit_dbweave_pattern.html:396
+#: src/textileplatform/templates/edit_dbweave_pattern.html:357
+#: src/textileplatform/templates/edit_dbweave_pattern.html:398
 #: src/textileplatform/templates/edit_groups.html:29
 #: src/textileplatform/templates/edit_groups.html:32
 #: src/textileplatform/templates/edit_jbead_pattern.html:146
@@ -2126,19 +2132,19 @@ msgid "Pattern"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:168
-#: src/textileplatform/templates/edit_dbweave_pattern.html:368
-#: src/textileplatform/templates/edit_dbweave_pattern.html:434
+#: src/textileplatform/templates/edit_dbweave_pattern.html:370
+#: src/textileplatform/templates/edit_dbweave_pattern.html:436
 msgid "Threading"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:169
-#: src/textileplatform/templates/edit_dbweave_pattern.html:429
+#: src/textileplatform/templates/edit_dbweave_pattern.html:431
 msgid "Tie-up"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:170
-#: src/textileplatform/templates/edit_dbweave_pattern.html:369
-#: src/textileplatform/templates/edit_dbweave_pattern.html:435
+#: src/textileplatform/templates/edit_dbweave_pattern.html:371
+#: src/textileplatform/templates/edit_dbweave_pattern.html:437
 msgid "Treadling"
 msgstr ""
 
@@ -2171,17 +2177,17 @@ msgid "Range"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:179
-#: src/textileplatform/templates/edit_dbweave_pattern.html:411
+#: src/textileplatform/templates/edit_dbweave_pattern.html:413
 msgid "Lift out"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:180
-#: src/textileplatform/templates/edit_dbweave_pattern.html:412
+#: src/textileplatform/templates/edit_dbweave_pattern.html:414
 msgid "Binding"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:181
-#: src/textileplatform/templates/edit_dbweave_pattern.html:413
+#: src/textileplatform/templates/edit_dbweave_pattern.html:415
 msgid "Unbinding"
 msgstr ""
 
@@ -2257,7 +2263,7 @@ msgid "General"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:199
-#: src/textileplatform/templates/edit_dbweave_pattern.html:448
+#: src/textileplatform/templates/edit_dbweave_pattern.html:450
 #: src/textileplatform/templates/edit_jbead_pattern.html:145
 msgid "Colors"
 msgstr ""
@@ -2283,7 +2289,7 @@ msgid "Pattern repeat:"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:207
-#: src/textileplatform/templates/edit_dbweave_pattern.html:341
+#: src/textileplatform/templates/edit_dbweave_pattern.html:343
 msgid "Number of shafts:"
 msgstr ""
 
@@ -2720,476 +2726,480 @@ msgid "Copy other"
 msgstr ""
 
 #: src/textileplatform/templates/edit_dbweave_pattern.html:322
+msgid "Overview"
+msgstr ""
+
+#: src/textileplatform/templates/edit_dbweave_pattern.html:324
 msgid "User-defined threading"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:323
+#: src/textileplatform/templates/edit_dbweave_pattern.html:325
 msgid "Take from pattern"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:325
+#: src/textileplatform/templates/edit_dbweave_pattern.html:327
 #: src/textileplatform/templates/edit_jbead_pattern.html:127
 msgid "Revert"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:327
+#: src/textileplatform/templates/edit_dbweave_pattern.html:329
 msgid "Threading must be continuous (no gaps)."
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:330
+#: src/textileplatform/templates/edit_dbweave_pattern.html:332
 msgid "Crossed"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:331
+#: src/textileplatform/templates/edit_dbweave_pattern.html:333
 msgid "Warp lancee…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:332
+#: src/textileplatform/templates/edit_dbweave_pattern.html:334
 msgid "Weft lancee…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:333
+#: src/textileplatform/templates/edit_dbweave_pattern.html:335
 msgid "Thread ratio"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:334
+#: src/textileplatform/templates/edit_dbweave_pattern.html:336
 msgid "Enter the thread ratio:"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:335
+#: src/textileplatform/templates/edit_dbweave_pattern.html:337
 msgid "Threading wizard…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:336
+#: src/textileplatform/templates/edit_dbweave_pattern.html:338
 msgid "Threading wizard"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:337
+#: src/textileplatform/templates/edit_dbweave_pattern.html:339
 msgid "Straight through"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:338
+#: src/textileplatform/templates/edit_dbweave_pattern.html:340
 msgid "Stepped"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:339
+#: src/textileplatform/templates/edit_dbweave_pattern.html:341
 msgid "First warp thread:"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:340
+#: src/textileplatform/templates/edit_dbweave_pattern.html:342
 msgid "First shaft:"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:342
+#: src/textileplatform/templates/edit_dbweave_pattern.html:344
 msgid "Orientation:"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:343
+#: src/textileplatform/templates/edit_dbweave_pattern.html:345
 msgid "Run length (Gratlänge):"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:344
+#: src/textileplatform/templates/edit_dbweave_pattern.html:346
 msgid "Offset (Versatz):"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:345
+#: src/textileplatform/templates/edit_dbweave_pattern.html:347
 msgid "Run length must be between 1 and the number of shafts."
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:346
+#: src/textileplatform/templates/edit_dbweave_pattern.html:348
 msgid "Offset must be between 1 and the number of shafts."
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:347
+#: src/textileplatform/templates/edit_dbweave_pattern.html:349
 msgid "Block patterns…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:348
+#: src/textileplatform/templates/edit_dbweave_pattern.html:350
 msgid "Range patterns…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:349
+#: src/textileplatform/templates/edit_dbweave_pattern.html:351
 msgid "Substitute with block patterns"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:350
+#: src/textileplatform/templates/edit_dbweave_pattern.html:352
 msgid "Substitute ranges with patterns"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:351
+#: src/textileplatform/templates/edit_dbweave_pattern.html:353
 msgid "Apply"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:352
+#: src/textileplatform/templates/edit_dbweave_pattern.html:354
 msgid "Used patterns:"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:353
+#: src/textileplatform/templates/edit_dbweave_pattern.html:355
 msgid "B"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:354
+#: src/textileplatform/templates/edit_dbweave_pattern.html:356
 msgid "Base pattern"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:357
+#: src/textileplatform/templates/edit_dbweave_pattern.html:359
 msgid "Mirror H"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:358
+#: src/textileplatform/templates/edit_dbweave_pattern.html:360
 msgid "Mirror V"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:361
+#: src/textileplatform/templates/edit_dbweave_pattern.html:363
 msgid "Central sym."
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:364
+#: src/textileplatform/templates/edit_dbweave_pattern.html:366
 msgid "Roll up"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:365
+#: src/textileplatform/templates/edit_dbweave_pattern.html:367
 msgid "Roll down"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:366
+#: src/textileplatform/templates/edit_dbweave_pattern.html:368
 msgid "Roll left"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:367
+#: src/textileplatform/templates/edit_dbweave_pattern.html:369
 msgid "Roll right"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:372
+#: src/textileplatform/templates/edit_dbweave_pattern.html:374
 msgid "Insert binding…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:373
+#: src/textileplatform/templates/edit_dbweave_pattern.html:375
 msgid "Tabby"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:374
+#: src/textileplatform/templates/edit_dbweave_pattern.html:376
 msgid "Twill 2/2"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:375
+#: src/textileplatform/templates/edit_dbweave_pattern.html:377
 msgid "Twill 3/3"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:376
+#: src/textileplatform/templates/edit_dbweave_pattern.html:378
 msgid "Twill 4/4"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:377
+#: src/textileplatform/templates/edit_dbweave_pattern.html:379
 msgid "Twill 2/1"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:378
+#: src/textileplatform/templates/edit_dbweave_pattern.html:380
 msgid "Twill 3/1"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:379
+#: src/textileplatform/templates/edit_dbweave_pattern.html:381
 msgid "Twill 3/2"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:380
+#: src/textileplatform/templates/edit_dbweave_pattern.html:382
 msgid "Twill 4/1"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:381
+#: src/textileplatform/templates/edit_dbweave_pattern.html:383
 msgid "Twill 4/2"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:382
+#: src/textileplatform/templates/edit_dbweave_pattern.html:384
 msgid "Twill 4/3"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:383
+#: src/textileplatform/templates/edit_dbweave_pattern.html:385
 msgid "Twill 5/1"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:384
+#: src/textileplatform/templates/edit_dbweave_pattern.html:386
 msgid "Twill 5/2"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:385
+#: src/textileplatform/templates/edit_dbweave_pattern.html:387
 msgid "Twill 5/3"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:386
+#: src/textileplatform/templates/edit_dbweave_pattern.html:388
 msgid "Satin 5×5"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:387
+#: src/textileplatform/templates/edit_dbweave_pattern.html:389
 msgid "Satin 7×7"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:388
+#: src/textileplatform/templates/edit_dbweave_pattern.html:390
 msgid "Satin 9×9"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:389
+#: src/textileplatform/templates/edit_dbweave_pattern.html:391
 msgid "Panama 2/1"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:390
+#: src/textileplatform/templates/edit_dbweave_pattern.html:392
 msgid "Panama 2/2"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:391
+#: src/textileplatform/templates/edit_dbweave_pattern.html:393
 msgid "Copy from…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:392
+#: src/textileplatform/templates/edit_dbweave_pattern.html:394
 msgid "Add current pattern…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:393
+#: src/textileplatform/templates/edit_dbweave_pattern.html:395
 msgid "Add selection…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:394
+#: src/textileplatform/templates/edit_dbweave_pattern.html:396
 msgid "Remove…"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:395
+#: src/textileplatform/templates/edit_dbweave_pattern.html:397
 msgid "Empty"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:397
+#: src/textileplatform/templates/edit_dbweave_pattern.html:399
 msgid "Select pattern slot"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:398
+#: src/textileplatform/templates/edit_dbweave_pattern.html:400
 msgid "Select pattern to delete"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:399
+#: src/textileplatform/templates/edit_dbweave_pattern.html:401
 msgid "Pattern description"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:400
+#: src/textileplatform/templates/edit_dbweave_pattern.html:402
 msgid "Pattern name:"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:401
+#: src/textileplatform/templates/edit_dbweave_pattern.html:403
 msgid "Pattern too large to save (maximum 50 × 50)."
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:402
+#: src/textileplatform/templates/edit_dbweave_pattern.html:404
 msgid "Range 1"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:403
+#: src/textileplatform/templates/edit_dbweave_pattern.html:405
 msgid "Range 2"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:404
+#: src/textileplatform/templates/edit_dbweave_pattern.html:406
 msgid "Range 3"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:405
+#: src/textileplatform/templates/edit_dbweave_pattern.html:407
 msgid "Range 4"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:406
+#: src/textileplatform/templates/edit_dbweave_pattern.html:408
 msgid "Range 5"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:407
+#: src/textileplatform/templates/edit_dbweave_pattern.html:409
 msgid "Range 6"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:408
+#: src/textileplatform/templates/edit_dbweave_pattern.html:410
 msgid "Range 7"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:409
+#: src/textileplatform/templates/edit_dbweave_pattern.html:411
 msgid "Range 8"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:410
+#: src/textileplatform/templates/edit_dbweave_pattern.html:412
 msgid "Range 9"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:419
+#: src/textileplatform/templates/edit_dbweave_pattern.html:421
 #: src/textileplatform/templates/edit_jbead_pattern.html:139
 msgid "File"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:422
+#: src/textileplatform/templates/edit_dbweave_pattern.html:424
 msgid "Style"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:424
-#: src/textileplatform/templates/edit_dbweave_pattern.html:436
+#: src/textileplatform/templates/edit_dbweave_pattern.html:426
+#: src/textileplatform/templates/edit_dbweave_pattern.html:438
 msgid "Insert"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:426
+#: src/textileplatform/templates/edit_dbweave_pattern.html:428
 msgid "Move"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:427
+#: src/textileplatform/templates/edit_dbweave_pattern.html:429
 msgid "Roll"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:428
+#: src/textileplatform/templates/edit_dbweave_pattern.html:430
 msgid "Slope"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:432
+#: src/textileplatform/templates/edit_dbweave_pattern.html:434
 msgid "Extras"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:433
+#: src/textileplatform/templates/edit_dbweave_pattern.html:435
 msgid "Cursor"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:437
-#: src/textileplatform/templates/edit_dbweave_pattern.html:441
+#: src/textileplatform/templates/edit_dbweave_pattern.html:439
+#: src/textileplatform/templates/edit_dbweave_pattern.html:443
 msgid "Satin"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:438
-#: src/textileplatform/templates/edit_dbweave_pattern.html:442
+#: src/textileplatform/templates/edit_dbweave_pattern.html:440
+#: src/textileplatform/templates/edit_dbweave_pattern.html:444
 msgid "Twill"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:439
+#: src/textileplatform/templates/edit_dbweave_pattern.html:441
 msgid "Balanced"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:440
+#: src/textileplatform/templates/edit_dbweave_pattern.html:442
 msgid "Warp sided"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:443
+#: src/textileplatform/templates/edit_dbweave_pattern.html:445
 msgid "Lancee"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:444
+#: src/textileplatform/templates/edit_dbweave_pattern.html:446
 msgid "Additional"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:447
+#: src/textileplatform/templates/edit_dbweave_pattern.html:449
 msgid "Current range"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:449
+#: src/textileplatform/templates/edit_dbweave_pattern.html:451
 msgid "Base settings"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:450
+#: src/textileplatform/templates/edit_dbweave_pattern.html:452
 msgid "Options"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:451
+#: src/textileplatform/templates/edit_dbweave_pattern.html:453
 #: src/textileplatform/templates/edit_jbead_pattern.html:144
 msgid "Export"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:455
+#: src/textileplatform/templates/edit_dbweave_pattern.html:457
 #: src/textileplatform/templates/edit_jbead_pattern.html:150
 msgid "Unsaved changes"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:456
+#: src/textileplatform/templates/edit_dbweave_pattern.html:458
 #: src/textileplatform/templates/edit_jbead_pattern.html:151
 msgid "You have unsaved changes. Save them before leaving this page?"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:457
+#: src/textileplatform/templates/edit_dbweave_pattern.html:459
 #: src/textileplatform/templates/edit_jbead_pattern.html:152
 msgid "Save and continue"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:458
+#: src/textileplatform/templates/edit_dbweave_pattern.html:460
 #: src/textileplatform/templates/edit_jbead_pattern.html:153
 msgid "Discard and continue"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:460
+#: src/textileplatform/templates/edit_dbweave_pattern.html:462
 #: src/textileplatform/templates/edit_jbead_pattern.html:155
 msgid "Save failed. Please try again."
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:462
+#: src/textileplatform/templates/edit_dbweave_pattern.html:464
 #: src/textileplatform/templates/edit_jbead_pattern.html:157
 msgid "Recover unsaved changes?"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:463
+#: src/textileplatform/templates/edit_dbweave_pattern.html:465
 #: src/textileplatform/templates/edit_jbead_pattern.html:158
 msgid ""
 "Local edits to this pattern from your last session were not saved on the "
 "server. Recover them?"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:464
+#: src/textileplatform/templates/edit_dbweave_pattern.html:466
 #: src/textileplatform/templates/edit_jbead_pattern.html:159
 msgid "Recover"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:465
+#: src/textileplatform/templates/edit_dbweave_pattern.html:467
 #: src/textileplatform/templates/edit_jbead_pattern.html:160
 msgid "Discard local edits"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:466
+#: src/textileplatform/templates/edit_dbweave_pattern.html:468
 #: src/textileplatform/templates/edit_jbead_pattern.html:161
 msgid "Decide later"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:491
+#: src/textileplatform/templates/edit_dbweave_pattern.html:493
 msgid "Shaft up"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:492
+#: src/textileplatform/templates/edit_dbweave_pattern.html:494
 msgid "Shaft down"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:493
+#: src/textileplatform/templates/edit_dbweave_pattern.html:495
 msgid "Treadle left"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:494
+#: src/textileplatform/templates/edit_dbweave_pattern.html:496
 msgid "Treadle right"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:497
+#: src/textileplatform/templates/edit_dbweave_pattern.html:499
 #: src/textileplatform/templates/edit_jbead_pattern.html:76
 msgid "Mirror horizontal"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:498
+#: src/textileplatform/templates/edit_dbweave_pattern.html:500
 #: src/textileplatform/templates/edit_jbead_pattern.html:77
 msgid "Mirror vertical"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:500
+#: src/textileplatform/templates/edit_dbweave_pattern.html:502
 msgid "Central symmetry"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:503
+#: src/textileplatform/templates/edit_dbweave_pattern.html:505
 msgid "Highlight"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:510
 #: src/textileplatform/templates/edit_dbweave_pattern.html:512
+#: src/textileplatform/templates/edit_dbweave_pattern.html:514
 #: src/textileplatform/templates/edit_jbead_pattern.html:196
 #: src/textileplatform/templates/edit_jbead_pattern.html:198
 msgid "Public - visible to all users"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:511
-#: src/textileplatform/templates/edit_dbweave_pattern.html:512
+#: src/textileplatform/templates/edit_dbweave_pattern.html:513
+#: src/textileplatform/templates/edit_dbweave_pattern.html:514
 #: src/textileplatform/templates/edit_jbead_pattern.html:197
 #: src/textileplatform/templates/edit_jbead_pattern.html:198
 msgid "Private - not visible to other users"
 msgstr ""
 
-#: src/textileplatform/templates/edit_dbweave_pattern.html:516
+#: src/textileplatform/templates/edit_dbweave_pattern.html:518
 #: src/textileplatform/templates/edit_jbead_pattern.html:202
 msgid "Clone"
 msgstr ""

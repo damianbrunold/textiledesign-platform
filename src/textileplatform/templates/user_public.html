@@ -66,7 +66,7 @@
         <div class="row-name"><a href="{{ edit_url }}">{{ p.label }}</a></div>
         <div class="row-meta">
             <span class="meta-dim">{% if p.pattern_width and p.pattern_height %}{{ p.pattern_width }}×{{ p.pattern_height }}{% else %}—{% endif %}</span>
-            <span class="meta-rap">{% if p.rapport_width or p.rapport_height %}r:{% if p.rapport_width %}{{ p.rapport_width }}{% else %}—{% endif %}×{% if p.rapport_height %}{{ p.rapport_height }}{% else %}—{% endif %}{% else %}—{% endif %}</span>
+            <span class="meta-rap">{% if p.rapport_height and not p.rapport_width %}r:{{ p.rapport_height }}{% elif p.rapport_width or p.rapport_height %}r:{% if p.rapport_width %}{{ p.rapport_width }}{% else %}—{% endif %}×{% if p.rapport_height %}{{ p.rapport_height }}{% else %}—{% endif %}{% else %}—{% endif %}</span>
             <span class="meta-author">{{ p.author or '—' }}</span>
             <span class="meta-org">{{ p.organization or '—' }}</span>
             <span class="meta-modified">{{ p.modified[:10] if p.modified else '—' }}</span>

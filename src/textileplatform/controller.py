@@ -1679,6 +1679,7 @@ def upload_pattern():
         # single-file upload directly into the editor (which will
         # auto-save to capture thumbnail + rapport).
         imported = []  # list of (saved_name, owner_name)
+        failed = []  # file names that could not be read
         for idx, file in enumerate(files):
             if not name or len(files) > 1:
                 if file.filename:
@@ -1689,27 +1690,35 @@ def upload_pattern():
             data = bytedata.decode("latin-1", "ignore")
             saved = None
             saved_kind = None
-            if data.startswith("@dbw3:"):
-                saved = add_weave_pattern(parse_dbw_data(data, name), g.user)
-                saved_kind = "DB-WEAVE Pattern"
-            elif data.startswith("(jbb"):
-                saved = add_bead_pattern(parse_jbb_data(data, name), g.user)
-                saved_kind = "JBead Pattern"
-            else:
-                try:
+            try:
+                if data.startswith("@dbw3:"):
+                    saved = add_weave_pattern(
+                        parse_dbw_data(data, name), g.user
+                    )
+                    saved_kind = "DB-WEAVE Pattern"
+                elif data.startswith("(jbb"):
+                    saved = add_bead_pattern(
+                        parse_jbb_data(data, name), g.user
+                    )
+                    saved_kind = "JBead Pattern"
+                else:
                     jsondata = json.loads(bytedata.decode("utf-8", "ignore"))
+                    if not isinstance(jsondata, dict):
+                        raise ValueError("not a pattern")
+                    if "name" not in jsondata:
+                        jsondata["name"] = name
                     if "max_shafts" in jsondata:
-                        if "name" not in jsondata:
-                            jsondata["name"] = name
                         saved = add_weave_pattern(jsondata, g.user)
                         saved_kind = "DB-WEAVE Pattern"
                     else:
-                        if "name" not in jsondata:
-                            jsondata["name"] = name
                         saved = add_bead_pattern(jsondata, g.user)
                         saved_kind = "JBead Pattern"
-                except Exception:
-                    pass  # TODO handle errors
+            except Exception:
+                logging.exception("upload of %r failed", file.filename)
+                db.session.rollback()
+                saved = None
+            if not saved:
+                failed.append(file.filename or name)
             if saved:
                 imported.append(saved)
                 _bump_pattern_edit(saved_kind)
@@ -1729,9 +1738,19 @@ def upload_pattern():
                             group_id=extra_group.id,
                         ))
                         _touch_group(extra_group)
+                # Commit per file so a later failing file (which rolls
+                # back the session) cannot discard this assignment.
+                db.session.commit()
         if imported:
             db.session.commit()
-        if len(imported) == 1:
+        if failed:
+            flash(gettext(
+                "These files could not be read as patterns: %(names)s",
+                names=", ".join(failed),
+            ))
+        # Jump straight into the editor only for a clean single import;
+        # with failures, stay on the listing so the message is visible.
+        if len(imported) == 1 and not failed:
             return redirect(url_for(
                 "edit_pattern",
                 user_name=g.user.name,

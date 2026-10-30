@@ -228,9 +228,10 @@ class TestRegistrationCaptcha:
         r = csrf_disabled_client.get("/auth/register")
         answer = _captcha_answer_from(r.get_data(as_text=True))
         r = csrf_disabled_client.post("/auth/register", data={
-            "name": "newuser",
+            "label": "newuser",
             "email": "newuser@example.com",
             "password": "correcthorse1",
+            "confirm_password": "correcthorse1",
             "x": str(answer),
         }, follow_redirects=False)
         # On success the verification_pending template is rendered.

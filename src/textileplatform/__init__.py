@@ -14,6 +14,7 @@ import textileplatform.controller  # noqa
 from textileplatform.controller import _delete_user_data
 
 import datetime
+import json
 import os
 
 import click
@@ -567,6 +568,25 @@ def restore_pattern_salvage(user_name, pattern_name):
         print(f"restored {user.name}/{pattern.name}")
 
 
+@click.command("refresh-pattern-metadata")
+def refresh_pattern_metadata():
+    """Recompute the list-view metadata (size, repeat, author, ...) of
+    every pattern from its stored contents. Does not touch the
+    modification date, so it is safe to run multiple times."""
+    from textileplatform.patterns import apply_pattern_metadata
+    with app.app_context():
+        count = 0
+        for p in Pattern.query.order_by(Pattern.id).all():
+            try:
+                apply_pattern_metadata(p, json.loads(p.contents or "{}"))
+                count += 1
+            except Exception as exc:
+                owner = p.owner.name if p.owner else "?"
+                print(f"failed for {owner}/{p.name}: {exc}")
+        db.session.commit()
+        print(f"refreshed {count} pattern(s)")
+
+
 @click.command("ensure-primary-groups")
 def ensure_primary_groups():
     with app.app_context():
@@ -613,5 +633,6 @@ app.cli.add_command(clean_up_orphan_personal_groups)
 app.cli.add_command(seed_starter_patterns_cmd)
 app.cli.add_command(list_pattern_salvage)
 app.cli.add_command(restore_pattern_salvage)
+app.cli.add_command(refresh_pattern_metadata)
 
 application = app

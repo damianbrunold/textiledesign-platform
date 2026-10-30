@@ -3509,6 +3509,7 @@ function drawToolPreview() {
 
 // Commit the in-flight tool drag as a single undoable command.
 function _finishToolDrag() {
+    if (readonly) { toolDrag = null; return; }
     if (!toolDrag || !toolDrag.active) { toolDrag = null; return; }
     const p = toolDrag.pane_info;
     const grid = p.grid;
@@ -6064,6 +6065,10 @@ function _recalcFor(kind) {
 }
 
 function _applyEnteringChange(i, newShaft) {
+    // Read-only views (someone else's pattern) must not change cells,
+    // neither by mouse nor by keyboard. All cell edits go through
+    // these _apply* helpers, so the guard lives here.
+    if (readonly) return;
     if (!commandBus) {
         pattern.entering.set_shaft(i, newShaft);
         pattern.recalc_weave();
@@ -6078,6 +6083,7 @@ function _applyEnteringChange(i, newShaft) {
 }
 
 function _applyGridToggle(grid, i, j, defaultValue, recalcKind) {
+    if (readonly) return;
     const current = grid.get(i, j);
     // Toggling an "off" cell (zero or stored-as-negative) always uses
     // the *currently active* range, not the value the cell previously
@@ -6153,6 +6159,7 @@ function _applyWeaveCellWithRapport(seedI, seedJ, newValue, recalcKind) {
 }
 
 function _applyCellSet(grid, i, j, newValue, recalcKind) {
+    if (readonly) return;
     if (!commandBus) {
         grid.set(i, j, newValue);
         if (recalcKind === "from_weave") pattern.recalc_from_weave(settings);
@@ -6170,6 +6177,7 @@ function _applyCellSet(grid, i, j, newValue, recalcKind) {
 // Treadling single-mode: clear row, then optionally set the clicked cell.
 // Captured as one command spanning the whole row.
 function _applyTreadlingSingle(i, j) {
+    if (readonly) return;
     const grid = pattern.treadling;
     const wasSet = grid.get(i, j) > 0;
     if (!commandBus) {
@@ -6598,11 +6606,13 @@ function showOverviewWindow() {
         }
     }
 
+    const i18n = _getI18n();
+    const L = (k, fallback) => (i18n.actions[k] && i18n.actions[k].label) || fallback;
     const m = Modal.open({
-        title: "Overview",
+        title: L("overview.title", "Overview"),
         className: "tx-modal-fill",
         body,
-        buttons: [{ label: "Close", role: "cancel" }],
+        buttons: [{ label: L("overview.close", "Close"), role: "cancel" }],
         onClose: () => {
             window.removeEventListener("resize", onResize);
             _overviewModal = null;
@@ -11073,8 +11083,10 @@ function showOptionsDialog(global) {
                 <label><input id="tx-opt-rtl" type="checkbox"> ${L("opt.work-rtl", "Work direction in threading and pattern from right to left")}</label>
                 <label><input id="tx-opt-ttb" type="checkbox"> ${L("opt.work-ttb", "Work direction in threading and tie-up from top to bottom")}</label>
                 <label><input id="tx-opt-fewr" type="checkbox"> ${L("opt.fe-with-raster", "Color effect with grid")}</label>
-                <label><input id="tx-opt-altpal" type="checkbox"> ${L("opt.alt-palette", "Use alternate color palette")}</label>
-                <label><input id="tx-opt-altpeg" type="checkbox"> ${L("opt.alt-pegplan", "Use alternate pegplan view")}</label>
+                <!-- Not implemented yet (see _PREFS_DEFAULTS): hidden, but
+                     kept so the values still round-trip through the dialog. -->
+                <label style="display:none"><input id="tx-opt-altpal" type="checkbox"> ${L("opt.alt-palette", "Use alternate color palette")}</label>
+                <label style="display:none"><input id="tx-opt-altpeg" type="checkbox"> ${L("opt.alt-pegplan", "Use alternate pegplan view")}</label>
             </div>
         </div>
         <div class="tx-tab-pane" data-pane="symbols" style="display:none;padding:0.6rem 0">

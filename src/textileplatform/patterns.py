@@ -18,6 +18,33 @@ def _truncate(value, n):
     return str(value)[:n] or None
 
 
+def _bead_repeat(model):
+    """Shortest repeat (in beads) of a JBead model, or None if empty.
+
+    Mirrors BeadList.updateRepeat in jbead.js: beads are read row by
+    row from the bottom, up to the highest used row, and the repeat is
+    the shortest period that matches the whole used area.
+    """
+    if not isinstance(model, list) or not model:
+        return None
+    if not all(isinstance(row, list) for row in model):
+        return None
+    used_h = 0
+    for j, row in enumerate(model):
+        if any(c for c in row):
+            used_h = j + 1
+    if used_h == 0:
+        return None
+    beads = [c for row in model[:used_h] for c in row]
+    n = len(beads)
+    for i in range(1, n):
+        if beads[i] != beads[0]:
+            continue
+        if all(beads[k % i] == beads[k] for k in range(i + 1, n)):
+            return i
+    return n
+
+
 def extract_pattern_metadata(pattern_dict, pattern_type):
     """Pull list-view fields out of the pattern JSON.
 
@@ -97,6 +124,10 @@ def extract_pattern_metadata(pattern_dict, pattern_type):
                         md["pattern_width"] = len(first)
                     md["pattern_height"] = used_h
             repeat = pattern_dict.get("repeat")
+            if not (isinstance(repeat, int) and repeat > 0):
+                # Uploaded, cloned or older patterns carry no repeat;
+                # derive it from the model like the editor does.
+                repeat = _bead_repeat(model)
             if isinstance(repeat, int) and repeat > 0:
                 md["rapport_height"] = repeat
     except Exception:

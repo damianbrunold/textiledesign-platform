@@ -2735,8 +2735,12 @@ function savePatternData(data, pattern) {
     }
     data.model = rows;
     // Persist the detected repeat length so the server can index it.
-    if (Number.isInteger(pattern.repeat) && pattern.repeat > 0) {
-        data.repeat = pattern.repeat;
+    // The repeat lives on the bead list, not on the pattern.
+    const repeat = beadlist ? beadlist.repeat : null;
+    if (Number.isInteger(repeat) && repeat > 0) {
+        data.repeat = repeat;
+    } else {
+        delete data.repeat;
     }
 }
 
