@@ -40,6 +40,7 @@ from textileplatform.exportcommon import (
     BLACK, WHITE,
     DrawTarget, PILTarget, SVGTarget, PDFTargetNoFlip,
     TooLargeError,
+    pdf_font,
     page_size as _page_size,
     svg_document,
 )
@@ -568,7 +569,7 @@ class BeadListPart(PartPrinter):
 
 # Approximate character widths for our default body / title fonts. We
 # don't have the PDF/raster font metrics at layout time, so we use a
-# coarse pt-per-char estimate based on Helvetica/DejaVu averages
+# coarse pt-per-char estimate (average glyph widths)
 # (≈ 0.55 × font-size for digits/lowercase). This is the same trick
 # the desktop uses indirectly via its FontMetrics estimator.
 _CHAR_W_BODY = _FONT_SIZE * 0.65
@@ -785,7 +786,7 @@ def _draw_page_header(c, title, page_idx, total_pages, page_w, top,
     all, and putting the filename inside ReportInfos)."""
     if total_pages <= 1 and not include_title:
         return
-    c.setFont("Helvetica", _HEADER_FONT_SIZE)
+    c.setFont(pdf_font(), _HEADER_FONT_SIZE)
     c.setFillColorRGB(0, 0, 0)
     parts = []
     if include_title and title:
@@ -820,7 +821,7 @@ def _draw_print_header_footer(c, data, title, page_idx, total_pages,
     footer = expand_header_tokens(
         footer_tpl, data, title, page_idx + 1, total_pages,
     )
-    c.setFont("Helvetica", _HEADER_FONT_SIZE)
+    c.setFont(pdf_font(), _HEADER_FONT_SIZE)
     c.setFillColorRGB(0, 0, 0)
     if header:
         c.drawString(margin, page_h - margin / 2, header)

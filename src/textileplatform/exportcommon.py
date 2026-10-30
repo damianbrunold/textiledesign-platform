@@ -8,7 +8,28 @@ Pillow / SVG / reportlab back-ends without circular imports.
 
 from __future__ import annotations
 
+import os
 from xml.sax.saxutils import escape as xml_escape
+
+_FONT_DIR = os.path.join(os.path.dirname(__file__), "static", "fonts")
+
+# Text font for PDF output: Carlito (bundled, SIL OFL, also the site's
+# web font) covers Latin, Greek and Cyrillic; the PDF core font
+# Helvetica covered Latin-1 only. Characters outside Carlito (e.g. CJK,
+# Arabic) still print as empty boxes.
+PDF_FONT = "Carlito"
+PDF_CAP_HEIGHT = 0.64   # Carlito cap height as a fraction of font size
+
+
+def pdf_font():
+    """Register the bundled PDF text font (once) and return its name."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    if PDF_FONT not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont(
+            PDF_FONT, os.path.join(_FONT_DIR, "Carlito-Regular.ttf"),
+        ))
+    return PDF_FONT
 
 
 class TooLargeError(ValueError):
@@ -166,6 +187,8 @@ def _pil_font(size):
         "/Library/Fonts/Arial.ttf",
         "/System/Library/Fonts/Helvetica.ttc",
         "C:/Windows/Fonts/arial.ttf",
+        # Bundled, so there is always a font with Cyrillic.
+        os.path.join(_FONT_DIR, "Carlito-Regular.ttf"),
     ]
     font = None
     for path in candidates:
@@ -408,18 +431,18 @@ class PDFTarget(DrawTarget):
     def text_centered(self, x, y, w, h, text, color):
         self._set_color(color, fill=True)
         size = max(4, h - 4)
-        self.c.setFont("Helvetica", size)
+        self.c.setFont(pdf_font(), size)
         # Place the baseline so cap-height glyphs sit centered in
-        # [y, y+h]. cap-height ≈ 0.7 × font size for Helvetica/Arial.
-        cap_h = 0.7 * size
+        # [y, y+h].
+        cap_h = PDF_CAP_HEIGHT * size
         baseline = y + (h + cap_h) / 2
         self.c.drawCentredString(x + w / 2, self._y(baseline), text)
 
     def text_left(self, x, y, h, text, color):
         self._set_color(color, fill=True)
         size = max(4, h - 4)
-        self.c.setFont("Helvetica", size)
-        cap_h = 0.7 * size
+        self.c.setFont(pdf_font(), size)
+        cap_h = PDF_CAP_HEIGHT * size
         baseline = y + (h + cap_h) / 2
         self.c.drawString(x, self._y(baseline), text)
 
@@ -473,24 +496,24 @@ class PDFTargetNoFlip(DrawTarget):
     def text_centered(self, x, y, w, h, text, color):
         self._set_color(color, fill=True)
         size = max(4, h - 4)
-        cap_h = 0.7 * size
+        cap_h = PDF_CAP_HEIGHT * size
         baseline = y + (h + cap_h) / 2
         # Y is flipped via negative scale; flip back locally so text
         # draws right-side up.
         self.c.saveState()
         self.c.scale(1, -1)
-        self.c.setFont("Helvetica", size)
+        self.c.setFont(pdf_font(), size)
         self.c.drawCentredString(x + w / 2, -baseline, text)
         self.c.restoreState()
 
     def text_left(self, x, y, h, text, color):
         self._set_color(color, fill=True)
         size = max(4, h - 4)
-        cap_h = 0.7 * size
+        cap_h = PDF_CAP_HEIGHT * size
         baseline = y + (h + cap_h) / 2
         self.c.saveState()
         self.c.scale(1, -1)
-        self.c.setFont("Helvetica", size)
+        self.c.setFont(pdf_font(), size)
         self.c.drawString(x, -baseline, text)
         self.c.restoreState()
 

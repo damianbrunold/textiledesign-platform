@@ -67,7 +67,7 @@ pybabel compile -d src/textileplatform/translations   # the .mo is committed
 - **`patterns.py`** — `add_weave_pattern`, `add_bead_pattern`, `clone_pattern`, `primary_group`, list metadata extraction (`apply_pattern_metadata`), source formatting.
 - **`validation.py`** — `validate_pattern(contents, pattern_type)`: shape and size limits for pattern JSON; applied on save, upload, clone, export, print and legacy download. Limits are at least what the editors allow.
 - **`weavepattern.py`** / **`beadpattern.py`** — `.dbw` / `.jbb` import and export. They follow the desktop apps' formats; the sources are in the sibling repositories `../dbweave` (`src/io/fileformat.cpp`, `src/ui/properties.cpp`) and `../jbead` (`src/io/objectmodel.cpp`, `jbeadmemento.cpp`). `beadpattern.smallest_period` is the bead repeat.
-- **`export.py`** / **`beadexport.py`** / **`exportcommon.py`** — PNG / JPEG / SVG / PDF export and multi-page print (Pillow, reportlab). Work is bounded (cell budget, raster pixel cap, page / bead limits); `TooLargeError` becomes a 400.
+- **`export.py`** / **`beadexport.py`** / **`exportcommon.py`** — PNG / JPEG / SVG / PDF export and multi-page print (Pillow, reportlab). Work is bounded (cell budget, raster pixel cap, page / bead limits); `TooLargeError` becomes a 400. PDF text uses the bundled Carlito font (`exportcommon.pdf_font`): Latin, Greek and Cyrillic; CJK and Arabic are not covered yet.
 - **`messaging.py`** — Direct and group conversations.
 - **`mail.py`** — Mail via localhost SMTP (verification, recovery, notifications).
 - **`support.py`** — The `support` admin account (`SUPPORT_USERNAME`).

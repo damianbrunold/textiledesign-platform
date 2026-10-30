@@ -34,6 +34,7 @@ from textileplatform.exportcommon import (
     DrawTarget, PILTarget, SVGTarget, PDFTarget, PDFTargetNoFlip,
     TooLargeError,
     paint_cell as _paint_cell,
+    pdf_font,
     page_size as _page_size,
     svg_document,
 )
@@ -1084,7 +1085,7 @@ def print_pdf(data, title=None,
             page_x_pt = col * paint_w
             page_y_pt = row * paint_h
             c.saveState()
-            c.setFont("Helvetica", 8)
+            c.setFont(pdf_font(), 8)
             c.setFillColorRGB(0, 0, 0)
             page_idx = col + 1 + row * cols
             header = expand_header_tokens(

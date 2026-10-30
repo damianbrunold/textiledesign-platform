@@ -258,3 +258,34 @@ class TestUploadDecoding:
         _login_as(csrf_disabled_client, user)
         r = csrf_disabled_client.get("/alice/broken/download/legacy")
         assert r.status_code == 400
+
+
+# ---------- PDF text font --------------------------------------------
+
+
+class TestPdfFont:
+    """PDF text used the core font Helvetica (Latin-1 only), so Cyrillic
+    pattern names, authors and bead symbols printed as boxes."""
+
+    def test_bundled_font_covers_cyrillic_and_romanian(self):
+        from reportlab.pdfbase import pdfmetrics
+        from textileplatform.exportcommon import pdf_font
+        face = pdfmetrics.getFont(pdf_font()).face
+        for ch in "Бусы Ана Петрова жщ ăîșț Ελληνικά":
+            assert ord(ch) in face.charToGlyph or ch == " ", ch
+
+    def test_pdfs_embed_the_font(self, app):
+        from textileplatform import export
+        bead = _bead()
+        bead.update(author="Ана", view={"draw-symbols": True,
+                                        "symbols": "·жщ"})
+        weave = _weave()
+        weave["header_text"] = "Узор &Pattern"
+        with app.test_request_context():
+            pdfs = [
+                export.print_pdf(weave, title="Узор"),
+                beadexport.print_pdf(bead, title="Бусы"),
+                beadexport.export_pdf(bead, title="Бусы"),
+            ]
+        for pdf in pdfs:
+            assert b"+Carlito" in pdf
