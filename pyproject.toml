@@ -27,6 +27,9 @@ dependencies = [
     "reportlab>=4.2",
     "Pillow>=11.0",
     "psutil>=6.0",
+    # Arabic / Hebrew text in PDF and image exports.
+    "arabic-reshaper>=3.0",
+    "python-bidi>=0.6",
 ]
 
 [project.optional-dependencies]

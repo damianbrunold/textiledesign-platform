@@ -40,7 +40,7 @@ from textileplatform.exportcommon import (
     BLACK, WHITE,
     DrawTarget, PILTarget, SVGTarget, PDFTargetNoFlip,
     TooLargeError,
-    pdf_font,
+    draw_pdf_text,
     page_size as _page_size,
     svg_document,
 )
@@ -786,7 +786,6 @@ def _draw_page_header(c, title, page_idx, total_pages, page_w, top,
     all, and putting the filename inside ReportInfos)."""
     if total_pages <= 1 and not include_title:
         return
-    c.setFont(pdf_font(), _HEADER_FONT_SIZE)
     c.setFillColorRGB(0, 0, 0)
     parts = []
     if include_title and title:
@@ -795,7 +794,8 @@ def _draw_page_header(c, title, page_idx, total_pages, page_w, top,
         parts.append(f"{page_idx + 1} / {total_pages}")
     if not parts:
         return
-    c.drawString(_BORDER, top - _HEADER_FONT_SIZE, "    ".join(parts))
+    draw_pdf_text(c, _BORDER, top - _HEADER_FONT_SIZE,
+                  "    ".join(parts), _HEADER_FONT_SIZE)
 
 
 # Default jbead header mirrors the weave default but with the JBead
@@ -821,15 +821,16 @@ def _draw_print_header_footer(c, data, title, page_idx, total_pages,
     footer = expand_header_tokens(
         footer_tpl, data, title, page_idx + 1, total_pages,
     )
-    c.setFont(pdf_font(), _HEADER_FONT_SIZE)
     c.setFillColorRGB(0, 0, 0)
     if header:
-        c.drawString(margin, page_h - margin / 2, header)
+        draw_pdf_text(c, margin, page_h - margin / 2, header,
+                      _HEADER_FONT_SIZE)
     if total_pages > 1:
-        c.drawRightString(page_w - margin, page_h - margin / 2,
-                          f"{page_idx + 1} / {total_pages}")
+        draw_pdf_text(c, page_w - margin, page_h - margin / 2,
+                      f"{page_idx + 1} / {total_pages}",
+                      _HEADER_FONT_SIZE, "right")
     if footer:
-        c.drawString(margin, margin / 2, footer)
+        draw_pdf_text(c, margin, margin / 2, footer, _HEADER_FONT_SIZE)
 
 
 def _paginated_pdf(data, title, full_pattern, fit_single_page):

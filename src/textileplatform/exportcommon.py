@@ -9,27 +9,93 @@ Pillow / SVG / reportlab back-ends without circular imports.
 from __future__ import annotations
 
 import os
+import re
 from xml.sax.saxutils import escape as xml_escape
 
 _FONT_DIR = os.path.join(os.path.dirname(__file__), "static", "fonts")
 
-# Text font for PDF output: Carlito (bundled, SIL OFL, also the site's
-# web font) covers Latin, Greek and Cyrillic; the PDF core font
-# Helvetica covered Latin-1 only. Characters outside Carlito (e.g. CJK,
-# Arabic) still print as empty boxes.
-PDF_FONT = "Carlito"
+# Text fonts for PDF (and non-Latin-1 raster) output, all bundled; each
+# character is drawn with the first font that has a glyph for it.
+TEXT_FONTS = (
+    # Latin, Greek, Cyrillic — the site's web font (SIL OFL).
+    ("Carlito", "Carlito-Regular.ttf"),
+    # Arabic (incl. the presentation forms shaping produces), Hebrew and
+    # many symbols (Bitstream Vera licence).
+    ("DejaVuSans", "DejaVuSans.ttf"),
+    # Chinese / Japanese ideographs and kana (Apache 2.0).
+    ("DroidSansFallback", "DroidSansFallbackFull.ttf"),
+)
 PDF_CAP_HEIGHT = 0.64   # Carlito cap height as a fraction of font size
 
+_text_fonts = None
 
-def pdf_font():
-    """Register the bundled PDF text font (once) and return its name."""
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    if PDF_FONT not in pdfmetrics.getRegisteredFontNames():
-        pdfmetrics.registerFont(TTFont(
-            PDF_FONT, os.path.join(_FONT_DIR, "Carlito-Regular.ttf"),
-        ))
-    return PDF_FONT
+
+def _fonts():
+    """[(name, path, codepoints)] for TEXT_FONTS, registered with
+    reportlab on first use."""
+    global _text_fonts
+    if _text_fonts is None:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+        loaded = []
+        for name, filename in TEXT_FONTS:
+            path = os.path.join(_FONT_DIR, filename)
+            font = TTFont(name, path)
+            pdfmetrics.registerFont(font)
+            loaded.append((name, path, frozenset(font.face.charToGlyph)))
+        _text_fonts = loaded
+    return _text_fonts
+
+
+# Right-to-left scripts (Hebrew, Arabic, Syriac, … and their
+# presentation forms).
+_RTL = re.compile("[֐-ࣿיִ-﷿ﹰ-﻿]")
+
+
+def visual_text(text):
+    """``text`` ready to be drawn left to right: Arabic letters joined
+    into their contextual forms and right-to-left runs in display order.
+    The paragraph direction is left to right, like the documents, so
+    e.g. a bead count "100 م" keeps the number first. Text without
+    right-to-left characters is returned unchanged."""
+    text = str(text)
+    if not _RTL.search(text):
+        return text
+    import arabic_reshaper
+    from bidi import get_display
+    return get_display(arabic_reshaper.reshape(text), base_dir="L")
+
+
+def text_runs(text):
+    """``text`` in display order, split into (font name, font path,
+    chunk) runs so every character uses a font that has it."""
+    fonts = _fonts()
+    runs = []
+    for ch in visual_text(text):
+        name, path, _ = next(
+            (f for f in fonts if ord(ch) in f[2]), fonts[0])
+        if runs and runs[-1][0] == name:
+            runs[-1][2] += ch
+        else:
+            runs.append([name, path, ch])
+    return [tuple(run) for run in runs]
+
+
+def draw_pdf_text(c, x, y, text, size, align="left"):
+    """Draw ``text`` on reportlab canvas ``c`` with its baseline at y,
+    using the text font chain; ``align`` is left, center or right."""
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    runs = text_runs(text)
+    widths = [stringWidth(chunk, name, size) for name, _, chunk in runs]
+    total = sum(widths)
+    if align == "center":
+        x -= total / 2
+    elif align == "right":
+        x -= total
+    for (name, _, chunk), width in zip(runs, widths):
+        c.setFont(name, size)
+        c.drawString(x, y, chunk)
+        x += width
 
 
 class TooLargeError(ValueError):
@@ -187,7 +253,7 @@ def _pil_font(size):
         "/Library/Fonts/Arial.ttf",
         "/System/Library/Fonts/Helvetica.ttc",
         "C:/Windows/Fonts/arial.ttf",
-        # Bundled, so there is always a font with Cyrillic.
+        # Bundled, so there is always a TrueType font.
         os.path.join(_FONT_DIR, "Carlito-Regular.ttf"),
     ]
     font = None
@@ -201,6 +267,21 @@ def _pil_font(size):
         font = ImageFont.load_default()
     _PIL_FONT_CACHE[key] = font
     return font
+
+
+def _is_latin1(text):
+    return all(ord(ch) < 256 for ch in str(text))
+
+
+def _pil_font_file(path, size):
+    """Font for pre-shaped text runs. Basic layout: with Raqm, Pillow
+    would apply bidi again and reverse the visual_text() result."""
+    key = (path, int(max(4, size)))
+    if key not in _PIL_FONT_CACHE:
+        from PIL import ImageFont
+        _PIL_FONT_CACHE[key] = ImageFont.truetype(
+            path, key[1], layout_engine=ImageFont.Layout.BASIC)
+    return _PIL_FONT_CACHE[key]
 
 
 class PILTarget(DrawTarget):
@@ -246,6 +327,9 @@ class PILTarget(DrawTarget):
         # the bbox's (left, top) at the given point, but for many fonts
         # the bbox's top isn't at y=0 (there's leading whitespace), so
         # without this correction text drifts a couple of pixels low.
+        if not _is_latin1(text):
+            self._text_runs(x, y, h, text, color, box_w=w)
+            return
         font = _pil_font(max(4, h - 4))
         try:
             bbox = self.draw.textbbox((0, 0), text, font=font)
@@ -258,7 +342,26 @@ class PILTarget(DrawTarget):
                         y + (h - th) // 2 - oy),
                        text, fill=color, font=font)
 
+    def _text_runs(self, x, y, h, text, color, box_w=None):
+        """Text beyond Latin-1 (Cyrillic, Arabic, CJK, …): drawn run by
+        run with the bundled font chain on a common baseline, centered
+        in ``box_w`` when given."""
+        size = max(4, h - 4)
+        runs = [(_pil_font_file(path, size), chunk)
+                for _, path, chunk in text_runs(text)]
+        widths = [font.getlength(chunk) for font, chunk in runs]
+        if box_w is not None:
+            x += (box_w - sum(widths)) / 2
+        baseline = y + (h + PDF_CAP_HEIGHT * size) / 2
+        for (font, chunk), width in zip(runs, widths):
+            self.draw.text((x, baseline), chunk, fill=color, font=font,
+                           anchor="ls")
+            x += width
+
     def text_left(self, x, y, h, text, color):
+        if not _is_latin1(text):
+            self._text_runs(x, y, h, text, color)
+            return
         font = _pil_font(max(4, h - 4))
         try:
             bbox = self.draw.textbbox((0, 0), text, font=font)
@@ -431,20 +534,19 @@ class PDFTarget(DrawTarget):
     def text_centered(self, x, y, w, h, text, color):
         self._set_color(color, fill=True)
         size = max(4, h - 4)
-        self.c.setFont(pdf_font(), size)
         # Place the baseline so cap-height glyphs sit centered in
         # [y, y+h].
         cap_h = PDF_CAP_HEIGHT * size
         baseline = y + (h + cap_h) / 2
-        self.c.drawCentredString(x + w / 2, self._y(baseline), text)
+        draw_pdf_text(self.c, x + w / 2, self._y(baseline), text, size,
+                      "center")
 
     def text_left(self, x, y, h, text, color):
         self._set_color(color, fill=True)
         size = max(4, h - 4)
-        self.c.setFont(pdf_font(), size)
         cap_h = PDF_CAP_HEIGHT * size
         baseline = y + (h + cap_h) / 2
-        self.c.drawString(x, self._y(baseline), text)
+        draw_pdf_text(self.c, x, self._y(baseline), text, size)
 
 
 class PDFTargetNoFlip(DrawTarget):
@@ -502,8 +604,7 @@ class PDFTargetNoFlip(DrawTarget):
         # draws right-side up.
         self.c.saveState()
         self.c.scale(1, -1)
-        self.c.setFont(pdf_font(), size)
-        self.c.drawCentredString(x + w / 2, -baseline, text)
+        draw_pdf_text(self.c, x + w / 2, -baseline, text, size, "center")
         self.c.restoreState()
 
     def text_left(self, x, y, h, text, color):
@@ -513,8 +614,7 @@ class PDFTargetNoFlip(DrawTarget):
         baseline = y + (h + cap_h) / 2
         self.c.saveState()
         self.c.scale(1, -1)
-        self.c.setFont(pdf_font(), size)
-        self.c.drawString(x, -baseline, text)
+        draw_pdf_text(self.c, x, -baseline, text, size)
         self.c.restoreState()
 
 

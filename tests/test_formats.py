@@ -260,32 +260,46 @@ class TestUploadDecoding:
         assert r.status_code == 400
 
 
-# ---------- PDF text font --------------------------------------------
+# ---------- PDF / image text in other scripts -----------------------
 
 
-class TestPdfFont:
-    """PDF text used the core font Helvetica (Latin-1 only), so Cyrillic
-    pattern names, authors and bead symbols printed as boxes."""
+class TestTextScripts:
+    """Export text used Helvetica (Latin-1 only); production has Cyrillic,
+    Chinese and Arabic pattern names, authors and bead symbols."""
 
-    def test_bundled_font_covers_cyrillic_and_romanian(self):
-        from reportlab.pdfbase import pdfmetrics
-        from textileplatform.exportcommon import pdf_font
-        face = pdfmetrics.getFont(pdf_font()).face
-        for ch in "Бусы Ана Петрова жщ ăîșț Ελληνικά":
-            assert ord(ch) in face.charToGlyph or ch == " ", ch
+    def test_each_script_gets_a_font_that_has_it(self):
+        from textileplatform.exportcommon import text_runs
+        fonts = {chunk: name for name, _, chunk in text_runs("Ана 云的花纹")}
+        assert fonts == {"Ана ": "Carlito", "云的花纹": "DroidSansFallback"}
 
-    def test_pdfs_embed_the_font(self, app):
+    def test_arabic_is_shaped_and_reordered(self):
+        from textileplatform.exportcommon import text_runs, visual_text
+        shaped = visual_text("تصميم")
+        # Contextual presentation forms, last letter first for
+        # left-to-right drawing.
+        assert shaped == "ﻢﻴﻤﺼﺗ"
+        assert text_runs("تصميم")[0][0] == "DejaVuSans"
+        assert visual_text("Muster 2") == "Muster 2"
+
+    def test_pdfs_embed_the_needed_fonts(self, app):
         from textileplatform import export
         bead = _bead()
-        bead.update(author="Ана", view={"draw-symbols": True,
-                                        "symbols": "·жщ"})
+        bead.update(author="Ана", organization="تصميم",
+                    view={"draw-symbols": True, "symbols": "·жщ"})
         weave = _weave()
-        weave["header_text"] = "Узор &Pattern"
+        weave["header_text"] = "云的花纹 &Pattern"
         with app.test_request_context():
-            pdfs = [
-                export.print_pdf(weave, title="Узор"),
-                beadexport.print_pdf(bead, title="Бусы"),
-                beadexport.export_pdf(bead, title="Бусы"),
-            ]
-        for pdf in pdfs:
-            assert b"+Carlito" in pdf
+            weave_pdf = export.print_pdf(weave, title="تصميم")
+            bead_pdf = beadexport.print_pdf(bead, title="星空表带")
+        for pdf in (weave_pdf, bead_pdf):
+            for font in (b"+Carlito", b"+DejaVuSans", b"+DroidSansFallback"):
+                assert font in pdf
+
+    def test_images_with_other_scripts(self, app):
+        from PIL import Image
+        bead = _bead()
+        bead.update(name="星空表带", author="تصميم",
+                    view={"draw-symbols": True, "symbols": "·云م"})
+        with app.test_request_context():
+            png = beadexport.export_png(bead)
+        assert Image.open(io.BytesIO(png)).size[0] > 100

@@ -34,7 +34,7 @@ from textileplatform.exportcommon import (
     DrawTarget, PILTarget, SVGTarget, PDFTarget, PDFTargetNoFlip,
     TooLargeError,
     paint_cell as _paint_cell,
-    pdf_font,
+    draw_pdf_text,
     page_size as _page_size,
     svg_document,
 )
@@ -1085,7 +1085,6 @@ def print_pdf(data, title=None,
             page_x_pt = col * paint_w
             page_y_pt = row * paint_h
             c.saveState()
-            c.setFont(pdf_font(), 8)
             c.setFillColorRGB(0, 0, 0)
             page_idx = col + 1 + row * cols
             header = expand_header_tokens(
@@ -1095,14 +1094,13 @@ def print_pdf(data, title=None,
                 footer_tpl, data, title, page_idx, total_pages,
             )
             if header:
-                c.drawString(margin, page_h - margin / 2, header)
+                draw_pdf_text(c, margin, page_h - margin / 2, header, 8)
             if total_pages > 1:
                 page_str = f"{page_idx} / {total_pages}"
-                c.drawRightString(
-                    page_w - margin, page_h - margin / 2, page_str
-                )
+                draw_pdf_text(c, page_w - margin, page_h - margin / 2,
+                              page_str, 8, "right")
             if footer:
-                c.drawString(margin, margin / 2, footer)
+                draw_pdf_text(c, margin, margin / 2, footer, 8)
             p = c.beginPath()
             p.rect(margin, margin, paint_w, paint_h)
             c.clipPath(p, stroke=0, fill=0)
