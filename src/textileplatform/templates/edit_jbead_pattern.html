@@ -21,6 +21,9 @@
     <script src="{{ url_for('static', filename='js/legal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/colorpicker.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jbead.js') }}"></script>
+    {# ES modules: served from a versioned path so their relative imports
+       are cache-busted together (see module_url in __init__.py). #}
+    <script type="module" src="{{ module_url('bead/globals.js') }}"></script>
 {% endblock %}
 
 {% block header %}
