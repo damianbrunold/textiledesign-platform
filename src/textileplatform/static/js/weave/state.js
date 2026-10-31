@@ -30,8 +30,13 @@ export let readonly = false;
 // The undo history (ui/commands.js CommandBus).
 export let commandBus = null;
 
+// Drag state of the drawing tools (ui/tools.js rasterizes); null when
+// no tool drag is in progress.
+export let toolDrag = null;
+
 export function setPattern(p) { pattern = p; }
 export function setView(v) { view = v; }
 export function setSettings(s) { settings = s; }
 export function setReadonly(r) { readonly = r; }
 export function setCommandBus(b) { commandBus = b; }
+export function setToolDrag(d) { toolDrag = d; }
