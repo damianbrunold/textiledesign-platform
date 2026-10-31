@@ -10,6 +10,9 @@ import {
     updateFixedEntering,
 } from "./arrange.js";
 import {
+    ATLAS_OFFSETS, completeTwill, stampAtlas, stampTwill,
+} from "./generators.js";
+import {
     loadPatternData, loadSettings, storePatternData, storeSettings,
 } from "./io.js";
 import { Entering, Grid, Muster, Pattern } from "./model.js";
@@ -20,6 +23,7 @@ export function install(target) {
         loadPatternData, loadSettings, storePatternData, storeSettings,
         arrangeThreading, arrangeTreadling, recalcFixedEntering,
         updateFixedEntering,
+        ATLAS_OFFSETS, completeTwill, stampAtlas, stampTwill,
     });
 }
 

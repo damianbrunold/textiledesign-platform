@@ -5389,81 +5389,20 @@ function _swapSide() {
 }
 
 
-// ---- Twill completion (Ctrl+K) — port of utilities.cpp::FillKoeper -
-// Operates on the current selection in the weave pane: if the selection
-// is a single-column or single-row strip with at least one set cell,
-// extend it diagonally as a twill, advancing right (vertical seed) or
-// upward (horizontal seed).
+// ---- Twill completion (Ctrl+K) — weave/generators.js completeTwill --
 function _fillKoeper() {
     if (readonly) return;
     if (cursor.selected_part !== "weave") return;
-    const i1 = Math.min(cursor.x1, cursor.x2);
-    const i2 = Math.max(cursor.x1, cursor.x2);
-    const j1 = Math.min(cursor.y1, cursor.y2);
-    const j2 = Math.max(cursor.y1, cursor.y2);
-    const cr = settings.current_range;
+    const sel = {
+        i1: Math.min(cursor.x1, cursor.x2), i2: Math.max(cursor.x1, cursor.x2),
+        j1: Math.min(cursor.y1, cursor.y2), j2: Math.max(cursor.y1, cursor.y2),
+    };
     _fullSnapCommand("twill completion", () => {
-        if (i1 === i2) {
-            // Vertical seed → extend right.
-            const dy = j2 - j1;
-            if (dy <= 0) return;
-            const iStart = i1;
-            let iEnd = iStart + dy;
-            // Stop early if any column in [iStart+1..iEnd] already has a
-            // set cell within [j1..j2].
-            let i = iStart + 1;
-            for (; i <= iEnd && i < pattern.weave.width; i++) {
-                let blocked = false;
-                for (let j = j1; j <= j2; j++) {
-                    if (pattern.weave.get(i, j) > 0) { blocked = true; break; }
-                }
-                if (blocked) break;
-            }
-            iEnd = i - 1;
-            for (let ii = iStart + 1; ii <= iEnd; ii++) {
-                for (let j = j1; j <= j1 + dy; j++) {
-                    let jj = j - j1 - (ii - iStart);
-                    while (jj < 0) jj += dy + 1;
-                    while (jj > dy) jj -= dy + 1;
-                    if (pattern.weave.get(iStart, j1 + jj) > 0) {
-                        pattern.weave.set(ii, j, cr);
-                    }
-                }
-            }
-            // Select the resulting twill block (matches desktop, which
-            // updates selection.end.i to iEnd).
-            cursor.x1 = iStart; cursor.y1 = j1;
-            cursor.x2 = Math.min(iEnd, pattern.weave.width - 1);
-            cursor.y2 = j2;
-        } else if (j1 === j2) {
-            // Horizontal seed → extend upward.
-            const dx = i2 - i1;
-            if (dx <= 0) return;
-            const jStart = j1;
-            let jEnd = jStart + dx;
-            let j = jStart + 1;
-            for (; j <= jEnd && j < pattern.weave.height; j++) {
-                let blocked = false;
-                for (let i = i1; i <= i2; i++) {
-                    if (pattern.weave.get(i, j) > 0) { blocked = true; break; }
-                }
-                if (blocked) break;
-            }
-            jEnd = j - 1;
-            for (let jj = jStart + 1; jj <= jEnd; jj++) {
-                for (let i = i1; i <= i1 + dx; i++) {
-                    let ii = i - i1 - (jj - jStart);
-                    while (ii < 0) ii += dx + 1;
-                    while (ii > dx) ii -= dx + 1;
-                    if (pattern.weave.get(i1 + ii, jStart) > 0) {
-                        pattern.weave.set(i, jj, cr);
-                    }
-                }
-            }
-            cursor.x1 = i1; cursor.y1 = jStart;
-            cursor.x2 = i2;
-            cursor.y2 = Math.min(jEnd, pattern.weave.height - 1);
-        }
+        const done = completeTwill(pattern.weave, sel, settings.current_range);
+        // Nothing to complete (not a single column / row): leave the
+        // threading etc. alone, too.
+        if (!done) return;
+        _selectBlock(done);
         pattern.recalc_from_weave(settings);
     });
 }
@@ -9051,79 +8990,39 @@ function _applyArrangementHook(s) {
 // recalc_from_weave so entering / treadling / tieup / pegplan catch up.
 // Cursor must be on the weave pane.
 
-// Atlas / Satin patterns. Hard-coded offsets per the desktop.
-const _ATLAS_OFFSETS = {
-    5:  [0, 2, 4, 1, 3],
-    6:  [0, 2, 4, 1, 5, 3],
-    7:  [2, 6, 3, 0, 4, 1, 5],
-    8:  [2, 5, 0, 3, 6, 1, 4, 7],
-    9:  [0, 2, 4, 6, 8, 1, 3, 5, 7],
-    10: [0, 7, 4, 1, 8, 5, 2, 9, 6, 3],
-};
+// The stamping itself is in weave/generators.js.
 
 function _insertAtlas(n) {
     if (readonly) return;
     if (cursor.selected_part !== "weave") return;
-    const offsets = _ATLAS_OFFSETS[n];
-    if (!offsets) return;
+    if (!ATLAS_OFFSETS[n]) return;
     const posi = cursor.x1, posj = cursor.y1;
     _fullSnapCommand("atlas " + n, () => {
-        const cr = settings.current_range;
-        for (let di = 0; di < n; di++) {
-            const i = posi + di;
-            const j = posj + offsets[di];
-            if (i >= pattern.weave.width) continue;
-            if (j >= pattern.weave.height) continue;
-            pattern.weave.set(i, j, cr);
-        }
+        const sel = stampAtlas(pattern.weave, n, posi, posj,
+                               settings.current_range);
         // Place a square selection over the inserted block.
-        cursor.x1 = posi; cursor.y1 = posj;
-        cursor.x2 = Math.min(posi + n - 1, pattern.weave.width - 1);
-        cursor.y2 = Math.min(posj + n - 1, pattern.weave.height - 1);
+        _selectBlock(sel);
         pattern.recalc_from_weave(settings);
     });
 }
 
-// Köper / Twill: h cells per row "warp up" (positive cells) over a
-// period of n = h + s. Two cases mirror the desktop:
-//   h <= s : balanced or weft-sided variant — for each row i, fill
-//            columns [i .. i + h) modulo n.
-//   h > s  : warp-sided variant — for each row i, fill columns
-//            [i + s .. i + n) modulo n.
 function _insertKoeper(h, s) {
     if (readonly) return;
     if (cursor.selected_part !== "weave") return;
-    const n = h + s;
-    if (n <= 0) return;
+    if (h + s <= 0) return;
     const posi = cursor.x1, posj = cursor.y1;
     _fullSnapCommand("twill " + h + "/" + s, () => {
-        const cr = settings.current_range;
-        if (h <= s) {
-            for (let i = 0; i < n; i++) {
-                for (let j = i; j < i + h; j++) {
-                    const ii = posi + i;
-                    const jj = posj + (j % n);
-                    if (ii < pattern.weave.width && jj < pattern.weave.height) {
-                        pattern.weave.set(ii, jj, cr);
-                    }
-                }
-            }
-        } else {
-            for (let i = 0; i < n; i++) {
-                for (let j = i + s; j < i + n; j++) {
-                    const ii = posi + i;
-                    const jj = posj + (j % n);
-                    if (ii < pattern.weave.width && jj < pattern.weave.height) {
-                        pattern.weave.set(ii, jj, cr);
-                    }
-                }
-            }
-        }
-        cursor.x1 = posi; cursor.y1 = posj;
-        cursor.x2 = Math.min(posi + n - 1, pattern.weave.width - 1);
-        cursor.y2 = Math.min(posj + n - 1, pattern.weave.height - 1);
+        const sel = stampTwill(pattern.weave, h, s, posi, posj,
+                               settings.current_range);
+        _selectBlock(sel);
         pattern.recalc_from_weave(settings);
     });
+}
+
+function _selectBlock(sel) {
+    if (!sel) return;
+    cursor.x1 = sel.i1; cursor.y1 = sel.j1;
+    cursor.x2 = sel.i2; cursor.y2 = sel.j2;
 }
 
 
