@@ -120,9 +120,23 @@ describe("switchSide", () => {
         }
     });
 
+    // In pegplan mode a first or last used weft with every threaded
+    // shaft raised becomes empty and drops out of the next switch (it
+    // can't be told from "no weft"); everything else round-trips.
+    function edgeWeftFullyRaised(p) {
+        const { j1, j2 } = pegplanBounds(p);
+        if (j2 < j1) return false;
+        const threaded = new Set(p.entering.data.filter((s) => s > 0));
+        const full = (j) => [...threaded].every((s) => p.pegplan.get(s - 1, j) > 0);
+        return full(j1) || full(j2);
+    }
+
     function switchTwice(pegplan) {
-        for (let n = 0; n < 200; n++) {
+        let checked = 0;
+        for (let n = 0; n < 300; n++) {
             const p = randomPattern({ pegplan });
+            if (pegplan && edgeWeftFullyRaised(p)) continue;
+            checked++;
             const weave = positive(p.weave.data);
             const entering = [...p.entering.data];
             const colors = [...p.color_warp.data];
@@ -132,18 +146,41 @@ describe("switchSide", () => {
             expect([...p.entering.data]).toEqual(entering);
             expect([...p.color_warp.data]).toEqual(colors);
         }
+        expect(checked).toBeGreaterThan(150);
     }
 
     it("switching twice gives back the fabric", () => switchTwice(false));
 
-    // Known limitation: in pegplan mode the inverted area is the
-    // pegplan's used rectangle, recomputed on every switch. A weft with
-    // every shaft raised becomes empty (and an edge shaft column
-    // unused), so the second switch covers a smaller area and loses
-    // those cells. The tie-up mode takes the area from the treadling
-    // and threading, which the switch does not change.
-    it.fails("switching twice gives back the fabric (pegplan)",
+    it("switching twice gives back the fabric (pegplan)",
         () => switchTwice(true));
+
+    it("inverts only threaded shafts in pegplan mode", () => {
+        const p = new Pattern(2, 2, 3, 3, { isPegplan: () => true });
+        p.entering.set_shaft(0, 1);
+        p.entering.set_shaft(1, 2);   // shaft 3 not threaded
+        p.pegplan.set(0, 0, 1);
+        p.pegplan.set(2, 1, 1);
+        p.recalc_weave();
+        switchSide(p, 1, { pegplan: true });
+        expect([0, 1].map((s) => p.pegplan.get(s, 0) > 0)).toEqual([false, true]);
+        expect([0, 1].map((s) => p.pegplan.get(s, 1) > 0)).toEqual([true, true]);
+        expect(p.pegplan.get(2, 1)).toBe(1);   // untouched
+    });
+
+    it("drops a fully raised edge weft on the second switch (pegplan)", () => {
+        // Weft 1 has both threaded shafts raised: after the first switch
+        // it is empty and no longer part of the used wefts.
+        const p = new Pattern(2, 2, 2, 2, { isPegplan: () => true });
+        [1, 2].forEach((s, i) => p.entering.set_shaft(i, s));
+        p.pegplan.set(0, 0, 1);
+        p.pegplan.set(0, 1, 1);
+        p.pegplan.set(1, 1, 1);
+        p.recalc_weave();
+        switchSide(p, 1, { pegplan: true });
+        switchSide(p, 1, { pegplan: true });
+        expect([0, 1].map((s) => p.pegplan.get(s, 0) > 0)).toEqual([true, false]);
+        expect([0, 1].map((s) => p.pegplan.get(s, 1) > 0)).toEqual([false, false]);
+    });
 });
 
 describe("invertPegplan", () => {

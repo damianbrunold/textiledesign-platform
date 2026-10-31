@@ -71,16 +71,18 @@ export function pegplanBounds(pattern) {
 // centre. Recomputes the weave.
 export function switchSide(pattern, value, { pegplan = false } = {}) {
     if (pegplan) {
-        // The rectangle is computed once up front so the iteration isn't
-        // influenced by the mutations (the desktop's per-row
-        // IsEmptyTrittfolge check loses cells whose row goes empty
-        // mid-loop and breaks F11→F11 round-trips).
-        const { s1, s2, j1, j2 } = pegplanBounds(pattern);
-        if (s2 >= s1 && j2 >= j1) {
-            for (let j = j1; j <= j2; j++) {
-                for (let s = s1; s <= s2; s++) {
-                    pattern.pegplan.set(s, j, flip(pattern.pegplan.get(s, j), value));
-                }
+        // Every threaded shaft (the threading doesn't change, so a
+        // second switch covers the same shafts) within the used wefts.
+        // The weft range is computed once up front so the iteration
+        // isn't influenced by the mutations. A weft with every threaded
+        // shaft raised becomes empty, though, and drops out of the next
+        // switch's range when it is the first or last used one: in the
+        // pegplan alone it can't be told from "no weft".
+        const { j1, j2 } = pegplanBounds(pattern);
+        for (let j = j1; j <= j2; j++) {
+            for (let s = 0; s < pattern.pegplan.width; s++) {
+                if (isFreeShaft(pattern, s)) continue;
+                pattern.pegplan.set(s, j, flip(pattern.pegplan.get(s, j), value));
             }
         }
     } else {
