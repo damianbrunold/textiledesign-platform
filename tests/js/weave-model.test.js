@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
     Grid, Muster, Pattern,
 } from "../../src/textileplatform/static/js/weave/model.js";
+import { randomSource } from "./helpers/random.js";
 
 // Pattern and Muster from weave/model.js, used directly as an ES module.
 
@@ -166,12 +167,10 @@ describe("Pattern", () => {
         it("round-trips any weave", () => {
             // Deterministic pseudo-random weaves, values 1..3, some cells
             // switched off (negative = empty).
-            let seed = 7;
-            const rand = (n) => {
-                seed = (seed * 1103515245 + 12345) % 2147483648;
-                return seed % n;
-            };
-            for (let k = 0; k < 25; k++) {
+            // At most 9 warps / wefts, so 12 shafts / treadles suffice.
+            const rand = randomSource(7);
+            let nonEmpty = 0;
+            for (let k = 0; k < 200; k++) {
                 const w = 1 + rand(9), h = 1 + rand(9);
                 const p = new Pattern(w, h, 12, 12);
                 const before = [];
@@ -185,7 +184,10 @@ describe("Pattern", () => {
                 p.recalc_from_weave({});
                 p.recalc_weave();
                 expect([...p.weave.data]).toEqual(before);
+                if (before.some((v) => v > 0)) nonEmpty++;
             }
+            // The generator really produces varied weaves.
+            expect(nonEmpty).toBeGreaterThan(150);
         });
 
         it("rebuilds the pegplan instead in pegplan mode", () => {

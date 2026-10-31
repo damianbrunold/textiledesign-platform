@@ -6,6 +6,10 @@
 // Remove a name from here once no classic script refers to it.
 
 import {
+    arrangeThreading, arrangeTreadling, recalcFixedEntering,
+    updateFixedEntering,
+} from "./arrange.js";
+import {
     loadPatternData, loadSettings, storePatternData, storeSettings,
 } from "./io.js";
 import { Entering, Grid, Muster, Pattern } from "./model.js";
@@ -14,6 +18,8 @@ export function install(target) {
     Object.assign(target, {
         Entering, Grid, Muster, Pattern,
         loadPatternData, loadSettings, storePatternData, storeSettings,
+        arrangeThreading, arrangeTreadling, recalcFixedEntering,
+        updateFixedEntering,
     });
 }
 
