@@ -12,7 +12,7 @@ from textileplatform.patterns import (
 )
 
 from test_limits import _login_as
-from test_patterns import _make_user, _reset_access_date
+from test_patterns import _make_user
 
 
 @pytest.fixture
@@ -35,7 +35,6 @@ def world(app):
 
 def _as(client, user):
     _login_as(client, user)
-    _reset_access_date(user)
     return client
 
 

@@ -45,13 +45,6 @@ def _login(client, email="alice@example.com", password="correcthorse1"):
     assert r.status_code in (301, 302)
 
 
-def _reset_access_date(user):
-    """SQLite hands back access_date without tzinfo, which makes the
-    inactivity check in load_logged_in_user fail and drop the login.
-    Clearing it before a request sidesteps that test-only quirk."""
-    user.access_date = None
-    db.session.commit()
-
 
 # ---------- bead repeat ----------------------------------------------
 
@@ -99,7 +92,7 @@ class TestBeadRepeat:
 
 class TestUpload:
     def test_unreadable_file_is_reported(self, csrf_disabled_client):
-        user = _make_user()
+        _make_user()
         _login(csrf_disabled_client)
         bead = {
             "name": "Rope",
@@ -107,7 +100,6 @@ class TestUpload:
             "model": [[1, 2, 1, 2], [1, 2, 1, 2]] + [[0] * 4] * 3,
             "colors": [[255, 255, 255], [255, 0, 0], [0, 0, 255]],
         }
-        _reset_access_date(user)
         r = csrf_disabled_client.post("/patterns/upload", data={
             "name": "",
             "file": [
@@ -119,7 +111,6 @@ class TestUpload:
         # so the message is visible.
         assert r.status_code == 302
         assert r.headers["Location"].endswith("/alice")
-        _reset_access_date(user)
         page = csrf_disabled_client.get(r.headers["Location"]).get_data(
             as_text=True
         )
@@ -185,9 +176,7 @@ def _shared_setup():
 
 class TestGroupAccess:
     def _as(self, client, name):
-        _reset_access_date(User.query.filter_by(name=name).one())
         _login(client, email=f"{name}@example.com")
-        _reset_access_date(User.query.filter_by(name=name).one())
 
     def test_member_can_view_and_clone_private_shared_pattern(
         self, csrf_disabled_client
@@ -196,7 +185,6 @@ class TestGroupAccess:
         self._as(csrf_disabled_client, "carla")
         r = csrf_disabled_client.get("/api/pattern/anna/rope")
         assert r.status_code == 200
-        _reset_access_date(User.query.filter_by(name="carla").one())
         r = csrf_disabled_client.put("/api/pattern/anna/rope", json={
             "action": "clone-pattern",
         })
@@ -233,7 +221,6 @@ class TestCreateWeave:
         user.settings = json.dumps({"dbweave": {"entering_at_bottom": True}})
         db.session.commit()
         _login(csrf_disabled_client)
-        _reset_access_date(user)
         r = csrf_disabled_client.post("/patterns/create", data={
             "pattern_type": "DB-WEAVE Pattern",
             "name": "Below",

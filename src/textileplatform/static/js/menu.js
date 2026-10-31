@@ -21,7 +21,6 @@
 const Menu = (function () {
     let openSubmenu = null;
     let rootEl = null;
-    let currentTree = [];
 
     function _formatShortcut(s) {
         if (!s) return "";
@@ -137,7 +136,6 @@ const Menu = (function () {
 
     function render(mountEl, tree) {
         rootEl = mountEl;
-        currentTree = tree;
         mountEl.innerHTML = "";
         mountEl.classList.add("tx-menubar");
         tree.forEach(topItem => {

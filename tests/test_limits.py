@@ -23,7 +23,7 @@ from textileplatform.weavepattern import (
     _format_value, parse_dbw_data,
 )
 
-from test_patterns import _login, _make_user, _reset_access_date
+from test_patterns import _login, _make_user
 
 
 def _weave(width=40, height=30):
@@ -271,9 +271,7 @@ class TestDbwImport:
 
 
 def _login_as(client, user):
-    _reset_access_date(user)
     _login(client, email=user.email)
-    _reset_access_date(user)
 
 
 class TestPrimaryGroupScoping:
@@ -349,12 +347,10 @@ class TestSaveValidation:
         _login_as(csrf_disabled_client, user)
         loaded = csrf_disabled_client.get("/api/pattern/alice/rope")
         assert "modified" in loaded.get_json()
-        _reset_access_date(user)
         saved = csrf_disabled_client.put("/api/pattern/alice/rope", json={
             "action": "save-pattern", "contents": _bead(),
         }).get_json()
         assert saved["modified"]
-        _reset_access_date(user)
         again = csrf_disabled_client.get("/api/pattern/alice/rope")
         assert again.get_json()["modified"] == saved["modified"]
 

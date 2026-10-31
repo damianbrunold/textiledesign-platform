@@ -680,10 +680,6 @@ class GridView {
     }
 
     drawCursor(ctx, settings, cursor) {
-        const dx = this.dx || settings.dx;
-        const dy = this.dy || settings.dy;
-        const width = Math.min(this.width, this.data.width);
-        const height = Math.min(this.height, this.data.height);
 
         let i1 = Math.min(cursor.x1, cursor.x2);
         let i2 = Math.max(cursor.x1, cursor.x2);
@@ -696,8 +692,6 @@ class GridView {
         j1 = Math.min(Math.max(j1, this.offset_j), this.offset_j + this.height);
         j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height - 1);
 
-        const ic = Math.min(Math.max(cursor.x2, this.offset_i), this.offset_i + this.width);
-        const jc = Math.min(Math.max(cursor.y2, this.offset_j), this.offset_j + this.height);
 
         const x1 = this.calc_x(i1 - this.offset_i);
         const x2 = this.calc_x(i2 - this.offset_i + 1);
@@ -717,8 +711,6 @@ class GridView {
     }
 
     drawGrid(ctx, settings) {
-        const dx = this.dx || settings.dx;
-        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -870,10 +862,6 @@ class GridViewPattern {
     }
 
     drawCursor(ctx, settings, cursor) {
-        const dx = this.dx || settings.dx;
-        const dy = this.dy || settings.dy;
-        const width = Math.min(this.width, this.data.width);
-        const height = Math.min(this.height, this.data.height);
 
         let i1 = Math.min(cursor.x1, cursor.x2);
         let i2 = Math.max(cursor.x1, cursor.x2);
@@ -886,8 +874,6 @@ class GridViewPattern {
         j1 = Math.min(Math.max(j1, this.offset_j), this.offset_j + this.height);
         j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height - 1);
 
-        const ic = Math.min(Math.max(cursor.x2, this.offset_i), this.offset_i + this.width);
-        const jc = Math.min(Math.max(cursor.y2, this.offset_j), this.offset_j + this.height);
 
         const x1 = this.calc_x(i1 - this.offset_i);
         const x2 = this.calc_x(i2+1 - this.offset_i);
@@ -907,8 +893,6 @@ class GridViewPattern {
     }
 
     drawGrid(ctx, settings) {
-        const dx = this.dx || settings.dx;
-        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -1015,8 +999,6 @@ class GridViewPattern {
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
-        const dx = this.dx || settings.dx;
-        const dy = this.dy || settings.dy;
         // Sinking shed: marks mean warp-down, so warp/weft visibility
         // flips relative to the rising-shed default.
         const sink = !!settings.sinking_shed;
@@ -1129,10 +1111,6 @@ class GridViewColors {
     }
 
     drawCursor(ctx, settings, cursor) {
-        const dx = this.dx || settings.dx;
-        const dy = this.dy || settings.dy;
-        const width = Math.min(this.width, this.data.width);
-        const height = Math.min(this.height, this.data.height);
 
         let i1 = Math.min(cursor.x1, cursor.x2);
         let i2 = Math.max(cursor.x1, cursor.x2);
@@ -1145,8 +1123,6 @@ class GridViewColors {
         j1 = Math.min(Math.max(j1, this.offset_j), this.offset_j + this.height);
         j2 = Math.min(Math.max(j2, this.offset_j), this.offset_j + this.height);
 
-        const ic = Math.min(Math.max(cursor.x2, this.offset_i), this.offset_i + this.width);
-        const jc = Math.min(Math.max(cursor.y2, this.offset_j), this.offset_j + this.height);
 
         const x1 = this.calc_x(i1);
         const x2 = this.calc_x(i2+1);
@@ -1166,8 +1142,6 @@ class GridViewColors {
     }
 
     drawGrid(ctx, settings) {
-        const dx = this.dx || settings.dx;
-        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
         const height = Math.min(this.height, this.data.height);
 
@@ -1274,8 +1248,6 @@ class GridViewReed {
     }
 
     drawGrid(ctx, settings) {
-        const dx = this.dx || settings.dx;
-        const dy = this.dy || settings.dy;
         const width = Math.min(this.width, this.data.width);
 
         ctx.beginPath();
@@ -1593,8 +1565,6 @@ class PatternView {
         if (dataHeight > 0) height1 = Math.min(height1, dataHeight);
 
         // Cell-coord bookkeeping kept for the bar definitions below.
-        const dx = base_dx;
-        const dy = base_dy;
 
         // Y/X origins of the actual pane content. When hlBar=1 we shift
         // everything by 1 cell to leave room for the bar at top/left.
@@ -3731,7 +3701,6 @@ function showPatternInfoDialog() {
         tabRow.appendChild(b);
     });
 
-    let modal;
     const onSave = () => {
         const text = _info_full_report();
         const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -3750,7 +3719,7 @@ function showPatternInfoDialog() {
         setTimeout(() => URL.revokeObjectURL(url), 10000);
     };
 
-    modal = Modal.open({
+    Modal.open({
         title: L("info.title", "Pattern information"),
         body,
         buttons: [
@@ -7830,7 +7799,6 @@ function showColorBlendDialog() {
             return;
         }
         // Commit start + steps + end as one undoable palette command.
-        const after = _paletteSnapshot();
         // First, restore to before-state, then build "after" by writing
         // start, blendTable, end.
         _paletteRestore(before);
@@ -7929,7 +7897,6 @@ function _paletteToolboxLayout() {
 function _paletteToolboxRefresh() {
     const grid = document.getElementById("palette-panel-grid");
     if (!grid) return;
-    const lay = _paletteToolboxLayout();
     const n = pattern.palette.length;
     if (grid.childElementCount !== n) {
         grid.innerHTML = "";
@@ -9353,7 +9320,6 @@ function setupEditorActions() {
             const i2 = Math.max(cursor.x1, cursor.x2);
             const j1 = Math.min(cursor.y1, cursor.y2);
             const j2 = Math.max(cursor.y1, cursor.y2);
-            const part = cursor.selected_part;
             _runSelectionCommand("apply range " + r, grid, () => {
                 for (let i = i1; i <= i2; i++) {
                     for (let j = j1; j <= j2; j++) {

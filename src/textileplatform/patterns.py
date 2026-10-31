@@ -152,6 +152,10 @@ def primary_group(user):
 
 _MAX_NAME_SUFFIX = 10
 
+class NoFreeNameError(ValueError):
+    """The label and all its " - n" variants are taken."""
+
+
 # txpattern.label and .name are varchar(100).
 PATTERN_LABEL_MAX = 100
 
@@ -189,7 +193,7 @@ def _insert_pattern(user, label, make):
             return name
         except IntegrityError:
             db.session.rollback()
-    raise ValueError(f"no free pattern name for {label!r}")
+    raise NoFreeNameError(f"no free pattern name for {label!r}")
 
 
 def add_pattern(contents, user, pattern_type):

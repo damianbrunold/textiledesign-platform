@@ -17,7 +17,7 @@ from textileplatform.validation import PatternError
 from textileplatform.weavepattern import parse_dbw_data, render_dbw_data
 
 from test_limits import _bead, _login_as, _weave
-from test_patterns import _make_user, _reset_access_date
+from test_patterns import _make_user
 
 
 # As written by the desktop JBead (ObjectModel::formatNode).
@@ -240,7 +240,6 @@ class TestUploadDecoding:
         self._upload(csrf_disabled_client, DESKTOP_JBB.encode("utf-8"),
                      "rope.jbb")
         name = Pattern.query.one().name
-        _reset_access_date(user)
         r = csrf_disabled_client.get(f"/alice/{name}/download/legacy")
         assert r.status_code == 200
         again = parse_jbb_data(r.data.decode("utf-8"))

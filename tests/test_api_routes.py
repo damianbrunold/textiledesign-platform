@@ -666,7 +666,7 @@ class TestClonePattern:
         assert r.status_code == 400
         assert Pattern.query.filter_by(owner_id=owned["bob"].id).count() == 0
 
-    def test_clone_gives_up_when_all_names_are_taken(
+    def test_clone_explains_when_all_names_are_taken(
         self, csrf_disabled_client, owned
     ):
         """clone_pattern tries "Twill", "Twill - 1" … "Twill - 10"."""
@@ -675,10 +675,30 @@ class TestClonePattern:
                         owned["alice"], "DB-WEAVE Pattern")
         _login_as(csrf_disabled_client, owned["alice"])
         r = _put(csrf_disabled_client, "alice/twill", action="clone-pattern")
-        assert r.status_code == 500
+        assert r.status_code == 409
+        assert "no free name" in r.get_json()["message"]
         assert Pattern.query.filter_by(
             owner_id=owned["alice"].id).count() == 12
 
+
+    def test_create_explains_when_all_names_are_taken(
+        self, csrf_disabled_client, owned
+    ):
+        alice = owned["alice"]
+        for i in range(11):
+            add_pattern(dict(_bead(), name="Rope" + (f" - {i}" if i else "")),
+                        alice, "JBead Pattern")
+        _login_as(csrf_disabled_client, alice)
+        count = Pattern.query.filter_by(owner_id=alice.id).count()
+        r = csrf_disabled_client.post("/patterns/create", data={
+            "pattern_type": "JBead Pattern", "name": "Rope",
+            "width": "8", "height": "10",
+        })
+        assert r.status_code in (301, 302)
+        with csrf_disabled_client.session_transaction() as s:
+            messages = [m for _, m in s.get("_flashes", [])]
+        assert any("no free name" in m for m in messages)
+        assert Pattern.query.filter_by(owner_id=alice.id).count() == count
 
 class TestRenamePattern:
     def test_rename_moves_the_pattern(self, csrf_disabled_client, owned):

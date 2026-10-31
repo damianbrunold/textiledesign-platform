@@ -167,6 +167,24 @@ describe("save and reload", () => {
         expect(reload(d)).toEqual(d);
     });
 
+    it("keeps switched-off cells (negative values) as they are", () => {
+        // Switching a cell off keeps its range as a negative value.
+        const d = twillData();
+        d.data_tieup[3 + 5 * d.max_treadles] = -2;
+        d.data_treadling[6 + 7 * d.max_treadles] = -3;   // unused row
+        d.data_pegplan = new Array(d.max_shafts * d.height).fill(0);
+        d.data_pegplan[2 + 4 * d.max_shafts] = -1;
+        storePatternData(d, load(d));
+        expect(reload(d)).toEqual(d);
+        const p = load(d);
+        expect(p.tieup.get(3, 5)).toBe(-2);
+        expect(p.treadling.get(6, 7)).toBe(-3);
+        expect(p.pegplan.get(2, 4)).toBe(-1);
+        // ...and they stay out of the weave and the extent
+        expect(p.weave.data.every((v) => v >= 0)).toBe(true);
+        expect(p.max_y).toBe(7);
+    });
+
     it("keeps tie-up cells of unused shafts and treadles", () => {
         const d = twillData();
         d.data_tieup[6 + 6 * d.max_treadles] = 2;   // treadle 7, shaft 7

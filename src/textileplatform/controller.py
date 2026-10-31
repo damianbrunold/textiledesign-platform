@@ -29,6 +29,7 @@ from textileplatform.patterns import fit_label
 from textileplatform.patterns import format_pattern_source
 from textileplatform.patterns import new_bead_pattern
 from textileplatform.patterns import new_weave_pattern
+from textileplatform.patterns import NoFreeNameError
 from textileplatform.patterns import pattern_handle
 from textileplatform.name import from_label
 from textileplatform.name import is_valid
@@ -1676,7 +1677,7 @@ def upload_pattern():
                     )
                 validate_pattern(contents, saved_kind)
                 saved = add_pattern(contents, g.user, saved_kind)
-            except PatternError as e:
+            except (PatternError, NoFreeNameError) as e:
                 logging.info("upload of %r rejected: %s", file.filename, e)
                 db.session.rollback()
                 saved = None
@@ -1757,6 +1758,13 @@ def _size_error(pattern_type, axis):
     return gettext("Height must be between 5 and 5000")
 
 
+def _no_free_name_message():
+    return gettext(
+        "There is no free name for the copy: rename or delete some of "
+        "the copies first."
+    )
+
+
 def _form_int(key):
     try:
         return int(request.form.get(key, ""))
@@ -1809,6 +1817,9 @@ def create_pattern():
                 ))
             except HTTPException:
                 raise
+            except NoFreeNameError:
+                db.session.rollback()
+                flash(_no_free_name_message())
             except Exception:
                 logging.exception("Failed to create pattern")
                 flash(gettext("Failed to create pattern"))
@@ -3572,7 +3583,10 @@ def update_pattern(user_name, pattern_name):
                 json.dumps(payload) if payload is not None
                 else pattern.contents
             )
-            clone_pattern(g.user, pattern, contents)
+            try:
+                clone_pattern(g.user, pattern, contents)
+            except NoFreeNameError:
+                return respond("NOK", _no_free_name_message(), 409)
             _bump_pattern_edit(pattern.pattern_type)
             db.session.commit()
             return jsonify({"status": "OK"}), 200

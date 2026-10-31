@@ -16,7 +16,7 @@ from textileplatform.models import (
 from textileplatform.support import SUPPORT_USERNAME
 
 from test_limits import _bead, _login_as
-from test_patterns import _make_user, _reset_access_date
+from test_patterns import _make_user
 
 
 ADMIN_PAGES = [
@@ -303,7 +303,6 @@ class TestSetEmail:
         admin.post("/admin/users/alice/set-email",
                    data={"email": "alice@new.example"})
         other = app.test_client()
-        _reset_access_date(world.alice)
         r = other.post("/auth/login", data={
             "email": "alice@new.example", "password": "correcthorse1",
         })

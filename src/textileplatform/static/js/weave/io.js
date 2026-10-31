@@ -75,10 +75,14 @@ export function loadPatternData(data, pattern, { pegplan = false } = {}) {
         if (shaft > 0) pattern.entering.set_shaft(i, shaft);
     }
 
-    for (let j = min_pattern_y; j <= max_pattern_y; j++) {
+    // Treadling, tie-up and pegplan cells are loaded as stored, also
+    // negative ones: a cell switched off keeps its range as a negative
+    // value, so switching it on again restores the range. (Everything
+    // that reads the grids treats values <= 0 as empty.)
+    for (let j = 0; j < data.height; j++) {
         for (let k = 0; k < data.max_treadles; k++) {
             const treadle = data.data_treadling[k + j * data.max_treadles];
-            if (treadle > 0) pattern.treadling.set(k, j, treadle);
+            if (treadle) pattern.treadling.set(k, j, treadle);
         }
     }
 
@@ -87,7 +91,7 @@ export function loadPatternData(data, pattern, { pegplan = false } = {}) {
     for (let i = 0; i < data.max_treadles; i++) {
         for (let j = 0; j < data.max_shafts; j++) {
             const tieup = data.data_tieup[i + j * data.max_treadles];
-            if (tieup > 0) pattern.tieup.set(i, j, tieup);
+            if (tieup) pattern.tieup.set(i, j, tieup);
         }
     }
 
@@ -97,7 +101,7 @@ export function loadPatternData(data, pattern, { pegplan = false } = {}) {
         for (let j = 0; j < data.height; j++) {
             for (let s = 0; s < data.max_shafts; s++) {
                 const v = data.data_pegplan[s + j * data.max_shafts];
-                if (v > 0) pattern.pegplan.set(s, j, v);
+                if (v) pattern.pegplan.set(s, j, v);
             }
         }
     }
@@ -129,19 +133,9 @@ export function loadPatternData(data, pattern, { pegplan = false } = {}) {
         }
     }
 
-    // Restore persisted rapport bounds (auto-detected on save). Older
-    // patterns lack these keys — leave Pattern's default "no rapport"
-    // (rapport_*_b < rapport_*_a) in place and let the user re-detect.
-    if (Number.isInteger(data.rapport_k_a)
-        && Number.isInteger(data.rapport_k_b)) {
-        pattern.rapport_k_a = data.rapport_k_a;
-        pattern.rapport_k_b = data.rapport_k_b;
-    }
-    if (Number.isInteger(data.rapport_s_a)
-        && Number.isInteger(data.rapport_s_b)) {
-        pattern.rapport_s_a = data.rapport_s_a;
-        pattern.rapport_s_b = data.rapport_s_b;
-    }
+    // The stored rapport_* bounds are not read back: recalc_weave below
+    // detects the repeat from the grids (storePatternData writes them
+    // for the server's list views only).
 
     // Pegplan + .dbw imports: the .dbw format stores no pegplan, only
     // treadling + tie-up. A pattern last viewed in pegplan mode would

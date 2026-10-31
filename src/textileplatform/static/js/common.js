@@ -519,10 +519,19 @@ async function clonePattern() {
             action: "clone-pattern",
             contents: data,
         });
-        if (!resp.ok) throw new Error("clone-failed:" + resp.status);
+        if (!resp.ok) {
+            // The server explains refusals it expects (e.g. no free
+            // name for the copy).
+            let message = null;
+            try { message = (await resp.json()).message; } catch (e) { /* not JSON */ }
+            const err = new Error("clone-failed:" + resp.status);
+            err.userMessage = resp.status === 409 ? message : null;
+            throw err;
+        }
     } catch (e) {
         console.error(e);
-        alert(_prompt("cloneFailed", "The pattern could not be cloned."));
+        alert(e.userMessage
+              || _prompt("cloneFailed", "The pattern could not be cloned."));
         return;
     }
     window.location.href = "/" + document.getElementById("viewer").value;

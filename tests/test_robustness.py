@@ -7,7 +7,7 @@ from textileplatform.models import Group, User
 from textileplatform.name import from_label, is_valid
 
 from test_limits import _login_as
-from test_patterns import _make_user, _reset_access_date
+from test_patterns import _make_user
 
 
 class TestNames:
@@ -37,9 +37,7 @@ def test_logout_requires_post(csrf_disabled_client):
     _login_as(csrf_disabled_client, user)
     # A GET (e.g. an <img> on another site) must not end the session.
     csrf_disabled_client.get("/auth/logout")
-    _reset_access_date(user)
     assert csrf_disabled_client.get("/profile").status_code == 200
-    _reset_access_date(user)
     assert csrf_disabled_client.post("/auth/logout").status_code == 302
     assert csrf_disabled_client.get("/profile").status_code == 302
 
@@ -50,7 +48,6 @@ def test_user_search_treats_wildcards_literally(csrf_disabled_client):
     _login_as(csrf_disabled_client, user)
     r = csrf_disabled_client.get("/api/users/search?q=__")
     assert r.get_json()["users"] == []
-    _reset_access_date(user)
     r = csrf_disabled_client.get("/api/users/search?q=bo")
     assert [u["name"] for u in r.get_json()["users"]] == ["bob"]
 
@@ -62,7 +59,6 @@ def test_message_history_limit_is_sanitised(csrf_disabled_client, limit):
     _login_as(csrf_disabled_client, user)
     csrf_disabled_client.post("/api/conversations/direct/bob",
                               json={"body": "hi"})
-    _reset_access_date(user)
     r = csrf_disabled_client.get(
         f"/api/conversations/direct/bob?limit={limit}")
     assert r.status_code == 200
@@ -86,7 +82,6 @@ def test_conversation_list_without_messages(csrf_disabled_client):
     _login_as(csrf_disabled_client, user)
     csrf_disabled_client.post("/api/conversations/direct/bob",
                               json={"body": "hi"})
-    _reset_access_date(user)
     r = csrf_disabled_client.get("/api/conversations")
     assert r.status_code == 200
     assert len(r.get_json()["conversations"]) == 2
@@ -108,7 +103,6 @@ class TestGroupTexts:
         csrf_disabled_client.post("/groups/add", data={
             "kind": "shared", "name": "Club",
         })
-        _reset_access_date(user)
         csrf_disabled_client.post("/groups/club/update", data={
             "label": "y" * 60, "description": "d",
         })

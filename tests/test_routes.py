@@ -10,7 +10,7 @@ from textileplatform.db import db
 from textileplatform.models import Assignment, Group, Membership, Pattern
 
 from test_limits import _bead, _login_as, _weave
-from test_patterns import _make_user, _reset_access_date
+from test_patterns import _make_user
 
 
 @pytest.fixture
@@ -44,7 +44,6 @@ def world(app):
 def _as(client, world, who):
     if who is not None:
         _login_as(client, world[who])
-        _reset_access_date(world[who])
     return client
 
 
@@ -136,7 +135,6 @@ def test_rename(csrf_disabled_client, world):
         "action": "rename-pattern", "label": "Fine Twill",
     })
     assert r.get_json()["name"] == "fine-twill"
-    _reset_access_date(world["alice"])
     r = client.put("/api/pattern/alice/fine-twill", json={
         "action": "rename-pattern", "label": "Rope",
     })
@@ -160,7 +158,6 @@ def test_cloning_twice_gets_a_suffix(csrf_disabled_client, world):
     for _ in range(2):
         client.put("/api/pattern/alice/rope",
                    json={"action": "clone-pattern"})
-        _reset_access_date(world["carla"])
     names = sorted(p.name for p in Pattern.query.filter_by(
         owner_id=world["carla"].id))
     assert names == ["rope", "rope-1"]

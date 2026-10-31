@@ -28,7 +28,7 @@ from textileplatform.models import (
 from werkzeug.security import check_password_hash
 
 from test_limits import _login_as, _weave
-from test_patterns import _login, _make_user, _reset_access_date
+from test_patterns import _login, _make_user
 
 
 # ---------- helpers ---------------------------------------------------
@@ -268,7 +268,6 @@ class TestProfilePassword:
         assert alice.session_token_version == 1
         assert alice.password_reset_code is None
         assert "Password changed" in _flashes(csrf_disabled_client)
-        _reset_access_date(alice)
         assert csrf_disabled_client.get("/profile").status_code == 200
 
     @pytest.mark.parametrize("kwargs, message", [
@@ -323,7 +322,6 @@ class TestUserSettingsApi:
         expected = {"zoom": 5, "grid": True, "sort": "name"}
         assert r.get_json()["settings"] == expected
         assert json.loads(_user("alice").settings) == expected
-        _reset_access_date(alice)
         r = csrf_disabled_client.get("/api/user/settings")
         assert r.get_json()["settings"] == expected
 
@@ -692,7 +690,6 @@ class TestResetPassword:
         assert alice.password_reset_code is None
         assert alice.password_reset_expires is None
         assert alice.session_token_version == 1
-        _reset_access_date(alice)
         # _login asserts a redirect, i.e. the new password works.
         _login(csrf_disabled_client, password="new-passphrase-7")
         assert _logged_in_name(csrf_disabled_client) == "alice"

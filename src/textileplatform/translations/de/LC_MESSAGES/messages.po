@@ -4104,6 +4104,13 @@ msgstr "Verifikation erfolgreich"
 msgid "Your account is now verified. Please log in."
 msgstr "Ihr Konto ist nun verifiziert. Bitte melden Sie sich an."
 
+msgid ""
+"There is no free name for the copy: rename or delete some of the copies "
+"first."
+msgstr ""
+"Es gibt keinen freien Namen für die Kopie: Benenne zuerst einige der "
+"Kopien um oder lösche sie."
+
 #~ msgid "Inverse Rapport"
 #~ msgstr "Inverser Rapport"
 

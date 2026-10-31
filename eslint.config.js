@@ -70,7 +70,7 @@ export default [
         },
         rules: {
             // Top-level names are used by the other scripts.
-            "no-unused-vars": ["warn", {
+            "no-unused-vars": ["error", {
                 vars: "local", args: "none", caughtErrors: "none",
             }],
         },

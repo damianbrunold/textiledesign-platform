@@ -3,7 +3,10 @@ unsaved-changes guards and local drafts."""
 import pytest
 from playwright.sync_api import expect
 
-from editor import click_weave_cell, is_modified, open_editor, save
+from editor import (
+    _WEAVE_CELL_JS as _CELL_JS, click_weave_cell, is_modified, open_editor,
+    save,
+)
 from helpers import make_user, make_weave_pattern, login, stored_contents
 
 
@@ -64,6 +67,34 @@ def test_tieup_prepared_first_survives_reload(alice_page, twill):
     alice_page.reload()
     open_editor(alice_page, "alice", twill)
     assert alice_page.evaluate("pattern.tieup.get(2, 3)") == 1
+
+
+def _drag_select(page, part, i1, j1, i2, j2):
+    start = page.evaluate(_CELL_JS, [part, i1, j1])
+    end = page.evaluate(_CELL_JS, [part, i2, j2])
+    page.mouse.move(start["x"], start["y"])
+    page.mouse.down()
+    page.mouse.move(end["x"], end["y"], steps=3)
+    page.mouse.up()
+
+
+def test_invert_restores_ranges_after_reload(alice_page, twill):
+    """Inverting a set cell keeps its range as a negative value, so a
+    second invert restores it, also after saving and reloading."""
+    alice_page.evaluate("settings.current_range = 2")
+    click_weave_cell(alice_page, "tieup", 1, 1)
+    alice_page.evaluate("settings.current_range = 3")
+    _drag_select(alice_page, "tieup", 1, 1, 2, 1)
+    alice_page.keyboard.press("i")
+    assert alice_page.evaluate(
+        "[pattern.tieup.get(1, 1), pattern.tieup.get(2, 1)]") == [-2, 3]
+    save(alice_page)
+    alice_page.reload()
+    open_editor(alice_page, "alice", twill)
+    _drag_select(alice_page, "tieup", 1, 1, 2, 1)
+    alice_page.keyboard.press("i")
+    assert alice_page.evaluate(
+        "[pattern.tieup.get(1, 1), pattern.tieup.get(2, 1)]") == [2, -3]
 
 
 def test_clicking_a_set_cell_clears_it(alice_page, twill):
