@@ -147,21 +147,23 @@ describe("Grid", () => {
             expect(rows(g)).toEqual(["321", "654"]);
         });
 
-        // Known bug: the early return tests the wrong axis, so a
-        // one-column selection is never mirrored vertically (and a
-        // one-row selection never horizontally). The desktop
-        // (MirrorVertSelection / MirrorHorzSelection in edit.cpp) has no
-        // such guard.
-        it.fails("mirrorV flips a single column", () => {
+        it("mirrorV flips a single column", () => {
             const g = grid(["1", "2", "3"]);
             g.mirrorV(0, 0, 0, 2);
             expect(rows(g)).toEqual(["3", "2", "1"]);
         });
 
-        it.fails("mirrorH flips a single row", () => {
+        it("mirrorH flips a single row", () => {
             const g = grid(["123"]);
             g.mirrorH(0, 0, 2, 0);
             expect(rows(g)).toEqual(["321"]);
+        });
+
+        it("leaves cells outside the region alone", () => {
+            const g = grid(["1234", "5678", "9000"]);
+            g.mirrorH(1, 0, 2, 1);
+            g.mirrorV(3, 0, 3, 1);
+            expect(rows(g)).toEqual(["1328", "5764", "9000"]);
         });
     });
 });
@@ -197,19 +199,19 @@ describe("Entering", () => {
         expect(e.height).toBe(2);
     });
 
-    // Desktop semantics (edit.cpp): mirroring the entering horizontally
-    // swaps warps; vertically it maps shaft s to (j1 + j2 + 2 - s).
-    // Entering.mirrorV swaps warps and mirrorH remaps shafts, i.e. the
-    // names are the other way round.
-    it("mirrorV swaps warps", () => {
-        const e = entering([1, 2, 3, 4]);
-        e.mirrorV(0, 0, 3, 1);
-        expect([...e.data]).toEqual([4, 3, 2, 1]);
+    // Desktop semantics (MirrorHorzSelection / MirrorVertSelection in
+    // edit.cpp): horizontally the warps swap, vertically the shafts.
+    it("mirrorH swaps warps", () => {
+        const e = entering([1, 2, 3, 4, 0]);
+        e.mirrorH(0, 0, 3, 0);  // a one-shaft-high selection
+        expect([...e.data]).toEqual([4, 3, 2, 1, 0]);
     });
 
-    it("mirrorH remaps shafts inside the range", () => {
+    it("mirrorV reverses the shafts inside the range", () => {
         const e = entering([1, 2, 3, 4]);
-        e.mirrorH(0, 0, 3, 2);
-        expect([...e.data]).toEqual([3, 2, 1, 4]);
+        e.mirrorV(0, 0, 0, 2);  // a one-warp-wide selection
+        expect([...e.data]).toEqual([3, 2, 3, 4]);
+        e.mirrorV(0, 0, 3, 2);
+        expect([...e.data]).toEqual([1, 2, 1, 4]);
     });
 });

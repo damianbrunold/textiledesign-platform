@@ -651,8 +651,9 @@ class Grid {
         }
     }
 
+    // Flip the rows (top <-> bottom) of the region.
     mirrorV(i1, j1, i2, j2) {
-        if (i1 === i2) return;
+        if (j1 === j2) return;
         for (let j = j1; j <= j1 + Math.trunc((j2-j1) / 2); j++) {
             for (let i = i1; i <= i2; i++) {
                 const v = this.get(i, j);
@@ -662,8 +663,9 @@ class Grid {
         }
     }
 
+    // Flip the columns (left <-> right) of the region.
     mirrorH(i1, j1, i2, j2) {
-        if (j1 === j2) return;
+        if (i1 === i2) return;
         for (let i = i1; i <= i1 + Math.trunc((i2-i1)/2); i++) {
             for (let j = j1; j <= j2; j++) {
                 const v = this.get(i, j);
@@ -1031,8 +1033,10 @@ class Entering {
         // empty
     }
 
-    mirrorV(i1, j1, i2, j2) {
-        if (j1 === j2) return;
+    // Swap the warps (left <-> right), as the desktop's horizontal
+    // mirror of the threading does.
+    mirrorH(i1, j1, i2, j2) {
+        if (i1 === i2) return;
         for (let i = i1; i <= i1 + Math.trunc((i2-i1)/2); i++) {
             const shaft1 = this.get_shaft(i);
             const shaft2 = this.get_shaft(i2 - (i-i1));
@@ -1041,8 +1045,9 @@ class Entering {
         }
     }
 
-    mirrorH(i1, j1, i2, j2) {
-        if (i1 === i2) return;
+    // Reverse the order of the shafts j1..j2 (vertical mirror).
+    mirrorV(i1, j1, i2, j2) {
+        if (j1 === j2) return;
         for (let i = i1; i <= i2; i++) {
             const shaft = this.get_shaft(i) - 1;
             if (j1 <= shaft && shaft <= j2) {
