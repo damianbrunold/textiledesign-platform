@@ -24,8 +24,10 @@ _WEAVE_CELL_JS = """
     }[part];
     const v = txEditor.view[part];
     const dx = v.dx || txEditor.settings.dx, dy = v.dy || txEditor.settings.dy;
-    const vi = flags[0] ? v.width - 1 - (i - v.offset_i) : i - v.offset_i;
-    const vj = flags[1] ? j - v.offset_j : v.height - 1 - (j - v.offset_j);
+    // One-dimensional panes (colour bars, reed) scroll in one axis only.
+    const oi = v.offset_i || 0, oj = v.offset_j || 0;
+    const vi = flags[0] ? v.width - 1 - (i - oi) : i - oi;
+    const vj = flags[1] ? j - oj : v.height - 1 - (j - oj);
     if (vi < 0 || vi >= v.width || vj < 0 || vj >= v.height) {
         throw new Error(`cell ${part}(${i},${j}) is scrolled out of view`);
     }

@@ -1,5 +1,7 @@
 import json
 
+import sqlalchemy as sa
+
 from textileplatform.db import db
 
 
@@ -83,17 +85,6 @@ class User(db.Model):
     def pending_invitations(self):
         return [m for m in self.memberships if m.state == "invited"]
 
-    def bump_usage_day(self, now):
-        today = now.date()
-        last = self.access_date
-        is_new_day = last is None or last.date() != today
-        if self.usage_year != now.year:
-            self.usage_year = now.year
-            self.usage_days_year = 0
-        if is_new_day:
-            self.usage_days_total = (self.usage_days_total or 0) + 1
-            self.usage_days_year = (self.usage_days_year or 0) + 1
-
     def get_usage_counts(self):
         if not self.usage_counts:
             return {}
@@ -109,6 +100,41 @@ class User(db.Model):
         counts = self.get_usage_counts()
         counts[category] = (counts.get(category) or 0) + 1
         self.usage_counts = json.dumps(counts)
+
+
+def record_access(user_id, now):
+    """Store an access of the user at `now` (UTC): the access time, and
+    one more distinct day (this year and in total) if it is the first
+    access of the UTC day.
+
+    A page load fires many requests at once, each with its own stale
+    copy of the user, so the decision is left to the database: only the
+    one UPDATE that still finds an access_date before today counts the
+    day. The caller commits."""
+    t = User.__table__
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    new_day = db.session.execute(
+        sa.update(t)
+        .where(t.c.id == user_id,
+               sa.or_(t.c.access_date.is_(None),
+                      t.c.access_date < start_of_day))
+        .values(
+            access_date=now,
+            usage_days_total=sa.func.coalesce(t.c.usage_days_total, 0) + 1,
+            usage_days_year=sa.case(
+                (t.c.usage_year == now.year,
+                 sa.func.coalesce(t.c.usage_days_year, 0) + 1),
+                else_=1),
+            usage_year=now.year,
+        )
+    ).rowcount
+    if not new_day:
+        # Never move the access time back (a slow request finishing
+        # after a later one).
+        db.session.execute(
+            sa.update(t)
+            .where(t.c.id == user_id, t.c.access_date < now)
+            .values(access_date=now))
 
 
 class Membership(db.Model):

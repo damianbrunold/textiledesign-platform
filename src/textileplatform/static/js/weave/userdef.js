@@ -6,30 +6,21 @@ import { editorI18n } from "../ui/common.js";
 import { Modal } from "../ui/modal.js";
 import { _fullSnapCommand } from "./history.js";
 import { cursor, pattern, readonly, settings } from "./state.js";
+import {
+    encodeUserdefRect, isUsableUserdef, parseUserdefSlots, stampUserdef,
+} from "./userdef-ops.js";
 
 // ---- Phase 8f: User-defined patterns ("Additional" menu) ------------
 //
-// Direct port of userdef.cpp. 10 slots persisted in localStorage as
+// Direct port of userdef.cpp (encoding and insertion: userdef-ops.js). 10 slots persisted in localStorage as
 // (description, sizex, sizey, data). Data is the desktop's k-alphabet
 // (cell value s → char(s + 'k') so 'k' = empty, 'l' = range 1, …).
 
 const USERDEF_KEY = "tx_dbweave_userdef_v1";
-const USERDEF_K_CHAR = 107; // 'k'
 
 export function _userdefList() {
     try {
-        const raw = localStorage.getItem(USERDEF_KEY);
-        if (!raw) return new Array(10).fill(null);
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed)) return new Array(10).fill(null);
-        const out = [];
-        for (let i = 0; i < 10; i++) {
-            const s = parsed[i];
-            out.push((s && s.data && s.sizex && s.sizey)
-                ? { description: s.description || "", sizex: s.sizex|0, sizey: s.sizey|0, data: s.data }
-                : null);
-        }
-        return out;
+        return parseUserdefSlots(localStorage.getItem(USERDEF_KEY));
     } catch { return new Array(10).fill(null); }
 }
 function _userdefSaveAll(slots) {
@@ -44,17 +35,9 @@ function _userdefSetSlot(idx, slot) {
 }
 function _userdefRemoveSlot(idx) { _userdefSetSlot(idx, null); }
 
-// k-alphabet encode/decode of a weave rectangle.
+// k-alphabet encoding of a weave rectangle.
 function _userdefEncodeRect(i1, i2, j1, j2) {
-    let out = "";
-    for (let i = i1; i <= i2; i++) {
-        for (let j = j1; j <= j2; j++) {
-            const s = pattern.weave.get(i, j);
-            const c = s > 0 ? (USERDEF_K_CHAR + s) : USERDEF_K_CHAR;
-            out += String.fromCharCode(c);
-        }
-    }
-    return out;
+    return encodeUserdefRect(pattern.weave, i1, i2, j1, j2);
 }
 
 // Stamp slot[idx] at the cursor. Transparent skips empty cells.
@@ -62,30 +45,13 @@ export function _insertUserdef(idx, transparent) {
     if (readonly) return;
     if (cursor.selected_part !== "weave") return;
     const slot = _userdefList()[idx];
-    if (!slot || !slot.data) return;
-    if (slot.data.length < slot.sizex * slot.sizey) return;
+    if (!isUsableUserdef(slot)) return;
     _fullSnapCommand("insert userdef", () => {
-        const x = cursor.x1, y = cursor.y1;
-        let xx = x + slot.sizex; let yy = y + slot.sizey;
-        if (xx > pattern.weave.width)  xx = pattern.weave.width;
-        if (yy > pattern.weave.height) yy = pattern.weave.height;
-        for (let i = x; i < xx; i++) {
-            for (let j = y; j < yy; j++) {
-                const idx2 = (i - x) * slot.sizey + (j - y);
-                if (idx2 >= slot.data.length) continue;
-                const code = slot.data.charCodeAt(idx2);
-                const s = code - USERDEF_K_CHAR;
-                if (s !== 0) {
-                    pattern.weave.set(i, j, s);
-                } else if (!transparent) {
-                    pattern.weave.set(i, j, 0);
-                }
-            }
-        }
+        const block = stampUserdef(pattern.weave, slot, cursor.x1, cursor.y1,
+                                   transparent);
         // Selection covers the inserted block.
-        cursor.x1 = x; cursor.y1 = y;
-        cursor.x2 = Math.max(x, xx - 1);
-        cursor.y2 = Math.max(y, yy - 1);
+        cursor.x1 = block.x1; cursor.y1 = block.y1;
+        cursor.x2 = block.x2; cursor.y2 = block.y2;
         pattern.recalc_from_weave(settings);
     });
 }

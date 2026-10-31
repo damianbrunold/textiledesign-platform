@@ -751,21 +751,22 @@ function init() {
     update_range_selector(settings);
     if (settings.display_palette) _paletteToolboxRefresh();
     view.draw();
-    // Defensive second pass: after the browser has settled the initial
-    // flex distribution (toolbox panels are now in their final widths),
-    // re-sync canvas.width with canvas.clientWidth and re-layout. This
-    // matches what _sidePanelApply does and prevents click hit-testing
-    // from drifting on a fresh page-load with toolboxes visible.
-    requestAnimationFrame(() => {
-        const c = document.getElementById("canvas");
-        if (!c || !view) return;
-        if (c.width !== c.clientWidth || c.height !== c.clientHeight) {
-            c.width = c.clientWidth;
-            c.height = c.clientHeight;
+    // Keep the canvas bitmap at its CSS size whenever that changes: side
+    // panels opening or closing (the palette panel settles its width
+    // only after its swatches are laid out, so a synchronous
+    // measurement can see a 0-wide canvas), the initial flex layout,
+    // window resizes. A bitmap that doesn't match the box shows a blank
+    // or squashed pattern and shifts mouse hit-testing.
+    new ResizeObserver(() => {
+        if (!view) return;
+        if (canvas.width !== canvas.clientWidth
+            || canvas.height !== canvas.clientHeight) {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
             view.layout();
             view.draw();
         }
-    });
+    }).observe(canvas);
 
     document.getElementById("icon-selection-mirrorv").addEventListener("click", selectionMirrorV);
     document.getElementById("icon-selection-mirrorh").addEventListener("click", selectionMirrorH);

@@ -4,6 +4,9 @@ import { editorI18n } from "../ui/common.js";
 import { Modal } from "../ui/modal.js";
 import { _fullSnapCommand } from "./history.js";
 import { pattern, readonly } from "./state.js";
+import {
+    checkSteppedParams, threadStepped, threadStraight,
+} from "./threading-wizard-ops.js";
 
 // ---- Phase 8g: Threading wizard (Einzugassistent) -------------------
 //
@@ -13,51 +16,18 @@ import { pattern, readonly } from "./state.js";
 //   Stepped (Abgesetzt)             — broken twill: runs of `gratlen`
 //                                      warps stepping +1, then jump
 //                                      shafts by `versatz`, repeat.
+// The threadings themselves are in threading-wizard-ops.js.
 
 function _ezAssistentGerade(firstKF, firstSchaft, schaefte, steigend) {
     _fullSnapCommand("threading wizard (straight)", () => {
-        const maxShaft = pattern.tieup.height;
-        const maxWarp = pattern.entering.width;
-        if (steigend) {
-            for (let i = firstKF - 1; i < firstKF - 1 + schaefte; i++) {
-                let s = firstSchaft + (i - (firstKF - 1));
-                if (s > maxShaft) break;          // clamp instead of ExtendSchaefte
-                if (i >= maxWarp) break;
-                pattern.entering.set_shaft(i, s);
-            }
-        } else {
-            for (let i = firstKF - 1; i < firstKF - 1 + schaefte; i++) {
-                let s = firstSchaft + (firstKF - 1 + schaefte - 1)
-                        - (i - (firstKF - 1));
-                if (s > maxShaft) break;
-                if (s <= 0) break;
-                if (i >= maxWarp) break;
-                pattern.entering.set_shaft(i, s);
-            }
-        }
+        threadStraight(pattern, firstKF, firstSchaft, schaefte, steigend);
         pattern.recalc_weave();
     });
 }
 
 function _ezAssistentAbgesetzt(firstKF, firstSchaft, schaefte, gratlen, versatz) {
     _fullSnapCommand("threading wizard (stepped)", () => {
-        const maxShaft = pattern.tieup.height;
-        const maxWarp = pattern.entering.width;
-        let i = firstKF - 1;
-        let j = firstSchaft - 1;
-        outer: while (true) {
-            for (let ii = 0; ii < gratlen; ii++) {
-                const s = j + ii + 1;
-                if (s - firstSchaft >= schaefte) break outer;
-                if (s <= 0) break outer;
-                if (s > maxShaft) break outer;
-                if (i + ii >= maxWarp) break outer;
-                pattern.entering.set_shaft(i + ii, s);
-                if (s - firstSchaft + 1 === schaefte) break outer;
-            }
-            i += gratlen;
-            j += versatz;
-        }
+        threadStepped(pattern, firstKF, firstSchaft, schaefte, gratlen, versatz);
         pattern.recalc_weave();
     });
 }
@@ -135,12 +105,13 @@ export function showThreadingWizardDialog() {
             const schaefte  = parseInt(body.querySelector("#tx-ez-ab-schaefte").value, 10) || 1;
             const glen      = parseInt(body.querySelector("#tx-ez-ab-gratlen").value, 10) || 1;
             const versatz   = parseInt(body.querySelector("#tx-ez-ab-versatz").value, 10) || 0;
-            if (glen < 1 || glen > schaefte) {
+            const invalid = checkSteppedParams(schaefte, glen, versatz);
+            if (invalid === "gratlen") {
                 errEl.textContent = L("ez.assist.err-gratlen",
                     "Run length must be between 1 and the number of shafts.");
                 return;
             }
-            if (Math.abs(versatz) < 1 || Math.abs(versatz) > schaefte) {
+            if (invalid === "versatz") {
                 errEl.textContent = L("ez.assist.err-versatz",
                     "Offset must be between 1 and the number of shafts.");
                 return;

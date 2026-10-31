@@ -3,6 +3,10 @@
 
 import { editorI18n } from "../ui/common.js";
 import { Modal } from "../ui/modal.js";
+import {
+    fillRanges, musterRange, rangeFillRect, recolourMuster, stampMusterPanama,
+    stampMusterSatin, stampMusterTwill, substituteBlocks, toggleMusterValue,
+} from "./blocks-ops.js";
 import { _fullSnapCommand } from "./history.js";
 import { Grid } from "./model.js";
 import { getRangeColor } from "./painters.js";
@@ -18,144 +22,9 @@ import { cursor, pattern, readonly, settings } from "./state.js";
 //     (or full extent) cell-by-cell, replacing each cell value n with
 //     bereichmuster[n] tiled.
 //
-// Direct port of blockmuster.cpp / blockmusterdialog.cpp / the
-// BlockExpand* and BereicheFillPattern functions from bereiche.cpp.
-
-// Apply: Blockmuster expansion --------------------------------------
-function _blockExpandEinzug(count, einzugZ) {
-    const ka = pattern.min_x, kb = pattern.max_x;
-    if (ka > kb) return;
-    const len = kb - ka + 1;
-    const pData = new Array(len);
-    for (let i = ka; i <= kb; i++) {
-        pData[i - ka] = pattern.entering.get_shaft(i);
-        pattern.entering.set_shaft(i, 0);
-    }
-    const maxWarp = pattern.entering.width;
-    const maxShaft = pattern.tieup.height;
-    for (let i = ka; i <= kb; i++) {
-        const v = pData[i - ka];
-        if (v <= 0) continue;
-        if (einzugZ) {
-            for (let k = 0; k < count; k++) {
-                const idx = i * count + k;
-                if (idx >= maxWarp) break;
-                const newShaft = (v - 1) * count + k + 1;
-                if (newShaft > maxShaft) continue;
-                pattern.entering.set_shaft(idx, newShaft);
-            }
-        } else {
-            for (let k = 0; k < count; k++) {
-                const idx = (i + 1) * count - 1 - k;
-                if (idx >= maxWarp || idx < 0) break;
-                const newShaft = (v - 1) * count + k + 1;
-                if (newShaft > maxShaft) continue;
-                pattern.entering.set_shaft(idx, newShaft);
-            }
-        }
-    }
-}
-
-function _blockExpandTrittfolge(count, trittfolgeZ) {
-    const sa = pattern.min_y, sb = pattern.max_y;
-    if (sa > sb) return;
-    const w = pattern.treadling.width;
-    const pData = new Array((sb - sa + 1) * w);
-    for (let j = sa; j <= sb; j++) {
-        for (let i = 0; i < w; i++) {
-            pData[(j - sa) * w + i] = pattern.treadling.get(i, j);
-            pattern.treadling.set(i, j, 0);
-        }
-    }
-    const maxWeft = pattern.treadling.height;
-    const maxTreadle = pattern.treadling.width;
-    for (let j = sa; j <= sb; j++) {
-        for (let i = 0; i < w; i++) {
-            if (pData[(j - sa) * w + i] === 0) continue;
-            if (trittfolgeZ) {
-                for (let k = 0; k < count; k++) {
-                    const newJ = j * count + k;
-                    if (newJ >= maxWeft) break;
-                    const newI = i * count + k;
-                    if (newI >= maxTreadle) continue;
-                    pattern.treadling.set(newI, newJ, 1);
-                }
-            } else {
-                for (let k = 0; k < count; k++) {
-                    const newJ = j * count + k;
-                    if (newJ >= maxWeft) break;
-                    const newI = (i + 1) * count - 1 - k;
-                    if (newI >= maxTreadle || newI < 0) continue;
-                    pattern.treadling.set(newI, newJ, 1);
-                }
-            }
-        }
-    }
-}
-
-function _blockExpandAufknuepfung(x, y, blockmuster) {
-    const w = pattern.tieup.width, h = pattern.tieup.height;
-    const pData = new Array(h * w);
-    for (let j = 0; j < h; j++) {
-        for (let i = 0; i < w; i++) {
-            pData[j * w + i] = pattern.tieup.get(i, j);
-            pattern.tieup.set(i, j, 0);
-        }
-    }
-    let i1 = w - 1, i2 = 0, j1 = h - 1, j2 = 0, nonempty = false;
-    for (let i = 0; i < w; i++) {
-        for (let j = 0; j < h; j++) {
-            if (pData[j * w + i] !== 0) {
-                if (i1 > i) i1 = i;
-                if (i2 < i) i2 = i;
-                if (j1 > j) j1 = j;
-                if (j2 < j) j2 = j;
-                nonempty = true;
-            }
-        }
-    }
-    if (!nonempty) return;
-    for (let i = i1; i <= i2; i++) {
-        for (let j = j1; j <= j2; j++) {
-            const bindung = pData[j * w + i];
-            if (bindung < 0 || bindung >= 10) continue;
-            for (let ii = x * i; ii < x * (i + 1); ii++) {
-                if (ii >= w) break;
-                for (let jj = y * j; jj < y * (j + 1); jj++) {
-                    if (jj >= h) break;
-                    const v = blockmuster[bindung].get(ii - x * i, jj - y * j);
-                    pattern.tieup.set(ii, jj, v);
-                }
-            }
-        }
-    }
-}
-
-// Apply: Bereichmuster fill -----------------------------------------
-function _bereicheFillPattern(bereichmuster) {
-    let i0, i1, j0, j1;
-    const hasSel = (cursor.x1 !== cursor.x2 || cursor.y1 !== cursor.y2);
-    if (hasSel && cursor.selected_part === "weave") {
-        i0 = Math.min(cursor.x1, cursor.x2);
-        i1 = Math.max(cursor.x1, cursor.x2);
-        j0 = Math.min(cursor.y1, cursor.y2);
-        j1 = Math.max(cursor.y1, cursor.y2);
-    } else {
-        i0 = pattern.min_x; i1 = pattern.max_x;
-        j0 = pattern.min_y; j1 = pattern.max_y;
-    }
-    if (i0 > i1 || j0 > j1) return;
-    for (let i = i0; i <= i1; i++) {
-        for (let j = j0; j <= j1; j++) {
-            const bindung = pattern.weave.get(i, j);
-            if (bindung < 0 || bindung >= 10) continue;
-            const m = bereichmuster[bindung];
-            const sx = m.sizeX(), sy = m.sizeY();
-            if (sx === 0 || sy === 0) continue;
-            pattern.weave.set(i, j, m.get(i % sx, j % sy));
-        }
-    }
-}
+// Direct port of blockmuster.cpp / blockmusterdialog.cpp; the
+// substitution itself (BlockExpand*, BereicheFillPattern) and the slot
+// presets are in blocks-ops.js.
 
 // Open the muster editor dialog. `mode` is "block" or "bereich"; the
 // dialog renders identically except that block mode shows the red
@@ -199,17 +68,8 @@ export function showMusterDialog(mode) {
     pushUndo(); // initial state
 
     function calcRange() {
-        state.mx = -1; state.my = -1;
-        for (let k = 0; k < 10; k++) {
-            for (let i = 0; i < 12; i++) {
-                for (let j = 0; j < 12; j++) {
-                    if (slots[k].get(i, j) !== 0) {
-                        if (state.mx < i) state.mx = i;
-                        if (state.my < j) state.my = j;
-                    }
-                }
-            }
-        }
+        const r = musterRange(slots);
+        state.mx = r.mx; state.my = r.my;
     }
     calcRange();
 
@@ -520,10 +380,7 @@ export function showMusterDialog(mode) {
         refreshAll();
     }
 
-    function toggle(s, current) {
-        if (s === 0) return current !== 0 ? current : 1;
-        return 0;
-    }
+    const toggle = toggleMusterValue;
 
     function editDelete() {
         if (state.mx === -1) return;
@@ -642,41 +499,15 @@ export function showMusterDialog(mode) {
 
     // ---- Preset bindings (Tabby / Twill / Satin / Panama) -----------
     function musterKoeper(h, s) {
-        const m = slots[state.current];
-        m.clear();
-        const n = h + s;
-        const v = state.current !== 0 ? state.current : 1;
-        if (h <= s) {
-            for (let i = 0; i < n; i++)
-                for (let j = i; j < i + h; j++) m.set(i, j % n, v);
-        } else {
-            for (let i = 0; i < n; i++)
-                for (let j = i + s; j < i + n; j++) m.set(i, j % n, v);
-        }
+        stampMusterTwill(slots[state.current], h, s, state.current);
         calcRange(); pushUndo(); refreshAll();
     }
-    const _MUSTER_ATLAS = {
-        5: [[0,0],[1,2],[2,4],[3,1],[4,3]],
-        7: [[0,2],[1,6],[2,3],[3,0],[4,4],[5,1],[6,5]],
-        9: [[0,0],[1,2],[2,4],[3,6],[4,8],[5,1],[6,3],[7,5],[8,7]],
-    };
     function musterAtlas(n) {
-        const m = slots[state.current];
-        m.clear();
-        const v = state.current !== 0 ? state.current : 1;
-        const offsets = _MUSTER_ATLAS[n];
-        if (!offsets) return;
-        for (const [i, j] of offsets) m.set(i, j, v);
+        if (!stampMusterSatin(slots[state.current], n, state.current)) return;
         calcRange(); pushUndo(); refreshAll();
     }
     function musterPanama(h, s) {
-        const m = slots[state.current];
-        m.clear();
-        const v = state.current !== 0 ? state.current : 1;
-        for (let i = 0; i < h; i++)
-            for (let j = 0; j < h; j++) m.set(i, j, v);
-        for (let i = h; i < h + s; i++)
-            for (let j = h; j < h + s; j++) m.set(i, j, v);
+        stampMusterPanama(slots[state.current], h, s, state.current);
         calcRange(); pushUndo(); refreshAll();
     }
 
@@ -688,13 +519,8 @@ export function showMusterDialog(mode) {
         if (fromSlot < 0 || fromSlot >= 10) return;
         if (fromSlot === state.current) return;
         if (state.mx === -1) return;
-        for (let i = 0; i <= state.mx; i++) {
-            for (let j = 0; j <= state.my; j++) {
-                let c = slots[fromSlot].get(i, j);
-                c = toggle(toggle(c, state.current), state.current);
-                slots[state.current].set(i, j, c);
-            }
-        }
+        recolourMuster(slots[fromSlot], slots[state.current], state.current,
+                       state.mx, state.my);
         pushUndo(); refreshAll();
     }
 
@@ -865,8 +691,6 @@ export function showMusterDialog(mode) {
 // Wraps the BlockExpand* trio in a single undoable command.
 function _applyBlockmuster(einzugZ, trittfolgeZ, mx, my) {
     if (mx < 0 || my < 0) return;
-    const x = mx + 1;
-    const y = my + 1;
     _fullSnapCommand("blockmuster", () => {
         // Legacy temporarily disables Schlagpatrone for the substitution.
         const wasPegplan = !!settings.display_pegplan;
@@ -874,11 +698,8 @@ function _applyBlockmuster(einzugZ, trittfolgeZ, mx, my) {
             settings.display_pegplan = false;
             pattern.recalc_weave();
         }
-        _blockExpandEinzug(y, einzugZ);
-        _blockExpandTrittfolge(x, trittfolgeZ);
-        _blockExpandAufknuepfung(x, y, pattern.blockmuster);
-        pattern.recalc_weave_extent();
-        pattern.recalc_weave();
+        substituteBlocks(pattern, pattern.blockmuster,
+                         { mx, my, einzugZ, trittfolgeZ });
         if (wasPegplan) {
             settings.display_pegplan = true;
             pattern._recalc_pegplan_from_weave();
@@ -888,7 +709,7 @@ function _applyBlockmuster(einzugZ, trittfolgeZ, mx, my) {
 
 function _applyBereichmuster() {
     _fullSnapCommand("bereichmuster", () => {
-        _bereicheFillPattern(pattern.bereichmuster);
+        fillRanges(pattern, pattern.bereichmuster, rangeFillRect(pattern, cursor));
         pattern.recalc_from_weave(settings);
     });
 }

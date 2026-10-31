@@ -1,7 +1,7 @@
 from textileplatform.beadpattern import parse_jbb_data, render_jbb_data
 from textileplatform.db import db
 from textileplatform.app import app, limiter
-from textileplatform.models import User
+from textileplatform.models import User, record_access
 from textileplatform.models import Pattern
 from textileplatform.models import Group
 from textileplatform.models import Membership
@@ -189,7 +189,11 @@ def load_logged_in_user():
                 # When the day rolls over we always write — otherwise the
                 # next request would see the same stale date and bump the
                 # day counter a second time.
-                if not impersonating and (
+                # Static files and JS modules don't count: they come in
+                # bulk with every page and say nothing about activity.
+                if not impersonating and request.endpoint not in (
+                    "static", "js_module"
+                ) and (
                     last is None
                     or last.date() != now.date()
                     or (now - last).total_seconds() > 600
@@ -365,9 +369,7 @@ def flush_usage_stats(response):
     if user is None:
         return response
     try:
-        now = g.usage_now
-        user.bump_usage_day(now)
-        user.access_date = now
+        record_access(user.id, g.usage_now)
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -3285,9 +3287,7 @@ def login():
             )
             session.permanent = True
 
-            now = datetime.datetime.now(datetime.UTC)
-            user.bump_usage_day(now)
-            user.access_date = now
+            record_access(user.id, datetime.datetime.now(datetime.UTC))
             db.session.commit()
 
             nxt = _safe_next_url(

@@ -246,3 +246,20 @@ def test_other_users_see_public_patterns_read_only(page):
     click_weave_cell(page, "entering", 0, 0)
     assert page.evaluate("txEditor.pattern.entering.get_shaft(0)") == 0
     assert not page.evaluate("txEditor.modified")
+
+
+def test_palette_panel_keeps_the_pattern_visible(alice_page, twill):
+    """Opening the palette side panel (Ctrl+F) must not leave the canvas
+    bitmap at the width measured while the panel was still settling
+    (it was 0: the whole pattern disappeared)."""
+    page = alice_page
+    page.keyboard.press("Control+f")
+    expect(page.locator("#palette-panel")).to_be_visible()
+    page.wait_for_function(
+        "() => { const c = document.getElementById(\"canvas\");"
+        " return c.width === c.clientWidth && c.width > 0; }")
+    assert page.evaluate("txEditor.view.weave.width") > 0
+    page.keyboard.press("Control+f")
+    page.wait_for_function(
+        "() => { const c = document.getElementById(\"canvas\");"
+        " return c.width === c.clientWidth; }")

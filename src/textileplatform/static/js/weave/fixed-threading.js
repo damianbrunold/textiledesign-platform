@@ -3,12 +3,17 @@
 import { editorI18n } from "../ui/common.js";
 import { Modal } from "../ui/modal.js";
 import { updateFixedEntering } from "./arrange.js";
+import {
+    commitFixedThreading, fixedThreadingScratch, fixedThreadingSize,
+    isContinuousThreading, toggleFixedThreading,
+} from "./fixed-threading-ops.js";
 import { _fullSnapCommand } from "./history.js";
 import { pattern, readonly, settings } from "./state.js";
 
 // ---- Phase 8 (final): EzFixiert (user-defined / fixed threading) ----
 //
-// Direct port of fixeinzugdialog.cpp + recalc.cpp::RecalcEinzugFixiert.
+// Direct port of fixeinzugdialog.cpp + recalc.cpp::RecalcEinzugFixiert;
+// editing and storing the template is in fixed-threading-ops.js.
 // When the user marks a threading template via "Threading ▸ User
 // defined…", every weave-driven recalc rebuilds the threading from
 // that template instead of from the standard recalc_entering algorithm.
@@ -39,18 +44,10 @@ export function showFixeinzugDialog() {
 
     // Editing buffer, isolated from the live pattern until the user
     // closes the dialog (Revert simply discards it).
-    const scratch = pattern.fixeinzug.slice();
+    const scratch = fixedThreadingScratch(pattern);
     let size = pattern.fixsize;
 
-    const calcRange = () => {
-        size = 0;
-        for (let i = 0; i < W; i++) if (scratch[i] !== 0) size = i;
-    };
-    const calcFirstFree = () => {
-        let ff = 0;
-        for (let i = 0; i < W; i++) if (scratch[i] >= ff) ff = scratch[i];
-        return ff;
-    };
+    const calcRange = () => { size = fixedThreadingSize(scratch); };
 
     const cellPx = 16;
     let cx = 0, cy = 0, scrollX = 0;
@@ -156,9 +153,7 @@ export function showFixeinzugDialog() {
     const toggleAt = (col, shaft) => {
         const src = scrollX + col;
         if (src < 0 || src >= W) return;
-        const old = scratch[src];
-        scratch[src] = (old === shaft + 1) ? 0 : (shaft + 1);
-        calcRange();
+        size = toggleFixedThreading(scratch, src, shaft);
         draw();
     };
 
@@ -224,7 +219,8 @@ export function showFixeinzugDialog() {
     addBtn(L("fixez.grab", "Take from pattern"), () => {
         // Re-snapshot from live entering into the local scratch buffer.
         updateFixedEntering(pattern);
-        for (let i = 0; i < W; i++) scratch[i] = pattern.fixeinzug[i];
+        const fresh = fixedThreadingScratch(pattern);
+        for (let i = 0; i < W; i++) scratch[i] = fresh[i];
         calcRange();
         draw();
     });
@@ -237,12 +233,10 @@ export function showFixeinzugDialog() {
     let modal;
     const accept = () => {
         // Continuity check: 0..size-1 must all be non-zero.
-        for (let i = 0; i < size; i++) {
-            if (scratch[i] === 0) {
-                alert(L("fixez.gap-error",
-                    "Threading must be continuous (no gaps)."));
-                return;
-            }
+        if (!isContinuousThreading(scratch, size)) {
+            alert(L("fixez.gap-error",
+                "Threading must be continuous (no gaps)."));
+            return;
         }
         // Wrap as one undoable command. _fullSnapCommand snapshots the
         // current pattern state ("before") at entry, runs mutate, then
@@ -254,16 +248,7 @@ export function showFixeinzugDialog() {
         const finalScratch = scratch.slice();
         const finalSize = size;
         _fullSnapCommand("user-defined threading", () => {
-            pattern.fixeinzug = finalScratch.slice();
-            pattern.fixsize = finalSize;
-            pattern.firstfree = calcFirstFree();
-            if (finalSize >= 0) {
-                let kk = 0;
-                for (let i = finalSize + 1; i < W; i++) {
-                    pattern.fixeinzug[i] = pattern.fixeinzug[kk++];
-                    if (kk > finalSize) kk = 0;
-                }
-            }
+            commitFixedThreading(pattern, finalScratch, finalSize);
             settings.threading_arrangement = "fixiert";
             // Trigger the full recalc-from-weave path so
             // recalcFixedEntering rebuilds entering from the freshly

@@ -6,6 +6,7 @@ import { ColorPicker } from "../ui/colorpicker.js";
 import { _prompt, data, downloadRendered, editorI18n } from "../ui/common.js";
 import { Modal } from "../ui/modal.js";
 import { _snapshotCommand } from "./history.js";
+import { infoColors, infoFloats, infoGeneral, infoHeddles } from "./info-ops.js";
 import { savePatternData, saveSettings } from "./persist.js";
 import { pattern, readonly, settings } from "./state.js";
 
@@ -157,249 +158,27 @@ export function showPageSetupDialog() {
 
 
 // Pattern info — direct port of EntwurfsinfoDialog. Builds 4 sections
-// of computed report text from the in-memory pattern.
+// of computed report text from the in-memory pattern (info-ops.js).
 
-function _info_fmt3g(v) {
-    if (!isFinite(v)) return "0";
-    // Match the desktop's "%1.3g" output: at most 3 significant digits.
-    return Number(v).toPrecision(3).replace(/\.?0+($|e)/, "$1");
+function _infoL() {
+    const i18n = editorI18n();
+    return (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
 }
 
-function _info_weave(i, j) {
-    // Re-derive weave value from in-memory pattern.weave.
-    if (i < 0 || j < 0) return 0;
-    if (i >= pattern.weave.width || j >= pattern.weave.height) return 0;
-    return pattern.weave.get(i, j);
-}
-
-// === Allgemein ===
 function _info_general() {
-    const lines = [];
-    const a = pattern.min_x, b = pattern.max_x;
-    const sa = pattern.min_y, sb = pattern.max_y;
-    const i18n = editorI18n();
-    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
-
-    if (b < a || sb < sa) return lines;
-
-    const props = _patternProperties();
-    if (props.author)       lines.push(L("info.author", "Author:") + " " + props.author);
-    if (props.organization) lines.push(L("info.org",    "Organization:") + " " + props.organization);
-
-    const w = b - a + 1, h = sb - sa + 1;
-    lines.push(L("info.size", "Pattern size:") + " " + w + " x " + h);
-
-    if (pattern.rapport_k_b >= pattern.rapport_k_a
-        && pattern.rapport_s_b >= pattern.rapport_s_a) {
-        const rw = pattern.rapport_k_b - pattern.rapport_k_a + 1;
-        const rh = pattern.rapport_s_b - pattern.rapport_s_a + 1;
-        lines.push(L("info.repeat", "Pattern repeat:") + " " + rw + " x " + rh);
-    }
-
-    let nshafts = 0;
-    for (let s = 0; s < pattern.tieup.height; s++) {
-        if (!pattern.entering.isRowEmpty(s)) nshafts++;
-    }
-    lines.push(L("info.shafts", "Number of shafts:") + " " + nshafts);
-
-    let ntreadles = 0;
-    for (let t = 0; t < pattern.treadling.width; t++) {
-        if (!pattern.treadling.isColEmpty(t)) ntreadles++;
-    }
-    lines.push(L("info.treadles", "Number of treadles:") + " " + ntreadles);
-
-    const total = w * h;
-    let up = 0, down = 0;
-    for (let i = a; i <= b; i++) {
-        for (let j = sa; j <= sb; j++) {
-            if (_info_weave(i, j) > 0) up++;
-            else down++;
-        }
-    }
-    if (up < down) {
-        lines.push(L("info.weft-sided", "The pattern is weft sided") + " ("
-            + _info_fmt3g(100 * down / total) + "% "
-            + L("info.sinking", "sinking binding points)"));
-    } else if (up > down) {
-        lines.push(L("info.warp-sided", "The pattern is warp sided") + " ("
-            + _info_fmt3g(100 * up / total) + "% "
-            + L("info.rising", "rising binding points)"));
-    } else {
-        lines.push(L("info.balanced", "The pattern is balanced"));
-    }
-
-    if (props.notes) {
-        lines.push("");
-        lines.push(L("info.notes", "Notes:"));
-        for (const ln of props.notes.split(/\r?\n/)) lines.push(ln);
-    }
-    return lines;
+    return infoGeneral(pattern, _patternProperties(), _infoL());
 }
 
-// === Farben ===
 function _info_colors() {
-    const lines = [];
-    const i18n = editorI18n();
-    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
-    const a = pattern.min_x, b = pattern.max_x;
-    const sa = pattern.min_y, sb = pattern.max_y;
-    if (b < a || sb < sa) return lines;
-
-    const palLen = pattern.palette ? pattern.palette.length : 0;
-    const ktable = new Array(palLen + 1).fill(0);
-    const stable = new Array(palLen + 1).fill(0);
-    const seen = new Set(), seenK = new Set(), seenF = new Set();
-    for (let i = a; i <= b; i++) {
-        const c = pattern.color_warp.get(i, 0);
-        seen.add(c); seenK.add(c);
-        ktable[c] = (ktable[c] | 0) + 1;
-    }
-    for (let j = sa; j <= sb; j++) {
-        const c = pattern.color_weft.get(0, j);
-        seen.add(c); seenF.add(c);
-        stable[c] = (stable[c] | 0) + 1;
-    }
-    lines.push(L("info.colors-count", "Number of colors:"));
-    lines.push(L("info.total", "Total:") + " " + seen.size);
-    lines.push(L("info.in-warp", "In warp:") + " " + seenK.size);
-    lines.push(L("info.in-weft", "In weft:") + " " + seenF.size);
-    lines.push("");
-
-    const emit = (label, table, total, fadenLabel) => {
-        lines.push(label);
-        let n = 1;
-        for (let i = 0; i < palLen; i++) {
-            if (!table[i]) continue;
-            const [r, g, b2] = pattern.palette[i] || [0, 0, 0];
-            const [h, s, v] = ColorPicker.rgbToHsv(r, g, b2);
-            const pct = _info_fmt3g(100 * table[i] / total);
-            lines.push("  "
-                + L("info.color", "Color") + " " + n + ": "
-                + "HSV=(" + _info_fmt3g(h) + "," + _info_fmt3g(s) + "," + _info_fmt3g(v) + "), "
-                + "RGB=(" + r + "," + g + "," + b2 + "), "
-                + table[i] + " " + fadenLabel + "  (" + pct + "%)");
-            n++;
-        }
-        lines.push("");
-    };
-    emit(L("info.warp-colors", "Warp colors:"), ktable, b - a + 1,
-        L("info.warp-ends", "warp ends"));
-    emit(L("info.weft-colors", "Weft colors:"), stable, sb - sa + 1,
-        L("info.weft-picks", "weft picks"));
-    return lines;
-}
-
-// === Flottierungen ===
-function _info_floats_axis(weft) {
-    const lines = [];
-    const i18n = editorI18n();
-    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
-    const a = pattern.min_x, b = pattern.max_x;
-    const sa = pattern.min_y, sb = pattern.max_y;
-    if (b < a || sb < sa) return lines;
-
-    // For weft floats, walk each weft row left→right; runs of <=0
-    // (warp goes "down") bounded by a >0 cell are floats. Warp floats
-    // mirror the algorithm with axes swapped — runs of >0 inside a
-    // warp column. Direct port of buildFlottierungen() in the desktop.
-    const maxflot = (weft ? (b - a + 2) : (sb - sa + 2));
-    const table = new Array(maxflot).fill(0);
-    let biggest = 0, count = 0;
-    if (weft) {
-        for (let j = sa; j <= sb; j++) {
-            let inflot = _info_weave(a, j) <= 0;
-            let start = inflot ? a : -1;
-            for (let i = a; i <= b; i++) {
-                if (inflot) {
-                    if (_info_weave(i, j) > 0) {
-                        const len = i - start;
-                        table[len]++; count++;
-                        if (len > biggest) biggest = len;
-                        inflot = false; start = -1;
-                    }
-                } else if (_info_weave(i, j) <= 0) {
-                    inflot = true; start = i;
-                }
-            }
-            if (inflot) {
-                const len = b + 1 - start;
-                table[len]++; count++;
-                if (len > biggest) biggest = len;
-            }
-        }
-    } else {
-        for (let i = a; i <= b; i++) {
-            let inflot = _info_weave(i, sa) > 0;
-            let start = inflot ? sa : -1;
-            for (let j = sa; j <= sb; j++) {
-                if (inflot) {
-                    if (_info_weave(i, j) <= 0) {
-                        const len = j - start;
-                        table[len]++; count++;
-                        if (len > biggest) biggest = len;
-                        inflot = false; start = -1;
-                    }
-                } else if (_info_weave(i, j) > 0) {
-                    inflot = true; start = j;
-                }
-            }
-            if (inflot) {
-                const len = sb + 1 - start;
-                table[len]++; count++;
-                if (len > biggest) biggest = len;
-            }
-        }
-    }
-    lines.push(weft ? L("info.weft-floats", "Weft floats:")
-                    : L("info.warp-floats", "Warp floats:"));
-    lines.push(L("info.longest-float", "Longest float:") + " " + biggest);
-    let mean = 0;
-    if (count > 0) {
-        for (let k = 1; k < maxflot; k++) {
-            if (table[k]) mean += table[k] * k / count;
-        }
-    }
-    lines.push(L("info.average-float", "Average float:") + " " + _info_fmt3g(mean));
-    lines.push(L("info.distribution", "Distribution:"));
-    for (let k = 1; k < maxflot; k++) {
-        if (!table[k]) continue;
-        lines.push("  " + L("info.float", "Float") + " " + k + ":  "
-            + table[k] + " " + L("info.floats", "floats")
-            + "  (" + _info_fmt3g(100 * table[k] / count) + "%)");
-    }
-    lines.push("");
-    return lines;
+    return infoColors(pattern, ColorPicker.rgbToHsv, _infoL());
 }
 
 function _info_floats() {
-    return _info_floats_axis(true).concat(_info_floats_axis(false));
+    return infoFloats(pattern, _infoL());
 }
 
-// === Litzen ===
 function _info_heddles() {
-    const lines = [];
-    const i18n = editorI18n();
-    const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
-    let total = 0;
-    for (let i = 0; i < pattern.entering.width; i++) {
-        if (pattern.entering.get_shaft(i) !== 0) total++;
-    }
-    lines.push(L("info.heddles-count", "Number of heddles:") + " " + total);
-    lines.push(L("info.distribution-shafts", "Distribution across the shafts:"));
-    let shaft = 0;
-    for (let s = 0; s < pattern.tieup.height; s++) {
-        if (pattern.entering.isRowEmpty(s)) continue;
-        shaft++;
-        let count = 0;
-        for (let i = 0; i < pattern.entering.width; i++) {
-            if (pattern.entering.get_shaft(i) === s + 1) count++;
-        }
-        const pct = total > 0 ? _info_fmt3g(100 * count / total) : "0";
-        lines.push("  " + L("info.shaft", "Shaft") + " " + shaft + ":  "
-            + count + " " + L("info.heddles", "heddles") + "  (" + pct + "%)");
-    }
-    lines.push("");
-    return lines;
+    return infoHeddles(pattern, _infoL());
 }
 
 function _info_full_report() {
