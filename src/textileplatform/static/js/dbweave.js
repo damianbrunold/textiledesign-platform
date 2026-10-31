@@ -3918,69 +3918,13 @@ async function _revertChanges() {
 }
 
 
+// Conversion to and from the stored pattern JSON is in weave/io.js.
 function initSettings(data, settings) {
-    // Per-device preferences supply the defaults for any setting the
-    // pattern JSON doesn't already specify (Phase 12). Saved patterns
-    // continue to win — the prefs only fill the gaps.
-    const prefs = (typeof _prefsLoad === "function") ? _prefsLoad() : {};
-    // Coerce a saved-but-unknown style key (e.g. an old pattern with an
-    // empty string left over from the symbol-options dialog regression)
-    // back to "filled" so cellPainters[...] always resolves.
-    const _coerceStyle = (v) =>
-        (typeof v === "string" && cellPainters[v]) ? v : "filled";
-    settings.style = val(data, "weave_style", "draft");
-    settings.entering_style  = _coerceStyle(val(data, "entering_style",  prefs.entering_style  || "filled"));
-    settings.tieup_style     = _coerceStyle(val(data, "tieup_style",     prefs.tieup_style     || "filled"));
-    settings.treadling_style = _coerceStyle(val(data, "treadling_style", prefs.treadling_style || "filled"));
-    settings.single_treadling = val(data, "single_treadling", true);
-    settings.weave_locked = val(data, "weave_locked", false);
-    settings.unit_width = val(data, "unit_width", prefs.unit_width || 4);
-    settings.unit_height = val(data, "unit_height", prefs.unit_height || 4);
-    settings.direction_righttoleft = val(data, "direction_righttoleft", !!prefs.direction_righttoleft);
-    settings.direction_toptobottom = val(data, "direction_toptobottom", !!prefs.direction_toptobottom);
-    settings.entering_at_bottom = val(data, "entering_at_bottom", !!prefs.entering_at_bottom);
-    settings.warp_factor = val(data, "warp_factor", prefs.warp_factor || 1.0);
-    settings.weft_factor = val(data, "weft_factor", prefs.weft_factor || 1.0);
-    // Phase 12 extras (port of XOptionsDialog fields). alt_palette and
-    // alt_pegplan are currently no-ops but kept on `settings` so the
-    // Optionen dialog round-trips them. sinking_shed inverts the colour
-    // effect / simulation render.
-    settings.pegplan_style    = _coerceStyle(val(data, "pegplan_style",    prefs.pegplan_style    || "filled"));
-    settings.aushebung_style  = _coerceStyle(val(data, "aushebung_style",  prefs.aushebung_style  || "rising"));
-    settings.anbindung_style  = _coerceStyle(val(data, "anbindung_style",  prefs.anbindung_style  || "cross"));
-    settings.abbindung_style  = _coerceStyle(val(data, "abbindung_style",  prefs.abbindung_style  || "circle"));
-    settings.alt_palette      = val(data, "alt_palette",      !!prefs.alt_palette);
-    settings.alt_pegplan      = val(data, "alt_pegplan",      !!prefs.alt_pegplan);
-    settings.sinking_shed     = val(data, "sinking_shed",     !!prefs.sinking_shed);
-    settings.current_color = val(data, "current_color", 0);
-    settings.display_colors_warp = val(data, "display_colors_warp", true);
-    settings.display_colors_weft = val(data, "display_colors_weft", true);
-    settings.display_hlines = val(data, "display_hlines", true);
-    settings.display_palette = val(data, "display_palette", false);
-    settings.display_pegplan = val(data, "display_pegplan", false);
-    settings.display_reed = val(data, "display_reed", true);
-    settings.display_repeat = val(data, "display_repeat", false);
-    settings.display_entering = val(data, "display_entering", true);
-    settings.display_treadling = val(data, "display_treadling", true);
-    const savedRange = val(data, "current_range", 1);
-    settings.current_range = (savedRange >= 1 && savedRange <= 12) ? savedRange : 1;
-    // Rapport is auto-computed from the pattern (see Pattern.calcRapport);
-    // no user-settable bounds to load here.
-    settings.inverse_repeat = val(data, "inverse_repeat", false);
-    settings.color_effect_with_grid = val(data, "color_effect_with_grid", false);
-    settings.highlight = false;
-    settings.threading_arrangement = val(data, "threading_arrangement", "minimal-z");
-    settings.treadling_arrangement = val(data, "treadling_arrangement", "minimal-z");
-    // Cursor behaviour (Extras ▸ Cursor): lock to rapport, and the
-    // direction(s) the cursor auto-advances after a Space toggle. The
-    // direction is a CD_* bitmask: 1=UP, 2=LEFT, 4=DOWN, 8=RIGHT
-    // (matches the desktop CURSORDIRECTION enum). Default is CD_UP.
-    settings.cursor_locked = val(data, "cursor_locked", false);
-    settings.cursor_dir    = val(data, "cursor_dir", 1);
-    // Side toolboxes (Werkzeuge / Bereiche) — visibility persisted per
-    // pattern, like display_palette.
-    settings.display_tools_panel  = val(data, "display_tools_panel",  false);
-    settings.display_ranges_panel = val(data, "display_ranges_panel", false);
+    loadSettings(data, settings, {
+        // Per-device preferences fill what the pattern doesn't specify.
+        prefs: (typeof _prefsLoad === "function") ? _prefsLoad() : {},
+        styles: new Set(Object.keys(cellPainters)),
+    });
 }
 
 
@@ -4046,46 +3990,7 @@ function set_current_layout(layout) {
 
 
 function saveSettings(data, settings) {
-    data["weave_style"] = settings.style;
-    data["entering_style"] = settings.entering_style;
-    data["tieup_style"] = settings.tieup_style;
-    data["treadling_style"] = settings.treadling_style;
-    data["single_treadling"] = settings.single_treadling;
-    data["weave_locked"] = settings.weave_locked;
-    data["unit_width"] = settings.unit_width;
-    data["unit_height"] = settings.unit_height;
-    data["direction_righttoleft"] = settings.direction_righttoleft;
-    data["direction_toptobottom"] = settings.direction_toptobottom;
-    data["entering_at_bottom"] = settings.entering_at_bottom;
-    data["warp_factor"] = settings.warp_factor;
-    data["weft_factor"] = settings.weft_factor;
-    data["pegplan_style"]    = settings.pegplan_style;
-    data["aushebung_style"]  = settings.aushebung_style;
-    data["anbindung_style"]  = settings.anbindung_style;
-    data["abbindung_style"]  = settings.abbindung_style;
-    data["alt_palette"]      = settings.alt_palette;
-    data["alt_pegplan"]      = settings.alt_pegplan;
-    data["sinking_shed"]     = settings.sinking_shed;
-    data["current_color"] = settings.current_color;
-    data["display_colors_warp"] = settings.display_colors_warp;
-    data["display_colors_weft"] = settings.display_colors_weft;
-    data["display_hlines"] = settings.display_hlines;
-    data["display_palette"] = settings.display_palette;
-    data["display_pegplan"] = settings.display_pegplan;
-    data["display_reed"] = settings.display_reed;
-    data["display_repeat"] = settings.display_repeat;
-    data["display_entering"] = settings.display_entering;
-    data["display_treadling"] = settings.display_treadling;
-    data["pattern_only"] = settings.pattern_only;
-    data["current_range"] = settings.current_range;
-    data["inverse_repeat"] = settings.inverse_repeat;
-    data["threading_arrangement"] = settings.threading_arrangement;
-    data["treadling_arrangement"] = settings.treadling_arrangement;
-    data["color_effect_with_grid"] = settings.color_effect_with_grid;
-    data["cursor_locked"] = settings.cursor_locked;
-    data["cursor_dir"]    = settings.cursor_dir;
-    data["display_tools_panel"]  = settings.display_tools_panel;
-    data["display_ranges_panel"] = settings.display_ranges_panel;
+    storeSettings(data, settings);
     // Cursor position persists across reloads so the user can pick up where
     // they left off. We only store a single cell, not the whole selection.
     if (typeof cursor !== "undefined" && cursor !== null) {
@@ -4097,161 +4002,11 @@ function saveSettings(data, settings) {
 
 
 function initPatternData(data, pattern) {
-    pattern.palette = [];
-    let idx = 0;
-    for (const spec of data.palette) {
-        pattern.palette.push([spec[0] | 0, spec[1] | 0, spec[2] | 0]);
-        colors[idx++] = `rgb(${spec[0]}, ${spec[1]}, ${spec[2]})`;
-    }
-
-    for (let i = 0; i < data.width; i++) {
-        pattern.color_warp.set(i, 0, data.colors_warp[i]);
-        pattern.reed.set(i, 0, data.data_reed[i]);
-    }
-
-    for (let j = 0; j < data.height; j++) {
-        pattern.color_weft.set(0, j, data.colors_weft[j]);
-    }
-
-    // Seed as "empty" (min > max) rather than 0 so a pattern whose first
-    // used warp/weft sits in the middle of the grid reloads with the same
-    // extent it had while being edited.
-    let min_pattern_x = data.width;
-    let max_pattern_x = 0;
-    for (let i = 0; i < data.width; i++) {
-        if (data.data_entering[i] > 0) {
-            min_pattern_x = Math.min(min_pattern_x, i);
-            max_pattern_x = Math.max(max_pattern_x, i);
-        }
-    }
-    pattern.min_x = min_pattern_x;
-    pattern.max_x = max_pattern_x;
-
-    let min_pattern_y = data.height;
-    let max_pattern_y = 0;
-    for (let j = 0; j < data.height; j++) {
-        for (let i = 0; i < data.max_treadles; i++) {
-            const idx = i + j * data.max_treadles;
-            if (data.data_treadling[idx] > 0) {
-                min_pattern_y = Math.min(min_pattern_y, j);
-                max_pattern_y = Math.max(max_pattern_y, j);
-            }
-        }
-    }
-    pattern.min_y = min_pattern_y;
-    pattern.max_y = max_pattern_y;
-
-    let max_shaft = 0;
-    for (let i = min_pattern_x; i <= max_pattern_x; i++) {
-        const shaft = data.data_entering[i];
-        if (shaft <= 0) continue;
-        max_shaft = Math.max(max_shaft, shaft - 1);
-        pattern.entering.set_shaft(i, shaft);
-    }
-
-    let max_treadle = 0;
-    for (let j = min_pattern_y; j <= max_pattern_y; j++) {
-        for (let k = 0; k < data.max_treadles; k++) {
-            const treadle = data.data_treadling[k + j * data.max_treadles];
-            if (treadle > 0) {
-                max_treadle = Math.max(max_treadle, k);
-                pattern.treadling.set(k, j, treadle);
-            }
-        }
-    }
-
-    for (let i = 0; i <= max_treadle; i++) {
-        for (let j = 0; j <= max_shaft; j++) {
-            const tieup = data.data_tieup[i + j * data.max_treadles];
-            if (tieup > 0) {
-                pattern.tieup.set(i, j, tieup);
-            }
-        }
-    }
-
-    // Pegplan: optional — older patterns won't have it. Shape is
-    // max_shafts × height, flattened by shaft-major order (i + j*max_shafts).
-    if (Array.isArray(data.data_pegplan)) {
-        for (let j = 0; j < data.height; j++) {
-            for (let s = 0; s < data.max_shafts; s++) {
-                const v = data.data_pegplan[s + j * data.max_shafts];
-                if (v > 0) pattern.pegplan.set(s, j, v);
-            }
-        }
-    }
-
-    // Block- / Bereich-muster slots (10 each, 12×12 cells flat). Older
-    // patterns without these arrays start with empty muster slots.
-    _loadMusterArray(data.data_blockmuster,   pattern.blockmuster);
-    _loadMusterArray(data.data_bereichmuster, pattern.bereichmuster);
-
-    // Fixed-threading template (optional — older patterns lack it).
-    if (Array.isArray(data.data_fixeinzug)) {
-        for (let i = 0; i < pattern.fixeinzug.length && i < data.data_fixeinzug.length; i++) {
-            pattern.fixeinzug[i] = data.data_fixeinzug[i] || 0;
-        }
-    }
-    pattern.fixsize  = val(data, "fixsize", 0);
-    pattern.firstfree = val(data, "firstfree", 0);
-
-    // Hilfslinien — array of {typ, feld, pos}. Older patterns may lack it.
-    pattern.hlines = [];
-    if (Array.isArray(data.hlines)) {
-        for (const h of data.hlines) {
-            if (!h || typeof h !== "object") continue;
-            const typ  = (h.typ === "vert") ? "vert" : "horz";
-            const feld = h.feld ? 1 : 0;
-            const pos  = h.pos | 0;
-            if (pos >= 0) pattern.hlines.push({ typ, feld, pos });
-        }
-    }
-
-    // Restore persisted rapport bounds (auto-detected on save). Older
-    // patterns lack these keys — leave Pattern's default "no rapport"
-    // (rapport_*_b < rapport_*_a) in place and let the user re-detect.
-    if (Number.isInteger(data.rapport_k_a) && Number.isInteger(data.rapport_k_b)) {
-        pattern.rapport_k_a = data.rapport_k_a;
-        pattern.rapport_k_b = data.rapport_k_b;
-    }
-    if (Number.isInteger(data.rapport_s_a) && Number.isInteger(data.rapport_s_b)) {
-        pattern.rapport_s_a = data.rapport_s_a;
-        pattern.rapport_s_b = data.rapport_s_b;
-    }
-
-    // Pegplan + .dbw imports: the desktop's .dbw file format does not
-    // store an explicit pegplan grid, only treadling+tieup. If the
-    // pattern was last viewed in pegplan mode (display_pegplan=true),
-    // recalc_weave would derive the weave from an empty pegplan. To
-    // make pegplan-mode imports work, derive pegplan from the weave
-    // computed via treadling+tieup, then resume the user's chosen
-    // display mode.
-    const pegplanWasOn = !!(settings && settings.display_pegplan);
-    let pegplanIsEmpty = true;
-    if (pegplanWasOn) {
-        for (let i = 0; i < pattern.pegplan.data.length; i++) {
-            if (pattern.pegplan.data[i] > 0) { pegplanIsEmpty = false; break; }
-        }
-        if (pegplanIsEmpty) {
-            settings.display_pegplan = false;  // force treadling-based recalc
-        }
-    }
-    pattern.recalc_weave();
-    if (pegplanWasOn && pegplanIsEmpty) {
-        pattern._recalc_pegplan_from_weave();
-        settings.display_pegplan = true;
-        pattern.recalc_weave();  // re-derive weave from now-populated pegplan
-    }
-}
-
-function _loadMusterArray(arr, target) {
-    if (!Array.isArray(arr)) return;
-    for (let k = 0; k < 10 && k < arr.length; k++) {
-        const slot = arr[k];
-        if (!Array.isArray(slot)) continue;
-        for (let i = 0; i < slot.length && i < 12 * 12; i++) {
-            target[k].feld[i] = slot[i] || 0;
-        }
-    }
+    loadPatternData(data, pattern,
+                    { pegplan: !!(settings && settings.display_pegplan) });
+    pattern.palette.forEach(([r, g, b], idx) => {
+        colors[idx] = `rgb(${r}, ${g}, ${b})`;
+    });
 }
 
 
@@ -4263,70 +4018,7 @@ function savePatternData(data, pattern) {
         data.visible_shafts   = view.visible_shafts;
         data.visible_treadles = view.visible_treadles;
     }
-    for (let i = 0; i < data.width; i++) {
-        data.data_reed[i] = pattern.reed.get(i, 0);
-        data.colors_warp[i] = pattern.color_warp.get(i, 0);
-        data.data_entering[i] = pattern.entering.get_shaft(i);
-    }
-
-    for (let j = 0; j < data.height; j++) {
-        data.colors_weft[j] = pattern.color_weft.get(0, j);
-    }
-
-    for (let j = 0; j < data.height; j++) {
-        for (let i = 0; i < data.max_treadles; i++) {
-            const idx = i + j * data.max_treadles;
-            data.data_treadling[idx] = pattern.treadling.get(i, j);
-        }
-    }
-
-    for (let i = 0; i < data.max_treadles; i++) {
-        for (let j = 0; j < data.max_shafts; j++) {
-            const idx = i + j * data.max_treadles;
-            data.data_tieup[idx] = pattern.tieup.get(i, j);
-        }
-    }
-
-    // Pegplan (shafts × height, shaft-major flattening).
-    const pegFlat = new Array(data.max_shafts * data.height);
-    pegFlat.fill(0);
-    for (let j = 0; j < data.height; j++) {
-        for (let s = 0; s < data.max_shafts; s++) {
-            pegFlat[s + j * data.max_shafts] = pattern.pegplan.get(s, j);
-        }
-    }
-    data.data_pegplan = pegFlat;
-
-    // Muster slots — 10 × 144 cells each, simple flat int arrays.
-    data.data_blockmuster   = pattern.blockmuster.map(m => m.feld.slice());
-    data.data_bereichmuster = pattern.bereichmuster.map(m => m.feld.slice());
-
-    // Fixed-threading template + helper indices.
-    data.data_fixeinzug = pattern.fixeinzug.slice();
-    data.fixsize        = pattern.fixsize;
-    data.firstfree      = pattern.firstfree;
-
-    // Hilfslinien — round-trip the user's guide-line list.
-    data.hlines = (pattern.hlines || []).map(h => ({
-        typ: h.typ, feld: h.feld | 0, pos: h.pos | 0,
-    }));
-
-    // Persist auto-detected rapport bounds so the server can index
-    // pattern_width/height + rapport_width/height for list views, and
-    // so reloading restores the same bounds without re-detection.
-    data.rapport_k_a = pattern.rapport_k_a | 0;
-    data.rapport_k_b = pattern.rapport_k_b | 0;
-    data.rapport_s_a = pattern.rapport_s_a | 0;
-    data.rapport_s_b = pattern.rapport_s_b | 0;
-
-    // Palette — write back as [r,g,b,0] triples to match the storage
-    // format (the 4th slot mirrors the legacy alpha/marker channel).
-    if (pattern.palette && pattern.palette.length) {
-        data.palette = pattern.palette.map(([r, g, b], i) => {
-            const orig = (Array.isArray(data.palette) && data.palette[i]) || [0, 0, 0, 0];
-            return [r, g, b, orig[3] || 0];
-        });
-    }
+    storePatternData(data, pattern);
 }
 
 

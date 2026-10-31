@@ -104,6 +104,7 @@ Uploads are detected by header (`@dbw3:` / `(jbb`), decoded as UTF-8 with a Wind
 Jinja2 templates in `src/textileplatform/templates/`. The pattern editors are JS-heavy:
 - `static/js/dbweave.js` — DB-WEAVE editor (classic script)
 - `static/js/weave/model.js` — ES module: the DB-WEAVE data model (`Grid`, `Entering`, `Muster`, `Pattern` with weave calculation in both directions and repeat detection). No DOM, no editor globals; the editor connects through `Pattern`'s hooks (`isPegplan`, `recalcFixedEntering`, `afterRecalcFromWeave`). `weave/globals.js` is a transition bridge that puts the classes on `window` for the classic scripts.
+- `static/js/weave/io.js` — ES module: conversion between the stored pattern JSON and the editor (`loadPatternData` / `storePatternData`, `loadSettings` / `storeSettings`); `dbweave.js`'s `initPatternData` / `savePatternData` / `initSettings` / `saveSettings` delegate to it. Save followed by load must give back the same data (`tests/js/weave-io.test.js`).
 - `static/js/jbead.js` — JBead editor
 - `static/js/common.js` — shared editor plumbing: `startEditor` (startup sequence), `savePattern`, the modified flag, local drafts in localStorage, navigation / close guards, `editorI18n()` (the `#tx-i18n` JSON block of the editor templates)
 - `static/js/commands.js` — `CommandBus` undo/redo, including saved-state tracking (`markSaved`, `isAtSavedState`)

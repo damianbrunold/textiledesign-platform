@@ -56,6 +56,16 @@ def test_edit_save_reload(alice_page, twill):
     assert not is_modified(alice_page)
 
 
+def test_tieup_prepared_first_survives_reload(alice_page, twill):
+    """Tie up before threading or treading anything, save, reload."""
+    click_weave_cell(alice_page, "tieup", 2, 3)
+    assert alice_page.evaluate("pattern.tieup.get(2, 3)") == 1
+    save(alice_page)
+    alice_page.reload()
+    open_editor(alice_page, "alice", twill)
+    assert alice_page.evaluate("pattern.tieup.get(2, 3)") == 1
+
+
 def test_clicking_a_set_cell_clears_it(alice_page, twill):
     click_weave_cell(alice_page, "entering", 3, 2)
     assert alice_page.evaluate("pattern.entering.get_shaft(3)") == 3
