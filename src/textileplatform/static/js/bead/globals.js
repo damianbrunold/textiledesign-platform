@@ -6,9 +6,15 @@
 // Remove a name from here once no classic script refers to it.
 
 import { BeadList, loadModel, Pattern, storeModel } from "./model.js";
+import {
+    affectedRect, captureGroup, restoreBaseline, stampGroup,
+} from "./selection.js";
 
 export function install(target) {
-    Object.assign(target, { BeadList, loadModel, Pattern, storeModel });
+    Object.assign(target, {
+        BeadList, loadModel, Pattern, storeModel,
+        affectedRect, captureGroup, restoreBaseline, stampGroup,
+    });
 }
 
 if (typeof window !== "undefined") install(window);

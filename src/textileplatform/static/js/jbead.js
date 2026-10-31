@@ -1142,7 +1142,7 @@ function _onMouseDown(event) {
             && i >= sel.i1 && i <= sel.i2
             && j >= sel.j1 && j <= sel.j2;
         if (inside) {
-            const group = _captureSelectionGroup();
+            const group = captureGroup(pattern);
             if (group) {
                 _drag = {
                     kind: "move",
@@ -1202,7 +1202,7 @@ function _onMouseMove(event) {
             if (dx !== _drag.lastDx || dy !== _drag.lastDy) {
                 _drag.lastDx = dx;
                 _drag.lastDy = dy;
-                _stampSelectionGroup(_drag.group, dx, dy);
+                stampGroup(pattern, _drag.group, dx, dy, background_color);
                 beadlist.update();
                 view.draw();
                 _updateStatusbar();
@@ -2278,111 +2278,14 @@ function _openArrangeDialog() {
 // gestures: mouse drag of an existing selection, Shift+Arrow on a
 // keyboard, and the toolbar arrow buttons (TODO).
 
-function _captureSelectionGroup() {
-    if (!pattern.selection) return null;
-    const sel = pattern.selection;
-    const W = sel.i2 - sel.i1 + 1;
-    const H = sel.j2 - sel.j1 + 1;
-    const PW = pattern.width;
-    const PH = pattern.height;
-    const total = PW * PH;
-    // The selection's "shape" is a set of linear offsets relative to
-    // the top-left bead's linear index. Working linearly (instead of
-    // in 2D x/y coordinates) means a 2x2 selection at the seam — say
-    // (W-1, j) wrapping into (0, j+1) — is still recognised as the
-    // same shape, so all symmetric copies move together when the
-    // group is dragged.
-    const offsets = [];
-    const values = [];
-    for (let m = 0; m < H; m++) {
-        for (let k = 0; k < W; k++) {
-            offsets.push(k + m * PW);
-            values.push(pattern.get(sel.i1 + k, sel.j1 + m));
-        }
-    }
-    const maxOffset = offsets[offsets.length - 1];
-    // Scan every linear base where the full shape stays in-bounds.
-    const matches = [];
-    for (let L = 0; L + maxOffset < total; L++) {
-        let ok = true;
-        for (let n = 0; n < offsets.length; n++) {
-            if (pattern.data[L + offsets[n]] !== values[n]) { ok = false; break; }
-        }
-        if (ok) matches.push(L);
-    }
-    return {
-        sel: { ...sel },
-        W, H, PW, PH, total,
-        offsets,
-        values,
-        matches,  // array of linear base positions
-        baseline: pattern.data.slice(),
-    };
-}
-
-// Render `group` translated by linear offset `dy * PW + dx`: restore
-// baseline, lift every match (paint background_color), stamp the
-// captured shape at the linearly-offset positions. Selection rect
-// moves by the (dx, dy) the user gestured; if that pushes it past the
-// seam the visual rect may extend outside the pattern (and won't be
-// drawn there) but the underlying data has wrapped correctly.
-function _stampSelectionGroup(group, dx, dy) {
-    const { sel, PW, total, offsets, values, matches, baseline } = group;
-    for (let k = 0; k < baseline.length; k++) pattern.data[k] = baseline[k];
-    for (const L of matches) {
-        for (const off of offsets) {
-            const tl = L + off;
-            if (tl < 0 || tl >= total) continue;
-            pattern.data[tl] = background_color;
-        }
-    }
-    const deltaLin = dy * PW + dx;
-    for (const L of matches) {
-        for (let n = 0; n < offsets.length; n++) {
-            const tl = L + offsets[n] + deltaLin;
-            if (tl < 0 || tl >= total) continue;
-            pattern.data[tl] = values[n];
-        }
-    }
-    pattern.selection = {
-        i1: sel.i1 + dx, j1: sel.j1 + dy,
-        i2: sel.i2 + dx, j2: sel.j2 + dy,
-    };
-}
-
-// Bounding rect over every linear position that the group either
-// lifts from or stamps into. Used by the snapshot for undo — it
-// over-captures (rect covers whole rows when cells are scattered),
-// but that's correct for `snapshotGridRegion`'s rectangular API.
-function _affectedRectForGroupMove(group, dx, dy) {
-    const { offsets, matches, PW, total } = group;
-    const deltaLin = dy * PW + dx;
-    let i1 = PW, j1 = group.PH, i2 = -1, j2 = -1;
-    const expand = (lin) => {
-        if (lin < 0 || lin >= total) return;
-        const x = lin % PW;
-        const y = Math.trunc(lin / PW);
-        if (x < i1) i1 = x;
-        if (y < j1) j1 = y;
-        if (x > i2) i2 = x;
-        if (y > j2) j2 = y;
-    };
-    for (const L of matches) {
-        for (const off of offsets) {
-            expand(L + off);
-            expand(L + off + deltaLin);
-        }
-    }
-    if (i2 < i1 || j2 < j1) return null;
-    return { i1, j1, i2, j2 };
-}
+// captureGroup / stampGroup / affectedRect are in bead/selection.js.
 
 // Single-arrow / toolbar entry point: capture, commit, push one undo
 // step. Called once per Shift+Arrow press / button click.
 function _moveSelectionGroup(dx, dy) {
     if (!pattern.selection || readonly) return;
     if (dx === 0 && dy === 0) return;
-    const group = _captureSelectionGroup();
+    const group = captureGroup(pattern);
     if (!group) return;
     _finalizeSelectionGroupMove(group, group.sel, dx, dy);
 }
@@ -2394,20 +2297,16 @@ function _finalizeSelectionGroupMove(group, sel0, dx, dy) {
     if (dx === 0 && dy === 0) {
         // No-op drag — restore baseline and selection just in case
         // the live preview drifted, but don't push an undo entry.
-        for (let k = 0; k < group.baseline.length; k++) {
-            pattern.data[k] = group.baseline[k];
-        }
+        restoreBaseline(pattern, group);
         pattern.selection = { ...sel0 };
         beadlist.update();
         view.draw();
         _updateStatusbar();
         return;
     }
-    const affected = _affectedRectForGroupMove(group, dx, dy);
+    const affected = affectedRect(group, dx, dy);
     // Roll back any preview mutations before snapshotting.
-    for (let k = 0; k < group.baseline.length; k++) {
-        pattern.data[k] = group.baseline[k];
-    }
+    restoreBaseline(pattern, group);
     pattern.selection = { ...sel0 };
     if (!affected) {
         beadlist.update();
@@ -2420,7 +2319,7 @@ function _finalizeSelectionGroupMove(group, sel0, dx, dy) {
     commandBus.execute({
         label: "selection.move",
         apply: () => {
-            _stampSelectionGroup(group, dx, dy);
+            stampGroup(pattern, group, dx, dy, background_color);
             beadlist.update();
             view.draw();
             if (!firstApply) setModified();
