@@ -16,6 +16,10 @@ import {
     loadPatternData, loadSettings, storePatternData, storeSettings,
 } from "./io.js";
 import { Entering, Grid, Muster, Pattern } from "./model.js";
+import {
+    clearPegplan, invertPegplan, mirrorPegplan, repeatWarp, repeatWeft,
+    switchSide,
+} from "./transforms.js";
 
 export function install(target) {
     Object.assign(target, {
@@ -24,6 +28,8 @@ export function install(target) {
         arrangeThreading, arrangeTreadling, recalcFixedEntering,
         updateFixedEntering,
         ATLAS_OFFSETS, completeTwill, stampAtlas, stampTwill,
+        clearPegplan, invertPegplan, mirrorPegplan, repeatWarp, repeatWeft,
+        switchSide,
     });
 }
 

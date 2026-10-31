@@ -5334,57 +5334,11 @@ function _fullSnapCommand(label, mutate) {
 }
 
 
-// ---- Switch side (F11) — port of utilities.cpp::SwapSide ------------
+// ---- Switch side (F11) — weave/transforms.js switchSide ------------
 function _swapSide() {
     _fullSnapCommand("switch side", () => {
-        const cr = settings.current_range;
-        if (settings.display_pegplan) {
-            // Invert pegplan over its bounding rectangle of currently
-            // used cells. The rectangle is computed ONCE up front so the
-            // iteration isn't influenced by mutations (the desktop's
-            // per-row IsEmptyTrittfolge check loses cells whose row goes
-            // empty mid-loop and breaks F11→F11 round-trips).
-            const s1 = _pegplanFirstUsedShaft();
-            const s2 = _pegplanLastUsedShaft();
-            const j1 = _pegplanFirstUsedWeft();
-            const j2 = _pegplanLastUsedWeft();
-            if (s2 >= s1 && j2 >= j1) {
-                for (let j = j1; j <= j2; j++) {
-                    for (let s = s1; s <= s2; s++) {
-                        const v = pattern.pegplan.get(s, j);
-                        pattern.pegplan.set(s, j, v === 0 ? cr : -v);
-                    }
-                }
-            }
-        } else {
-            // Invert tieup over every (used treadle, used shaft) cell.
-            for (let i = 0; i < pattern.tieup.width; i++) {
-                if (_isFreeTritt(i)) continue;
-                for (let j = 0; j < pattern.tieup.height; j++) {
-                    if (_isFreeSchaft(j)) continue;
-                    const v = pattern.tieup.get(i, j);
-                    pattern.tieup.set(i, j, v === 0 ? cr : -v);
-                }
-            }
-        }
-        // Mirror the warp side: entering, color_warp, reed swap around
-        // the kette centre.
-        if (pattern.min_x <= pattern.max_x) {
-            const mid = Math.floor((pattern.max_x - pattern.min_x + 1) / 2);
-            for (let i = pattern.min_x; i < pattern.min_x + mid; i++) {
-                const mirror = pattern.max_x - (i - pattern.min_x);
-                const e = pattern.entering.get_shaft(i);
-                pattern.entering.set_shaft(i, pattern.entering.get_shaft(mirror));
-                pattern.entering.set_shaft(mirror, e);
-                const cw = pattern.color_warp.get(i, 0);
-                pattern.color_warp.set(i, 0, pattern.color_warp.get(mirror, 0));
-                pattern.color_warp.set(mirror, 0, cw);
-                const r = pattern.reed.get(i, 0);
-                pattern.reed.set(i, 0, pattern.reed.get(mirror, 0));
-                pattern.reed.set(mirror, 0, r);
-            }
-        }
-        pattern.recalc_weave();
+        switchSide(pattern, settings.current_range,
+                   { pegplan: !!settings.display_pegplan });
     });
 }
 
@@ -9074,209 +9028,31 @@ function _pegplanCommand(label, mutate) {
     else cmd.apply();
 }
 
-// First / last used shaft column in pegplan (any positive value in any
-// weft). Port of desktop GetFirstTritt / GetLastTritt — a column is
-// "free" when no cell in it is positive.
-function _pegplanFirstUsedShaft() {
-    for (let s = 0; s < pattern.pegplan.width; s++) {
-        for (let j = 0; j < pattern.pegplan.height; j++) {
-            if (pattern.pegplan.get(s, j) > 0) return s;
-        }
-    }
-    return pattern.pegplan.width - 1;
-}
-function _pegplanLastUsedShaft() {
-    for (let s = pattern.pegplan.width - 1; s >= 0; s--) {
-        for (let j = 0; j < pattern.pegplan.height; j++) {
-            if (pattern.pegplan.get(s, j) > 0) return s;
-        }
-    }
-    return 0;
-}
+// The pegplan transforms themselves are in weave/transforms.js.
 
-// First / last used weft row in pegplan.
-function _pegplanFirstUsedWeft() {
-    for (let j = 0; j < pattern.pegplan.height; j++) {
-        for (let s = 0; s < pattern.pegplan.width; s++) {
-            if (pattern.pegplan.get(s, j) > 0) return j;
-        }
-    }
-    return pattern.pegplan.height - 1;
-}
-function _pegplanLastUsedWeft() {
-    for (let j = pattern.pegplan.height - 1; j >= 0; j--) {
-        for (let s = 0; s < pattern.pegplan.width; s++) {
-            if (pattern.pegplan.get(s, j) > 0) return j;
-        }
-    }
-    return 0;
-}
-
-// Invert: toggle every cell inside the pegplan's bounding rectangle of
-// used cells. Bounds are driven by the pegplan itself (independent of
-// weave extent) so rows whose shafts don't happen to thread any warp
-// still get inverted. No per-row skipping — the whole rectangle is
-// flipped (empty cells become current_range, non-empty get negated).
-// The weave is inverted in lockstep within [min_x..max_x] × [j1..j2].
 function _pegplanInvert() {
-    _pegplanCommand("pegplan invert", () => {
-        const cr = settings.current_range;
-        const s1 = _pegplanFirstUsedShaft();
-        const s2 = _pegplanLastUsedShaft();
-        const j1 = _pegplanFirstUsedWeft();
-        const j2 = _pegplanLastUsedWeft();
-        if (s2 < s1 || j2 < j1) return;
-        for (let j = j1; j <= j2; j++) {
-            for (let s = s1; s <= s2; s++) {
-                const v = pattern.pegplan.get(s, j);
-                pattern.pegplan.set(s, j, v === 0 ? cr : -v);
-            }
-            if (pattern.min_x <= pattern.max_x) {
-                for (let i = pattern.min_x; i <= pattern.max_x; i++) {
-                    const v = pattern.weave.get(i, j);
-                    pattern.weave.set(i, j, v === 0 ? cr : -v);
-                }
-            }
-        }
-    });
+    _pegplanCommand("pegplan invert",
+                    () => invertPegplan(pattern, settings.current_range));
 }
 
-// Mirror: swap weft rows (j, max_y - (j - min_y)) for j in the first half
-// of the used weft range. Applied to pegplan rows + weave rows.
 function _pegplanMirror() {
-    _pegplanCommand("pegplan mirror", () => {
-        if (pattern.min_y >= pattern.max_y) return;
-        const half = pattern.min_y + Math.floor((pattern.max_y - pattern.min_y) / 2);
-        for (let j = pattern.min_y; j <= half; j++) {
-            const j2 = pattern.max_y - (j - pattern.min_y);
-            if (j >= j2) break;
-            for (let s = 0; s < pattern.pegplan.width; s++) {
-                const a = pattern.pegplan.get(s, j);
-                pattern.pegplan.set(s, j, pattern.pegplan.get(s, j2));
-                pattern.pegplan.set(s, j2, a);
-            }
-            if (pattern.min_x <= pattern.max_x) {
-                for (let i = pattern.min_x; i <= pattern.max_x; i++) {
-                    const a = pattern.weave.get(i, j);
-                    pattern.weave.set(i, j, pattern.weave.get(i, j2));
-                    pattern.weave.set(i, j2, a);
-                }
-            }
-        }
-    });
+    _pegplanCommand("pegplan mirror", () => mirrorPegplan(pattern));
 }
 
-// Delete: wipe the entire pegplan AND weave (matches desktop
-// ClearTrittfolgeClick which zeroes both grids).
 function _pegplanClear() {
-    _pegplanCommand("pegplan clear", () => {
-        pattern.pegplan.data.fill(0);
-        pattern.weave.data.fill(0);
-    });
+    _pegplanCommand("pegplan clear", () => clearPegplan(pattern));
 }
 
 
-// ---- Rapport extension (F8 Rapportieren) / reduction (F7) ----
-//
-// Port of desktop RapportKette / RapportSchuss / CopyKettfaden /
-// CopySchussfaden / ClearKettfaden / ClearSchussfaden.
+// ---- Rapport extension (F8) / reduction (F7) — weave/transforms.js --
 
-function _copyKettfaden(fromI, toI, withColors) {
-    pattern.entering.set_shaft(toI, pattern.entering.get_shaft(fromI));
-    if (withColors) {
-        pattern.color_warp.set(toI, 0, pattern.color_warp.get(fromI, 0));
-    }
-    if (pattern.min_y <= pattern.max_y) {
-        for (let j = pattern.min_y; j <= pattern.max_y; j++) {
-            pattern.weave.set(toI, j, pattern.weave.get(fromI, j));
-        }
-    }
-}
-
-function _copySchussfaden(fromJ, toJ, withColors) {
-    // Copy treadling OR pegplan, depending on mode.
-    if (settings.display_pegplan) {
-        for (let s = 0; s < pattern.pegplan.width; s++) {
-            pattern.pegplan.set(s, toJ, pattern.pegplan.get(s, fromJ));
-        }
-    } else {
-        for (let k = 0; k < pattern.treadling.width; k++) {
-            pattern.treadling.set(k, toJ, pattern.treadling.get(k, fromJ));
-        }
-    }
-    if (withColors) {
-        pattern.color_weft.set(0, toJ, pattern.color_weft.get(0, fromJ));
-    }
-    if (pattern.min_x <= pattern.max_x) {
-        for (let i = pattern.min_x; i <= pattern.max_x; i++) {
-            pattern.weave.set(i, toJ, pattern.weave.get(i, fromJ));
-        }
-    }
-}
-
-function _clearKettfaden(i) {
-    pattern.entering.set_shaft(i, 0);
-    if (pattern.min_y <= pattern.max_y) {
-        for (let j = pattern.min_y; j <= pattern.max_y; j++) {
-            pattern.weave.set(i, j, 0);
-        }
-    }
-}
-
-function _clearSchussfaden(j) {
-    if (settings.display_pegplan) {
-        for (let s = 0; s < pattern.pegplan.width; s++) pattern.pegplan.set(s, j, 0);
-    } else {
-        for (let k = 0; k < pattern.treadling.width; k++) pattern.treadling.set(k, j, 0);
-    }
-    if (pattern.min_x <= pattern.max_x) {
-        for (let i = pattern.min_x; i <= pattern.max_x; i++) {
-            pattern.weave.set(i, j, 0);
-        }
-    }
-}
-
-// Replicate the warp (kette) rapport `rx` times within the active extent.
-// `rx = -1` fills up to the pattern's max width. `rx = 1` reduces to a
-// single rapport (clearing everything outside).
 function _rapportKette(rx, withColors) {
-    pattern.recalc_weave_extent();
-    const i1 = pattern.min_x, i2 = pattern.max_x;
-    if (i1 > i2) return;
-    pattern.calcRapport();
-    let ki1 = pattern.rapport_k_a;
-    let ki2 = pattern.rapport_k_b;
-    if (ki1 === 0 && ki2 === -1) { ki1 = i1; ki2 = i2; }
-    // Clear outside the rapport.
-    for (let i = i1; i < ki1; i++) _clearKettfaden(i);
-    for (let i = ki2 + 1; i <= i2; i++) _clearKettfaden(i);
-    // Replicate.
-    const rapW = ki2 - ki1 + 1;
-    let maxi = rx !== -1 ? ki1 + rapW * rx : pattern.weave.width;
-    if (maxi > pattern.weave.width) maxi = pattern.weave.width;
-    for (let i = ki2 + 1; i < maxi; i++) {
-        _copyKettfaden(ki1 + (i - ki2 - 1) % rapW, i, withColors);
-    }
-    pattern.recalc_weave_extent();
+    repeatWarp(pattern, rx, { withColors });
 }
 
 function _rapportSchuss(ry, withColors) {
-    pattern.recalc_weave_extent();
-    const j1 = pattern.min_y, j2 = pattern.max_y;
-    if (j1 > j2) return;
-    pattern.calcRapport();
-    let sj1 = pattern.rapport_s_a;
-    let sj2 = pattern.rapport_s_b;
-    if (sj1 === 0 && sj2 === -1) { sj1 = j1; sj2 = j2; }
-    for (let j = j1; j < sj1; j++) _clearSchussfaden(j);
-    for (let j = sj2 + 1; j <= j2; j++) _clearSchussfaden(j);
-    const rapH = sj2 - sj1 + 1;
-    let maxj = ry !== -1 ? sj1 + rapH * ry : pattern.weave.height;
-    if (maxj > pattern.weave.height) maxj = pattern.weave.height;
-    for (let j = sj2 + 1; j < maxj; j++) {
-        _copySchussfaden(sj1 + (j - sj2 - 1) % rapH, j, withColors);
-    }
-    pattern.recalc_weave_extent();
+    repeatWeft(pattern, ry,
+               { withColors, pegplan: !!settings.display_pegplan });
 }
 
 // Helpers to read the cursor-based insertion indices.
