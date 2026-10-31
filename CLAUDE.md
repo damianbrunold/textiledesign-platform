@@ -19,6 +19,7 @@ Install (runtime pins plus dev tools) and run:
 ```bash
 pip install -r requirements-dev.txt -e .
 npm install          # JS test and lint tools (development only)
+playwright install chromium   # browser for the e2e tests
 flask --app textileplatform run
 ```
 
@@ -36,6 +37,7 @@ flask --app textileplatform db check   # models and migrations must agree
 - `test_patterns.py` — metadata, upload, group access; `_make_user` / `_login` helpers
 - `test_limits.py` — size limits, validation, print/export budgets, primary group scoping
 - `test_formats.py` — `.jbb` / `.dbw` import and export against the desktop formats, upload decoding
+- `e2e/` — browser end-to-end tests (Playwright, marker `e2e`): the app runs in a server thread on the test's in-memory database; scenarios cover login/registration and the editors (edit, save, undo, close/navigation guards, drafts, export of unsaved state, read-only view). `pytest -m "not e2e"` skips them, `pytest tests/e2e --headed --slowmo 300` shows the browser. Seed data with `helpers.py` (`make_user`, `make_weave_pattern`, `stored_contents`, all inside `db_access()`; never hold it while the browser acts), drive the editors with `editor.py` (`open_editor`, `click_weave_cell(page, pane, i, j)`, `click_bead`, `save`, `is_modified`). Editor globals are reachable with `page.evaluate("pattern.weave.get(0, 0)")`. Uncaught page errors fail the test.
 
 SQLite drops tzinfo, so tests call `_reset_access_date(user)` between requests.
 

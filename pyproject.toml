@@ -36,6 +36,7 @@ dependencies = [
 dev = [
     "pytest>=8",
     "pytest-cov>=6",
+    "pytest-playwright>=0.7",
     "ruff>=0.15",
     "pip-audit>=2.9",
     "autopep8>=2",
@@ -49,6 +50,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error::DeprecationWarning:textileplatform"]
+markers = ["e2e: browser end-to-end test (Playwright, tests/e2e)"]
 
 [tool.coverage.run]
 source = ["textileplatform"]
