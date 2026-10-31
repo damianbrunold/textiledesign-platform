@@ -182,9 +182,13 @@ const Clipboard = (function () {
     function set(p) {
         payload = p ? JSON.parse(JSON.stringify(p)) : null;
         // Best-effort sync to system clipboard as JSON for cross-tab paste.
+        // writeText fails asynchronously when the browser refuses (no
+        // permission, no user gesture): catch the promise, too.
         try {
             if (navigator.clipboard && navigator.clipboard.writeText && payload) {
-                navigator.clipboard.writeText("textileplatform:" + JSON.stringify(payload));
+                navigator.clipboard
+                    .writeText("textileplatform:" + JSON.stringify(payload))
+                    .catch(() => { /* ignore */ });
             }
         } catch (e) { /* ignore */ }
     }
