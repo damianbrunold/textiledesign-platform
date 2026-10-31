@@ -145,21 +145,14 @@ class ViewDraft {
                this.y <= j && j < this.y + Math.min(pattern.height, this.height);
     }
 
+    // Geometry (draw position and hit test) is in bead/geometry.js.
     pixelToDataCoord(x, y) {
-        // Cells are drawn at i*dx + 0.5 / j*dy + 0.5 so the 1-px grid
-        // strokes land crisp on integer pixels. So visible cell N
-        // occupies x in [N*dx + 0.5, N*dx + dx + 0.5). Use
-        // Math.floor((x - 0.5) / dx) so a click at the right-hand
-        // half of cell N maps back to N and not to N+1.
-        let i = Math.floor((x - 0.5) / settings.dx);
-        let j = this.height - 1 - Math.floor((y - 0.5) / settings.dy);
-        return [i - this.x, j - this.y + this.offset];
+        return draftHit(this, x, y, settings.dx, settings.dy);
     }
 
     pixelToViewCoord(x, y) {
-        let i = Math.floor((x - 0.5) / settings.dx);
-        let j = this.height - 1 - Math.floor((y - 0.5) / settings.dy);
-        return [i - this.x, j - this.y];
+        const [i, j] = draftHit(this, x, y, settings.dx, settings.dy);
+        return [i, j - this.offset];
     }
 
 
@@ -178,8 +171,7 @@ class ViewDraft {
             const j_data = j + this.offset;
             for (let i = 0; i < this.width; i++) {
                 const state = this.data.get(i, j_data);
-                const x = 0.5 + (this.x + i) * dx;
-                const y = 0.5 + (this.y + this.height - j - 1) * dy;
+                const { x, y } = draftCell(this, i, j_data, dx, dy);
                 if (draw_colors) {
                     ctx.fillStyle = colors[state];
                     ctx.fillRect(x, y, dx, dy);
@@ -242,43 +234,14 @@ class ViewCorrected {
                this.y <= j && j < this.y + this.height;
     }
 
+    // Geometry (draw position and hit test) is in bead/geometry.js.
     pixelToDataCoord(x, y) {
-        let j = this.height - 1 - Math.floor((y - 0.5) / settings.dy);
-        j = j - this.y + this.offset;
-        let i;
-        if (j % 2 == 0) {
-            i = Math.floor((x - 0.5) / settings.dx) - this.x;
-        } else {
-            i = Math.floor((x - 0.5 + settings.dx / 2) / settings.dx) - this.x;
-        }
-        let idx = i;
-        j--;
-        while (j >= 0) {
-            idx += j % 2 == 0 ? this.data.width : this.data.width + 1;
-            j--;
-        }
-        return [idx % this.data.width, Math.trunc(idx / this.data.width)];
+        return correctedHit(this, x, y, this.data.width,
+                            settings.dx, settings.dy);
     }
 
     pixelToViewCoord(x, y) {
         const [i, j] = this.pixelToDataCoord(x, y);
-        return [i, j - this.offset];
-    }
-
-    idxToDataCoord(idx) {
-        let j = 0;
-        let w = this.data.width;
-        while (idx >= w) {
-            j++;
-            idx -= w;
-            w = j % 2 == 0 ? this.data.width : this.data.width + 1;
-        }
-        let i = idx;
-        return [i, j];
-    }
-
-    idxToViewCoord(idx) {
-        const [i, j] = this.idxToDataCoord(idx);
         return [i, j - this.offset];
     }
 
@@ -295,22 +258,17 @@ class ViewCorrected {
         for (let jj = 0; jj < this.data.height; jj++) {
             for (let ii = 0; ii < this.data.width; ii++) {
                 const idx = ii + jj * this.data.width;
-                const [i, j] = this.idxToViewCoord(idx);
-
-                // j only increases monotonically with idx, so we can
-                // short-circuit once we leave the visible window
-                // downward; on the way to it we must `continue`, not
-                // `break`, or we'd skip everything past the first
-                // hidden row when scrolled.
-                if (j < 0) continue;
-                if (j >= this.height) break;
-
-                const xoff = j % 2 == 0 ? 0 : -dx/2;
+                const cell = correctedCell(this, idx, this.data.width, dx, dy);
+                if (!cell) {
+                    // The row only grows with idx: past the window's
+                    // top nothing more is visible; below it, go on.
+                    const { row } = foldIndex(idx, this.data.width);
+                    if (row >= this.offset + this.height) break;
+                    continue;
+                }
+                const { x, y } = cell;
 
                 const state = this.data.get(ii, jj);
-
-                const x = 0.5 + xoff + (this.x + i) * dx;
-                const y = 0.5 + (this.y + this.height - j - 1) * dy;
 
                 if (draw_colors) {
                     ctx.fillStyle = colors[state];
@@ -355,42 +313,11 @@ class ViewSimulated {
                this.y <= j && j < this.y + this.height;
     }
 
+    // Geometry (draw position and hit test) is in bead/geometry.js.
+    // Mirrors desktop SimulationPanel::mouseToField + Model::correctedIndex.
     pixelToDataCoord(x, y) {
-        // Inverse of the spiral fold + shift in draw(): pixel ->
-        // (i_view, j_view) in simulation space -> linear rope index ->
-        // (data_x, data_y) in the pattern. Mirrors desktop
-        // SimulationPanel::mouseToField + Model::correctedIndex.
-        const dx = settings.dx;
-        const dy = settings.dy;
-        const W = this.data.width;
-        if (W <= 0) return [undefined, undefined];
-        const j_view = this.height - 1 - Math.floor((y - 0.5) / dy);
-        if (j_view < 0 || j_view >= this.height) {
-            return [undefined, undefined];
-        }
-        const j_abs = j_view + this.offset;
-        const x_rel = x - this.x * dx;
-        let i;
-        if (j_abs % 2 === 0) {
-            // Even rows: W full-width cells centred on the column grid;
-            // cell i spans [(i-1)*dx + dx/2, i*dx + dx/2).
-            i = Math.floor((x_rel + dx / 2) / dx);
-            if (i < 0 || i >= W) return [undefined, undefined];
-        } else {
-            // Odd rows: W+1 cells, with i=0 and i=W as half-width
-            // edges. Cell i (1..W-1) spans [(i-1)*dx, i*dx).
-            i = Math.floor((x_rel + dx) / dx);
-            if (i < 0 || i > W) return [undefined, undefined];
-        }
-        const pairs = Math.trunc(j_abs / 2);
-        const linearPos = pairs * (2 * W + 1)
-            + ((j_abs % 2 === 1) ? W : 0) + i;
-        const idx = linearPos - (this.data.shift | 0);
-        if (idx < 0) return [undefined, undefined];
-        const data_x = idx % W;
-        const data_y = Math.trunc(idx / W);
-        if (data_y >= this.data.height) return [undefined, undefined];
-        return [data_x, data_y];
+        return simulatedHit(this, x, y, this.data.width, this.data.height,
+                            this.data.shift | 0, settings.dx, settings.dy);
     }
 
     pixelToViewCoord(x, y) {
@@ -403,8 +330,6 @@ class ViewSimulated {
         const dx = settings.dx;
         const dy = settings.dy;
 
-        const even = this.width == Math.trunc(this.width);
-
         ctx.fillStyle = settings.darcula ? "#444" : "#aaa";
         ctx.fillRect(
             this.x * dx - dx / 2,
@@ -415,58 +340,24 @@ class ViewSimulated {
 
         for (let jj = 0; jj < this.data.height; jj++) {
             for (let ii = 0; ii < this.data.width; ii++) {
-                // Apply pattern.shift to the linear index *before* the
+                // pattern.shift rotates the linear index *before* the
                 // spiral fold — mirrors desktop SimulationPanel's
-                // `raw.shifted(shift, W)`. Shifting the source lookup
-                // instead (the previous approach) breaks diagonal
-                // patterns because the visual seam wrap doesn't move
-                // with the colours.
-                let idx = ii + jj * this.data.width + (this.data.shift | 0);
-                let j = 0;
-                let w = this.data.width;
-                while (idx >= w) {
-                    j++;
-                    idx -= w;
-                    w = j % 2 == 0 ? this.data.width : this.data.width + 1;
+                // `raw.shifted(shift, W)` (shifting the colour lookup
+                // instead breaks diagonal patterns: the seam wouldn't
+                // move with the colours).
+                const idx = ii + jj * this.data.width;
+                const shift = this.data.shift | 0;
+                const cell = simulatedCell(this, idx, this.data.width, shift,
+                                           dx, dy);
+                if (!cell) {
+                    const { row } = foldIndex(idx + shift, this.data.width);
+                    if (row >= this.offset + this.height) break;
+                    continue;
                 }
-                let i = idx;
-
-                j -= this.offset;
-                if (j < 0) continue;
-                if (j >= this.height) break;
-                if (j % 2 == 0 && i >= this.width) continue;
-                if (j % 2 == 1 && i > this.width) continue;
-
-                const xoff = j % 2 == 0 ? 0 : -dx/2;
+                const { x, y } = cell;
+                const d = cell.w;
 
                 const state = this.data.get(ii, jj);
-
-                let x;
-                let d = dx;
-
-                if (even) {
-                    if (i === 0 && j % 2 == 1) {
-                        x = 0.5 + xoff + this.x * dx;
-                        d = dx / 2;
-                    } else if (i >= Math.trunc(this.width) && j % 2 == 1) {
-                        x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
-                        d = dx / 2;
-                    } else {
-                        x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
-                    }
-                } else {
-                    if (i === 0 && j % 2 == 1) {
-                        x = 0.5 + xoff + this.x * dx;
-                        d = dx / 2;
-                    } else if (i + 1 >= this.width && j % 2 == 0) {
-                        x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
-                        d = dx / 2;
-                    } else {
-                        x = 0.5 + xoff + (this.x + i - 1) * dx + dx/2;
-                    }
-                }
-
-                const y = 0.5 + (this.y + this.height - j - 1) * dy;
 
                 ctx.fillStyle = draw_colors
                     ? colors[state]
@@ -1366,11 +1257,10 @@ function _drawPencilPreview() {
     ctx.strokeStyle = "#ff5";
     ctx.lineWidth = 1;
     for (const [i, j] of _pencil_stroke.previewCells) {
-        const j_view = j - off;
         if (i < 0 || i >= view.draft.width) continue;
-        if (j_view < 0 || j_view >= view.draft.height) continue;
-        const x = 0.5 + (view.draft.x + i) * dx;
-        const y = 0.5 + (view.draft.y + view.draft.height - j_view - 1) * dy;
+        const cell = draftCell({ ...view.draft, offset: off }, i, j, dx, dy);
+        if (!cell) continue;
+        const { x, y } = cell;
         ctx.fillRect(x, y, dx, dy);
         ctx.strokeRect(x, y, dx, dy);
     }

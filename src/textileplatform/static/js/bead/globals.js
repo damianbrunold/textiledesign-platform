@@ -5,6 +5,10 @@
 //
 // Remove a name from here once no classic script refers to it.
 
+import {
+    correctedCell, correctedHit, draftCell, draftHit, foldIndex,
+    simulatedCell, simulatedHit,
+} from "./geometry.js";
 import { BeadList, loadModel, Pattern, storeModel } from "./model.js";
 import {
     affectedRect, captureGroup, restoreBaseline, stampGroup,
@@ -20,6 +24,8 @@ import {
 export function install(target) {
     Object.assign(target, {
         BeadList, loadModel, Pattern, storeModel,
+        correctedCell, correctedHit, draftCell, draftHit, foldIndex,
+        simulatedCell, simulatedHit,
         affectedRect, captureGroup, restoreBaseline, stampGroup,
         arrangeCopies, arrangeUndoRows, resizedData, selectionSource,
         withRowDeleted, withRowInserted,
