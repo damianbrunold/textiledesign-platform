@@ -32,6 +32,8 @@ flask --app textileplatform db check   # models and migrations must agree
 
 ## Common Commands
 
+**All checks at once:** `python run_tests.py` (with the venv's Python) runs ruff, pytest including the browser tests, ESLint and Vitest, and prints a summary. `--fast` skips the browser tests, `--cov` writes coverage reports (`htmlcov/`, `coverage/js/`), `py` / `js` runs one side only, and pytest arguments go after `--` (`python run_tests.py py -- -k drafts -x`).
+
 **Tests:** `pytest` (in-memory SQLite, see `tests/conftest.py`):
 - `test_security.py` — auth, sessions, CSRF, rate limiting, passwords, e-mail changes
 - `test_patterns.py` — metadata, upload, group access; `_make_user` / `_login` helpers

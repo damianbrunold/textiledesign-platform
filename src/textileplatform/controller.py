@@ -25,9 +25,11 @@ from textileplatform.patterns import add_pattern
 from textileplatform.patterns import apply_pattern_metadata
 from textileplatform.patterns import get_patterns_for_user
 from textileplatform.patterns import clone_pattern
+from textileplatform.patterns import fit_label
 from textileplatform.patterns import format_pattern_source
 from textileplatform.patterns import new_bead_pattern
 from textileplatform.patterns import new_weave_pattern
+from textileplatform.patterns import pattern_handle
 from textileplatform.name import from_label
 from textileplatform.name import is_valid
 from textileplatform.name import label_from_email
@@ -620,18 +622,26 @@ def _is_name_taken(name):
 def _user_group_by_name(user, group_name):
     """Find a group by name from the user's perspective: prefer a
     global group the user has any membership in, otherwise a personal
-    group the user owns. Returns None when neither matches. Disjoint
-    namespaces (enforced at create time) guarantee at most one match."""
+    group the user owns, otherwise the global group (the callers refuse
+    non-members). Returns None when nothing matches. A user can't
+    create a global group named like one of their personal groups, nor
+    a personal group named like an existing global group."""
     if user is None or not group_name:
         return None
     global_group = Group.query.filter(
         Group.owner_id.is_(None), Group.name == group_name,
     ).one_or_none()
-    if global_group is not None:
+    if global_group is not None and Membership.query.filter(
+        Membership.group_id == global_group.id,
+        Membership.user_id == user.id,
+    ).first() is not None:
         return global_group
-    return Group.query.filter(
+    personal = Group.query.filter(
         Group.owner_id == user.id, Group.name == group_name,
     ).one_or_none()
+    # Without a personal group of that name, the global group (if any):
+    # the caller refuses non-members.
+    return personal if personal is not None else global_group
 
 
 def _is_personal_group_name_taken(user, name, exclude_id=None):
@@ -1357,6 +1367,7 @@ def profile():
             flash(gettext("Profile updated"))
         except Exception:
             logging.exception("Profile changes not changed")
+            db.session.rollback()
             flash(gettext("Changes could not be saved"))
         return redirect(url_for("profile"))
 
@@ -1863,11 +1874,6 @@ def assignments(pattern_name):
 
     if request.method == "POST":
         try:
-            fixed = [
-                assignment
-                for assignment in pattern.assignments
-                if assignment.group.name == g.user.name
-            ]
             # Only allow assigning to groups where the user can write.
             writable_group_ids = {
                 m.group_id for m in g.user.memberships
@@ -1907,7 +1913,12 @@ def assignments(pattern_name):
                 db.session.delete(a)
             for a in new:
                 db.session.add(a)
-            pattern.assignments = fixed + existing + new
+            # Keep every assignment that isn't deleted, including those to
+            # groups the user can no longer write to (demoted to reader,
+            # or left): dropping them from the list would orphan the rows.
+            pattern.assignments = [
+                a for a in pattern.assignments if a not in todelete
+            ] + new
             if touched_group_ids:
                 for gr in (
                     Group.query
@@ -2379,7 +2390,10 @@ def add_group():
         if kind == "shared":
             # Shared groups must own a globally unique handle (no user
             # and no other global group may already hold it).
-            if _is_name_taken(name):
+            # Nor one of the creator's own personal groups: their lookups
+            # by name would become ambiguous.
+            if (_is_name_taken(name)
+                    or _is_personal_group_name_taken(g.user, name)):
                 flash(gettext("Group already exists"))
                 return render_template("add_group.html", form=request.form)
             owner_id = None
@@ -2916,39 +2930,46 @@ def investigate_pattern(owner_name, pattern_name):
     if not src:
         abort(404, description="Pattern not found")
     support_user = g.user
-    suffix = datetime.datetime.now(
-        datetime.UTC
-    ).strftime("%Y%m%d%H%M%S")
-    base_label = f"{src.label} [{owner.label}]"
-    label = f"{base_label} {suffix}"
-    name = from_label(label)
     now = datetime.datetime.now(datetime.UTC)
-    copy = Pattern(
-        name=name,
-        label=label,
-        description=src.description,
-        pattern_type=src.pattern_type,
-        contents=src.contents,
-        preview_image=src.preview_image,
-        thumbnail_image=src.thumbnail_image,
-        created=now,
-        modified=now,
-        public=False,
-        owner=support_user,
-        author=src.author,
-        organization=src.organization,
-        notes=src.notes,
-        pattern_width=src.pattern_width,
-        pattern_height=src.pattern_height,
-        rapport_width=src.rapport_width,
-        rapport_height=src.rapport_height,
-        investigation_origin_user_id=owner.id,
-        investigation_origin_pattern_id=src.id,
-        investigation_origin_label=f"{owner.name}/{src.name}",
-        investigation_origin_public=bool(src.public),
-    )
-    db.session.add(copy)
-    db.session.commit()
+    stamp = now.strftime("%Y%m%d%H%M%S")
+    # "<label> [<owner>] <timestamp>", cut to fit the label column even
+    # with a " - n" suffix for copies made within the same second.
+    base = fit_label(f"{src.label} [{owner.label}]",
+                     len(stamp) + 1 + len(" - 10"))
+    for n in range(11):
+        label = f"{base} {stamp}" + (f" - {n}" if n else "")
+        copy = Pattern(
+            name=pattern_handle(label),
+            label=label,
+            description=src.description,
+            pattern_type=src.pattern_type,
+            contents=src.contents,
+            preview_image=src.preview_image,
+            thumbnail_image=src.thumbnail_image,
+            created=now,
+            modified=now,
+            public=False,
+            owner=support_user,
+            author=src.author,
+            organization=src.organization,
+            notes=src.notes,
+            pattern_width=src.pattern_width,
+            pattern_height=src.pattern_height,
+            rapport_width=src.rapport_width,
+            rapport_height=src.rapport_height,
+            investigation_origin_user_id=owner.id,
+            investigation_origin_pattern_id=src.id,
+            investigation_origin_label=f"{owner.name}/{src.name}",
+            investigation_origin_public=bool(src.public),
+        )
+        db.session.add(copy)
+        try:
+            db.session.commit()
+            break
+        except IntegrityError:
+            db.session.rollback()
+    else:
+        abort(500, description="No free name for the investigation copy")
     flash(gettext("Investigation copy created"))
     return redirect(url_for("support_console"))
 
@@ -3487,6 +3508,8 @@ def update_pattern(user_name, pattern_name):
         elif action == "save-pattern":
             if not g.user or user.name != g.user.name:
                 return respond("NOK", "Invalid user", 403)
+            if "contents" not in data:
+                return respond("NOK", "Missing contents", 400)
             contents = scrub_surrogates(data["contents"])
             try:
                 validate_pattern(contents, pattern.pattern_type)
@@ -3732,6 +3755,16 @@ def _conversation_history(conv, before_id, limit):
     return msgs
 
 
+def _message_body():
+    """The posted message text, or None when the request carries no
+    usable text (not a JSON object, no string body, only whitespace)."""
+    data = request.get_json(silent=True)
+    body = data.get("body") if isinstance(data, dict) else None
+    if not isinstance(body, str) or not body.strip():
+        return None
+    return body
+
+
 @app.route("/api/conversations/direct/<string:user_name>",
            methods=("GET", "POST"))
 @login_required
@@ -3756,13 +3789,14 @@ def api_direct_conversation(user_name):
         if (conv is None and target.block_invitations
                 and not is_support(target)):
             return respond("NOK", "User does not accept messages", 403)
+        # Check the message before a new conversation is created: a
+        # rejected first message must not leave an empty conversation.
+        body = _message_body()
+        if body is None:
+            return respond("NOK", "Empty message", 400)
         if conv is None:
             conv = get_or_create_direct_conversation(g.user, target)
-        data = request.get_json(silent=True) or {}
-        body = data.get("body", "")
         msg = post_message(conv, g.user, body)
-        if msg is None:
-            return respond("NOK", "Empty message", 400)
         _bump_messaging()
         db.session.commit()
         if is_support(target) and not is_support(g.user):
@@ -3818,10 +3852,10 @@ def api_group_conversation(group_name):
     conv = ensure_group_conversation(group)
 
     if request.method == "POST":
-        data = request.get_json(silent=True) or {}
-        msg = post_message(conv, g.user, data.get("body", ""))
-        if msg is None:
+        body = _message_body()
+        if body is None:
             return respond("NOK", "Empty message", 400)
+        msg = post_message(conv, g.user, body)
         _bump_messaging()
         db.session.commit()
         return jsonify({

@@ -107,7 +107,11 @@ def can_access_conversation(conversation, user):
 
 
 def post_message(conversation, sender, body):
-    body = (body or "").strip()
+    """Add `body` to the conversation; None (nothing added) when it is
+    not a string with some text."""
+    if not isinstance(body, str):
+        return None
+    body = body.strip()
     if not body:
         return None
     msg = Message(

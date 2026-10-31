@@ -95,7 +95,8 @@ def _app_info():
 
 def _host_info():
     cpu_count = _safe(psutil.cpu_count)
-    load = _safe(os.getloadavg)
+    getloadavg = getattr(os, "getloadavg", None)   # not on Windows
+    load = _safe(getloadavg) if getloadavg else None
     cpu_pct = _safe(lambda: psutil.cpu_percent(interval=0.1))
     mem = _safe(psutil.virtual_memory)
     swap = _safe(psutil.swap_memory)

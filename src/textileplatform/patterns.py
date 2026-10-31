@@ -152,6 +152,20 @@ def primary_group(user):
 
 _MAX_NAME_SUFFIX = 10
 
+# txpattern.label and .name are varchar(100).
+PATTERN_LABEL_MAX = 100
+
+
+def fit_label(label, reserve=0):
+    """``label`` shortened so that it and ``reserve`` more characters fit
+    the label column."""
+    return label[:PATTERN_LABEL_MAX - reserve].rstrip()
+
+
+def pattern_handle(label):
+    """URL handle of a pattern label, cut to the name column."""
+    return from_label(label)[:PATTERN_LABEL_MAX]
+
 
 def _insert_pattern(user, label, make):
     """Store a new pattern of ``user`` in their primary group, named after
@@ -161,9 +175,12 @@ def _insert_pattern(user, label, make):
     if not from_label(label).strip("-"):
         # Only punctuation / whitespace: nothing to build a handle from.
         label = "Pattern"
+    # Long labels (from long file names, say) are cut so that even the
+    # last suffix fits the column.
+    label = fit_label(label, len(f" - {_MAX_NAME_SUFFIX}"))
     for suffix in range(_MAX_NAME_SUFFIX + 1):
         candidate = f"{label} - {suffix}" if suffix else label
-        name = from_label(candidate)
+        name = pattern_handle(candidate)
         pattern = make(name, candidate)
         db.session.add(pattern)
         db.session.add(Assignment(pattern=pattern, group=group))

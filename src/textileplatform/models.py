@@ -17,7 +17,7 @@ class User(db.Model):
     disabled = db.Column(db.Boolean)
     block_invitations = db.Column(db.Boolean)
     locale = db.Column(db.String(20))
-    timezone = db.Column(db.String(20))
+    timezone = db.Column(db.String(64))
     verification_code = db.Column(db.String(100))
     password_reset_code = db.Column(db.String(100))
     password_reset_expires = db.Column(db.DateTime(timezone=True))
@@ -193,8 +193,10 @@ class Assignment(db.Model):
     __tablename__ = "txassignment"
 
     id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey("txgroup.id"))
-    pattern_id = db.Column(db.Integer, db.ForeignKey("txpattern.id"))
+    group_id = db.Column(db.Integer, db.ForeignKey("txgroup.id"),
+                         nullable=False)
+    pattern_id = db.Column(db.Integer, db.ForeignKey("txpattern.id"),
+                           nullable=False)
 
     group = db.relationship("Group", back_populates="assignments")
     pattern = db.relationship("Pattern", back_populates="assignments")

@@ -15,7 +15,7 @@ from textileplatform.beadpattern import smallest_period
 from textileplatform.db import db
 from textileplatform.exportcommon import TooLargeError
 from textileplatform.models import Pattern, User
-from textileplatform.patterns import get_patterns_for_user
+from textileplatform.patterns import add_pattern, get_patterns_for_user
 from textileplatform.validation import PatternError, validate_pattern
 from textileplatform.weavepattern import (
     _dehex_byte, _dehex_colors, _dehex_short, _dehex_ubyte,
@@ -439,3 +439,34 @@ class TestGetPatternsForUser:
         public = get_patterns_for_user(user, only_public=True)
         assert [p.name for p in public] == ["pub"]
         assert len(get_patterns_for_user(user)) == 2
+
+
+class TestPatternLabelLength:
+    """txpattern.label / .name are varchar(100) (PostgreSQL enforces it;
+    SQLite doesn't): long labels, e.g. from long upload file names, are
+    cut so that even the last free-name suffix fits."""
+
+    def test_long_label_is_cut_to_the_column(self, app):
+        user = _make_user()
+        long_label = "Very long pattern name " * 8   # 184 characters
+        names = [add_pattern(_bead() | {"name": long_label}, user,
+                             "JBead Pattern") for _ in range(3)]
+        assert len(set(names)) == 3   # free names: "…", "… - 1", "… - 2"
+        for p in Pattern.query.all():
+            assert len(p.label) <= 100
+            assert len(p.name) <= 100
+        assert Pattern.query.filter_by(name=names[2]).one().label \
+            .endswith(" - 2")
+
+    def test_upload_with_a_long_file_name(self, csrf_disabled_client):
+        user = _make_user()
+        _login_as(csrf_disabled_client, user)
+        body = json.dumps(_bead()).encode()
+        r = csrf_disabled_client.post("/patterns/upload", data={
+            "name": "",
+            "file": (io.BytesIO(body), "x" * 150 + ".json"),
+        }, content_type="multipart/form-data")
+        assert r.status_code in (301, 302)
+        p = Pattern.query.one()
+        assert len(p.label) <= 100
+        assert len(p.name) <= 100

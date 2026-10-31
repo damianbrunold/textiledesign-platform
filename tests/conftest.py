@@ -15,8 +15,22 @@ os.environ.setdefault("ADMIN_PASSWORD", "test-admin-password")
 os.environ.setdefault("SHOW_VERIFICATION_CODE", "1")
 
 import pytest  # noqa: E402
+import werkzeug.security  # noqa: E402
 
 from textileplatform import app as flask_app  # noqa: E402
+
+# Password hashing is deliberately slow (scrypt, ~80 ms per hash and per
+# check); the tests create and log in hundreds of users. Hash with a
+# single PBKDF2 round instead. check_password_hash reads the method from
+# the stored hash, so checks get fast too.
+_hash_internal = werkzeug.security._hash_internal
+
+
+def _fast_hash_internal(method, salt, password):
+    return _hash_internal("pbkdf2:sha256:1", salt, password)
+
+
+werkzeug.security._hash_internal = _fast_hash_internal
 from textileplatform.app import limiter  # noqa: E402
 from textileplatform.db import db  # noqa: E402
 from textileplatform import mail as mail_module  # noqa: E402

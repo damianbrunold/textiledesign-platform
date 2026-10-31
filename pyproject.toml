@@ -103,7 +103,7 @@ ignore = [
 # The noqa: E402 comments stop autopep8 from hoisting the imports above
 # the environment setup; ruff itself allows imports after it.
 "tests/conftest.py" = ["RUF100"]
-"{deploy_to_server,update_server}.py" = ["S603", "S607"]
+"{deploy_to_server,update_server,run_tests}.py" = ["S603", "S607"]
 
 [tool.ruff.lint.flake8-pytest-style]
 parametrize-names-type = "csv"
