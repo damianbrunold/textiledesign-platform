@@ -550,7 +550,7 @@ class ViewSimulated {
 
                 const state = this.data.get(ii, jj);
 
-                let x = 0;
+                let x;
                 let d = dx;
 
                 if (even) {

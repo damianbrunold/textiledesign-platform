@@ -1495,7 +1495,7 @@ class GridViewPattern {
                 if (j < pattern.min_y || pattern.max_y < j) continue;
                 const value = this.data.get(i, j);
                 const warpUp = (value > 0) !== sink;
-                let color = null;
+                let color;
                 if (warpUp) {
                     color = colors[pattern.color_warp.get(i, 0)];
                 } else {
@@ -2323,7 +2323,7 @@ class ScrollbarHorz {
 
     scrollTo(x) {
         const dx = this.dx || settings.dx;
-        let f = undefined;
+        let f;
         if (this.righttoleft) {
             f = 1.0 - 1.0 * (x - this.x) / (this.width * dx);
         } else {
@@ -2404,7 +2404,7 @@ class ScrollbarVert {
 
     scrollTo(y) {
         const dy = this.dy || settings.dy;
-        let f = undefined;
+        let f;
         if (this.toptobottom) {
             f = 1.0 * (y - this.y) / (this.height * dy);
         } else {
@@ -2477,7 +2477,7 @@ class PatternView {
         const scroll = 15;
 
         const PANE_GAP = 6;
-        const hlBar = !!this.settings.display_hlines ? 1 : 0;
+        const hlBar = this.settings.display_hlines ? 1 : 0;
         const pegplanMode = !!this.settings.display_pegplan;
         const width3 = this.settings.display_colors_weft ? 1 : 0;
         const sidePaneWidth = pegplanMode ? this.visible_shafts : this.visible_treadles;

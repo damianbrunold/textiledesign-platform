@@ -24,3 +24,12 @@ repos:
     rev: v0.17.3
     hooks:
     -   id: ruff-check
+# ESLint for the editors' JavaScript (needs Node and `npm install`).
+-   repo: local
+    hooks:
+    -   id: eslint
+        name: eslint
+        entry: node node_modules/eslint/bin/eslint.js
+        language: system
+        types: [javascript]
+        exclude: ^docs/

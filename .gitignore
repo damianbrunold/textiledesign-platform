@@ -13,3 +13,5 @@ __pycache__
 *.egg-info/
 *backup.sql
 backup*.sql
+/node_modules/
+/coverage/

@@ -18,6 +18,7 @@ ADMIN_PASSWORD=...
 Install (runtime pins plus dev tools) and run:
 ```bash
 pip install -r requirements-dev.txt -e .
+npm install          # JS test and lint tools (development only)
 flask --app textileplatform run
 ```
 
@@ -36,11 +37,15 @@ flask --app textileplatform db check   # models and migrations must agree
 - `test_limits.py` — size limits, validation, print/export budgets, primary group scoping
 - `test_formats.py` — `.jbb` / `.dbw` import and export against the desktop formats, upload decoding
 
-SQLite drops tzinfo, so tests call `_reset_access_date(user)` between requests. The editors' JavaScript has no automated tests.
+SQLite drops tzinfo, so tests call `_reset_access_date(user)` between requests.
+
+**JavaScript tests:** `npm test` (Vitest; `npm run coverage` for coverage, `npm install` once first). Tests live in `tests/js/`. `tests/js/helpers/load.js` runs the real `static/js` scripts unchanged in a fresh jsdom window per test: `loadScripts([...])` loads named files, `loadEditor("dbweave" | "jbead")` loads the script list parsed from the editor template, in order. Top-level `let` / `const` / `class` bindings are not `window` properties, so tests reach them with `run("expression")` (e.g. `run("new CommandBus()")`, `run("pattern = new Pattern(8, 6, 4, 4)")`). `load` listeners (the editor startup) are held back until `fireLoad()`. Known bugs are pinned with `it.fails`.
 
 **Coverage:** `pytest --cov` (branch coverage, configured in `pyproject.toml`; `--cov-report=html` for `htmlcov/`).
 
 **Lint:** `ruff check .` — or `pre-commit run --all-files` (trailing whitespace, EOF, autopep8, ruff; migrations and `docs/` are excluded). Ruff's rule set is in `pyproject.toml`; formatting stays with autopep8. The `# noqa: E402` comments in `tests/conftest.py` keep autopep8 from hoisting the imports above the environment setup.
+
+**JavaScript lint:** `npm run lint` (ESLint, `eslint.config.js`; also a pre-commit hook). Each `static/js` file sees the other files' top-level names as globals, so `no-undef` catches typos across the shared script scope.
 
 **Dependency audit:** `pip-audit -r requirements.txt`.
 
