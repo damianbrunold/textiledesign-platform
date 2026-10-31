@@ -6,8 +6,7 @@
 import { ActionRegistry } from "../ui/actions.js";
 import {
     _prompt, clearModified, closePatternGuarded, data, downloadRendered,
-    editorDialogOpen, editorI18n, getPattern, modified, resizeWindow,
-    savePattern,
+    editorDialogOpen, editorI18n, getPattern, modified, savePattern,
 } from "../ui/common.js";
 import { LegalDialog } from "../ui/legal.js";
 import { Menu } from "../ui/menu.js";
@@ -1017,5 +1016,3 @@ function _setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text || "";
 }
-
-window.addEventListener("resize", () => resizeWindow(view));

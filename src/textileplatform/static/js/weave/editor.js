@@ -8,8 +8,8 @@
 import { ActionRegistry } from "../ui/actions.js";
 import { CommandBus, makeGridRegionCommand } from "../ui/commands.js";
 import {
-    data, editorDialogOpen, modified, setModified, startEditor,
-    trackSavedState,
+    data, editorDialogOpen, modified, resizeWindow, setModified,
+    startEditor, trackSavedState,
 } from "../ui/common.js";
 import { Modal } from "../ui/modal.js";
 import { ToolRaster } from "../ui/tools.js";
@@ -50,8 +50,6 @@ import {
 import {
     _applyAspectRatio, GridViewDummy, PatternView, ViewSettings,
 } from "./views.js";
-
-
 
 let mousedown = false;
 let had_selection = false;
@@ -944,6 +942,8 @@ function keyDown(e) {
 // _selBounds: read current selection bounds from cursor; returns null if
 // nothing selected.
 
+
+window.addEventListener("resize", () => resizeWindow(view));
 
 window.addEventListener("load", () => {
     setReadonly(document.getElementById("readonly").value === "True");
