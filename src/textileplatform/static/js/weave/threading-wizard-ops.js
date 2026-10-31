@@ -25,8 +25,10 @@ export function threadStraight(pattern, firstKF, firstSchaft, schaefte, steigend
         }
     } else {
         for (let i = firstKF - 1; i < firstKF - 1 + schaefte; i++) {
-            let s = firstSchaft + (firstKF - 1 + schaefte - 1)
-                    - (i - (firstKF - 1));
+            // Shafts firstSchaft + schaefte - 1 down to firstSchaft. (The
+            // desktop's createGerade adds firstKF - 1 here too, so its
+            // falling draw only works from warp 1.)
+            let s = firstSchaft + (schaefte - 1) - (i - (firstKF - 1));
             if (s > maxShaft) break;
             if (s <= 0) break;
             if (i >= maxWarp) break;

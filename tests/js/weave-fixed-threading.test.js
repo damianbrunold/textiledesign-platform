@@ -3,6 +3,7 @@ import {
     commitFixedThreading, fixedThreadingFirstFree, fixedThreadingScratch,
     fixedThreadingSize, isContinuousThreading, toggleFixedThreading,
 } from "../../src/textileplatform/static/js/weave/fixed-threading-ops.js";
+import { updateFixedEntering } from "../../src/textileplatform/static/js/weave/arrange.js";
 import { Pattern } from "../../src/textileplatform/static/js/weave/model.js";
 
 const padded = (values, w) => [...values, ...new Array(w - values.length).fill(0)];
@@ -60,13 +61,10 @@ describe("fixed threading template", () => {
         expect(p.fixsize).toBe(3);
     });
 
-    // BUG: the dialog's editing buffer is the whole stored array,
-    // including the repeats out to the threading width, where the
-    // desktop (FixeinzugDialog) copies only entries 0..fixsize. The
-    // first click then makes the size the last warp of the threading,
-    // so an edit changes only that one warp instead of the template
-    // (and every repeat of it).
-    it.fails("editing the template changes every repeat", () => {
+    // Regression: the editing buffer once held the stored repeats too,
+    // so the first click made the whole threading width the template
+    // and an edit changed only one warp.
+    it("editing the template changes every repeat", () => {
         const p = new Pattern(10, 4, 8, 8);
         commitFixedThreading(p, padded([1, 2, 3, 4], 10), 3);
         const scratch = fixedThreadingScratch(p);
@@ -74,5 +72,14 @@ describe("fixed threading template", () => {
         commitFixedThreading(p, scratch, size);
         expect(p.fixsize).toBe(3);
         expect(p.fixeinzug).toEqual([1, 3, 3, 4, 1, 3, 3, 4, 1, 3]);
+    });
+
+    it("taking the threading from the pattern edits only the template", () => {
+        const p = new Pattern(10, 4, 8, 8);
+        [3, 0, 1, 2].forEach((s, i) => p.entering.set_shaft(i, s));
+        updateFixedEntering(p);          // "Take from pattern"
+        const scratch = fixedThreadingScratch(p);
+        expect(scratch).toEqual(padded([3, 1, 2], 10));
+        expect(fixedThreadingSize(scratch)).toBe(p.fixsize);
     });
 });

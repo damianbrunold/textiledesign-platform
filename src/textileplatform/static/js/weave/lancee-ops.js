@@ -80,7 +80,10 @@ export function lanceePlan(vvIn, a, b, size) {
     for (let i = a; i <= b; i++) {
         for (let j = 0; j < vv[idx]; j++) {
             buff[ii++] = i++;
-            if (ii >= needed || i - 1 > b) break;
+            // Stop after the range's last thread (i is past it now).
+            // The desktop checks i - 1 > b and so copies thread b + 1
+            // in place of the inserted thread after an incomplete run.
+            if (ii >= needed || i > b) break;
         }
         i--;
         if (ii >= needed) break;

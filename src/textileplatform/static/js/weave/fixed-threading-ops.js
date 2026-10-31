@@ -15,9 +15,16 @@
 // arrange.js recalcFixedEntering).
 
 // The dialog's editing buffer when it opens (and after "Take from
-// pattern"): a copy of the stored template.
+// pattern"): the template itself, entries 0..fixsize, without the
+// repeats stored after it (as the desktop's FixeinzugDialog). With the
+// repeats in the buffer, an edit would make the whole threading width
+// the template and change one warp instead of every repeat.
 export function fixedThreadingScratch(pattern) {
-    return pattern.fixeinzug.slice();
+    const scratch = new Array(pattern.fixeinzug.length).fill(0);
+    for (let i = 0; i <= pattern.fixsize && i < scratch.length; i++) {
+        scratch[i] = pattern.fixeinzug[i];
+    }
+    return scratch;
 }
 
 // Index of the last used warp (0 when none is used).

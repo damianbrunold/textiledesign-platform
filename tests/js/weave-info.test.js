@@ -47,14 +47,14 @@ describe("fmt3g", () => {
         expect(fmt3g(NaN)).toBe("0");
     });
 
-    // BUG: the trailing-zero regex also strips the zeros of an integer
-    // with three digits: toPrecision(3) gives "100", and
-    // /\.?0+($|e)/ turns it into "1". So 100 % shows as "1%" (a
-    // single-colour warp, a single shaft) and hues 120 / 240 as 12 / 24.
-    it.fails("keeps the zeros of three-digit integers", () => {
+    // Regression: the trailing-zero regex once stripped the zeros of
+    // three-digit integers too (100 % showed as "1%", hue 120 as 12).
+    it("keeps the zeros of three-digit integers", () => {
         expect(fmt3g(100)).toBe("100");
         expect(fmt3g(120)).toBe("120");
         expect(fmt3g(250)).toBe("250");
+        expect(fmt3g(0.5)).toBe("0.5");
+        expect(fmt3g(1000)).toBe("1e+3");
     });
 });
 
@@ -155,7 +155,7 @@ describe("colors", () => {
         ]);
     });
 
-    it.fails("a single-colour warp is 100 % (fmt3g bug above)", () => {
+    it("a single-colour warp is 100 %", () => {
         const p = weavePattern(["11"]);
         p.palette = [[0, 0, 0]];
         expect(infoColors(p, hsv)).toContain(

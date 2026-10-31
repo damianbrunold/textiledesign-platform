@@ -25,11 +25,10 @@ describe("straight threading", () => {
         expect(shafts(p)).toEqual([5, 4, 3, 2, 0, 0, 0, 0]);
     });
 
-    // BUG (also in the desktop's EinzugassistentDialog::createGerade):
-    // the falling shaft is firstShaft + (firstWarp - 1 + shafts - 1) -
-    // offset, so the first warp number leaks into the shaft numbers.
-    // From warp 3 on shafts 2..4 this threads 6, 5, 4 instead of 4, 3, 2.
-    it.fails("falling from warp 3 uses the requested shafts", () => {
+    // Regression (the desktop's createGerade still has it): the first
+    // warp number leaked into the falling shafts, so from warp 3 on
+    // shafts 2..4 it threaded 6, 5, 4.
+    it("falling from warp 3 uses the requested shafts", () => {
         const p = new Pattern(8, 4, 8, 8);
         threadStraight(p, 3, 2, 3, false);
         expect(shafts(p)).toEqual([0, 0, 4, 3, 2, 0, 0, 0]);

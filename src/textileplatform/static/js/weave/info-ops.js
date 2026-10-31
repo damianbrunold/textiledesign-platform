@@ -19,8 +19,12 @@ const fallbackL = (k, fb) => fb;
 
 export function fmt3g(v) {
     if (!isFinite(v)) return "0";
-    // Match the desktop's "%1.3g" output: at most 3 significant digits.
-    return Number(v).toPrecision(3).replace(/\.?0+($|e)/, "$1");
+    // Match the desktop's "%1.3g" output: at most 3 significant digits,
+    // trailing zeros of the fraction dropped (not those of an integer:
+    // 100 stays "100").
+    return Number(v).toPrecision(3)
+        .replace(/\.(\d*?)0+(e|$)/, (m, digits, e) =>
+            (digits ? "." + digits : "") + e);
 }
 
 function weaveAt(pattern, i, j) {

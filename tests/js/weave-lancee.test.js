@@ -76,13 +76,10 @@ describe("lanceePlan", () => {
         expect(lanceePlan(ratio(1, 1), 0, 3, 6)).toEqual([0, -1, 1, -1, 2]);
     });
 
-    // BUG (also in the desktop's KettLancierungClick /
-    // SchussLancierungClick): when the last run of original threads is
-    // incomplete, the filling loop writes one more source (b + 1) in
-    // place of the inserted thread after it. Its check `i - 1 > b`
-    // runs after `buff[ii++] = i++` and should be `i > b`. Visible as a
-    // duplicated thread when the range is a selection (see below).
-    it.fails("inserts after an incomplete last run too", () => {
+    // Regression (the desktop's KettLancierungClick /
+    // SchussLancierungClick still have it): after an incomplete last
+    // run the plan copied thread b + 1 in place of the inserted one.
+    it("inserts after an incomplete last run too", () => {
         expect(lanceePlan(ratio(3, 1), 0, 3, 20)).toEqual([0, 1, 2, -1, 3, -1]);
     });
 });
@@ -102,7 +99,7 @@ describe("warp lancée", () => {
             ["1:0", "2:1", ".", "3:2", ".", "4:3", "5:0", "."]);
     });
 
-    it.fails("does not duplicate a warp after an incomplete last run (bug above)", () => {
+    it("does not duplicate a warp after an incomplete last run", () => {
         // Selection 0..2 with ratio 2:1: the last run (warp 2) is
         // incomplete, warp 3 ends up both in the gap and after it.
         const p = warpPattern([1, 2, 3, 4], [0, 1, 2, 3]);
