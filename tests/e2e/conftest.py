@@ -103,3 +103,19 @@ def alice_page(page, alice):
     """A page logged in as alice."""
     login(page, alice)
     return page
+
+
+@pytest.fixture
+def bob_page(browser, browser_context_args):
+    """A second browser session, logged in as bob, for scenarios with
+    two users. Uncaught page errors fail the test here, too."""
+    user = make_user("bob")
+    # browser_context_args carry the live server's base_url
+    context = browser.new_context(**browser_context_args)
+    page = context.new_page()
+    errors = []
+    page.on("pageerror", lambda exc: errors.append(str(exc)))
+    login(page, user)
+    yield page
+    context.close()
+    assert errors == [], f"uncaught errors in bob's page: {errors}"
