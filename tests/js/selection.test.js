@@ -7,8 +7,8 @@ import { loadEditor } from "./helpers/load.js";
 
 let ed, run, Selection, Clipboard, pattern, cursor;
 
-beforeEach(() => {
-    ed = loadEditor("dbweave");
+beforeEach(async () => {
+    ed = await loadEditor("dbweave");
     run = ed.run;
     pattern = run("pattern = new Pattern(8, 6, 4, 4)");
     cursor = run("cursor");

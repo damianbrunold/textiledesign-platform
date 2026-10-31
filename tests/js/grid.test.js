@@ -1,18 +1,12 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { loadEditor } from "./helpers/load.js";
+import { describe, expect, it } from "vitest";
+import { Entering, Grid } from "../../src/textileplatform/static/js/weave/model.js";
 
-// Grid and Entering from dbweave.js: the data structures behind every
+// Grid and Entering (weave/model.js): the data structures behind every
 // pane of the weave editor.
-
-let run;
-
-beforeAll(() => {
-    ({ run } = loadEditor("dbweave"));
-});
 
 // Build a grid from rows of digits (row j = 0 first) and read it back.
 function grid(lines) {
-    const g = run(`new Grid(${lines[0].length}, ${lines.length})`);
+    const g = new Grid(lines[0].length, lines.length);
     lines.forEach((line, j) => [...line].forEach((ch, i) => {
         g.set(i, j, Number(ch));
     }));
@@ -30,14 +24,14 @@ function rows(g) {
 }
 
 function entering(shafts, maxShafts = 4) {
-    const e = run(`new Entering(${shafts.length}, ${maxShafts})`);
+    const e = new Entering(shafts.length, maxShafts);
     shafts.forEach((s, i) => e.set_shaft(i, s));
     return e;
 }
 
 describe("Grid", () => {
     it("stores cells row-major and toggles to the given value", () => {
-        const g = run("new Grid(3, 2)");
+        const g = new Grid(3, 2);
         g.set(2, 1, 4);
         expect(g.data[5]).toBe(4);
         g.toggle(0, 0);

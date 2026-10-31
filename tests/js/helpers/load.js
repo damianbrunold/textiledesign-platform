@@ -82,6 +82,27 @@ export function loadScripts(names, { html = "", url, setup } = {}) {
     return { dom, window, document: window.document, run, fireLoad };
 }
 
-export function loadEditor(editor, options) {
-    return loadScripts(templateScripts(editor), options);
+// The ES modules an editor template loads (module_url('...')).
+export function templateModules(editor) {
+    const html = fs.readFileSync(
+        path.join(PACKAGE, `templates/edit_${editor}_pattern.html`), "utf8");
+    const re = /module_url\('([^']+\.js)'\)/g;
+    return [...html.matchAll(re)].map((m) => m[1]);
+}
+
+// Every script and module of the editor template. The bridge modules
+// (weave/globals.js, ...) export install(window); here they install
+// into the jsdom window, as they do into the browser's.
+export async function loadEditor(editor, options = {}) {
+    const modules = await Promise.all(templateModules(editor).map(
+        (name) => import(pathToFileURL(path.join(STATIC_JS, name)).href)));
+    return loadScripts(templateScripts(editor), {
+        ...options,
+        setup(window, run) {
+            for (const mod of modules) {
+                if (typeof mod.install === "function") mod.install(window);
+            }
+            if (options.setup) options.setup(window, run);
+        },
+    });
 }

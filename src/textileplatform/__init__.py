@@ -13,6 +13,7 @@ import textileplatform.controller  # noqa
 from textileplatform.controller import _delete_user_data
 
 import datetime
+import hashlib
 import json
 import os
 
@@ -20,6 +21,8 @@ import click
 from dotenv import load_dotenv
 from flask import g
 from flask import request
+from flask import send_from_directory
+from flask import url_for
 from flask_babel import Babel
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
@@ -141,6 +144,60 @@ def add_static_version(endpoint, values):
     version = _static_version(filename)
     if version:
         values["v"] = version
+
+
+# ES modules (static/js, loaded with <script type="module">) import each
+# other by relative URL, which a ?v= query would not reach. They are
+# served from /static/m/<version>/... instead: one version for the whole
+# static/js tree, so relative imports resolve inside the same versioned
+# directory and a page never mixes modules from two deploys.
+_JS_ROOT = os.path.join(app.static_folder, "js")
+_js_module_version_cache = None
+
+
+def _js_module_version():
+    global _js_module_version_cache
+    if _js_module_version_cache is not None and not app.debug:
+        return _js_module_version_cache
+    digest = hashlib.sha256()
+    for dirpath, dirnames, filenames in os.walk(_JS_ROOT):
+        dirnames.sort()
+        for name in sorted(filenames):
+            path = os.path.join(dirpath, name)
+            stat = os.stat(path)
+            rel = os.path.relpath(path, _JS_ROOT).replace(os.sep, "/")
+            digest.update(f"{rel}\0{stat.st_size}\0{stat.st_mtime_ns}\0"
+                          .encode())
+    _js_module_version_cache = digest.hexdigest()[:12]
+    return _js_module_version_cache
+
+
+def module_url(path):
+    """URL of the ES module static/js/<path>."""
+    return url_for("js_module", version=_js_module_version(),
+                   filename=path)
+
+
+app.jinja_env.globals["module_url"] = module_url
+
+
+@app.route("/static/m/<version>/<path:filename>")
+def js_module(version, filename):
+    response = send_from_directory(_JS_ROOT, filename, max_age=0)
+    if filename.endswith(".js"):
+        # Module scripts require a JavaScript MIME type; the system's
+        # mimetypes table (Windows registry) may say otherwise.
+        response.mimetype = "text/javascript"
+    if version == _js_module_version():
+        # The URL changes whenever any module does.
+        response.cache_control.public = True
+        response.cache_control.max_age = 365 * 24 * 3600
+        response.cache_control.immutable = True
+    else:
+        # A page from before a deploy: serve the current files, but don't
+        # cache them under the old version.
+        response.cache_control.no_store = True
+    return response
 
 
 db.init_app(app)

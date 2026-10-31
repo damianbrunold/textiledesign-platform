@@ -27,6 +27,25 @@ const files = fs.readdirSync(STATIC_JS).filter((f) => f.endsWith(".js"));
 const declared = Object.fromEntries(
     files.map((f) => [f, topLevelNames(path.join(STATIC_JS, f))]));
 
+// ES modules live in subdirectories (static/js/weave/, ...). Bridge
+// modules (globals.js) put some of their classes on `window` for the
+// classic scripts: `Object.assign(target, { A, B })`.
+function bridgedNames() {
+    const names = [];
+    for (const entry of fs.readdirSync(STATIC_JS, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const bridge = path.join(STATIC_JS, entry.name, "globals.js");
+        if (!fs.existsSync(bridge)) continue;
+        const src = fs.readFileSync(bridge, "utf8");
+        for (const m of src.matchAll(/Object\.assign\(\s*\w+,\s*\{([^}]*)\}/g)) {
+            names.push(...m[1].split(",").map((s) => s.trim()).filter(Boolean));
+        }
+    }
+    return names;
+}
+
+const bridged = bridgedNames();
+
 function sharedGlobalsFor(file) {
     const own = new Set(declared[file]);
     const out = {};
@@ -34,6 +53,7 @@ function sharedGlobalsFor(file) {
         if (other === file) continue;
         for (const n of names) if (!own.has(n)) out[n] = "writable";
     }
+    for (const n of bridged) if (!own.has(n)) out[n] = "readonly";
     return out;
 }
 
@@ -55,6 +75,18 @@ export default [
             }],
         },
     })),
+    {
+        files: [`${STATIC_JS}/*/**/*.js`],
+        languageOptions: {
+            sourceType: "module",
+            ecmaVersion: 2022,
+            globals: globals.browser,
+        },
+        rules: {
+            // Interface-style methods keep their full parameter lists.
+            "no-unused-vars": ["error", { args: "none" }],
+        },
+    },
     {
         // `Selection` / `Clipboard` deliberately shadow the DOM's
         // built-ins of the same name.

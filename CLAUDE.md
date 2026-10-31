@@ -43,7 +43,7 @@ flask --app textileplatform db check   # models and migrations must agree
 
 SQLite drops tzinfo, so tests call `_reset_access_date(user)` between requests.
 
-**JavaScript tests:** `npm test` (Vitest; `npm run coverage` for coverage, `npm install` once first). Tests live in `tests/js/`. `tests/js/helpers/load.js` runs the real `static/js` scripts unchanged in a fresh jsdom window per test: `loadScripts([...])` loads named files, `loadEditor("dbweave" | "jbead")` loads the script list parsed from the editor template, in order. Top-level `let` / `const` / `class` bindings are not `window` properties, so tests reach them with `run("expression")` (e.g. `run("new CommandBus()")`, `run("pattern = new Pattern(8, 6, 4, 4)")`). `load` listeners (the editor startup) are held back until `fireLoad()`. Known bugs are pinned with `it.fails`.
+**JavaScript tests:** `npm test` (Vitest; `npm run coverage` for coverage, `npm install` once first). Tests live in `tests/js/`. `tests/js/helpers/load.js` runs the real `static/js` scripts unchanged in a fresh jsdom window per test: `loadScripts([...])` loads named files, `await loadEditor("dbweave" | "jbead")` loads the script list parsed from the editor template, in order, after installing the template's bridge modules into the jsdom window. ES modules are tested by importing them directly (`tests/js/weave-model.test.js`). Top-level `let` / `const` / `class` bindings are not `window` properties, so tests reach them with `run("expression")` (e.g. `run("new CommandBus()")`, `run("pattern = new Pattern(8, 6, 4, 4)")`). `load` listeners (the editor startup) are held back until `fireLoad()`. Known bugs are pinned with `it.fails`.
 
 **Coverage:** `pytest --cov` (branch coverage, configured in `pyproject.toml`; `--cov-report=html` for `htmlcov/`).
 
@@ -102,11 +102,14 @@ Uploads are detected by header (`@dbw3:` / `(jbb`), decoded as UTF-8 with a Wind
 ### Frontend
 
 Jinja2 templates in `src/textileplatform/templates/`. The pattern editors are JS-heavy:
-- `static/js/dbweave.js` — DB-WEAVE editor
+- `static/js/dbweave.js` — DB-WEAVE editor (classic script)
+- `static/js/weave/model.js` — ES module: the DB-WEAVE data model (`Grid`, `Entering`, `Muster`, `Pattern` with weave calculation in both directions and repeat detection). No DOM, no editor globals; the editor connects through `Pattern`'s hooks (`isPegplan`, `recalcFixedEntering`, `afterRecalcFromWeave`). `weave/globals.js` is a transition bridge that puts the classes on `window` for the classic scripts.
 - `static/js/jbead.js` — JBead editor
 - `static/js/common.js` — shared editor plumbing: `startEditor` (startup sequence), `savePattern`, the modified flag, local drafts in localStorage, navigation / close guards, `editorI18n()` (the `#tx-i18n` JSON block of the editor templates)
 - `static/js/commands.js` — `CommandBus` undo/redo, including saved-state tracking (`markSaved`, `isAtSavedState`)
 - `shortcuts.js`, `actions.js`, `menu.js`, `modal.js`, `colorpicker.js`, … — shared UI pieces
+
+**Moving editor code into ES modules (in progress):** pure logic moves out of `dbweave.js` / `jbead.js` into modules under `static/js/<area>/`, with its editor globals turned into parameters or hooks. Templates load modules with `<script type="module" src="{{ module_url('weave/globals.js') }}">`: `module_url` serves `static/js` from `/static/m/<version>/…` (one version for the whole tree, so relative imports are cache-busted together; old versions are served with `no-store`). Do not import modules via `url_for('static', …)`. Classic code that still needs a moved name gets it from the area's `globals.js` bridge; module scripts run before the window `load` event that starts the editors, so classic code must not use bridged names at script load time.
 
 Leaving an editor with unsaved changes never saves to the server implicitly: the in-app guards ask (save / discard / cancel) and tab close / reload keeps the changes in the local draft, which is offered for recovery on the next open.
 
