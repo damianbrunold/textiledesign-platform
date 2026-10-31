@@ -37,6 +37,7 @@ dev = [
     "pytest>=8",
     "pytest-cov>=6",
     "pytest-playwright>=0.7",
+    "hypothesis>=6.100",
     "ruff>=0.15",
     "pip-audit>=2.9",
     "autopep8>=2",

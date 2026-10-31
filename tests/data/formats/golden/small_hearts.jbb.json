@@ -1,0 +1,47 @@
+{
+ "metadata": {
+  "author": null,
+  "notes": null,
+  "organization": null,
+  "pattern_height": 128,
+  "pattern_width": 7,
+  "rapport_height": 56,
+  "rapport_width": null
+ },
+ "pattern": {
+  "author": "",
+  "colors": {
+   "digest": "d1f6a5182a6a5c35",
+   "len": 10
+  },
+  "model": {
+   "digest": "8c3600b83cf6335d",
+   "len": 1666
+  },
+  "name": "sample",
+  "notes": "",
+  "organization": "",
+  "view": {
+   "corrected-visible": true,
+   "draft-visible": true,
+   "report-visible": true,
+   "scroll": 0,
+   "selected-color": 5,
+   "selected-tool": "select",
+   "shift": 0,
+   "simulation-visible": true,
+   "zoom": 10
+  }
+ },
+ "png_size": [
+  491,
+  596
+ ],
+ "svg_elements": {
+  "ellipse": 28,
+  "line": 9,
+  "rect": 2339,
+  "svg": 1,
+  "text": 32
+ }
+}

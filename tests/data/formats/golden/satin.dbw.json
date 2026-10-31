@@ -1,0 +1,104 @@
+{
+ "metadata": {
+  "author": null,
+  "notes": null,
+  "organization": null,
+  "pattern_height": 105,
+  "pattern_width": 112,
+  "rapport_height": null,
+  "rapport_width": null
+ },
+ "pattern": {
+  "author": "",
+  "color_effect_with_grid": true,
+  "colors_warp": {
+   "digest": "446eddccb43d8d9c",
+   "len": 300
+  },
+  "colors_weft": {
+   "digest": "94592f5b9f013487",
+   "len": 300
+  },
+  "current_color": 196,
+  "data_bereichmuster": {
+   "digest": "934b394fcfb198e4",
+   "len": 10
+  },
+  "data_blockmuster": {
+   "digest": "934b394fcfb198e4",
+   "len": 10
+  },
+  "data_entering": {
+   "digest": "87a0e9b1440fd2a4",
+   "len": 300
+  },
+  "data_fixeinzug": {
+   "digest": "a2ef066ac88f1593",
+   "len": 300
+  },
+  "data_reed": {
+   "digest": "6c1b2979d4304ae9",
+   "len": 300
+  },
+  "data_tieup": {
+   "digest": "174a9adace222b8c",
+   "len": 900
+  },
+  "data_treadling": {
+   "digest": "8736d0bb08f3d368",
+   "len": 9000
+  },
+  "direction_righttoleft": true,
+  "direction_toptobottom": true,
+  "display_colors_warp": true,
+  "display_colors_weft": true,
+  "display_entering": true,
+  "display_hlines": true,
+  "display_palette": false,
+  "display_pegplan": false,
+  "display_reed": false,
+  "display_repeat": false,
+  "display_treadling": true,
+  "entering_at_bottom": true,
+  "entering_style": "filled",
+  "firstfree": 0,
+  "fixsize": 0,
+  "height": 300,
+  "hlines": {
+   "digest": "4f53cda18c2baa0c",
+   "len": 0
+  },
+  "max_shafts": 30,
+  "max_treadles": 30,
+  "name": "sample",
+  "notes": "",
+  "organization": "",
+  "palette": {
+   "digest": "0e99bd4b796a931b",
+   "len": 236
+  },
+  "single_treadling": false,
+  "tieup_style": "filled",
+  "treadling_style": "filled",
+  "unit_height": 7,
+  "unit_width": 7,
+  "visible_shafts": 14,
+  "visible_treadles": 14,
+  "warp_factor": 1.0,
+  "warp_lifting": true,
+  "weave_locked": false,
+  "weave_style": "color",
+  "weft_factor": 1.0,
+  "width": 300,
+  "zoom": 1
+ },
+ "png_size": [
+  2065,
+  1953
+ ],
+ "svg_elements": {
+  "line": 502,
+  "rect": 12299,
+  "svg": 1
+ }
+}

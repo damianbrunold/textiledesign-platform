@@ -24,6 +24,7 @@ span lines, and the file is UTF-8. ``#`` starts a comment. A node either
 holds child nodes or is a leaf holding a list of values (int, bool,
 string). This module mirrors the desktop lexer, parser and formatter.
 """
+import math
 import re
 
 from textileplatform.validation import PatternError
@@ -114,10 +115,11 @@ def render_jbb_data(pattern):
             continue
         if key == 'zoom':
             value = _zoom_to_desktop(value)
-        if isinstance(value, list):
-            view_leaves.append((key, *value))
-        else:
-            view_leaves.append((key, value))
+        values = value if isinstance(value, list) else [value]
+        # Validation only checks that `view` is an object; skip what a
+        # .jbb leaf cannot hold.
+        if values and all(_is_leaf_value(v) for v in values):
+            view_leaves.append((key, *values))
 
     lines = ['(jbb']
     _leaf(lines, 1, 'version', 1)
@@ -126,6 +128,9 @@ def render_jbb_data(pattern):
     _leaf(lines, 1, 'notes', str(pattern.get('notes') or ''))
     _node(lines, 1, 'colors', [
         ('rgb', *color) for color in pattern.get('colors') or []
+        # The reader keeps entries of at least three numbers.
+        if isinstance(color, list) and len(color) >= 3
+        and all(_is_number(c) for c in color)
     ])
     _node(lines, 1, 'view', view_leaves)
     _node(lines, 1, 'model', [
@@ -138,6 +143,15 @@ def render_jbb_data(pattern):
 # ---------------------------------------------------------------------------
 # Rendering helpers
 # ---------------------------------------------------------------------------
+
+def _is_number(v):
+    return (isinstance(v, int) and not isinstance(v, bool)) or (
+        isinstance(v, float) and math.isfinite(v))
+
+
+def _is_leaf_value(v):
+    return isinstance(v, (bool, str)) or _is_number(v)
+
 
 def _render_value(value):
     if isinstance(value, bool):
@@ -267,6 +281,9 @@ class _Leaf:
         self.values = []
 
 
+_MAX_DEPTH = 64
+
+
 def _parse(tokens):
     pos = 0
 
@@ -278,9 +295,13 @@ def _parse(tokens):
         pos += 1
         return token
 
-    def parse_node(token):
+    def parse_node(token, depth=0):
         if token is not _OPEN:
             raise PatternError("syntax error, expected (")
+        if depth > _MAX_DEPTH:
+            # Real files nest three levels; this keeps a hostile one
+            # from exhausting the recursion limit.
+            raise PatternError("nodes are nested too deeply")
         name = next_token()
         if not isinstance(name, str):
             raise PatternError("syntax error, expected a node name")
@@ -290,7 +311,7 @@ def _parse(tokens):
         if token is _OPEN:
             node = _Node(name)
             while token is not _CLOSE:
-                node.children.append(parse_node(token))
+                node.children.append(parse_node(token, depth + 1))
                 token = next_token()
             return node
         leaf = _Leaf(name)

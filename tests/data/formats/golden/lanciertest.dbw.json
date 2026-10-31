@@ -1,0 +1,105 @@
+{
+ "metadata": {
+  "author": null,
+  "notes": null,
+  "organization": null,
+  "pattern_height": 8,
+  "pattern_width": 8,
+  "rapport_height": null,
+  "rapport_width": null
+ },
+ "pattern": {
+  "author": "",
+  "color_effect_with_grid": false,
+  "colors_warp": {
+   "digest": "fb17625efc0b9c93",
+   "len": 300
+  },
+  "colors_weft": {
+   "digest": "9126983c815cfb16",
+   "len": 300
+  },
+  "current_color": 234,
+  "data_bereichmuster": {
+   "digest": "934b394fcfb198e4",
+   "len": 10
+  },
+  "data_blockmuster": {
+   "digest": "934b394fcfb198e4",
+   "len": 10
+  },
+  "data_entering": {
+   "digest": "f3152809a88b550c",
+   "len": 300
+  },
+  "data_fixeinzug": {
+   "digest": "a2ef066ac88f1593",
+   "len": 300
+  },
+  "data_reed": {
+   "digest": "6c1b2979d4304ae9",
+   "len": 300
+  },
+  "data_tieup": {
+   "digest": "8d97b51dd528fc6b",
+   "len": 900
+  },
+  "data_treadling": {
+   "digest": "28046922103a06e5",
+   "len": 9000
+  },
+  "direction_righttoleft": false,
+  "direction_toptobottom": false,
+  "display_colors_warp": true,
+  "display_colors_weft": true,
+  "display_entering": true,
+  "display_hlines": true,
+  "display_palette": false,
+  "display_pegplan": false,
+  "display_reed": true,
+  "display_repeat": false,
+  "display_treadling": true,
+  "entering_at_bottom": false,
+  "entering_style": "vdash",
+  "firstfree": 0,
+  "fixsize": 0,
+  "height": 300,
+  "hlines": {
+   "digest": "4f53cda18c2baa0c",
+   "len": 0
+  },
+  "max_shafts": 30,
+  "max_treadles": 30,
+  "name": "sample",
+  "notes": "",
+  "organization": "",
+  "palette": {
+   "digest": "0e99bd4b796a931b",
+   "len": 236
+  },
+  "single_treadling": true,
+  "tieup_style": "cross",
+  "treadling_style": "dot",
+  "unit_height": 4,
+  "unit_width": 4,
+  "visible_shafts": 12,
+  "visible_treadles": 12,
+  "warp_factor": 1.0,
+  "warp_lifting": false,
+  "weave_locked": false,
+  "weave_style": "draft",
+  "weft_factor": 1.0,
+  "width": 300,
+  "zoom": 3
+ },
+ "png_size": [
+  305,
+  337
+ ],
+ "svg_elements": {
+  "ellipse": 8,
+  "line": 137,
+  "rect": 56,
+  "svg": 1
+ }
+}

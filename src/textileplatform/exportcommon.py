@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import re
+import unicodedata
 from xml.sax.saxutils import escape as xml_escape
 
 _FONT_DIR = os.path.join(os.path.dirname(__file__), "static", "fonts")
@@ -273,6 +274,15 @@ def _is_latin1(text):
     return all(ord(ch) < 256 for ch in str(text))
 
 
+def _drawable(text):
+    """Control characters and line / paragraph separators (NEL, U+2028,
+    ...) as spaces: Pillow's layout fails on some of them, and a raster
+    label is a single line anyway."""
+    return "".join(
+        " " if unicodedata.category(ch) in ("Cc", "Zl", "Zp") else ch
+        for ch in str(text))
+
+
 def _pil_font_file(path, size):
     """Font for pre-shaped text runs. Basic layout: with Raqm, Pillow
     would apply bidi again and reverse the visual_text() result."""
@@ -327,6 +337,7 @@ class PILTarget(DrawTarget):
         # the bbox's (left, top) at the given point, but for many fonts
         # the bbox's top isn't at y=0 (there's leading whitespace), so
         # without this correction text drifts a couple of pixels low.
+        text = _drawable(text)
         if not _is_latin1(text):
             self._text_runs(x, y, h, text, color, box_w=w)
             return
@@ -359,6 +370,7 @@ class PILTarget(DrawTarget):
             x += width
 
     def text_left(self, x, y, h, text, color):
+        text = _drawable(text)
         if not _is_latin1(text):
             self._text_runs(x, y, h, text, color)
             return

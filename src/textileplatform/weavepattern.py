@@ -86,8 +86,15 @@ def render_dbw_data(pattern):
 # Raw text → nested dict
 # ---------------------------------------------------------------------------
 
+# The desktop breaks lines at CR / LF only. str.splitlines() would also
+# break inside a value at NEL, U+2028 etc. and then reject the file.
+_LINE_BREAK = re.compile(r'\r\n|\r|\n')
+
+
 def _parse_dbw_into_struct(data):
-    lines = [line for line in data.splitlines() if not line.startswith(";")]
+    lines = [
+        line for line in _LINE_BREAK.split(data) if not line.startswith(";")
+    ]
     lines = _unsplit_lines(lines)
     lines = [line.strip() for line in lines]
     if lines and lines[0] == '@dbw3:file':
@@ -186,7 +193,9 @@ def _map_raw_to_platform(raw, name):
         _dig(raw, 'properties', 'remarks', default=''))
 
     # Sizes (with sensible fallbacks).
-    size = _dig(raw, 'data', 'size', default={}) or {}
+    size = _dig(raw, 'data', 'size', default={})
+    if not isinstance(size, dict):
+        size = {}
     width = _str_int(size.get('maxx1')) or 50
     height = _str_int(size.get('maxy2')) or 50
     max_shafts = _str_int(size.get('maxx2')) or 32
@@ -673,9 +682,14 @@ def _format_value(v):
 def _single_line(s):
     """A value ends at the line break, and a backslash right before it
     means "continued on the next line" — so a written value must not
-    contain line breaks or end in a backslash."""
+    contain line breaks or end in a backslash. Trailing whitespace is
+    dropped too, as the reader strips lines: the file then holds exactly
+    the value that reads back, and exporting again changes nothing."""
     s = s.replace('\r\n', ' ').replace('\r', ' ').replace('\n', ' ')
-    return s.rstrip('\\')
+    s = s.rstrip()
+    while s.endswith('\\'):
+        s = s.rstrip('\\').rstrip()
+    return s
 
 
 _KEY_RE = re.compile(r'[^\s\\{}=;@]+')
@@ -723,7 +737,7 @@ def _clamped(v, lo, hi):
     emit extra hex digits and shift every following cell."""
     try:
         v = int(v or 0)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         v = 0
     return min(max(v, lo), hi)
 
@@ -760,7 +774,10 @@ def _hex_bytes(data):
     its own, as the original per-character decoder did."""
     if len(data) % 2:
         data = data[:-1] + '0' + data[-1]
-    return bytes.fromhex(data)
+    try:
+        return bytes.fromhex(data)
+    except ValueError:
+        raise PatternError("invalid hex data in .dbw") from None
 
 
 def _dehex_byte(data):

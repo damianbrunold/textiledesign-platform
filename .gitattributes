@@ -1,0 +1,2 @@
+# Sample pattern files are test data: keep their bytes exactly.
+tests/data/formats/** -text

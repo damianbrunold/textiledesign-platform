@@ -15,6 +15,7 @@ defusedxml==0.7.1
 distlib==0.4.4
 filelock==4.2.5
 greenlet==3.5.6
+hypothesis==6.170.14
 identify==2.6.20
 idna==3.20
 iniconfig==2.3.1

@@ -107,8 +107,12 @@ def _contrast(rgb):
 
 
 def _to_rgb(c):
+    # Validation only checks that `colors` is a list.
     if isinstance(c, (list, tuple)) and len(c) >= 3:
-        return (int(c[0]) & 0xFF, int(c[1]) & 0xFF, int(c[2]) & 0xFF)
+        try:
+            return (int(c[0]) & 0xFF, int(c[1]) & 0xFF, int(c[2]) & 0xFF)
+        except (TypeError, ValueError, OverflowError):
+            pass
     return BLACK
 
 
@@ -123,7 +127,7 @@ def load_model(data) -> BeadModel:
     shift = 0
     try:
         shift = int(view.get("shift", 0))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         shift = 0
     if width > 0:
         shift = ((shift % width) + width) % width

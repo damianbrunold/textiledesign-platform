@@ -6,7 +6,11 @@ repos:
     rev: v6.0.0
     hooks:
     -   id: trailing-whitespace
+        # Desktop sample files are test data, kept byte for byte.
+        exclude: ^tests/data/
     -   id: end-of-file-fixer
+        # Desktop sample files are test data, kept byte for byte.
+        exclude: ^tests/data/
     -   id: check-yaml
     -   id: check-added-large-files
         # Bundled export fonts (CJK fallback is ~4 MB).

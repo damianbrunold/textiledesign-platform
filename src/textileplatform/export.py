@@ -392,10 +392,16 @@ def _pattern_layout(data, base=16):
 
 def _palette_color(data, idx):
     palette = data.get("palette") or []
-    if 0 <= idx < len(palette):
+    # Grid cells may be null (validation allows it for old editor data).
+    if isinstance(idx, int) and 0 <= idx < len(palette):
         c = palette[idx]
+        # Validation only checks that the palette is a list.
         if isinstance(c, (list, tuple)) and len(c) >= 3:
-            return (int(c[0]) & 0xFF, int(c[1]) & 0xFF, int(c[2]) & 0xFF)
+            try:
+                return (int(c[0]) & 0xFF, int(c[1]) & 0xFF,
+                        int(c[2]) & 0xFF)
+            except (TypeError, ValueError, OverflowError):
+                pass
     return BLACK
 
 
@@ -867,7 +873,30 @@ def _raster_layout(data):
     return layout
 
 
+_GRID_KEYS = ("data_entering", "data_tieup", "data_treadling", "data_reed",
+              "colors_warp", "colors_weft", "data_pegplan")
+
+
+def _clean_grids(data):
+    """Grid cells as ints: null (validation allows it for old editor
+    data) and other non-numbers become 0, and threading entries outside
+    1..max_shafts are ignored. Validation does not bound cell values,
+    and the highest shaft used sizes the image."""
+    out = dict(data)
+    for key in _GRID_KEYS:
+        cells = out.get(key)
+        if isinstance(cells, list):
+            out[key] = [c if isinstance(c, int) else 0 for c in cells]
+    entering = out.get("data_entering")
+    if isinstance(entering, list):
+        max_shafts = int(out.get("max_shafts") or 0)
+        out["data_entering"] = [
+            s if 0 <= s <= max_shafts else 0 for s in entering]
+    return out
+
+
 def _export_raster(data, fmt: str, jpeg_quality=92):
+    data = _clean_grids(data)
     layout = _raster_layout(data)
     target = PILTarget(layout.width, layout.height)
     paint_pattern(target, data, layout)
@@ -891,6 +920,7 @@ def export_jpeg(data) -> bytes:
 # ---------- SVG --------------------------------------------------
 
 def export_svg(data) -> bytes:
+    data = _clean_grids(data)
     layout = _pattern_layout(data)
     _check_cell_budget(layout)
     target = SVGTarget(layout.width, layout.height)
@@ -907,6 +937,7 @@ def export_pdf(data, title=None) -> bytes:
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import mm
 
+    data = _clean_grids(data)
     layout = _pattern_layout(data)
     _check_cell_budget(layout)
     page_w, page_h = _page_size()
@@ -983,6 +1014,7 @@ def print_pdf(data, title=None,
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import mm
 
+    data = _clean_grids(data)
     layout = _pattern_layout(data)
 
     # Apply optional ranges by overriding kette_a/dx and schuesse_a/dy
