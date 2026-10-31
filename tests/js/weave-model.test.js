@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-    Grid, Muster, Pattern,
+    Entering, Grid, Muster, Pattern,
 } from "../../src/textileplatform/static/js/weave/model.js";
 import { randomSource } from "./helpers/random.js";
 
@@ -50,6 +50,16 @@ describe("Grid.invertRange", () => {
             g.invertRange(0, 0, 0, 0);  // default value 1
             expect(g.get(0, 0)).toBe(-7);
         });
+});
+
+describe("Entering.isRowEmpty", () => {
+    it("is true for a shaft (row j = shaft j + 1) without warps", () => {
+        const e = new Entering(4, 3);
+        e.set_shaft(0, 2);
+        e.set_shaft(3, 2);
+        expect([0, 1, 2].map((j) => e.isRowEmpty(j)))
+            .toEqual([true, false, true]);
+    });
 });
 
 describe("Muster", () => {

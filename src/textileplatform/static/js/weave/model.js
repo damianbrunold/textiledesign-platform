@@ -428,6 +428,15 @@ export class Entering {
         // empty
     }
 
+    // No warp is threaded on shaft j + 1 (row j of the threading), like
+    // Grid.isRowEmpty.
+    isRowEmpty(j) {
+        for (let i = 0; i < this.width; i++) {
+            if (this.get_shaft(i) === j + 1) return false;
+        }
+        return true;
+    }
+
     // Swap the warps (left <-> right), as the desktop's horizontal
     // mirror of the threading does.
     mirrorH(i1, j1, i2, j2) {
