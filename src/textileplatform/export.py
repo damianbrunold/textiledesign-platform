@@ -189,7 +189,7 @@ class Bands:
     pattern_only: bool
 
 
-def _bands(data, layout: "Layout") -> "Bands":
+def _bands(data, layout: Layout) -> Bands:
     """Compute the visible-band geometry for ``data`` / ``layout``. This
     is the single source of truth for both the image extent
     (:func:`_pattern_layout`, :func:`print_pdf`) and the painter

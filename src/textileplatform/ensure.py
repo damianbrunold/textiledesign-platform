@@ -57,7 +57,7 @@ def ensure_db_contents(app):
     """Create the support and example accounts if missing, and give every
     user (except support) a primary group holding their patterns."""
     with app.app_context():
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         if User.query.count() == 0:
             _add_account(app, SUPPORT_USERNAME, "Support",
                          "admin@textileplatform.ch", "en", now)

@@ -38,7 +38,11 @@ flask --app textileplatform db check   # models and migrations must agree
 
 SQLite drops tzinfo, so tests call `_reset_access_date(user)` between requests. The editors' JavaScript has no automated tests.
 
-**Lint:** `flake8 src/ tests/` — or `pre-commit run --all-files` (trailing whitespace, EOF, autopep8, flake8; migrations and `docs/` are excluded).
+**Coverage:** `pytest --cov` (branch coverage, configured in `pyproject.toml`; `--cov-report=html` for `htmlcov/`).
+
+**Lint:** `ruff check .` — or `pre-commit run --all-files` (trailing whitespace, EOF, autopep8, ruff; migrations and `docs/` are excluded). Ruff's rule set is in `pyproject.toml`; formatting stays with autopep8. The `# noqa: E402` comments in `tests/conftest.py` keep autopep8 from hoisting the imports above the environment setup.
+
+**Dependency audit:** `pip-audit -r requirements.txt`.
 
 **Dependencies:** `pyproject.toml` lists runtime dependencies with lower bounds (plus a `dev` extra); `requirements.txt` pins the runtime set for deployment and `requirements-dev.txt` adds the dev tools. After changing dependencies, regenerate `requirements.txt` from a clean venv (`pip install .` then `pip freeze --exclude textileplatform`), as described in its header.
 

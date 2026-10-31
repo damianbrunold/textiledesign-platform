@@ -70,9 +70,7 @@ def test_view_permissions(csrf_disabled_client, world, route, who,
     r = client.get(route.format(p=pattern))
     if allowed:
         assert r.status_code == 200
-    elif route.startswith("/api/"):
-        assert r.status_code == 403
-    elif route.startswith(("/thumbnail/", "/preview/")):
+    elif route.startswith(("/api/", "/thumbnail/", "/preview/")):
         assert r.status_code == 403
     else:
         assert r.status_code == 302
@@ -174,7 +172,9 @@ class TestListings:
     ):
         page = _as(csrf_disabled_client, world, "alice").get(
             "/alice").get_data(as_text=True)
-        assert "Twill" in page and "Rope" in page and "Club" in page
+        assert "Twill" in page
+        assert "Rope" in page
+        assert "Club" in page
 
     def test_public_listing_shows_only_public_own_patterns(
         self, csrf_disabled_client, world
@@ -211,7 +211,8 @@ class TestCreate:
         client = _as(csrf_disabled_client, world, "alice")
         self._create(client, "JBead Pattern", width="8", height="10")
         p = json.loads(Pattern.query.filter_by(name="new").one().contents)
-        assert len(p["model"]) == 10 and len(p["model"][0]) == 8
+        assert len(p["model"]) == 10
+        assert len(p["model"][0]) == 8
         assert p["view"]["selected-tool"] == "pencil"
         assert p["view"]["zoom"] == 12
 

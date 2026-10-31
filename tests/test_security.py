@@ -263,7 +263,8 @@ class TestRecoverNonDisclosure:
         r2 = csrf_disabled_client.post(
             "/auth/recover", data={"email": "ghost@example.com"},
         )
-        assert r1.status_code == 200 and r2.status_code == 200
+        assert r1.status_code == 200
+        assert r2.status_code == 200
         # Both responses should hit the same template; the body should
         # not contain the previous "E-Mail is unknown." message.
         assert b"unknown" not in r1.data.lower()

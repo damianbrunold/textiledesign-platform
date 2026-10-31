@@ -37,7 +37,7 @@ def _stub_smtp(session_mocker=None):
 
     mail_module.send_mail = _capture
     _capture.calls = calls
-    yield _capture
+    return _capture
 
 
 @pytest.fixture

@@ -28,7 +28,7 @@ from werkzeug.security import generate_password_hash
 
 load_dotenv()
 
-app.startup_time = datetime.datetime.now(datetime.timezone.utc)
+app.startup_time = datetime.datetime.now(datetime.UTC)
 
 app.config.update(
     SESSION_COOKIE_SECURE=True,
@@ -208,7 +208,7 @@ def clean_up_non_verified_users():
                 continue
             # only clean up 24 hours after account creation
             if user.create_date:
-                now = datetime.datetime.now(datetime.timezone.utc)
+                now = datetime.datetime.now(datetime.UTC)
                 delta = now - user.create_date
                 if delta.days < 1:
                     continue
@@ -503,7 +503,7 @@ def restore_pattern_salvage(user_name, pattern_name):
             return
         pattern.contents = pattern.contents_salvage
         pattern.contents_salvage = None
-        pattern.modified = datetime.datetime.now(datetime.timezone.utc)
+        pattern.modified = datetime.datetime.now(datetime.UTC)
         db.session.commit()
         print(f"restored {user.name}/{pattern.name}")
 
@@ -563,7 +563,7 @@ def ensure_primary_groups():
                 label=user.label,
                 description='',
                 owner_id=user.id,
-                created=datetime.datetime.now(datetime.timezone.utc),
+                created=datetime.datetime.now(datetime.UTC),
             )
             membership = Membership(
                 user=user,

@@ -100,7 +100,7 @@ def _correct_by_loop(width, idx):
 class TestBeadGeometry:
     @pytest.mark.parametrize("width", [1, 2, 7, 12, 100])
     def test_closed_form_matches_loop(self, width):
-        for idx in range(0, 5 * (2 * width + 1) + 3):
+        for idx in range(5 * (2 * width + 1) + 3):
             assert (
                 beadexport._correct_y_for_index(width, idx)
                 == _correct_by_loop(width, idx)

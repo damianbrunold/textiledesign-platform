@@ -154,7 +154,7 @@ class TestInactivityLogout:
     def _set_last_access(self, user, days_ago):
         import datetime
         user.access_date = (
-            datetime.datetime.now(datetime.timezone.utc)
+            datetime.datetime.now(datetime.UTC)
             - datetime.timedelta(days=days_ago)
         )
         db.session.commit()

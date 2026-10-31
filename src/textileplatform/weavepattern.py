@@ -92,12 +92,12 @@ def _parse_dbw_into_struct(data):
     lines = [line.strip() for line in lines]
     if lines and lines[0] == '@dbw3:file':
         lines = lines[1:]
-    result = dict()
+    result = {}
     stack = []
     current = result
     for line in lines:
         if line.startswith("\\") and line.endswith("{"):
-            child = dict()
+            child = {}
             current[line[1:-1]] = child
             stack.append(current)
             current = child
@@ -175,7 +175,7 @@ def _eq(v, true_value='1'):
 # ---------------------------------------------------------------------------
 
 def _map_raw_to_platform(raw, name):
-    result = dict()
+    result = {}
 
     result['name'] = name
     result['author'] = _dig(raw, 'properties', 'author', default='') or ''

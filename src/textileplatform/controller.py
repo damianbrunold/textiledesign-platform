@@ -90,7 +90,7 @@ def inject_csp_nonce():
 
 def _current_announcement():
     """Return the most recent non-expired announcement, or None."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     return (
         Announcement.query
         .filter(Announcement.expires > now)
@@ -161,7 +161,7 @@ def load_logged_in_user():
                     elif session_ver != user_ver:
                         session.clear()
                         return _auth_redirect_or_401()
-                now = datetime.datetime.now(datetime.timezone.utc)
+                now = datetime.datetime.now(datetime.UTC)
                 last = _as_utc(g.user.access_date)
 
                 # Log out after PERMANENT_SESSION_LIFETIME without any
@@ -184,14 +184,13 @@ def load_logged_in_user():
                 # When the day rolls over we always write — otherwise the
                 # next request would see the same stale date and bump the
                 # day counter a second time.
-                if not impersonating:
-                    if (
-                        last is None
-                        or last.date() != now.date()
-                        or (now - last).total_seconds() > 600
-                    ):
-                        g.usage_pending = True
-                        g.usage_now = now
+                if not impersonating and (
+                    last is None
+                    or last.date() != now.date()
+                    or (now - last).total_seconds() > 600
+                ):
+                    g.usage_pending = True
+                    g.usage_now = now
         except Exception:
             # Treat the request as anonymous, but don't hide the cause
             # or leave the session in a failed transaction.
@@ -205,7 +204,7 @@ def _as_utc(dt):
     """Timestamps are stored in UTC; SQLite (tests) returns them without
     tzinfo."""
     if dt is not None and dt.tzinfo is None:
-        return dt.replace(tzinfo=datetime.timezone.utc)
+        return dt.replace(tzinfo=datetime.UTC)
     return dt
 
 
@@ -266,7 +265,7 @@ def _touch_group(group):
     surrounding commit."""
     if group is None:
         return
-    group.modified = datetime.datetime.now(datetime.timezone.utc)
+    group.modified = datetime.datetime.now(datetime.UTC)
 
 
 def _resolve_extra_group(group_name, user):
@@ -609,11 +608,9 @@ def _is_name_taken(name):
     `_is_personal_group_name_taken`."""
     if User.query.filter(User.name == name).first():
         return True
-    if Group.query.filter(
+    return Group.query.filter(
         Group.name == name, Group.owner_id.is_(None),
-    ).first():
-        return True
-    return False
+    ).first() is not None
 
 
 def _user_group_by_name(user, group_name):
@@ -1345,9 +1342,7 @@ def profile():
         if locale not in ("de", "en"):
             locale = None
         timezone = request.form.get("timezone", "").strip()
-        if timezone and timezone not in pytz.all_timezones_set:
-            timezone = None
-        elif not timezone:
+        if timezone not in pytz.all_timezones_set:
             timezone = None
         user.darkmode = darkmode
         user.block_invitations = block_invitations
@@ -2397,7 +2392,7 @@ def add_group():
                 return render_template("add_group.html", form=request.form)
             owner_id = g.user.id
 
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        now_utc = datetime.datetime.now(datetime.UTC)
         group = Group(
             name=name,
             label=label,
@@ -2458,8 +2453,8 @@ def groups():
             .group_by(Assignment.group_id)
             .all()
         )
-        member_counts = {gid: n for gid, n in member_rows}
-        pattern_counts = {gid: n for gid, n in pattern_rows}
+        member_counts = dict(member_rows)
+        pattern_counts = dict(pattern_rows)
         return render_template(
             "admin-groups.html",
             groups=all_groups,
@@ -2845,7 +2840,7 @@ def publish_announcement():
     if days < 1 or days > 365:
         flash(gettext("Duration must be between 1 and 365 days."))
         return redirect(url_for("support_console"))
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     ann = Announcement(
         body_de=body_de,
         body_en=body_en,
@@ -2865,7 +2860,7 @@ def publish_announcement():
 def retire_announcement():
     current = _current_announcement()
     if current is not None:
-        current.expires = datetime.datetime.now(datetime.timezone.utc)
+        current.expires = datetime.datetime.now(datetime.UTC)
         db.session.commit()
         flash(gettext("Announcement retired."))
     return redirect(url_for("support_console"))
@@ -2913,12 +2908,12 @@ def investigate_pattern(owner_name, pattern_name):
         abort(404, description="Pattern not found")
     support_user = g.user
     suffix = datetime.datetime.now(
-        datetime.timezone.utc
+        datetime.UTC
     ).strftime("%Y%m%d%H%M%S")
     base_label = f"{src.label} [{owner.label}]"
     label = f"{base_label} {suffix}"
     name = from_label(label)
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     copy = Pattern(
         name=name,
         label=label,
@@ -3151,13 +3146,13 @@ def register():
                     locale=str(locale),
                     timezone=str(tz),
                     verification_code=secrets.token_urlsafe(30),
-                    create_date=datetime.datetime.now(datetime.timezone.utc),
+                    create_date=datetime.datetime.now(datetime.UTC),
                     verify_date=None,
                     access_date=None,
                 )
                 db.session.add(user)
                 db.session.flush()
-                now_utc = datetime.datetime.now(datetime.timezone.utc)
+                now_utc = datetime.datetime.now(datetime.UTC)
                 group = Group(
                     name=name,
                     label=label,
@@ -3249,7 +3244,7 @@ def login():
             )
             session.permanent = True
 
-            now = datetime.datetime.now(datetime.timezone.utc)
+            now = datetime.datetime.now(datetime.UTC)
             user.bump_usage_day(now)
             user.access_date = now
             db.session.commit()
@@ -3291,7 +3286,7 @@ def verify(user_name, verification_code):
             return render_template("verification_failed.html")
         user.verified = True
         user.verification_code = None
-        user.verify_date = datetime.datetime.now(datetime.timezone.utc)
+        user.verify_date = datetime.datetime.now(datetime.UTC)
         logging.info("user_id=%s successfully verified", user.id)
         try:
             db.session.commit()
@@ -3338,7 +3333,7 @@ def recover():
             if user is not None and user.verified:
                 user.password_reset_code = secrets.token_urlsafe(30)
                 user.password_reset_expires = (
-                    datetime.datetime.now(datetime.timezone.utc)
+                    datetime.datetime.now(datetime.UTC)
                     + datetime.timedelta(hours=1)
                 )
                 db.session.commit()
@@ -3395,7 +3390,7 @@ def reset_password(user_name, verification_code):
         if (
             user.password_reset_expires is None
             or user.password_reset_expires
-            < datetime.datetime.now(datetime.timezone.utc)
+            < datetime.datetime.now(datetime.UTC)
         ):
             return render_template("recover_failed.html")
 
@@ -3513,7 +3508,7 @@ def update_pattern(user_name, pattern_name):
                     request.remote_addr,
                 )
             pattern.contents = json.dumps(contents)
-            pattern.modified = datetime.datetime.now(datetime.timezone.utc)
+            pattern.modified = datetime.datetime.now(datetime.UTC)
             apply_pattern_metadata(pattern, contents)
             # Distinguish "absent" (don't touch) from "explicit null"
             # (clear). The dbweave editor sends explicit nulls when the
@@ -3871,7 +3866,7 @@ def api_mark_read(conversation_id):
         )
     if p is None:
         return respond("NOK", "Not a participant", 403)
-    p.last_read_at = datetime.datetime.now(datetime.timezone.utc)
+    p.last_read_at = datetime.datetime.now(datetime.UTC)
     db.session.commit()
     return jsonify({"status": "OK", "unread_total": unread_total(g.user)})
 

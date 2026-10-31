@@ -52,7 +52,7 @@ def test_unread_total_matches_per_conversation_count(app):
     post_message(solo_chat, ben, "not visible to anyone")
     # ann has read the club chat up to now; later messages are unread.
     seen = get_or_create_group_participant(club_chat, ann)
-    seen.last_read_at = datetime.datetime.now(datetime.timezone.utc)
+    seen.last_read_at = datetime.datetime.now(datetime.UTC)
     later = post_message(club_chat, ben, "later")
     later.created = seen.last_read_at + datetime.timedelta(seconds=5)
     db.session.commit()
@@ -71,7 +71,7 @@ def test_unread_total_matches_per_conversation_count(app):
 def _inbox_world(n_direct):
     """ann has a group chat and ``n_direct`` direct chats; messages at
     distinct, increasing times."""
-    base = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
+    base = datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
     ann = _make_user(name="ann", email="ann@example.com")
     club = Group(name="club", label="Club", description="")
     db.session.add(club)

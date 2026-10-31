@@ -74,4 +74,5 @@ def test_create_pattern_commands(app):
     weave = json.loads(Pattern.query.filter_by(name="w").one().contents)
     bead = json.loads(Pattern.query.filter_by(name="b").one().contents)
     assert (weave["width"], weave["height"]) == (300, 300)
-    assert len(bead["model"]) == 200 and len(bead["model"][0]) == 12
+    assert len(bead["model"]) == 200
+    assert len(bead["model"][0]) == 12

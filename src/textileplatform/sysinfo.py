@@ -69,7 +69,7 @@ def collect():
 def _app_info():
     proc = _safe(psutil.Process)
     startup = getattr(flask.current_app, "startup_time", None)
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     try:
         from importlib.metadata import version
         version_str = version("textileplatform")
@@ -104,7 +104,7 @@ def _host_info():
     for path in ("/", "/var/lib/postgresql", os.getcwd()):
         try:
             real = os.path.realpath(path)
-            mount = _safe(lambda: psutil.disk_usage(real))
+            mount = _safe(lambda p=real: psutil.disk_usage(p))
             if mount is None:
                 continue
             key = (mount.total, mount.used)
@@ -227,7 +227,7 @@ def _app_metrics():
             .group_by(Pattern.pattern_type)
             .all()
         )
-        by_type = {t: n for t, n in rows}
+        by_type = dict(rows)
         out["patterns_weave"] = by_type.pop("DB-WEAVE Pattern", 0)
         out["patterns_bead"] = by_type.pop("JBead Pattern", 0)
         out["patterns_other"] = sum(by_type.values())
@@ -249,7 +249,7 @@ def _app_metrics():
         pass
     try:
         cutoff = (
-            datetime.datetime.now(datetime.timezone.utc)
+            datetime.datetime.now(datetime.UTC)
             - datetime.timedelta(hours=24)
         )
         out["messages_24h"] = (

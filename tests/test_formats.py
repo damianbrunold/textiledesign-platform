@@ -154,7 +154,7 @@ class TestDbw:
     def test_out_of_range_values_do_not_shift_neighbours(self):
         weave = _weave()
         weave["colors_warp"] = [300, -5, 7] + [55] * 37
-        weave["data_entering"] = [70000] + weave["data_entering"][1:]
+        weave["data_entering"] = [70000, *weave["data_entering"][1:]]
         weave["palette"][0] = [999, -1, 12]
         back = _dbw_round_trip(weave)
         assert back["colors_warp"] == [255, 0, 7] + [55] * 37

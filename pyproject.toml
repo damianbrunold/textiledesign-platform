@@ -35,7 +35,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
-    "flake8>=7",
+    "pytest-cov>=6",
+    "ruff>=0.15",
+    "pip-audit>=2.9",
     "autopep8>=2",
     "pre-commit>=4",
     "build>=1.2",
@@ -47,6 +49,64 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["error::DeprecationWarning:textileplatform"]
+
+[tool.coverage.run]
+source = ["textileplatform"]
+branch = true
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true
+
+# Linting only; formatting stays with autopep8 (ruff format would rewrite
+# most files).
+[tool.ruff]
+line-length = 79
+extend-exclude = ["migrations/versions", "docs"]
+# Apply the excludes to files pre-commit passes explicitly, too.
+force-exclude = true
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F",  # pycodestyle, pyflakes (what flake8 checked)
+    "B",            # bugbear: likely bugs
+    "C4",           # comprehensions
+    "PIE",          # misc. lints
+    "UP",           # pyupgrade
+    "SIM",          # simplifications
+    "PT",           # pytest style
+    "RUF",          # ruff-specific
+    "PLE", "PLW",   # pylint errors / warnings
+    "S",            # bandit security checks
+    "DTZ",          # naive datetimes
+]
+ignore = [
+    "B905",     # zip() without strict=: our zips pair equal-length lists
+    "RUF001", "RUF002", "RUF003",  # "×" in text and comments is intended
+    "SIM105",   # contextlib.suppress over try/except/pass: taste
+    "SIM108",   # ternary over if/else: taste
+    "PLW0603",  # module-level caches use `global`
+    "PLW2901",  # rebinding a loop variable while normalising it
+    "S110", "S112",  # best-effort try/except/pass (sysinfo, cleanup)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",                  # assert
+    "S105", "S106", "S107",  # test passwords
+    "S311",                  # non-crypto random
+    "S314",                  # parsing our own SVG output
+]
+# The noqa: E402 comments stop autopep8 from hoisting the imports above
+# the environment setup; ruff itself allows imports after it.
+"tests/conftest.py" = ["RUF100"]
+"{deploy_to_server,update_server}.py" = ["S603", "S607"]
+
+[tool.ruff.lint.flake8-pytest-style]
+parametrize-names-type = "csv"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [build-system]
 requires = ["setuptools"]

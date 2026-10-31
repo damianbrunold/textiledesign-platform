@@ -121,7 +121,7 @@ def send_email_changed_notice(user, old_email):
     a German user's account doesn't send an English e-mail — and the
     timestamp is formatted in the matching local convention."""
     new_email = user.email
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     # Use a mailto: link, not the in-app support page. If the change
     # wasn't authorised, the legitimate user can't log in any more
     # (e-mail is the login credential and the attacker now owns it),

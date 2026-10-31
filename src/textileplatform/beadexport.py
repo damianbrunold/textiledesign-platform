@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass, field
-from typing import List, Tuple
 
 try:
     from flask_babel import gettext
@@ -56,8 +55,8 @@ MAX_PRINT_BEADS = 1_000_000
 class BeadModel:
     width: int
     height: int
-    rows: List[List[int]]                     # rows[y][x] = palette idx
-    palette: List[Tuple[int, int, int]]       # rgb tuples
+    rows: list[list[int]]                     # rows[y][x] = palette idx
+    palette: list[tuple[int, int, int]]       # rgb tuples
     title: str = ""
     author: str = ""
     organization: str = ""
@@ -65,7 +64,7 @@ class BeadModel:
 
     used_height: int = 0
     repeat: int = 0
-    bead_list: List[Tuple[int, int]] = field(default_factory=list)
+    bead_list: list[tuple[int, int]] = field(default_factory=list)
     # View-only rotation of the simulated rope. Mirrors desktop's
     # Model.shift / SimulationPanel.getShift — only the simulation
     # printer reads it; bead-list / draft / corrected / repeat are
@@ -201,7 +200,7 @@ def _compute_bead_list(m: BeadModel) -> None:
 
 # ---------- Corrected coordinate helper --------------------------
 
-def _correct_y_for_index(width: int, idx: int) -> Tuple[int, int]:
+def _correct_y_for_index(width: int, idx: int) -> tuple[int, int]:
     """Return (x_corr, y_corr) for linear bead index ``idx`` in the
     hexagonally corrected grid, where rows alternate widths
     [width, width+1, width, ...]. Mirrors Model.correct."""
@@ -253,7 +252,7 @@ class PartPrinter:
     ``paint_column`` call paints one column at (x, y_top); the column
     extends downward by ``page_h``."""
 
-    def layout_columns(self, page_w: float, page_h: float) -> List[float]:
+    def layout_columns(self, page_w: float, page_h: float) -> list[float]:
         raise NotImplementedError
 
     def paint_column(self, t: DrawTarget, page_h: float,
@@ -596,8 +595,8 @@ class ReportInfoPart(PartPrinter):
         self._infos = self._build_infos()
         self._counts = self._build_counts()
 
-    def _build_infos(self) -> List[Tuple[str, str]]:
-        items: List[Tuple[str, str]] = []
+    def _build_infos(self) -> list[tuple[str, str]]:
+        items: list[tuple[str, str]] = []
         beads = gettext("beads")
         items.append((gettext("Pattern:"), self.m.title or ""))
         if self.m.author:
@@ -624,7 +623,7 @@ class ReportInfoPart(PartPrinter):
              f"{self.m.used_height * self.m.width} {beads}"))
         return items
 
-    def _build_counts(self) -> List[Tuple[int, int]]:
+    def _build_counts(self) -> list[tuple[int, int]]:
         """Per-colour totals across the entire used pattern, including
         the background colour — those beads have to be bought too."""
         counts = {}
@@ -726,12 +725,12 @@ class _PagePart:
 
 @dataclass
 class _Page:
-    parts: List[_PagePart] = field(default_factory=list)
+    parts: list[_PagePart] = field(default_factory=list)
     used_w: float = 0.0
 
 
-def _layout_pages(parts: List[PartPrinter], page_w: float, page_h: float):
-    pages: List[_Page] = []
+def _layout_pages(parts: list[PartPrinter], page_w: float, page_h: float):
+    pages: list[_Page] = []
     current = _Page()
     for part in parts:
         for ci, cw in enumerate(part.layout_columns(page_w, page_h)):
@@ -754,7 +753,7 @@ def _select_parts(m: BeadModel, view: dict, full_pattern: bool,
     corrected/simulation views to a single column (anything that
     won't fit is omitted) — used by the single-page exports so a
     long pattern doesn't expand into a giant horizontal strip."""
-    parts: List[PartPrinter] = []
+    parts: list[PartPrinter] = []
     if view.get("report-visible", True):
         parts.append(ReportInfoPart(m))
     if view.get("draft-visible", True):
@@ -948,7 +947,7 @@ def export_pdf(data, title=None) -> bytes:
 
 # ---------- Raster / SVG ----------------------------------------
 
-def _layout_strip(parts: List[PartPrinter], page_h: float):
+def _layout_strip(parts: list[PartPrinter], page_h: float):
     """Pack all part columns into a single landscape strip of height
     ``page_h``. Returns (total_width, list[(part, column, x, w)])."""
     placements = []
@@ -971,7 +970,7 @@ def _export_image_size(view: dict, m: BeadModel):
     flat single-page raster/SVG export. We use the landscape page
     height as the column height — matching the PDF layout — and let
     the width grow to whatever the parts pack into."""
-    page_w, page_h = _landscape_page()
+    _, page_h = _landscape_page()
     margin = 6 * _MM
     paint_h = page_h - 2 * margin
     parts = _select_parts(m, view, full_pattern=True,

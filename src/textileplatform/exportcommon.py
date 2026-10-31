@@ -261,7 +261,7 @@ def _pil_font(size):
         try:
             font = ImageFont.truetype(path, key)
             break
-        except (OSError, IOError):
+        except OSError:
             continue
     if font is None:
         font = ImageFont.load_default()

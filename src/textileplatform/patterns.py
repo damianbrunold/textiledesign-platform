@@ -178,7 +178,7 @@ def _insert_pattern(user, label, make):
 def add_pattern(contents, user, pattern_type):
     """Store pattern JSON ``contents`` (with a "name") as a new private
     pattern of ``user``. Returns the pattern name."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     def make(name, label):
         p = Pattern(
@@ -201,7 +201,7 @@ def add_pattern(contents, user, pattern_type):
 def clone_pattern(user, pattern, contents):
     """Copy ``pattern`` (with the given JSON ``contents`` string) into
     ``user``'s patterns. Returns the new pattern name."""
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     try:
         parsed = json.loads(contents)
     except (TypeError, ValueError):
