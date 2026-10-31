@@ -1,6 +1,38 @@
-"use strict";
+import { ActionRegistry } from "../ui/actions.js";
+import { ColorPicker } from "../ui/colorpicker.js";
+import {
+    CommandBus, makeCellCommand, makeEnteringCommand, makeGridRegionCommand,
+    restoreEntering, restoreGridRegion, snapshotEntering,
+    snapshotGridRegion,
+} from "../ui/commands.js";
+import {
+    _prompt, clearModified, closePatternGuarded, data, downloadRendered,
+    editorDialogOpen, editorI18n, getPattern, modified, resizeWindow,
+    savePattern, setModified, startEditor, trackSavedState,
+} from "../ui/common.js";
+import { LegalDialog } from "../ui/legal.js";
+import { Menu } from "../ui/menu.js";
+import { Modal } from "../ui/modal.js";
+import { Clipboard, Selection } from "../ui/selection.js";
+import { Shortcuts } from "../ui/shortcuts.js";
+import { ToolRaster } from "../ui/tools.js";
+import {
+    arrangeThreading, arrangeTreadling, recalcFixedEntering,
+    updateFixedEntering,
+} from "./arrange.js";
+import {
+    ATLAS_OFFSETS, completeTwill, stampAtlas, stampTwill,
+} from "./generators.js";
+import {
+    loadPatternData, loadSettings, storePatternData, storeSettings,
+} from "./io.js";
+import { Grid, Pattern } from "./model.js";
+import {
+    clearPegplan, invertPegplan, mirrorPegplan, repeatWarp, repeatWeft,
+    switchSide,
+} from "./transforms.js";
 
-// data is provided by common.js and contains the "raw" json data of the pattern.
+// data is provided by ui/common.js and contains the "raw" json data of the pattern.
 
 // The pattern is an instance of the Pattern class and encapsulates the
 // data from the data object in order to manipulate and visualize it easier.
@@ -198,7 +230,7 @@ function select_part(part, x1, y1, x2, y2) {
     } else {
         console.error("cannot select part", part);
     }
-    if (typeof ActionRegistry !== "undefined") ActionRegistry.notify();
+    ActionRegistry.notify();
 }
 
 
@@ -780,7 +812,7 @@ class GridView {
         // fixeinzug[count of non-empty warps strictly before w].
         // Direct port of TDBWFRM::DrawEinzug's red-cell logic.
         let mismatchSet = null;
-        if (typeof pattern !== "undefined" && pattern
+        if (pattern
             && this.data === pattern.entering
             && settings.threading_arrangement === "fixiert"
             && pattern.fixeinzug && pattern.fixeinzug[0] !== 0) {
@@ -1923,7 +1955,7 @@ class PatternView {
         if (cursor.selected_view) {
             cursor.selected_view.drawCursor(this.ctx, this.settings, cursor);
         }
-        if (typeof updateStatusBar === "function") updateStatusBar();
+        updateStatusBar();
     }
 
     clearCanvas() {
@@ -2256,7 +2288,7 @@ function _hlineToggle(typ, feld, pos) {
             finalize();
         },
     };
-    if (typeof commandBus !== "undefined" && commandBus) commandBus.execute(cmd);
+    if (commandBus) commandBus.execute(cmd);
     else cmd.apply();
 }
 
@@ -3088,7 +3120,7 @@ function init() {
     settings = new ViewSettings();
     settings.darcula = darkmode;
 
-    if (typeof CommandBus !== "undefined") {
+    {
         commandBus = new CommandBus();
         trackSavedState(commandBus);
     }
@@ -3389,10 +3421,6 @@ function showPageSetupDialog() {
 // Pattern info — direct port of EntwurfsinfoDialog. Builds 4 sections
 // of computed report text from the in-memory pattern.
 
-const _INFO_RANGE_AUSHEBUNG = 10;
-const _INFO_RANGE_ANBINDUNG = 11;
-const _INFO_RANGE_ABBINDUNG = 12;
-
 function _info_fmt3g(v) {
     if (!isFinite(v)) return "0";
     // Match the desktop's "%1.3g" output: at most 3 significant digits.
@@ -3505,7 +3533,7 @@ function _info_colors() {
         for (let i = 0; i < palLen; i++) {
             if (!table[i]) continue;
             const [r, g, b2] = pattern.palette[i] || [0, 0, 0];
-            const [h, s, v] = _rgbToHsv(r, g, b2);
+            const [h, s, v] = ColorPicker.rgbToHsv(r, g, b2);
             const pct = _info_fmt3g(100 * table[i] / total);
             lines.push("  "
                 + L("info.color", "Color") + " " + n + ": "
@@ -3895,70 +3923,9 @@ async function _revertChanges() {
 function initSettings(data, settings) {
     loadSettings(data, settings, {
         // Per-device preferences fill what the pattern doesn't specify.
-        prefs: (typeof _prefsLoad === "function") ? _prefsLoad() : {},
+        prefs: _prefsLoad(),
         styles: new Set(Object.keys(cellPainters)),
     });
-}
-
-
-function get_current_layout(settings) {
-    if (settings.entering_style === "filled"
-        && settings.tieup_style === "filled"
-        && settings.treadling_style === "filled"
-        && settings.direction_righttoleft === true
-        && settings.direction_toptobottom === false
-        && settings.entering_at_bottom === false) {
-        return "US";
-    } else if ((settings.entering_style === "vdash"
-                || settings.entering_style === "dash")
-        && settings.tieup_style === "cross"
-        && settings.treadling_style === "dot"
-        && settings.direction_righttoleft === false
-        && settings.direction_toptobottom === false
-        && settings.entering_at_bottom === false) {
-        return "DE";
-    } else if (settings.entering_style === "filled"
-        && settings.tieup_style === "filled"
-        && settings.treadling_style === "filled"
-        && settings.direction_righttoleft === true
-        && settings.direction_toptobottom === true
-        && settings.entering_at_bottom === true) {
-        return "SK";
-    } else {
-        return "--";
-    }
-}
-
-
-function set_current_layout(layout) {
-    if (layout === "DE") {
-        settings.entering_style = "vdash";
-        settings.treadling_style = "dot";
-        settings.tieup_style = "cross";
-        settings.entering_at_bottom = false;
-        settings.direction_toptobottom = false;
-        settings.direction_righttoleft = false;
-        view.layout();
-        view.draw();
-    } else if (layout === "SK") {
-        settings.entering_style = "filled";
-        settings.treadling_style = "filled";
-        settings.tieup_style = "filled";
-        settings.entering_at_bottom = true;
-        settings.direction_toptobottom = true;
-        settings.direction_righttoleft = true;
-        view.layout();
-        view.draw();
-    } else if (layout === "US") {
-        settings.entering_style = "filled";
-        settings.treadling_style = "filled";
-        settings.tieup_style = "filled";
-        settings.entering_at_bottom = false;
-        settings.direction_toptobottom = false;
-        settings.direction_righttoleft = true;
-        view.layout();
-        view.draw();
-    }
 }
 
 
@@ -3966,7 +3933,7 @@ function saveSettings(data, settings) {
     storeSettings(data, settings);
     // Cursor position persists across reloads so the user can pick up where
     // they left off. We only store a single cell, not the whole selection.
-    if (typeof cursor !== "undefined" && cursor !== null) {
+    if (cursor !== null) {
         data["cursor_part"] = cursor.selected_part;
         data["cursor_x"] = cursor.x1;
         data["cursor_y"] = cursor.y1;
@@ -3987,7 +3954,7 @@ function savePatternData(data, pattern) {
     // Persist the drag-resizable viewport sizes (einzug height,
     // trittfolge width). They live on the runtime view; mirror back
     // into data so a reload picks them up.
-    if (typeof view !== "undefined" && view) {
+    if (view) {
         data.visible_shafts   = view.visible_shafts;
         data.visible_treadles = view.visible_treadles;
     }
@@ -4545,7 +4512,6 @@ function tieupSwapSides() {
 // selection collapses (the web model unifies cursor + selection in the
 // (x1,y1)-(x2,y2) pair, so we collapse to a single cell at the new spot).
 function _moveCursorAfterCopy() {
-    if (typeof Selection === "undefined") return;
     if (Selection.isEmpty(cursor)) return;
     const sel = Selection.current(cursor);
     if (!sel) return;
@@ -4563,27 +4529,24 @@ function _moveCursorAfterCopy() {
     }
     cursor.x1 = cursor.x2 = x;
     cursor.y1 = cursor.y2 = y;
-    if (typeof updateSelectionIcons === "function") updateSelectionIcons();
-    if (typeof save_part_position === "function") save_part_position();
-    if (typeof view !== "undefined" && view.draw) view.draw();
+    updateSelectionIcons();
+    save_part_position();
+    if (view.draw) view.draw();
 }
 
 function selectionCopy() {
-    if (typeof Selection === "undefined") return;
     if (Selection.isEmpty(cursor)) return;
     Selection.copyToClipboard(cursor, pattern);
     _moveCursorAfterCopy();
 }
 
 function selectionCut() {
-    if (typeof Selection === "undefined") return;
     if (Selection.isEmpty(cursor)) return;
     Selection.copyToClipboard(cursor, pattern);
     selectionClear();
 }
 
 function _paste(transparent) {
-    if (typeof Selection === "undefined") return;
     if (!Clipboard.has()) return;
     const sel = Selection.current(cursor);
     if (!sel) return;
@@ -4621,19 +4584,13 @@ function _paste(transparent) {
 function selectionPaste() { _paste(false); }
 function selectionPasteTransparent() { _paste(true); }
 
-function update_layout_selector() {
-    // Layout selector chip removed in the toolbar revamp. Layout
-    // changes go through Extras ▸ Grundeinstellung now.
-}
-
-
 function update_color_selector(settings) {
     const elem = document.getElementById("current-color");
     if (elem) {
         elem.style.backgroundColor = colors[settings.current_color];
         elem.style.color = colors[settings.current_color];
     }
-    if (typeof _paletteToolboxRefresh === "function" && settings && settings.display_palette) {
+    if (settings && settings.display_palette) {
         _paletteToolboxRefresh();
     }
 }
@@ -4894,7 +4851,7 @@ function _restorePatternDims(s) {
     pattern.firstfree = s.firstfree;
     pattern.min_x = s.min_x; pattern.max_x = s.max_x;
     pattern.min_y = s.min_y; pattern.max_y = s.max_y;
-    if (typeof data !== "undefined" && data) {
+    if (data) {
         data.width        = s.width;
         data.height       = s.height;
         data.max_shafts   = s.max_shafts;
@@ -4930,7 +4887,7 @@ function _resizePatternCommand(newW, newH, newMS, newMT) {
     _restorePatternDims(before);
     const finalize = () => {
         setModified();
-        if (typeof view !== "undefined" && view) {
+        if (view) {
             view.layout();
             view.draw();
         }
@@ -5255,15 +5212,6 @@ function _isFreeTritt(i) {
     return true;
 }
 
-function _isEmptyTrittfolge(j) {
-    // True iff weft row j has no treadle/pegplan column set.
-    const grid = settings.display_pegplan ? pattern.pegplan : pattern.treadling;
-    for (let i = 0; i < grid.width; i++) {
-        if (grid.get(i, j) > 0) return false;
-    }
-    return true;
-}
-
 // Generic snapshot-command helper for non-grid mutations (settings,
 // metadata). `capture` returns a plain-object snapshot of the touched
 // fields; `restore` writes one back. `mutate` performs the change in
@@ -5465,7 +5413,7 @@ function _userdefList() {
                 : null);
         }
         return out;
-    } catch (e) { return new Array(10).fill(null); }
+    } catch { return new Array(10).fill(null); }
 }
 function _userdefSaveAll(slots) {
     try { localStorage.setItem(USERDEF_KEY, JSON.stringify(slots)); }
@@ -5711,7 +5659,7 @@ function _refreshUserdefMenuLabels() {
     // Top-level Additional menu visibility — handled via visibleWhen in
     // the menu tree, but force a refresh now so it picks up changes
     // even if no other notify happened.
-    if (typeof ActionRegistry !== "undefined") ActionRegistry.notify();
+    ActionRegistry.notify();
     return anyUsed;
 }
 
@@ -7380,15 +7328,8 @@ function _paletteRestore(snap) {
     }
 }
 
-// Tiny RGB <-> HSV helpers. H ∈ [0,360), S,V ∈ [0,1].
-// Colour conversions and the RGB / HSV pickers are shared with the
-// bead editor (colorpicker.js).
-// ColorPicker comes from a module (ui/colorpicker.js), which runs after
-// this script: look it up when called, not at load time.
-function _rgbToHsv(...args) { return ColorPicker.rgbToHsv(...args); }
-function _hsvToRgb(...args) { return ColorPicker.hsvToRgb(...args); }
-function _rgbToHex(...args) { return ColorPicker.rgbToHex(...args); }
-function _hexToRgb(...args) { return ColorPicker.hexToRgb(...args); }
+// Colour conversions and the RGB / HSV pickers are in ui/colorpicker.js,
+// shared with the bead editor.
 function _colorLabel(k, fb) {
     const a = _getI18n().actions[k];
     return (a && a.label) || fb;
@@ -7493,7 +7434,7 @@ function showPaletteDialog(onPick) {
     };
     const refreshReadout = () => {
         const [r, g, b] = pattern.palette[cur];
-        const [h, s, v] = _rgbToHsv(r, g, b);
+        const [h, s, v] = ColorPicker.rgbToHsv(r, g, b);
         $("#tx-pal-idx").textContent = String(cur + 1);
         $("#tx-pal-r").textContent = r;
         $("#tx-pal-g").textContent = g;
@@ -7633,8 +7574,8 @@ function _farbverlaufRGB(start, end, n, weight) {
 
 function _farbverlaufHSV(start, end, n, weight) {
     const m = weight;
-    const [h1, s1, v1] = _rgbToHsv(start[0], start[1], start[2]);
-    const [h2, s2, v2] = _rgbToHsv(end[0],   end[1],   end[2]);
+    const [h1, s1, v1] = ColorPicker.rgbToHsv(start[0], start[1], start[2]);
+    const [h2, s2, v2] = ColorPicker.rgbToHsv(end[0],   end[1],   end[2]);
     const out = [];
     for (let i = 0; i < n; i++) {
         const x = (i + 1) / (n + 1);
@@ -7642,7 +7583,7 @@ function _farbverlaufHSV(start, end, n, weight) {
         const h = h1 + (h2 - h1) * t;
         const s = Math.max(0, Math.min(1, s1 + (s2 - s1) * t));
         const v = Math.max(0, Math.min(1, v1 + (v2 - v1) * t));
-        out.push(_hsvToRgb(h, s, v));
+        out.push(ColorPicker.hsvToRgb(h, s, v));
     }
     return out;
 }
@@ -8359,7 +8300,7 @@ function _prefsRead() {
                 dbw = all.dbweave;
             }
         }
-    } catch (e) { /* fall through to defaults */ }
+    } catch { /* fall through to defaults */ }
     _prefsCache = Object.assign({}, _PREFS_DEFAULTS, dbw);
     return _prefsCache;
 }
@@ -8425,7 +8366,7 @@ function _optionsApplyToSettings(opts) {
             settings.unit_height = opts.unit_height | 0;
         },
         () => {
-            if (typeof view !== "undefined" && view) {
+            if (view) {
                 view.layout();
                 view.draw();
             }
@@ -8483,7 +8424,7 @@ function _applyBaseStyle(name) {
             for (const k of keys) settings[k] = base[k];
         },
         () => {
-            if (typeof view !== "undefined" && view) {
+            if (view) {
                 view.layout();
                 view.draw();
             }
@@ -9064,7 +9005,6 @@ function _setWeaveStyle(style) {
 }
 
 function setupEditorActions() {
-    if (typeof ActionRegistry === "undefined") return;
     const i18n = _getI18n();
     const L = (id) => (i18n.actions[id] && i18n.actions[id].label) || id;
 
@@ -9110,16 +9050,16 @@ function setupEditorActions() {
     R("edit.redo", "Ctrl+Y", () => { if (commandBus) commandBus.redo(); },
         { enabledWhen: () => commandBus && commandBus.canRedo() });
     R("edit.cut", "Ctrl+X", selectionCut,
-        { enabledWhen: () => !readonly && typeof Selection !== "undefined" && !Selection.isEmpty(cursor) });
+        { enabledWhen: () => !readonly && !Selection.isEmpty(cursor) });
     R("edit.copy", "Ctrl+C", selectionCopy,
-        { enabledWhen: () => typeof Selection !== "undefined" && !Selection.isEmpty(cursor) });
+        { enabledWhen: () => !Selection.isEmpty(cursor) });
     R("edit.paste", "Ctrl+V", selectionPaste,
-        { enabledWhen: () => !readonly && typeof Clipboard !== "undefined" && Clipboard.has() });
+        { enabledWhen: () => !readonly && Clipboard.has() });
     R("edit.paste-transparent", "Ctrl+B", selectionPasteTransparent,
-        { enabledWhen: () => !readonly && typeof Clipboard !== "undefined" && Clipboard.has() });
+        { enabledWhen: () => !readonly && Clipboard.has() });
     R("edit.delete", "Delete", selectionClear,
-        { enabledWhen: () => !readonly && typeof Selection !== "undefined" && !Selection.isEmpty(cursor) });
-    const hasSel = () => typeof Selection !== "undefined" && !Selection.isEmpty(cursor);
+        { enabledWhen: () => !readonly && !Selection.isEmpty(cursor) });
+    const hasSel = () => !Selection.isEmpty(cursor);
     const hasSquareSel = () => {
         if (!hasSel()) return false;
         return Math.abs(cursor.x2 - cursor.x1) === Math.abs(cursor.y2 - cursor.y1);
@@ -9837,6 +9777,7 @@ window.addEventListener("load", () => {
     readonly = document.getElementById("readonly").value === "True";
     window.addEventListener("keydown", keyDown);
     startEditor({
+        readonly,
         preSave: () => {
             saveSettings(data, settings);
             savePatternData(data, pattern);
@@ -9846,6 +9787,7 @@ window.addEventListener("load", () => {
             setupEditorActions();
             setupToolbarAndStatusbar();
         },
+        captureThumbnails,
     });
 });
 
@@ -9885,7 +9827,7 @@ function setupToolbarAndStatusbar() {
 //   sb-rapport — "Size KxS  Rapport KxS"
 //   sb-zoom    — "Zoom: <px>" (web equivalent of legacy lock indicator)
 function updateStatusBar() {
-    if (typeof settings === "undefined" || settings === null) return;
+    if (settings === null) return;
     const i18n = _getI18n();
     const L = (k, fb) => (i18n.actions[k] && i18n.actions[k].label) || fb;
     const FIELD_NAME = {
@@ -9934,7 +9876,7 @@ function updateStatusBar() {
     _setText("sb-range", rangeText);
 
     let rap = "";
-    if (typeof pattern !== "undefined" && pattern) {
+    if (pattern) {
         const hasExt = pattern.hasExtent();
         const kw = hasExt ? (pattern.max_x - pattern.min_x + 1) : 0;
         const sw = hasExt ? (pattern.max_y - pattern.min_y + 1) : 0;
@@ -9961,7 +9903,7 @@ function _setText(id, text) {
     if (el) el.textContent = text || "";
 }
 
-window.addEventListener("resize", resizeWindow);
+window.addEventListener("resize", () => resizeWindow(view));
 
 
 // --- Thumbnail / preview capture ---------------------------------------
@@ -10035,7 +9977,7 @@ function _renderTwoPaneToCanvas(data, pat, w, h) {
     // Cell aspect ratio honours warp_factor / weft_factor (the editor's
     // configurable cell aspect): cellW : cellH = wf : sf. Defaults to
     // square cells when the factors aren't set or are equal.
-    const baseSettings = (typeof settings !== "undefined" && settings)
+    const baseSettings = (settings)
         ? settings : { darcula: false };
     const wf = Math.max(0.01, +baseSettings.warp_factor || 1.0);
     const sf = Math.max(0.01, +baseSettings.weft_factor || 1.0);
@@ -10194,8 +10136,8 @@ function _renderTwoPaneToCanvas(data, pat, w, h) {
 }
 
 
-window.captureThumbnails = function(currentData) {
-    if (typeof pattern === "undefined" || !pattern) return null;
+function captureThumbnails(currentData) {
+    if (!pattern) return null;
     // Empty patterns (no warp threads entered, no woven cells) get no
     // thumbnail. Returning explicit nulls instead of skipping capture
     // lets the server clear any prior thumbnail when a pattern is
@@ -10219,4 +10161,21 @@ window.captureThumbnails = function(currentData) {
         console.error("captureThumbnails error", e);
         return null;
     }
+}
+
+// ---- Test handle -----------------------------------------------------
+//
+// Module bindings are not globals: the browser tests read and drive
+// the editor through window.txEditor (page.evaluate("txEditor.pattern
+// ...")). Getters, so they always see the current objects.
+window.txEditor = {
+    get pattern() { return pattern; },
+    get view() { return view; },
+    get settings() { return settings; },
+    get cursor() { return cursor; },
+    get commandBus() { return commandBus; },
+    get data() { return data; },
+    get modified() { return modified; },
+    get readonly() { return readonly; },
+    ActionRegistry, Modal, select_part, setModified,
 };

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { loadEditor } from "./helpers/load.js";
+import { Pattern } from "../../src/textileplatform/static/js/bead/model.js";
+import {
+    ViewCorrected, ViewDraft, ViewSimulated,
+} from "../../src/textileplatform/static/js/bead/views.js";
 
 // The bead editor's draft, corrected and simulated views: what they
 // draw and what a click hits must agree. Each bead gets its own colour
@@ -35,30 +38,26 @@ function fold(idx, W) {
         : { i: rest - W, row: 2 * pair + 1 };
 }
 
-let ed;
-
-async function editor() {
-    if (!ed) {
-        ed = await loadEditor("jbead");
-        ed.run(`settings = { dx: ${DX}, dy: ${DY}, darcula: false };
-                draw_colors = true; draw_symbols = false;`);
-    }
-    return ed.run;
-}
+const VIEWS = { ViewCorrected, ViewDraft, ViewSimulated };
 
 // Draw `kind` for a W x H pattern and return the beads drawn
 // ({ k, cx, cy }) and the view.
-async function drawView(kind, { W, H, x, y = 0, viewW, viewH, offset,
-                                shift = 0 }) {
-    const run = await editor();
-    run(`pattern = new Pattern(${W}, ${H});
-         pattern.data = Array.from({ length: ${W * H} }, (_, k) => k);
-         pattern.shift = ${shift};
-         colors = Array.from({ length: ${W * H} }, (_, k) => "id" + k);`);
-    const v = run(`new ${kind}(pattern, ${x}, ${y}, ${viewW}, ${viewH})`);
+function drawView(kind, { W, H, x, y = 0, viewW, viewH, offset,
+                          shift = 0 }) {
+    const pattern = new Pattern(W, H);
+    pattern.data = Array.from({ length: W * H }, (_, k) => k);
+    pattern.shift = shift;
+    const env = {
+        pattern,
+        settings: { dx: DX, dy: DY, darcula: false },
+        colors: Array.from({ length: W * H }, (_, k) => "id" + k),
+        drawColors: true,
+        drawSymbols: false,
+    };
+    const v = new VIEWS[kind](env, pattern, x, y, viewW, viewH);
     v.offset = offset;
     const { ctx, shapes } = recorder();
-    v.draw(ctx, run("settings"));
+    v.draw(ctx, env.settings);
     const beads = shapes.filter((s) => s.id.startsWith("id"))
         .map((s) => ({ k: Number(s.id.slice(2)), cx: s.cx, cy: s.cy }));
     return { v, beads };
@@ -81,10 +80,10 @@ function hitsBack(v, beads, W) {
 }
 
 describe("draft view", () => {
-    it("hit-tests every drawn bead back to itself", async () => {
+    it("hit-tests every drawn bead back to itself", () => {
         for (const c of cases()) {
             for (const y of [0, 2]) {
-                const { v, beads } = await drawView("ViewDraft",
+                const { v, beads } = drawView("ViewDraft",
                     { ...c, x: 4, y, viewW: c.W });
                 expect(hitsBack(v, beads, c.W), JSON.stringify({ ...c, y }))
                     .toEqual([]);
@@ -94,9 +93,9 @@ describe("draft view", () => {
 });
 
 describe("corrected view", () => {
-    it("draws every bead of the visible rows", async () => {
+    it("draws every bead of the visible rows", () => {
         for (const c of cases()) {
-            const { beads } = await drawView("ViewCorrected",
+            const { beads } = drawView("ViewCorrected",
                 { ...c, x: 4, viewW: c.W + 1 });
             const expected = [];
             for (let k = 0; k < c.W * c.H; k++) {
@@ -108,10 +107,10 @@ describe("corrected view", () => {
         }
     });
 
-    it("hit-tests every drawn bead back to itself", async () => {
+    it("hit-tests every drawn bead back to itself", () => {
         for (const c of cases()) {
             for (const y of [0, 2]) {
-                const { v, beads } = await drawView("ViewCorrected",
+                const { v, beads } = drawView("ViewCorrected",
                     { ...c, x: 4, y, viewW: c.W + 1 });
                 expect(hitsBack(v, beads, c.W), JSON.stringify({ ...c, y }))
                     .toEqual([]);
@@ -125,11 +124,11 @@ describe("simulated view", () => {
     // trunc(W / 2) columns (desktop SimulationPanel::visibleWidth).
     const front = (W) => Math.trunc(W / 2);
 
-    it("draws every bead on the front of the visible rows", async () => {
+    it("draws every bead on the front of the visible rows", () => {
         for (const c of cases()) {
             for (let shift = 0; shift < c.W; shift++) {
                 const vw = front(c.W);
-                const { beads } = await drawView("ViewSimulated",
+                const { beads } = drawView("ViewSimulated",
                     { ...c, x: 4, viewW: vw, shift });
                 const expected = [];
                 for (let k = 0; k < c.W * c.H; k++) {
@@ -146,11 +145,11 @@ describe("simulated view", () => {
         }
     });
 
-    it("hit-tests every drawn bead back to itself", async () => {
+    it("hit-tests every drawn bead back to itself", () => {
         for (const c of cases()) {
             for (let shift = 0; shift < c.W; shift++) {
                 for (const y of [0, 2]) {
-                    const { v, beads } = await drawView("ViewSimulated",
+                    const { v, beads } = drawView("ViewSimulated",
                         { ...c, x: 4, y, viewW: front(c.W), shift });
                     expect(hitsBack(v, beads, c.W),
                            JSON.stringify({ ...c, shift, y })).toEqual([]);

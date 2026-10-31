@@ -185,7 +185,7 @@ class DrawTarget:
 def paint_cell(t: DrawTarget, darst, x, y, gw, gh, color):
     """Render one cell in the requested ``darstellung``. ``DARST_FILLED``
     fills a block inset by the same margin the symbol variants use, so
-    the grid stays visible around it (cellPainterFilled in dbweave.js
+    the grid stays visible around it (cellPainterFilled in weave/editor.js
     insets by bxf/byf, and the desktop's AUSGEFUELLT by two pixels); the
     symbol variants leave the background untouched. Port of the
     paintExportCell lambda in exportbitmap.cpp:189-196."""

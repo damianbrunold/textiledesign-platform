@@ -54,9 +54,9 @@ class TestSharing:
         expect(row).to_be_visible()
         with bob_page.expect_navigation():
             row.locator(".row-name a").click()
-        bob_page.wait_for_function("() => typeof readonly !== 'undefined'"
-                                   " && view !== null")
-        assert bob_page.evaluate("readonly") is True
+        bob_page.wait_for_function(
+            "() => window.txEditor && txEditor.view !== null")
+        assert bob_page.evaluate("txEditor.readonly") is True
 
     def test_unshared_pattern_is_not_visible(self, alice_page, bob_page):
         make_weave_pattern("alice", "secret")
@@ -104,7 +104,8 @@ class TestUpload:
             alice_page.get_by_role("button", name="Upload").click()
         assert saved.value.ok
         expect(alice_page).to_have_url(re.compile(r"/alice/satin(\?|$)"))
-        assert alice_page.evaluate("pattern.weave.data.some(v => v > 0)")
+        assert alice_page.evaluate(
+            "txEditor.pattern.weave.data.some(v => v > 0)")
         assert not is_modified(alice_page)
         with db_access():
             p = Pattern.query.filter_by(name="satin").one()

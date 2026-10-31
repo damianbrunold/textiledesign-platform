@@ -195,7 +195,6 @@ describe("CommandBus", () => {
         });
 
         it("are isolated from each other's exceptions", () => {
-            // jsdom forwards the window's console to Node's.
             const error = vi.spyOn(console, "error")
                 .mockImplementation(() => {});
             const bus = new CommandBus();

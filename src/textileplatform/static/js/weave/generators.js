@@ -9,7 +9,7 @@
 // the block to select afterwards, as { i1, j1, i2, j2 }, or null when
 // there is nothing to do. Cells outside the grid are skipped. Ports of
 // insertbindung.cpp::AtlasEinfuegen / KoeperEinfuegen and
-// utilities.cpp::FillKoeper, moved out of dbweave.js (which keeps the
+// utilities.cpp::FillKoeper, moved out of the editor (which keeps the
 // undo command, the cursor and the recalculation).
 
 // Row offset of the cell in each of the n columns (desktop table).

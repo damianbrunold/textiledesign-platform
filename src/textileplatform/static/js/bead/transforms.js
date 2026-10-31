@@ -9,8 +9,8 @@
 //   withRowInserted(data, W, H, j)                    -> new data
 //   withRowDeleted(data, W, H, j)                     -> new data | null
 //
-// No DOM and no editor globals; moved out of jbead.js (which keeps the
-// dialogs and the undo commands).
+// No DOM and no editor globals; the editor (editor.js) keeps the
+// dialogs and the undo commands.
 
 // ---------- arrange ---------------------------------------------------
 //

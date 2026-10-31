@@ -1,5 +1,5 @@
-// Shared colour-picker primitives. Used by the bead editor (jbead.js)
-// and ports the same dialogs the weave editor (dbweave.js) ships:
+// Shared colour-picker primitives. Used by the bead editor (bead/editor.js)
+// and ports the same dialogs the weave editor (weave/editor.js) ships:
 //
 //   - ColorPicker.pickRGB(initialRgb, onAccept, getLabel)
 //       Modal RGB picker — R/G/B sliders, numeric and hex input, live

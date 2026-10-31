@@ -13,7 +13,7 @@
 //   setSymbol(symbols, colorIdx, text)  symbols with one slot changed
 //   contrastingColor("rgb(r, g, b)")    "#000" or "#fff"
 //
-// No DOM and no editor globals; moved out of jbead.js.
+// No DOM and no editor globals.
 
 export const DEFAULT_SYMBOLS = "·abcdefghijklmnopqrstuvwxyz+-/\\*";
 

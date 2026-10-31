@@ -10,7 +10,7 @@
 // `value` is the editor's current range (set for switched-on cells).
 // Ports of utilities.cpp::SwapSide, SpInvertClick / SpSpiegelnClick /
 // ClearSchlagpatroneClick and RapportKette / RapportSchuss, moved out of
-// dbweave.js (which keeps the undo commands).
+// editor.js (which keeps the undo commands).
 
 // ---------- helpers ---------------------------------------------------
 

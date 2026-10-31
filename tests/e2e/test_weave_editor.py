@@ -27,7 +27,7 @@ def _draw_one_crossing(page):
 
 
 def _crossing(page):
-    return page.evaluate("pattern.weave.get(0, 0)") > 0
+    return page.evaluate("txEditor.pattern.weave.get(0, 0)") > 0
 
 
 def _dialog(page):
@@ -43,7 +43,7 @@ def test_edit_save_reload(alice_page, twill):
 
     _draw_one_crossing(alice_page)
     assert _crossing(alice_page)
-    assert alice_page.evaluate("pattern.weave.get(1, 0)") == 0
+    assert alice_page.evaluate("txEditor.pattern.weave.get(1, 0)") == 0
     assert is_modified(alice_page)
 
     save(alice_page)
@@ -62,11 +62,11 @@ def test_edit_save_reload(alice_page, twill):
 def test_tieup_prepared_first_survives_reload(alice_page, twill):
     """Tie up before threading or treading anything, save, reload."""
     click_weave_cell(alice_page, "tieup", 2, 3)
-    assert alice_page.evaluate("pattern.tieup.get(2, 3)") == 1
+    assert alice_page.evaluate("txEditor.pattern.tieup.get(2, 3)") == 1
     save(alice_page)
     alice_page.reload()
     open_editor(alice_page, "alice", twill)
-    assert alice_page.evaluate("pattern.tieup.get(2, 3)") == 1
+    assert alice_page.evaluate("txEditor.pattern.tieup.get(2, 3)") == 1
 
 
 def _drag_select(page, part, i1, j1, i2, j2):
@@ -81,27 +81,27 @@ def _drag_select(page, part, i1, j1, i2, j2):
 def test_invert_restores_ranges_after_reload(alice_page, twill):
     """Inverting a set cell keeps its range as a negative value, so a
     second invert restores it, also after saving and reloading."""
-    alice_page.evaluate("settings.current_range = 2")
+    alice_page.evaluate("txEditor.settings.current_range = 2")
     click_weave_cell(alice_page, "tieup", 1, 1)
-    alice_page.evaluate("settings.current_range = 3")
+    alice_page.evaluate("txEditor.settings.current_range = 3")
     _drag_select(alice_page, "tieup", 1, 1, 2, 1)
     alice_page.keyboard.press("i")
     assert alice_page.evaluate(
-        "[pattern.tieup.get(1, 1), pattern.tieup.get(2, 1)]") == [-2, 3]
+        "[1, 2].map(i => txEditor.pattern.tieup.get(i, 1))") == [-2, 3]
     save(alice_page)
     alice_page.reload()
     open_editor(alice_page, "alice", twill)
     _drag_select(alice_page, "tieup", 1, 1, 2, 1)
     alice_page.keyboard.press("i")
     assert alice_page.evaluate(
-        "[pattern.tieup.get(1, 1), pattern.tieup.get(2, 1)]") == [2, -3]
+        "[1, 2].map(i => txEditor.pattern.tieup.get(i, 1))") == [2, -3]
 
 
 def test_clicking_a_set_cell_clears_it(alice_page, twill):
     click_weave_cell(alice_page, "entering", 3, 2)
-    assert alice_page.evaluate("pattern.entering.get_shaft(3)") == 3
+    assert alice_page.evaluate("txEditor.pattern.entering.get_shaft(3)") == 3
     click_weave_cell(alice_page, "entering", 3, 2)
-    assert alice_page.evaluate("pattern.entering.get_shaft(3)") == 0
+    assert alice_page.evaluate("txEditor.pattern.entering.get_shaft(3)") == 0
 
 
 def test_undo_back_to_saved_state_clears_modified(alice_page, twill):
@@ -192,7 +192,7 @@ class TestDrafts:
         self._reload_with_unsaved_changes(alice_page)
         expect(_dialog(alice_page)).to_be_visible()
         alice_page.click(".navguard-save")  # Recover
-        alice_page.wait_for_function("() => modified")
+        alice_page.wait_for_function("() => txEditor.modified")
         assert _crossing(alice_page)
         assert is_modified(alice_page)
         # Not on the server until saved.
@@ -226,7 +226,7 @@ def test_export_renders_unsaved_state(alice_page, twill):
     with alice_page.expect_request(
             lambda r: r.url.endswith(f"/alice/{twill}/export/png")) as req, \
             alice_page.expect_download() as download:
-        alice_page.evaluate("ActionRegistry.invoke('file.export-png')")
+        alice_page.evaluate("txEditor.ActionRegistry.invoke('file.export-png')")
     sent = req.value.post_data_json["contents"]
     assert sent["data_entering"][0] == 1
     assert download.value.suggested_filename == f"alice-{twill}.png"
@@ -242,7 +242,7 @@ def test_other_users_see_public_patterns_read_only(page):
     name = make_weave_pattern("alice", "rope", public=True)
     login(page, make_user("bob"))
     open_editor(page, "alice", name)
-    assert page.evaluate("readonly") is True
+    assert page.evaluate("txEditor.readonly") is True
     click_weave_cell(page, "entering", 0, 0)
-    assert page.evaluate("pattern.entering.get_shaft(0)") == 0
-    assert not page.evaluate("modified")
+    assert page.evaluate("txEditor.pattern.entering.get_shaft(0)") == 0
+    assert not page.evaluate("txEditor.modified")

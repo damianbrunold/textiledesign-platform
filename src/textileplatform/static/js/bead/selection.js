@@ -8,7 +8,7 @@
 //
 // The bead rope is a tube: beads are compared and moved by their linear
 // index (row by row), so a shape that wraps across the seam is still
-// the same shape. No DOM and no editor globals; moved out of jbead.js.
+// the same shape. No DOM and no editor globals.
 
 // The selection's shape as linear offsets from its first bead, its
 // values, every linear position where the whole shape occurs, and the

@@ -7,7 +7,7 @@
 //   loadSettings(data, settings, { prefs, styles })
 //   storeSettings(data, settings)
 //
-// No DOM and no editor globals. Moved out of dbweave.js
+// No DOM and no editor globals. The editor's
 // (initPatternData / savePatternData / initSettings / saveSettings,
 // which now delegate here).
 

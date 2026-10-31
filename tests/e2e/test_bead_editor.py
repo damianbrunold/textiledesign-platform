@@ -22,8 +22,8 @@ def test_pencil_paints_and_save_stores(alice_page, rope):
     assert not is_modified(alice_page)
     click_bead(alice_page, 2, 0)
     click_bead(alice_page, 5, 3)
-    assert alice_page.evaluate("pattern.get(2, 0)") == 1
-    assert alice_page.evaluate("pattern.get(5, 3)") == 1
+    assert alice_page.evaluate("txEditor.pattern.get(2, 0)") == 1
+    assert alice_page.evaluate("txEditor.pattern.get(5, 3)") == 1
     assert is_modified(alice_page)
 
     save(alice_page)
@@ -32,16 +32,16 @@ def test_pencil_paints_and_save_stores(alice_page, rope):
 
     alice_page.reload()
     open_editor(alice_page, "alice", rope)
-    assert alice_page.evaluate("pattern.get(5, 3)") == 1
+    assert alice_page.evaluate("txEditor.pattern.get(5, 3)") == 1
 
 
 def test_undo_redo(alice_page, rope):
     click_bead(alice_page, 1, 1)
     alice_page.keyboard.press("Control+z")
-    assert alice_page.evaluate("pattern.get(1, 1)") == 0
+    assert alice_page.evaluate("txEditor.pattern.get(1, 1)") == 0
     assert not is_modified(alice_page)
     alice_page.keyboard.press("Control+y")
-    assert alice_page.evaluate("pattern.get(1, 1)") == 1
+    assert alice_page.evaluate("txEditor.pattern.get(1, 1)") == 1
     assert is_modified(alice_page)
 
 

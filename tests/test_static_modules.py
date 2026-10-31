@@ -24,10 +24,10 @@ def test_current_version_is_cached_as_immutable(client):
 
 
 def test_relative_imports_stay_in_the_versioned_directory(client):
-    """globals.js imports ./model.js: the browser resolves it against
-    the versioned URL of globals.js."""
+    """editor.js imports ./model.js: the browser resolves it against
+    the versioned URL of editor.js."""
     version = _js_module_version()
-    r = client.get(f"/static/m/{version}/weave/globals.js")
+    r = client.get(f"/static/m/{version}/weave/editor.js")
     assert b'from "./model.js"' in r.data
     assert client.get(f"/static/m/{version}/weave/model.js").status_code \
         == 200
@@ -49,7 +49,7 @@ def test_missing_files_and_traversal_are_404(client):
         f"/static/m/{version}/..%2F..%2F__init__.py").status_code == 404
 
 
-def test_weave_editor_loads_the_bridge_module(csrf_disabled_client):
+def test_weave_editor_loads_the_editor_module(csrf_disabled_client):
     client = csrf_disabled_client
     user = _make_user()
     name = add_pattern(new_weave_pattern("twill", "Alice", 10, 10), user,
@@ -57,4 +57,4 @@ def test_weave_editor_loads_the_bridge_module(csrf_disabled_client):
     _login(client)
     page = client.get(f"/alice/{name}").get_data(as_text=True)
     assert (f'<script type="module" src="/static/m/{_js_module_version()}'
-            f'/weave/globals.js"></script>') in page
+            f'/weave/editor.js"></script>') in page

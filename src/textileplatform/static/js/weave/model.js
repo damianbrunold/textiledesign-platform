@@ -3,9 +3,6 @@
 // ties them together (weave calculation in both directions, repeat
 // detection). No DOM and no editor globals: the editor connects
 // through Pattern's hooks.
-//
-// Moved out of dbweave.js; the classic editor scripts still reach the
-// classes as globals through weave/globals.js.
 
 export class Grid {
     constructor(width, height) {

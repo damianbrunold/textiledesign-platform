@@ -1,11 +1,11 @@
-"use strict";
+import { Modal } from "./modal.js";
 
 // Shared editor plumbing for the DB-WEAVE and JBead editors: loading,
 // saving, the modified flag, local drafts, navigation guards, and the
 // startup sequence (startEditor).
 
-let data = null;
-let modified = false;
+export let data = null;
+export let modified = false;
 // Server modification time of the pattern version `data` was loaded
 // from or last saved as (ISO string). Drafts record it so a draft based
 // on an older version can be recognised.
@@ -19,9 +19,11 @@ let _editSeq = 0;
 let _editorPreSave = null;
 // The editor's CommandBus, for saved-state tracking (trackSavedState).
 let _editorBus = null;
+// Set by startEditor: the pattern is opened read-only.
+let _readonly = false;
 
 
-function setModified() {
+export function setModified() {
     modified = true;
     _editSeq++;
     const m = document.getElementById("modified");
@@ -34,7 +36,7 @@ function setModified() {
 
 // The editor matches the server again (saved, reverted, discarded or
 // undone back to the saved state), so any local draft is obsolete.
-function clearModified() {
+export function clearModified() {
     modified = false;
     _cancelDraftSave();
     _clearDraft();
@@ -72,7 +74,7 @@ function _putPattern(request, extra) {
 let _editorI18nCache = null;
 
 // The #tx-i18n JSON block of the editor templates, parsed once.
-function editorI18n() {
+export function editorI18n() {
     if (_editorI18nCache === null) {
         _editorI18nCache = { actions: {}, menus: {}, prompts: {} };
         const el = document.getElementById("tx-i18n");
@@ -86,7 +88,7 @@ function editorI18n() {
     return _editorI18nCache;
 }
 
-function _prompt(key, fallback) {
+export function _prompt(key, fallback) {
     const p = editorI18n().prompts || {};
     return p[key] || fallback;
 }
@@ -99,7 +101,7 @@ function _actionText(id, fallback) {
 
 // ---- Load / save -----------------------------------------------------
 
-async function getPattern() {
+export async function getPattern() {
     const resp = await fetch(_patternUrl(), { cache: "no-cache" });
     if (!resp.ok) throw new Error("load-failed:" + resp.status);
     const json = await resp.json();
@@ -108,15 +110,16 @@ async function getPattern() {
 }
 
 
-// Editor-specific code may register this to produce thumbnail/preview
-// PNG data URLs from the current `data` and runtime state. Keys that
-// are present (even with a null value) are sent; a failed capture
-// returns nothing, so the stored images are left untouched.
-window.captureThumbnails = window.captureThumbnails || null;
+// The editor's thumbnail/preview capture (startEditor's
+// captureThumbnails option): PNG data URLs from the current `data` and
+// runtime state. Keys that are present (even with a null value) are
+// sent; a failed capture returns nothing, so the stored images are left
+// untouched.
+let _captureThumbnails = null;
 
 async function _runCaptureThumbnails(contents) {
-    if (typeof window.captureThumbnails === "function") {
-        try { return (await window.captureThumbnails(contents)) || {}; }
+    if (_captureThumbnails) {
+        try { return (await _captureThumbnails(contents)) || {}; }
         catch (e) { console.error("captureThumbnails failed", e); }
     }
     return {};
@@ -127,7 +130,7 @@ async function _runCaptureThumbnails(contents) {
 // modified). If the user kept editing while the request was in flight,
 // the editor stays modified too — only the state at the start of the
 // save reached the server.
-async function savePattern() {
+export async function savePattern() {
     if (_editorPreSave) _editorPreSave();
     const seq = _editSeq;
     const savedTop = _editorBus ? _editorBus.top() : null;
@@ -142,7 +145,7 @@ async function savePattern() {
     }
     try {
         patternModified = (await resp.json()).modified || patternModified;
-    } catch (e) { /* older server: no timestamp in the reply */ }
+    } catch { /* older server: no timestamp in the reply */ }
     if (_editorBus) _editorBus.markSaved(savedTop);
     if (seq === _editSeq) {
         clearModified();
@@ -155,7 +158,7 @@ async function savePattern() {
 
 // Wire a CommandBus into the modified flag: undo/redo back to the saved
 // state clears it, any other position sets it.
-function trackSavedState(bus) {
+export function trackSavedState(bus) {
     _editorBus = bus;
     bus.subscribe((b) => {
         if (b.isAtSavedState()) clearModified();
@@ -220,7 +223,7 @@ function _clearDraft() {
     try {
         const k = _draftKey();
         if (k) localStorage.removeItem(k);
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
 }
 
 function _readDraft() {
@@ -232,7 +235,7 @@ function _readDraft() {
         const obj = JSON.parse(raw);
         if (!obj || typeof obj !== "object" || obj.contents == null) return null;
         return obj;
-    } catch (e) { return null; }
+    } catch { return null; }
 }
 
 // Returns true if the user chose to recover (in which case `data` has
@@ -244,7 +247,7 @@ async function maybeRecoverDraft(prompts) {
     try {
         serverJson = JSON.stringify(data);
         draftJson  = JSON.stringify(draft.contents);
-    } catch (e) { return false; }
+    } catch { return false; }
     if (serverJson === draftJson) {
         // Server already has the same content — nothing to recover.
         _clearDraft();
@@ -334,8 +337,8 @@ function _threeButtonDialog(labels, onPrimary) {
 
 // True while any editor dialog is open; keyboard shortcuts must not
 // reach the pattern behind it.
-function editorDialogOpen() {
-    if (typeof Modal !== "undefined" && Modal.topmost()) return true;
+export function editorDialogOpen() {
+    if (Modal.topmost()) return true;
     return document.querySelector(".navguard-overlay") !== null;
 }
 
@@ -419,7 +422,7 @@ function installNavGuard() {
             if (u.pathname === window.location.pathname
                 && u.search === window.location.search) return false;
             return true;
-        } catch (e) { return false; }
+        } catch { return false; }
     }
     async function guard(navigate) {
         if (await _confirmLeave(_navLabels())) navigate();
@@ -457,8 +460,8 @@ function installNavGuard() {
 // The editors' Close command: asks to save or discard unsaved changes
 // (desktop confirm-on-close), then returns to where the editor was
 // opened from.
-async function closePatternGuarded() {
-    const ok = (typeof readonly !== "undefined" && readonly) || await _confirmLeave({
+export async function closePatternGuarded() {
+    const ok = _readonly || await _confirmLeave({
         title:   _actionText("file.close-title", "Close pattern"),
         body:    _actionText("file.close-prompt",
                              "The pattern has unsaved changes. Save before closing?"),
@@ -523,7 +526,7 @@ async function clonePattern() {
             // The server explains refusals it expects (e.g. no free
             // name for the copy).
             let message = null;
-            try { message = (await resp.json()).message; } catch (e) { /* not JSON */ }
+            try { message = (await resp.json()).message; } catch { /* not JSON */ }
             const err = new Error("clone-failed:" + resp.status);
             err.userMessage = resp.status === 409 ? message : null;
             throw err;
@@ -541,7 +544,7 @@ async function clonePattern() {
 // POST `body` to /<user>/<pattern>/<route> (export/<fmt> or print) and
 // save the returned file. On failure show `failMessage`, plus the
 // server's short reason when it sent one as plain text (size limits).
-async function downloadRendered(route, body, fallbackName, failMessage) {
+export async function downloadRendered(route, body, fallbackName, failMessage) {
     const user = document.getElementById("user").value;
     const pattern = document.getElementById("pattern").value;
     const url = `/${encodeURIComponent(user)}/${encodeURIComponent(pattern)}/${route}`;
@@ -585,11 +588,16 @@ async function downloadRendered(route, body, fallbackName, failMessage) {
 
 // ---- Startup ---------------------------------------------------------
 
-// Common editor startup. Expects the global `readonly` to be set.
-//   preSave: flushes the editor's working state into `data`
-//   init:    builds the editor from `data` (may be async); must call
-//            trackSavedState(commandBus) for editable patterns
-async function startEditor({ preSave, init }) {
+// Common editor startup.
+//   readonly:          the pattern is opened read-only
+//   preSave:           flushes the editor's working state into `data`
+//   init:              builds the editor from `data` (may be async);
+//                      must call trackSavedState(commandBus) for
+//                      editable patterns
+//   captureThumbnails: (contents) => { thumbnail, preview } for saves
+export async function startEditor({ readonly, preSave, init, captureThumbnails }) {
+    _readonly = readonly;
+    _captureThumbnails = captureThumbnails || null;
     if (!readonly) {
         // Before any edit can fire, so draft writes capture fresh data.
         _editorPreSave = preSave;
@@ -636,7 +644,8 @@ async function startEditor({ preSave, init }) {
 }
 
 
-function resizeWindow() {
+// Match the canvas bitmap to its layout size and redraw `view`.
+export function resizeWindow(view) {
     const canvas = document.getElementById('canvas');
     if (!canvas) return;
     // Use canvas.clientWidth/Height directly so we account for sibling
@@ -646,7 +655,7 @@ function resizeWindow() {
     // the lower panes' clicks land one row off after a chrome reflow.
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
-    if (typeof view !== "undefined" && view) {
+    if (view) {
         view.layout();
         view.draw();
     }

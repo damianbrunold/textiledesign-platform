@@ -158,7 +158,7 @@ class Layout:
 @dataclass
 class Bands:
     """Geometry of the visible bands, mirroring the on-screen layout in
-    dbweave.js (PatternView.layout). Bands the user has hidden collapse
+    weave/editor.js (PatternView.layout). Bands the user has hidden collapse
     to zero and are not drawn, so the export reflects exactly what the
     editor shows. All offsets are in logical pixels.
 
@@ -353,7 +353,7 @@ def _pattern_layout(data, base=16):
 
     # Pegplan mode: the side strip shows pegplan (shafts × wefts)
     # instead of treadling (treadles × wefts), so its column count is
-    # the number of shafts. Mirrors the editor's layout in dbweave.js
+    # the number of shafts. Mirrors the editor's layout in weave/editor.js
     # (sidePaneWidth = visible_shafts when display_pegplan).
     if bool(data.get("display_pegplan")):
         treadles = shafts
@@ -455,7 +455,7 @@ def _is_empty_weft(data, j):
 
 def _calc_weave(data, i, j):
     """Recompute weave[i,j] from entering+treadling+tieup. Direct
-    port of _recalc_weave_from_treadling in dbweave.js. In pegplan
+    port of _recalc_weave_from_treadling in weave/editor.js. In pegplan
     mode the weave is derived from entering+pegplan instead, mirroring
     _recalc_weave_from_pegplan."""
     shaft = _get_entering(data, i)
@@ -577,7 +577,7 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
             t.line(x0, y0 + j * gh, x0 + treadles * gw, y0 + j * gh, GRID_LINE)
         if pegplan:
             # The diagonal is grid decoration, not editable data, so it
-            # is drawn even under pattern_only (mirrors dbweave.js).
+            # is drawn even under pattern_only (mirrors weave/editor.js).
             for k in range(min(treadles, shafts)):
                 x = x0 + k * gw
                 y = y0 + k * gh if ttb else y0 + (shafts - k - 1) * gh
@@ -603,7 +603,7 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
 
     # Reed (Blatteinzug) — one row above the gewebe; each warp column is
     # half-filled black (top half when threaded through the reed, else
-    # bottom half). Mirrors GridViewReed.drawData in dbweave.js.
+    # bottom half). Mirrors GridViewReed.drawData in weave/editor.js.
     if b.show_reed:
         y0 = b.y_reed
         half = gh // 2
@@ -706,12 +706,12 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
     if style not in ("empty", "invisible"):
         # Patrone cells are drawn with a small margin so the grid stays
         # visible around them, matching the editor (bxf/byf = 0.15 in
-        # dbweave.js) and the desktop's AUSGEFUELLT inset.
+        # weave/editor.js) and the desktop's AUSGEFUELLT inset.
         bx = max(1, gw * 15 // 100)
         by = max(1, gh * 15 // 100)
         # The anbindung / abbindung background sits between the cell
         # border and its symbol, so it uses half the margin (bxf / 2 in
-        # dbweave.js) and stays clear of the glyph drawn on top.
+        # weave/editor.js) and stays clear of the glyph drawn on top.
         hbx = max(1, bx // 2)
         hby = max(1, by // 2)
         for i in range(dx):
@@ -777,7 +777,7 @@ def paint_pattern(t: DrawTarget, data, layout: Layout):
     t.stroke_rect(x0, y0, dx * gw, dy * gh, BLACK)
 
     # ---- Rapport overlay --------------------------------------------
-    # Mirrors the on-screen _drawRapport in dbweave.js: cells inside the
+    # Mirrors the on-screen _drawRapport in weave/editor.js: cells inside the
     # rapport (or outside, with inverse_repeat) are repainted as a red
     # patrone on white; vertical red boundary lines span the einzug
     # strip at the warp rapport edges; horizontal red lines span the

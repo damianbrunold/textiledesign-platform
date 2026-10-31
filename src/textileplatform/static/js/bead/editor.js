@@ -1,6 +1,32 @@
-"use strict";
+import { ActionRegistry } from "../ui/actions.js";
+import { ColorPicker } from "../ui/colorpicker.js";
+import {
+    CommandBus, restoreGridRegion, snapshotGridRegion,
+} from "../ui/commands.js";
+import {
+    _prompt, clearModified, closePatternGuarded, data, downloadRendered,
+    editorDialogOpen, editorI18n, getPattern, modified, resizeWindow,
+    savePattern, setModified, startEditor, trackSavedState,
+} from "../ui/common.js";
+import { LegalDialog } from "../ui/legal.js";
+import { Menu } from "../ui/menu.js";
+import { Modal } from "../ui/modal.js";
+import { Shortcuts } from "../ui/shortcuts.js";
+import { draftCell } from "./geometry.js";
+import { BeadList, loadModel, Pattern, storeModel } from "./model.js";
+import {
+    affectedRect, captureGroup, restoreBaseline, stampGroup,
+} from "./selection.js";
+import {
+    contrastingColor, DEFAULT_SYMBOLS, padSymbols, setSymbol, symbolFor,
+} from "./symbols.js";
+import {
+    arrangeCopies, arrangeUndoRows, resizedData, selectionSource,
+    withRowDeleted, withRowInserted,
+} from "./transforms.js";
+import { PatternView, ViewSettings } from "./views.js";
 
-// data is provided by common.js and contains the "raw" json data of the pattern.
+// data is provided by ui/common.js and contains the "raw" json data of the pattern.
 
 // The pattern is an instance of the Pattern class and encapsulates the
 // data from the data object in order to manipulate and visualize it easier.
@@ -83,527 +109,21 @@ function _menuLabel(id, fallback) {
 }
 
 
-// Pattern and BeadList are in bead/model.js.
-
-
-class ViewRuler {
-    constructor(x, y, width, height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.offset = 0;
-    }
-
-    contains(i, j) {
-        return this.x <= i && i < this.x + this.width &&
-               this.y <= j && j < this.y + Math.min(pattern.height, this.height);
-    }
-
-    draw(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
-
-        ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-        ctx.fillStyle = settings.darcula ? "#aaa" : "#222";
-        ctx.font = `${settings.dy}px sans-serif`;
-        ctx.textAlign = 'end';
-        for (let j = 0; j <= Math.min(pattern.height, this.height); j++) {
-            const jj = j + this.offset + 1;
-            if (jj % 10 == 0) {
-                ctx.moveTo(
-                    0.5 + (this.x + 0.5) * dx,
-                    0.5 + (this.y + this.height - j - 1) * dy
-                )
-                ctx.lineTo(
-                    0.5 + (this.x + this.width) * dx,
-                    0.5 + (this.y + this.height - j - 1) * dy
-                )
-                ctx.stroke();
-
-                ctx.fillText(
-                    `${jj}`,
-                    (this.x + this.width) * dx,
-                    (this.y + this.height - j) * dy);
-            }
-        }
-    }
-}
-
-
-
-class ViewDraft {
-    constructor(data, x, y, width, height) {
-        this.data = data;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.offset = 0;
-    }
-
-    contains(i, j) {
-        return this.x <= i && i < this.x + this.width &&
-               this.y <= j && j < this.y + Math.min(pattern.height, this.height);
-    }
-
-    // Geometry (draw position and hit test) is in bead/geometry.js.
-    pixelToDataCoord(x, y) {
-        return draftHit(this, x, y, settings.dx, settings.dy);
-    }
-
-    pixelToViewCoord(x, y) {
-        const [i, j] = draftHit(this, x, y, settings.dx, settings.dy);
-        return [i, j - this.offset];
-    }
-
-
-    draw(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
-        const drawSymbol = draw_symbols && dx >= 8;
-        if (drawSymbol) {
-            ctx.font = `${Math.round(dx * 0.8)}px sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-        }
-
-        const visible = Math.min(pattern.height - this.offset, this.height);
-        for (let j = 0; j < visible; j++) {
-            const j_data = j + this.offset;
-            for (let i = 0; i < this.width; i++) {
-                const state = this.data.get(i, j_data);
-                const { x, y } = draftCell(this, i, j_data, dx, dy);
-                if (draw_colors) {
-                    ctx.fillStyle = colors[state];
-                    ctx.fillRect(x, y, dx, dy);
-                } else {
-                    ctx.fillStyle = settings.darcula ? "#444" : "#fff";
-                    ctx.fillRect(x, y, dx, dy);
-                }
-                ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-                ctx.strokeRect(x, y, dx, dy);
-                if (drawSymbol) {
-                    const sym = symbolFor(pattern_symbols, state);
-                    if (sym) {
-                        ctx.fillStyle = draw_colors
-                            ? contrastingColor(colors[state])
-                            : (settings.darcula ? "#eee" : "#222");
-                        ctx.fillText(sym, x + dx / 2, y + dy / 2);
-                    }
-                }
-            }
-        }
-
-        // Selection highlight — yellow rectangle drawn on top of the
-        // grid lines. Selection is in data coords; subtract offset to
-        // get view coords, and clip to the visible window.
-        const sel = this.data.selection;
-        if (sel != null) {
-            const j1v = sel.j1 - this.offset;
-            const j2v = sel.j2 - this.offset;
-            if (j2v >= 0 && j1v < this.height) {
-                const cj1 = Math.max(0, j1v);
-                const cj2 = Math.min(this.height - 1, j2v);
-                const x1 = (this.x + sel.i1) * dx;
-                const x2 = (this.x + sel.i2 + 1) * dx;
-                const y2 = (this.y + this.height - cj1) * dy;
-                const y1 = (this.y + this.height - cj2 - 1) * dy;
-                ctx.save();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = "#ff5";
-                ctx.strokeRect(x1 + 0.5, y1 + 0.5, x2 - x1, y2 - y1);
-                ctx.restore();
-            }
-        }
-    }
-}
-
-
-class ViewCorrected {
-    constructor(data, x, y, width, height) {
-        this.data = data;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.offset = 0;
-        this.rotation = 0;
-    }
-
-    contains(i, j) {
-        return this.x - 1 <= i && i < this.x + this.width + 1 &&
-               this.y <= j && j < this.y + this.height;
-    }
-
-    // Geometry (draw position and hit test) is in bead/geometry.js.
-    pixelToDataCoord(x, y) {
-        return correctedHit(this, x, y, this.data.width,
-                            settings.dx, settings.dy);
-    }
-
-    pixelToViewCoord(x, y) {
-        const [i, j] = this.pixelToDataCoord(x, y);
-        return [i, j - this.offset];
-    }
-
-    draw(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
-        const drawSymbol = draw_symbols && dx >= 8;
-        if (drawSymbol) {
-            ctx.font = `${Math.round(dx * 0.8)}px sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-        }
-
-        for (let jj = 0; jj < this.data.height; jj++) {
-            for (let ii = 0; ii < this.data.width; ii++) {
-                const idx = ii + jj * this.data.width;
-                const cell = correctedCell(this, idx, this.data.width, dx, dy);
-                if (!cell) {
-                    // The row only grows with idx: past the window's
-                    // top nothing more is visible; below it, go on.
-                    const { row } = foldIndex(idx, this.data.width);
-                    if (row >= this.offset + this.height) break;
-                    continue;
-                }
-                const { x, y } = cell;
-
-                const state = this.data.get(ii, jj);
-
-                if (draw_colors) {
-                    ctx.fillStyle = colors[state];
-                    ctx.fillRect(x, y, dx, dy);
-                } else {
-                    ctx.fillStyle = settings.darcula ? "#444" : "#fff";
-                    ctx.fillRect(x, y, dx, dy);
-                }
-                ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-                ctx.strokeRect(x, y, dx, dy);
-                if (drawSymbol) {
-                    const sym = symbolFor(pattern_symbols, state);
-                    if (sym) {
-                        ctx.fillStyle = draw_colors
-                            ? contrastingColor(colors[state])
-                            : (settings.darcula ? "#eee" : "#222");
-                        ctx.fillText(sym, x + dx / 2, y + dy / 2);
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-class ViewSimulated {
-    constructor(data, x, y, width, height) {
-        this.data = data;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.offset = 0;
-    }
-
-    contains(i, j) {
-        // Half-cells extend dx/2 to the left of this.x and to the
-        // right of this.x + this.width on odd rows, so the floor()-
-        // derived `i` may land one cell outside the nominal range
-        // and still hit a bead. Match ViewCorrected's tolerance.
-        return this.x - 1 <= i && i < this.x + this.width + 1 &&
-               this.y <= j && j < this.y + this.height;
-    }
-
-    // Geometry (draw position and hit test) is in bead/geometry.js.
-    // Mirrors desktop SimulationPanel::mouseToField + Model::correctedIndex.
-    pixelToDataCoord(x, y) {
-        return simulatedHit(this, x, y, this.data.width, this.data.height,
-                            this.data.shift | 0, settings.dx, settings.dy);
-    }
-
-    pixelToViewCoord(x, y) {
-        const [i, j] = this.pixelToDataCoord(x, y);
-        if (i === undefined || j === undefined) return [undefined, undefined];
-        return [i, j - this.offset];
-    }
-
-    draw(ctx, settings) {
-        const dx = settings.dx;
-        const dy = settings.dy;
-
-        ctx.fillStyle = settings.darcula ? "#444" : "#aaa";
-        ctx.fillRect(
-            this.x * dx - dx / 2,
-            this.y * dy,
-            this.width * dx,
-            this.height * dy
-        );
-
-        for (let jj = 0; jj < this.data.height; jj++) {
-            for (let ii = 0; ii < this.data.width; ii++) {
-                // pattern.shift rotates the linear index *before* the
-                // spiral fold — mirrors desktop SimulationPanel's
-                // `raw.shifted(shift, W)` (shifting the colour lookup
-                // instead breaks diagonal patterns: the seam wouldn't
-                // move with the colours).
-                const idx = ii + jj * this.data.width;
-                const shift = this.data.shift | 0;
-                const cell = simulatedCell(this, idx, this.data.width, shift,
-                                           dx, dy);
-                if (!cell) {
-                    const { row } = foldIndex(idx + shift, this.data.width);
-                    if (row >= this.offset + this.height) break;
-                    continue;
-                }
-                const { x, y } = cell;
-                const d = cell.w;
-
-                const state = this.data.get(ii, jj);
-
-                ctx.fillStyle = draw_colors
-                    ? colors[state]
-                    : (settings.darcula ? "#444" : "#fff");
-                ctx.beginPath();
-                ctx.ellipse(x + d / 2, y + dy / 2, d / 2, dy / 2, 0, 0, 2 * Math.PI);
-                ctx.fill();
-                if (!draw_colors) {
-                    ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-                    ctx.stroke();
-                }
-                if (draw_symbols && d >= 8) {
-                    const sym = symbolFor(pattern_symbols, state);
-                    if (sym) {
-                        ctx.font = `${Math.round(Math.min(d, dy) * 0.8)}px sans-serif`;
-                        ctx.textAlign = "center";
-                        ctx.textBaseline = "middle";
-                        ctx.fillStyle = draw_colors
-                            ? contrastingColor(colors[state])
-                            : (settings.darcula ? "#eee" : "#222");
-                        ctx.fillText(sym, x + d / 2, y + dy / 2);
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-class ViewColors {
-    constructor(palette, x, y, width, height) {
-        this.palette = palette;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-    }
-
-    contains(x, y) {
-        return this.x <= x && x < this.x + this.width &&
-               this.y <= y && y < this.y + this.height;
-    }
-
-    draw(ctx, settings) {
-        const d = 25; // TODO adapt on hdpi screens?
-        const showSymbols = !!draw_symbols;
-        if (showSymbols) {
-            ctx.font = `${Math.round(d * 0.7)}px sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-        }
-
-        let i = 0;
-        let j = 0;
-        for (let idx = 0; idx < this.palette.length; idx++) {
-            const x = 0.5 + this.x + i * d;
-            const y = 0.5 + this.y + j * d;
-            if (draw_colors) {
-                ctx.fillStyle = this.palette[idx];
-                ctx.fillRect(x, y, d, d);
-            } else {
-                ctx.fillStyle = settings.darcula ? "#444" : "#fff";
-                ctx.fillRect(x, y, d, d);
-            }
-            ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-            ctx.strokeRect(x, y, d, d);
-            if (showSymbols) {
-                const sym = symbolFor(pattern_symbols, idx);
-                if (sym) {
-                    ctx.fillStyle = draw_colors
-                        ? contrastingColor(this.palette[idx])
-                        : (settings.darcula ? "#eee" : "#222");
-                    ctx.fillText(sym, x + d / 2, y + d / 2);
-                }
-            }
-            j++;
-            if (j == 16) {
-                j = 0;
-                i = 1;
-            }
-        }
-
-        i = 0;
-        j = 0;
-        for (let idx = 0; idx < this.palette.length; idx++) {
-            if (selected_color === idx) {
-                const x = 0.5 + this.x + i * d;
-                const y = 0.5 + this.y + j * d;
-                ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-                ctx.lineWidth = 4;
-                ctx.strokeRect(x, y, d, d);
-                ctx.lineWidth = 1;
-                break;
-            }
-            j++;
-            if (j == 16) {
-                j = 0;
-                i = 1;
-            }
-        }
-    }
-}
-
-
-
-class ViewBeadList {
-    constructor(x, y, width, height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.offset = 0;
-    }
-
-    contains(i, j) {
-        return this.x <= i && i < this.x + this.width &&
-               this.y <= j && j < this.y + this.height;
-    }
-
-    draw(ctx, settings) {
-	const dx = 50; // TODO make scalable?
-	const dy = 25;
-	const b = 5;
-
-        ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-	ctx.beginPath();
-	ctx.moveTo(this.x + b, this.y);
-	ctx.lineTo(this.x + b, this.y + 60);
-	ctx.lineTo(this.x + 1, this.y + 60 - b*2);
-	ctx.moveTo(this.x + b, this.y + 60);
-	ctx.lineTo(this.x + b*2 - 1, this.y + 60 - b*2);
-	ctx.stroke();
-        ctx.font = "16px sans-serif";
-	ctx.textAlign = "center";
-	let x = this.x + 2*b;
-	let y = this.y;
-	for (let [color, count] of beadlist.list) {
-	    ctx.fillStyle = draw_colors
-	        ? colors[color]
-	        : (settings.darcula ? "#444" : "#fff");
-	    ctx.beginPath();
-            ctx.roundRect(x, y, dx, dy, dx / 3);
-            ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
-	    ctx.fill();
-	    ctx.stroke();
-	    ctx.fillStyle = draw_colors
-	        ? contrastingColor(colors[color])
-	        : (settings.darcula ? "#eee" : "#222");
-	    const sym = draw_symbols ? symbolFor(pattern_symbols, color) : "";
-	    const label = sym ? `${count} ${sym}` : `${count}`;
-	    ctx.fillText(label, x + dx / 2, y + dy / 2 + 5);
-	    y += dy + b;
-	    if (y + dy > this.y + this.height * settings.dy) {
-		x += dx + b;
-		y = this.y;
-	    }
-	}
-    }
-}
-
-
-class ViewSettings {
-    constructor(dx=12, dy=null) {
-        this.dx = dx;
-        this.dy = dy || this.dx;
-        this.darcula = true;
-    }
-}
-
-
-class PatternView {
-    constructor(pattern, beadlist, settings, ctx) {
-        this.settings = settings;
-	this.beadlist = beadlist;
-        this.pattern = pattern;
-        this.ctx = ctx;
-        this.layout();
-    }
-
-    layout() {
-        const dx = this.settings.dx;
-        const dy = this.settings.dy;
-
-        const availy = Math.trunc((this.ctx.canvas.height - 2) / dy);
-
-        const width_ruler = 3;
-        const width_draft = show_draft ? this.pattern.width : 0;
-        const gap_draft = show_draft ? 2 : 0;
-        const width_corrected = show_corrected ? this.pattern.width + 1 : 0;
-        const gap_corrected = show_corrected ? 2 : 0;
-        const width_simulated = show_simulation
-            ? simulatedWidth(this.pattern.width) : 0;
-        const gap_simulated = show_simulation ? 1 : 0;
-
-        const x1 = 0;
-        const x2 = width_ruler + 1;
-        const x3 = x2 + width_draft + gap_draft;
-        const x4 = x3 + width_corrected + gap_corrected;
-        const x5 = x4 + width_simulated + gap_simulated;
-
-        this.ruler = new ViewRuler(x1, 0, width_ruler, availy);
-        this.draft = show_draft
-            ? new ViewDraft(this.pattern, x2, 0, width_draft, availy) : null;
-        this.corrected = show_corrected
-            ? new ViewCorrected(this.pattern, x3, 0, width_corrected, availy)
-            : null;
-        this.simulated = show_simulation
-            ? new ViewSimulated(this.pattern, x4, 0, width_simulated, availy)
-            : null;
-        this.colors = new ViewColors(colors, x5 * dx, 0, 2 * 25, 16 * 25);
-        this.beads = show_report
-            ? new ViewBeadList(x5 * dx + 2 * 25 + dx, 0, 5 * 25, availy)
-            : null;
-    }
-
-    draw() {
-        // Sync each view's per-instance offset with the pattern's
-        // shared scroll value before painting. Views were originally
-        // designed to scroll independently, but the desktop has a
-        // single shared scrollbar — match that.
-        const s = this.pattern.scroll | 0;
-        if (this.ruler) this.ruler.offset = s;
-        if (this.draft) this.draft.offset = s;
-        if (this.corrected) this.corrected.offset = s;
-        if (this.simulated) this.simulated.offset = s;
-        this.clearCanvas();
-        if (this.draft) this.draft.draw(this.ctx, this.settings);
-        if (this.corrected) this.corrected.draw(this.ctx, this.settings);
-        if (this.simulated) this.simulated.draw(this.ctx, this.settings);
-        this.colors.draw(this.ctx, this.settings);
-        this.ruler.draw(this.ctx, this.settings);
-        if (this.beads) this.beads.draw(this.ctx, this.settings);
-    }
-
-    // Number of data rows visible at once in the rectangular views.
-    visibleRows() {
-        return (this.draft || this.corrected || this.simulated || this.ruler)
-            .height;
-    }
-
-    clearCanvas() {
-        this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
-    }
-}
+// What the views (views.js) read from the editor state.
+const viewEnv = {
+    get pattern() { return pattern; },
+    get settings() { return settings; },
+    get colors() { return colors; },
+    get drawColors() { return draw_colors; },
+    get drawSymbols() { return draw_symbols; },
+    get symbols() { return pattern_symbols; },
+    get selectedColor() { return selected_color; },
+    get beadlist() { return beadlist; },
+    get showDraft() { return show_draft; },
+    get showCorrected() { return show_corrected; },
+    get showSimulation() { return show_simulation; },
+    get showReport() { return show_report; },
+};
 
 
 // ---- Per-user preferences (jbead subtree) -----------------------
@@ -628,7 +148,7 @@ function _jbeadPrefsRead() {
                 jb = all.jbead;
             }
         }
-    } catch (e) { /* fall through */ }
+    } catch { /* fall through */ }
     _jbeadPrefsCache = jb;
     return _jbeadPrefsCache;
 }
@@ -637,7 +157,7 @@ let _jbeadPrefsTimer = null;
 
 function _jbeadPrefsSave(partial) {
     _jbeadPrefsCache = Object.assign({}, _jbeadPrefsRead(), partial);
-    if (typeof readonly !== "undefined" && readonly) return;
+    if (readonly) return;
     // Debounced: zooming step by step would otherwise send one request
     // per step.
     clearTimeout(_jbeadPrefsTimer);
@@ -668,7 +188,7 @@ function init() {
     canvas.style.border = "none";
     const ctx = canvas.getContext('2d');
     // Size the bitmap to the canvas's *own* CSS box (same approach
-    // resizeWindow() in common.js uses). Using container.client* as
+    // resizeWindow() in ui/common.js uses). Using container.client* as
     // a fallback is wrong — it includes the scrollbar (~18 px) and
     // any padding/borders, producing a bitmap that doesn't match the
     // CSS box. The browser then scales offsetX/offsetY by a factor
@@ -680,7 +200,7 @@ function init() {
     ctx.canvas.width  = Math.max(1, Math.round(rect.width));
     ctx.canvas.height = Math.max(1, Math.round(rect.height));
 
-    view = new PatternView(pattern, beadlist, settings, ctx);
+    view = new PatternView(viewEnv, pattern, beadlist, settings, ctx);
 
     initPattern(data, pattern);
     // Existing patterns ship a data.view; new patterns get filled in
@@ -715,7 +235,7 @@ function init() {
     commandBus = new CommandBus();
     trackSavedState(commandBus);
     commandBus.subscribe(() => {
-        if (typeof ActionRegistry !== "undefined") ActionRegistry.notify();
+        ActionRegistry.notify();
     });
 
     view.draw();
@@ -1765,7 +1285,7 @@ function _openPaletteDialog() {
     // strings) and data.colors (canonical [r, g, b] triples). We
     // snapshot both up front, then use ColorPicker.showPaletteEditor
     // for the actual UI — same widget the weave editor uses
-    // (showPaletteDialog in dbweave.js: hue ring + S/V square +
+    // (showPaletteDialog in weave/editor.js: hue ring + S/V square +
     // numeric sliders + palette grid).
     const before = colors.map(_rgbFromString);
 
@@ -2297,7 +1817,7 @@ function _updateStatusbar() {
 }
 
 // Discard in-memory edits and reload the pattern from the server.
-// Mirrors weave's _revertChanges in dbweave.js.
+// Mirrors weave's _revertChanges in weave/editor.js.
 async function _revertChanges() {
     if (readonly || !modified) return;
     if (!window.confirm(_actionLabel("file.revert-confirm",
@@ -2787,6 +2307,7 @@ window.addEventListener("load", () => {
     // Parse the translations before anything can show a dialog.
     _i18n = editorI18n();
     startEditor({
+        readonly,
         preSave: () => {
             saveSettings(data, settings);
             savePatternData(data, pattern);
@@ -2796,12 +2317,13 @@ window.addEventListener("load", () => {
             setupEditorActions();
             _updateStatusbar();
         },
+        captureThumbnails,
     });
 });
 
 // ---- Thumbnail / preview capture --------------------------------
 //
-// Mirrors `window.captureThumbnails` in dbweave.js (which common.js
+// Mirrors `captureThumbnails` in weave/editor.js (which ui/common.js
 // invokes during save). The bead version paints two halves into an
 // offscreen canvas:
 //
@@ -2858,7 +2380,7 @@ function _renderBeadThumbnail(currentData, w, h) {
     // Used-height: prefer the live beadlist (already up to date during
     // save). Fall back to a manual scan for cold callers.
     let usedH = 0;
-    if (typeof beadlist !== "undefined" && beadlist
+    if (beadlist
         && Number.isInteger(beadlist.usedHeight)
         && beadlist.usedHeight > 0) {
         usedH = beadlist.usedHeight;
@@ -2957,7 +2479,7 @@ function _renderBeadThumbnail(currentData, w, h) {
 
     // ----- Right half: simulation -----
     // True simulation view (not corrected) — only the front half of
-    // the bead rope is shown, like ViewSimulated.draw in jbead.js.
+    // the bead rope is shown, like ViewSimulated.draw in views.js.
     // Beads are laid out in rows of alternating widths W and W+1,
     // and clipped to xi < simWidth on even rows / xi <= simWidth on
     // odd rows. Half-beads appear at the start and end of every odd
@@ -3050,7 +2572,7 @@ function _renderBeadThumbnail(currentData, w, h) {
 }
 
 
-window.captureThumbnails = function (currentData) {
+function captureThumbnails(currentData) {
     // Empty patterns (no painted cells) get explicit nulls so the
     // server clears any prior thumbnail. Mirrors the dbweave editor.
     const model = currentData && currentData.model;
@@ -3081,11 +2603,11 @@ window.captureThumbnails = function (currentData) {
         console.error("captureThumbnails error", e);
         return null;
     }
-};
+}
 
 
 window.addEventListener("resize", () => {
-    resizeWindow();
+    resizeWindow(view);
     if (pattern && pattern.scroll > _maxScroll()) {
         pattern.scroll = _maxScroll();
     }
@@ -3096,3 +2618,20 @@ window.addEventListener("resize", () => {
 // changes are protected by `installBeforeUnloadGuard` (set up in the
 // load handler), which runs the standard "leave site?" prompt and
 // fires a best-effort beacon save when the page is closing.
+
+// ---- Test handle -----------------------------------------------------
+//
+// Module bindings are not globals: the browser tests read and drive
+// the editor through window.txEditor (page.evaluate("txEditor.pattern
+// ...")). Getters, so they always see the current objects.
+window.txEditor = {
+    get pattern() { return pattern; },
+    get view() { return view; },
+    get settings() { return settings; },
+    get beadlist() { return beadlist; },
+    get commandBus() { return commandBus; },
+    get data() { return data; },
+    get modified() { return modified; },
+    get readonly() { return readonly; },
+    ActionRegistry, Modal, setModified,
+};

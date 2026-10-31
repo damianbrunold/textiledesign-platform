@@ -11,7 +11,7 @@
 //
 // Ports of the desktop's trittfolge.cpp::RearrangeTritte,
 // einzug.cpp::NormalZ/S, GeradeZ/S, Chorig2/3 and
-// recalc.cpp::RecalcEinzugFixiert, moved out of dbweave.js. The
+// recalc.cpp::RecalcEinzugFixiert, moved out of the editor. The
 // arrangement code keeps the desktop's structure: the functions of one
 // run share a closure over `pattern` (and the run's range state).
 

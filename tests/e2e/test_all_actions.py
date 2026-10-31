@@ -26,7 +26,7 @@ _INVOKE_JS = """
 async (id) => {
     let result;
     try {
-        result = ActionRegistry.invoke(id) ? "ran" : "disabled";
+        result = txEditor.ActionRegistry.invoke(id) ? "ran" : "disabled";
     } catch (e) {
         return "threw: " + (e && e.stack || e);
     }
@@ -55,7 +55,9 @@ async () => {
             const cancel = top.querySelector(".tx-modal-btn-cancel");
             if (primary && round === 0) primary.click();
             else if (cancel) cancel.click();
-            else if (Modal.topmost()) Modal.topmost().close();
+            else if (txEditor.Modal.topmost()) {
+                txEditor.Modal.topmost().close();
+            }
         }
         await new Promise((r) => setTimeout(r, 30));
     }
@@ -67,6 +69,7 @@ _WEAVE_SETUP_JS = """
 () => {
     // 2/2 twill on 8 shafts / treadles over the whole pattern, then a
     // selection in the weave.
+    const { pattern, view } = txEditor;
     const w = pattern.weave.width, h = pattern.weave.height;
     for (let i = 0; i < w; i++) pattern.entering.set_shaft(i, (i % 8) + 1);
     for (let s = 0; s < 8; s++) {
@@ -84,8 +87,8 @@ _WEAVE_SETUP_JS = """
 # undo / revert have something to do).
 _WEAVE_STATE_JS = """
 () => {
-    select_part("weave", 2, 2, 5, 5);
-    setModified();
+    txEditor.select_part("weave", 2, 2, 5, 5);
+    txEditor.setModified();
 }
 """
 
@@ -94,35 +97,44 @@ _WEAVE_STATE_JS = """
 # it on), something to undo / redo.
 _WEAVE_RETRY_STATES = [
     """() => {
+        const { ActionRegistry, settings, select_part } = txEditor;
         if (settings.display_pegplan) ActionRegistry.invoke("pegplan.toggle");
-        select_part("entering", 2, 2); setModified();
+        select_part("entering", 2, 2); txEditor.setModified();
     }""",
     """() => {
+        const { ActionRegistry, settings, select_part } = txEditor;
         if (settings.display_pegplan) ActionRegistry.invoke("pegplan.toggle");
-        select_part("treadling", 2, 2); setModified();
+        select_part("treadling", 2, 2); txEditor.setModified();
     }""",
     """() => {
+        const { ActionRegistry, settings, select_part } = txEditor;
         if (settings.display_pegplan) ActionRegistry.invoke("pegplan.toggle");
-        select_part("tieup", 1, 1, 3, 3); setModified();
+        select_part("tieup", 1, 1, 3, 3); txEditor.setModified();
     }""",
-    """() => { select_part("color_warp", 1, 0, 4, 0); setModified(); }""",
-    """() => { ActionRegistry.invoke("edit.undo"); setModified(); }""",
+    """() => {
+        txEditor.select_part("color_warp", 1, 0, 4, 0);
+        txEditor.setModified();
+    }""",
+    """() => {
+        txEditor.ActionRegistry.invoke("edit.undo");
+        txEditor.setModified();
+    }""",
 ]
 
 _BEAD_SETUP_JS = """
 () => {
-    for (let k = 0; k < pattern.data.length; k++) {
-        pattern.data[k] = (k * 7) % 4;
+    for (let k = 0; k < txEditor.pattern.data.length; k++) {
+        txEditor.pattern.data[k] = (k * 7) % 4;
     }
-    beadlist.update();
-    view.draw();
+    txEditor.beadlist.update();
+    txEditor.view.draw();
 }
 """
 
 _BEAD_STATE_JS = """
 () => {
-    pattern.selection = { i1: 1, j1: 1, i2: 3, j2: 3 };
-    setModified();
+    txEditor.pattern.selection = { i1: 1, j1: 1, i2: 3, j2: 3 };
+    txEditor.setModified();
 }
 """
 
@@ -147,7 +159,7 @@ def test_every_action_runs_without_errors(alice_page, editor, page_errors):
     page.on("download", lambda download: None)
 
     state = _WEAVE_STATE_JS if editor == "dbweave" else _BEAD_STATE_JS
-    ids = page.evaluate("ActionRegistry.all().map(a => a.id)")
+    ids = page.evaluate("txEditor.ActionRegistry.all().map(a => a.id)")
     outcome = {}
     for action in ids:
         if action in SKIP:

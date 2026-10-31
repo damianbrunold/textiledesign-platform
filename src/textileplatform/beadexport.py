@@ -100,7 +100,7 @@ class BeadModel:
 
 def _contrast(rgb):
     """Black or white text colour for legibility on ``rgb``. Same
-    luminance test the JS editor uses (jbead.js contrastingColor)."""
+    luminance test the JS editor uses (bead/symbols.js contrastingColor)."""
     r, g, b = rgb
     lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
     return WHITE if lum < 128 else BLACK
@@ -169,7 +169,7 @@ def _compute_used_height(m: BeadModel) -> None:
 
 def _compute_repeat(m: BeadModel) -> None:
     """Smallest period in the linear bead sequence (i + j*width).
-    Direct port of jbead.js BeadList.updateRepeat."""
+    Direct port of bead/model.js BeadList.updateRepeat."""
     n = m.used_height * m.width
     m.repeat = n
     if n <= 0:
@@ -182,7 +182,7 @@ def _compute_repeat(m: BeadModel) -> None:
 
 def _compute_bead_list(m: BeadModel) -> None:
     """Run-length-encode one repeat from top to bottom (last bead first
-    — desktop reads from end of repeat). Mirrors jbead.js BeadList."""
+    — desktop reads from end of repeat). Mirrors bead/model.js BeadList."""
     m.bead_list = []
     if m.repeat <= 0:
         return
@@ -490,7 +490,7 @@ class BeadListPart(PartPrinter):
     GAP_V = 3
     GAP_H = 4
     # "Start here" arrow drawn to the left of the first column. Mirrors
-    # the on-screen ViewBeadList arrow (jbead.js:467-474).
+    # the on-screen ViewBeadList arrow (bead/views.js).
     ARROW_W = 12.0
     ARROW_LEN = 30.0
 

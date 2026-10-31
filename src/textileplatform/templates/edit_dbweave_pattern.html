@@ -12,12 +12,10 @@
     {% elif dark_pref is none %}
         <link rel="stylesheet" href="{{ url_for('static', filename='css/editor-menu-dark.css') }}" media="(prefers-color-scheme: dark)">
     {% endif %}
-    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/dbweave.js') }}"></script>
-    {# ES modules: served from a versioned path so their relative imports
-       are cache-busted together (see module_url in __init__.py). #}
-    <script type="module" src="{{ module_url('ui/globals.js') }}"></script>
-    <script type="module" src="{{ module_url('weave/globals.js') }}"></script>
+    {# The editor is an ES module, served from a versioned path so its
+       relative imports are cache-busted together (see module_url in
+       __init__.py). #}
+    <script type="module" src="{{ module_url('weave/editor.js') }}"></script>
 {% endblock %}
 
 {% block header %}

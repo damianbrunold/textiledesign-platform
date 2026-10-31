@@ -5,8 +5,7 @@
 //   loadModel(data, pattern)          data.model -> pattern
 //   storeModel(data, pattern, repeat) pattern -> data.model, data.repeat
 //
-// No DOM and no editor globals. Moved out of jbead.js; the classic
-// editor script reaches these through bead/globals.js.
+// No DOM and no editor globals.
 
 export class Pattern {
     constructor(width, height) {

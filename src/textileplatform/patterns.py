@@ -24,7 +24,7 @@ def _truncate(value, n):
 def _bead_repeat(model):
     """Shortest repeat (in beads) of a JBead model, or None if empty.
 
-    Mirrors BeadList.updateRepeat in jbead.js: beads are read row by
+    Mirrors BeadList.updateRepeat in bead/model.js: beads are read row by
     row from the bottom, up to the highest used row, and the repeat is
     the shortest period that matches the whole used area.
     """

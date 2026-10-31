@@ -34,7 +34,7 @@ def smallest_period(seq):
     """Length of the shortest period p of ``seq`` (seq[k] == seq[k - p]
     for every k >= p), or len(seq) if there is none. 0 for an empty
     sequence. Linear time via the KMP prefix function; this is the bead
-    repeat that jbead.js BeadList.updateRepeat computes."""
+    repeat that bead/model.js BeadList.updateRepeat computes."""
     n = len(seq)
     if n == 0:
         return 0
