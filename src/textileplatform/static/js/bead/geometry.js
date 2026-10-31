@@ -83,6 +83,13 @@ export function correctedHit(view, px, py, W, dx, dy) {
 // rope, rotated by `shift` beads. Odd rows have a half bead at each
 // edge (columns 0 and view.width).
 
+// Columns of the tube's front shown for a W-wide pattern: half the
+// circumference, as the desktop (SimulationPanel::visibleWidth) and
+// the exports (SimulationPart._visible_width) show it.
+export function simulatedWidth(W) {
+    return Math.trunc(W / 2);
+}
+
 // Bead `idx` (linear) in the simulated view, or null when it is out of
 // the window or on the back of the tube.
 export function simulatedCell(view, idx, W, shift, dx, dy) {

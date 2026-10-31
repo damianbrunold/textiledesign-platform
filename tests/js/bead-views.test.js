@@ -121,8 +121,9 @@ describe("corrected view", () => {
 });
 
 describe("simulated view", () => {
-    // Only the front of the tube is shown: trunc((W + 1) / 2) columns.
-    const front = (W) => Math.trunc((W + 1) / 2);
+    // Only the front of the tube is shown: half the circumference,
+    // trunc(W / 2) columns (desktop SimulationPanel::visibleWidth).
+    const front = (W) => Math.trunc(W / 2);
 
     it("draws every bead on the front of the visible rows", async () => {
         for (const c of cases()) {

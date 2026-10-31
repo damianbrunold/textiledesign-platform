@@ -549,7 +549,7 @@ class PatternView {
         const width_corrected = show_corrected ? this.pattern.width + 1 : 0;
         const gap_corrected = show_corrected ? 2 : 0;
         const width_simulated = show_simulation
-            ? Math.trunc((this.pattern.width + 1) / 2) : 0;
+            ? simulatedWidth(this.pattern.width) : 0;
         const gap_simulated = show_simulation ? 1 : 0;
 
         const x1 = 0;

@@ -1,7 +1,8 @@
+import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
     correctedCell, correctedHit, draftCell, draftHit, foldIndex, rowStart,
-    simulatedCell, simulatedHit,
+    simulatedCell, simulatedHit, simulatedWidth,
 } from "../../src/textileplatform/static/js/bead/geometry.js";
 import { randomSource } from "./helpers/random.js";
 
@@ -80,7 +81,7 @@ describe("cells and hits are inverse", () => {
     it("simulated, with every shift", () => {
         for (let n = 0; n < 100; n++) {
             const W = 1 + rand(9), H = 1 + rand(12);
-            const view = randomView(Math.trunc((W + 1) / 2));
+            const view = randomView(simulatedWidth(W));
             const [dx, dy] = sizes();
             for (let shift = 0; shift < W; shift++) {
                 for (let k = 0; k < W * H; k++) {
@@ -135,4 +136,48 @@ describe("simulated view", () => {
         expect(simulatedHit(view, 5, 95, 0, 2, 0, 10, 10))
             .toEqual([undefined, undefined]);     // empty pattern
     });
+});
+
+// tests/data/bead_geometry.json is generated from the server's export
+// geometry (beadexport.py, see tests/test_bead_geometry.py): the editor
+// must place beads exactly like the PDF / PNG / SVG exports.
+describe("agrees with the server's exports", () => {
+    const fixture = JSON.parse(fs.readFileSync(
+        new URL("../data/bead_geometry.json", import.meta.url), "utf8"));
+    const DX = 10, DY = 10, ROWS = 100;
+
+    for (const [w, spec] of Object.entries(fixture.widths)) {
+        const W = Number(w);
+
+        it(`width ${W}: row starts and the corrected view`, () => {
+            spec.first_index_of_row.forEach((start, row) => {
+                expect(rowStart(row, W)).toBe(start);
+            });
+            const view = { x: 0, y: 0, width: W + 1, height: ROWS, offset: 0 };
+            for (const [idx, left, row] of spec.corrected) {
+                const r = correctedCell(view, idx, W, DX, DY);
+                expect([(r.x - 0.5) / DX, ROWS - 1 - (r.y - 0.5) / DY])
+                    .toEqual([left, row]);
+            }
+        });
+
+        it(`width ${W}: the simulated view`, () => {
+            const view = { x: 0, y: 0, width: simulatedWidth(W),
+                           height: ROWS, offset: 0 };
+            // grid origin: half a cell left of the view
+            const origin = 0.5 - DX / 2;
+            for (const [shift, expected] of Object.entries(spec.simulated)) {
+                const drawn = [];
+                const n = spec.corrected.length;
+                for (let idx = 0; idx < n; idx++) {
+                    const r = simulatedCell(view, idx, W, Number(shift), DX, DY);
+                    if (r) {
+                        drawn.push([idx, (r.x - origin) / DX, r.w / DX,
+                                    ROWS - 1 - (r.y - 0.5) / DY]);
+                    }
+                }
+                expect(drawn, `shift ${shift}`).toEqual(expected);
+            }
+        });
+    }
 });

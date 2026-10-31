@@ -7,7 +7,7 @@
 
 import {
     correctedCell, correctedHit, draftCell, draftHit, foldIndex,
-    simulatedCell, simulatedHit,
+    simulatedCell, simulatedHit, simulatedWidth,
 } from "./geometry.js";
 import { BeadList, loadModel, Pattern, storeModel } from "./model.js";
 import {
@@ -25,7 +25,7 @@ export function install(target) {
     Object.assign(target, {
         BeadList, loadModel, Pattern, storeModel,
         correctedCell, correctedHit, draftCell, draftHit, foldIndex,
-        simulatedCell, simulatedHit,
+        simulatedCell, simulatedHit, simulatedWidth,
         affectedRect, captureGroup, restoreBaseline, stampGroup,
         arrangeCopies, arrangeUndoRows, resizedData, selectionSource,
         withRowDeleted, withRowInserted,
