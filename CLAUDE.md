@@ -111,6 +111,7 @@ Jinja2 templates in `src/textileplatform/templates/`. The pattern editors are JS
 - `static/js/jbead.js` — JBead editor (classic script)
 - `static/js/bead/model.js` — ES module: the JBead data model (`Pattern`, `BeadList` with used height, repeat and run-length bead list) and `loadModel` / `storeModel` for `data.model` / `data.repeat`. The repeat is the same smallest period the server computes (`patterns._bead_repeat`). Bridge: `bead/globals.js`.
 - `static/js/bead/selection.js` — ES module: moving a selection group (`captureGroup`, `stampGroup`, `affectedRect`, `restoreBaseline`). Beads are matched and moved by linear index, so shapes wrap across the tube's seam. Contract: a move only changes beads inside `affectedRect` (the undo snapshot).
+- `static/js/bead/transforms.js` — ES module: "Arrange" (`selectionSource`, `arrangeCopies` at linear offsets, `arrangeUndoRows` for the undo snapshot) and the data side of resize / insert row / delete row (`resizedData`, `withRowInserted`, `withRowDeleted`).
 - `static/js/common.js` — shared editor plumbing: `startEditor` (startup sequence), `savePattern`, the modified flag, local drafts in localStorage, navigation / close guards, `editorI18n()` (the `#tx-i18n` JSON block of the editor templates)
 - `static/js/commands.js` — `CommandBus` undo/redo, including saved-state tracking (`markSaved`, `isAtSavedState`)
 - `shortcuts.js`, `actions.js`, `menu.js`, `modal.js`, `colorpicker.js`, … — shared UI pieces

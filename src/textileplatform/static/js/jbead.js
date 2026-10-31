@@ -1539,20 +1539,11 @@ function _doResize(newWidth, newHeight) {
     if (newWidth === pattern.width && newHeight === pattern.height) return;
     const oldW = pattern.width, oldH = pattern.height;
     const oldData = pattern.data.slice();
-    const newData = new Array(newWidth * newHeight).fill(0);
-    const cw = Math.min(oldW, newWidth);
-    const ch = Math.min(oldH, newHeight);
-    for (let j = 0; j < ch; j++) {
-        for (let i = 0; i < cw; i++) {
-            newData[i + j * newWidth] = oldData[i + j * oldW];
-        }
-    }
-    let applied = false;
+    const newData = resizedData(oldData, oldW, oldH, newWidth, newHeight);
     commandBus.execute({
         label: "resize",
         apply: () => {
             _replacePatternData(newWidth, newHeight, newData.slice());
-            applied = true;
         },
         revert: () => {
             _replacePatternData(oldW, oldH, oldData.slice());
@@ -1562,28 +1553,12 @@ function _doResize(newWidth, newHeight) {
 
 function _insertRowAt(j) {
     const W = pattern.width, H = pattern.height;
-    if (j < 0) j = 0;
-    if (j > H) j = H;
     const oldData = pattern.data.slice();
-    const newData = new Array(W * (H + 1)).fill(0);
-    // Rows below j (lower y indices) stay; new zero row at j;
-    // rows >= j shift up by one.
-    for (let r = 0; r < j; r++) {
-        for (let i = 0; i < W; i++) {
-            newData[i + r * W] = oldData[i + r * W];
-        }
-    }
-    for (let r = j; r < H; r++) {
-        for (let i = 0; i < W; i++) {
-            newData[i + (r + 1) * W] = oldData[i + r * W];
-        }
-    }
-    let applied = false;
+    const newData = withRowInserted(oldData, W, H, j);
     commandBus.execute({
         label: "insert-row",
         apply: () => {
             _replacePatternData(W, H + 1, newData.slice());
-            applied = true;
         },
         revert: () => {
             _replacePatternData(W, H, oldData.slice());
@@ -1593,26 +1568,14 @@ function _insertRowAt(j) {
 
 function _deleteRowAt(j) {
     const W = pattern.width, H = pattern.height;
-    if (H <= 1) return;            // refuse to leave an empty pattern
-    if (j < 0 || j >= H) return;
     const oldData = pattern.data.slice();
-    const newData = new Array(W * (H - 1)).fill(0);
-    for (let r = 0; r < j; r++) {
-        for (let i = 0; i < W; i++) {
-            newData[i + r * W] = oldData[i + r * W];
-        }
-    }
-    for (let r = j + 1; r < H; r++) {
-        for (let i = 0; i < W; i++) {
-            newData[i + (r - 1) * W] = oldData[i + r * W];
-        }
-    }
-    let applied = false;
+    // null: not a row, or the last one (a pattern keeps one row).
+    const newData = withRowDeleted(oldData, W, H, j);
+    if (!newData) return;
     commandBus.execute({
         label: "delete-row",
         apply: () => {
             _replacePatternData(W, H - 1, newData.slice());
-            applied = true;
         },
         revert: () => {
             _replacePatternData(W, H, oldData.slice());
@@ -2125,10 +2088,9 @@ function _openSymbolsDialog() {
 function _openArrangeDialog() {
     if (!pattern.selection) return;
     const sel = pattern.selection;
+    // Default offsets: the selection's size.
     const W = sel.i2 - sel.i1 + 1;
     const H = sel.j2 - sel.j1 + 1;
-    const PW = pattern.width;
-    const PH = pattern.height;
 
     // Snapshot the full pattern data at dialog open. Live preview
     // mutates pattern.data in place; on every input change (and on
@@ -2138,19 +2100,14 @@ function _openArrangeDialog() {
     // Capture the source cells once — they don't change while the
     // dialog is open and they reference pattern coords inside the
     // selection (which the preview won't overwrite for k=0).
-    const src = [];
-    for (let j = 0; j < H; j++) {
-        const row = [];
-        for (let i = 0; i < W; i++) row.push(pattern.get(sel.i1 + i, sel.j1 + j));
-        src.push(row);
-    }
+    const src = selectionSource(pattern, sel);
 
     const restore = () => {
         for (let i = 0; i < baseline.length; i++) pattern.data[i] = baseline[i];
     };
     const renderPreview = (dx, dy, copies) => {
         restore();
-        _applyArrangeMutation(sel, src, W, H, PW, PH, dx, dy, copies);
+        arrangeCopies(pattern, sel, src, dx, dy, copies);
         beadlist.update();
         view.draw();
     };
@@ -2340,81 +2297,23 @@ function _finalizeSelectionGroupMove(group, sel0, dx, dy) {
 }
 
 
-// Pure mutation helper shared between the live-preview path in
-// _openArrangeDialog and the committed apply in _arrangeSelection.
-// Writes copies of `src` into pattern.data at linear-bead offsets
-// `k * (dy * PW + dx)` for k = 1..copies; out-of-bounds linear
-// indices are skipped.
-function _applyArrangeMutation(sel, src, W, H, PW, PH, dx, dy, copies) {
-    const linearOffset = dy * PW + dx;
-    if (copies < 1 || linearOffset === 0) return;
-    const total = PW * PH;
-    for (let k = 1; k <= copies; k++) {
-        for (let j = 0; j < H; j++) {
-            for (let i = 0; i < W; i++) {
-                const srcLin = (sel.j1 + j) * PW + (sel.i1 + i);
-                const tl = srcLin + k * linearOffset;
-                if (tl < 0 || tl >= total) continue;
-                pattern.set(tl % PW, Math.trunc(tl / PW), src[j][i]);
-            }
-        }
-    }
-}
-
+// The arrangement itself is in bead/transforms.js (arrangeCopies).
 function _arrangeSelection(dx, dy, copies) {
     if (!pattern.selection) return;
     const sel = pattern.selection;
-    const W = sel.i2 - sel.i1 + 1;
-    const H = sel.j2 - sel.j1 + 1;
-    const PW = pattern.width;
-    const PH = pattern.height;
-    // (dx, dy) is interpreted as a *linear* bead offset: each successive
-    // copy is shifted by `dy * PW + dx` beads in the row-major linear
-    // order. So overflowing the right edge wraps to the next row up,
-    // matching how a beaded rope is arranged. (The desktop jbead's
-    // single-offset version is the same idea, just with dx folded into
-    // dy implicitly.)
-    const linearOffset = dy * PW + dx;
-    if (copies < 1 || linearOffset === 0) return;
+    const rows = arrangeUndoRows(pattern, sel, dx, dy, copies);
+    if (!rows) return;
     // Capture source cells before any writes (in case copies overlap).
-    const src = [];
-    for (let j = 0; j < H; j++) {
-        const row = [];
-        for (let i = 0; i < W; i++) row.push(pattern.get(sel.i1 + i, sel.j1 + j));
-        src.push(row);
-    }
-    // Snapshot region: the linear range from min to max target index
-    // is contiguous; for a rectangular snapshot we cover whole rows.
-    const total = PW * PH;
-    const sourceFirst = sel.j1 * PW + sel.i1;
-    const sourceLast  = sel.j2 * PW + sel.i2;
-    const targets = [
-        sourceFirst, sourceLast,
-        sourceFirst + copies * linearOffset,
-        sourceLast  + copies * linearOffset,
-    ];
-    let minLin = Math.min(...targets);
-    let maxLin = Math.max(...targets);
-    if (minLin < 0) minLin = 0;
-    if (maxLin >= total) maxLin = total - 1;
-    if (minLin > maxLin) return;
-    const i1 = 0;
-    const i2 = PW - 1;
-    const j1 = Math.trunc(minLin / PW);
-    const j2 = Math.trunc(maxLin / PW);
-    const before = snapshotGridRegion(pattern, i1, j1, i2, j2);
-    const apply = () => {
-        _applyArrangeMutation(sel, src, W, H, PW, PH, dx, dy, copies);
-        beadlist.update();
-        view.draw();
-        setModified();
-    };
-    let applied = false;
+    const src = selectionSource(pattern, sel);
+    const before = snapshotGridRegion(pattern, 0, rows.j1,
+                                      pattern.width - 1, rows.j2);
     commandBus.execute({
         label: "arrange",
         apply: () => {
-            if (!applied) { apply(); applied = true; }
-            else { apply(); }
+            arrangeCopies(pattern, sel, src, dx, dy, copies);
+            beadlist.update();
+            view.draw();
+            setModified();
         },
         revert: () => {
             restoreGridRegion(pattern, before);
@@ -2423,7 +2322,6 @@ function _arrangeSelection(dx, dy, copies) {
         },
     });
 }
-
 
 function _shiftPattern(delta) {
     // View-only operation: rotates the simulated bead tube by `delta`

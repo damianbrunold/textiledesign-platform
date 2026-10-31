@@ -9,11 +9,17 @@ import { BeadList, loadModel, Pattern, storeModel } from "./model.js";
 import {
     affectedRect, captureGroup, restoreBaseline, stampGroup,
 } from "./selection.js";
+import {
+    arrangeCopies, arrangeUndoRows, resizedData, selectionSource,
+    withRowDeleted, withRowInserted,
+} from "./transforms.js";
 
 export function install(target) {
     Object.assign(target, {
         BeadList, loadModel, Pattern, storeModel,
         affectedRect, captureGroup, restoreBaseline, stampGroup,
+        arrangeCopies, arrangeUndoRows, resizedData, selectionSource,
+        withRowDeleted, withRowInserted,
     });
 }
 
