@@ -9,6 +9,7 @@ optional, and grid cells may be null (older editor versions wrote
 nulls; edit_pattern still normalises them).
 """
 import math
+import re
 
 WEAVE = "DB-WEAVE Pattern"
 BEAD = "JBead Pattern"
@@ -122,3 +123,23 @@ def validate_pattern(contents, pattern_type):
         _validate_bead(contents)
     else:
         raise PatternError(f"unknown pattern type {pattern_type!r}")
+
+
+# json.loads keeps a lone UTF-16 surrogate escape ("\ud83d" without its
+# pair) as a surrogate code point; a complete pair becomes one character.
+_LONE_SURROGATE = re.compile("[\ud800-\udfff]")
+
+
+def scrub_surrogates(value):
+    """``value`` (parsed JSON) with lone surrogates in its strings and
+    keys replaced by U+FFFD. Browsers send them for broken text (half an
+    emoji): they can't be encoded as UTF-8, so downloads and SVG exports
+    of the pattern would fail."""
+    if isinstance(value, str):
+        return _LONE_SURROGATE.sub("�", value)
+    if isinstance(value, list):
+        return [scrub_surrogates(v) for v in value]
+    if isinstance(value, dict):
+        return {scrub_surrogates(k): scrub_surrogates(v)
+                for k, v in value.items()}
+    return value

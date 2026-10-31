@@ -10,6 +10,9 @@ import {
     affectedRect, captureGroup, restoreBaseline, stampGroup,
 } from "./selection.js";
 import {
+    contrastingColor, DEFAULT_SYMBOLS, padSymbols, setSymbol, symbolFor,
+} from "./symbols.js";
+import {
     arrangeCopies, arrangeUndoRows, resizedData, selectionSource,
     withRowDeleted, withRowInserted,
 } from "./transforms.js";
@@ -20,6 +23,7 @@ export function install(target) {
         affectedRect, captureGroup, restoreBaseline, stampGroup,
         arrangeCopies, arrangeUndoRows, resizedData, selectionSource,
         withRowDeleted, withRowInserted,
+        contrastingColor, DEFAULT_SYMBOLS, padSymbols, setSymbol, symbolFor,
     });
 }
 

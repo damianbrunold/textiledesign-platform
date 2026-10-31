@@ -39,7 +39,9 @@ from textileplatform.mail import send_support_dm_mail
 from textileplatform.support import SUPPORT_USERNAME
 from textileplatform.support import is_support
 from textileplatform.weavepattern import parse_dbw_data, render_dbw_data
-from textileplatform.validation import PatternError, validate_pattern
+from textileplatform.validation import (
+    PatternError, scrub_surrogates, validate_pattern,
+)
 from textileplatform import export as exporter
 from textileplatform import beadexport as bead_exporter
 from textileplatform.exportcommon import TooLargeError
@@ -489,13 +491,15 @@ def _render_source(pattern, readonly):
     stored pattern; a POST from the owner (or support) may send unsaved
     editor state as `contents`. Data is None if a POST lacks it."""
     if request.method != "POST":
-        return json.loads(pattern.contents), request.args
+        return scrub_surrogates(json.loads(pattern.contents)), request.args
     params = request.get_json(silent=True) or {}
     if readonly and not is_support(g.user):
         # Viewers render the stored version even if they POST.
-        return json.loads(pattern.contents), params
+        return scrub_surrogates(json.loads(pattern.contents)), params
     contents = params.get("contents")
-    return (contents if isinstance(contents, dict) else None), params
+    if not isinstance(contents, dict):
+        return None, params
+    return scrub_surrogates(contents), params
 
 
 def _user_settings(user):
@@ -1064,7 +1068,7 @@ def status():
 @app.route("/<string:user_name>/<string:pattern_name>/download")
 def download_pattern(user_name, pattern_name):
     _, pattern, _ = _viewable_pattern(user_name, pattern_name)
-    contents = json.loads(pattern.contents)
+    contents = scrub_surrogates(json.loads(pattern.contents))
     return send_file(
         io.BytesIO(
             json.dumps(contents, ensure_ascii=False, indent=2).encode("utf8")
@@ -1086,7 +1090,7 @@ def download_pattern_legacy(user_name, pattern_name):
         return redirect(url_for("user", user_name=user_name))
     render, ext = renderers[pattern.pattern_type]
     try:
-        data = json.loads(pattern.contents)
+        data = scrub_surrogates(json.loads(pattern.contents))
         validate_pattern(data, pattern.pattern_type)
         # UTF-8, as both desktop apps read it.
         body = render(data).encode("utf8")
@@ -1363,13 +1367,18 @@ def profile():
     )
 
 
+def _export_json(obj):
+    """Readable JSON for the profile export (UTF-8 in the zip)."""
+    return json.dumps(scrub_surrogates(obj), indent=2, ensure_ascii=False)
+
+
 @app.route("/profile/export")
 @login_required
 def profile_export():
     user = g.user
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("profile.json", json.dumps({
+        zf.writestr("profile.json", _export_json({
             "name": user.name,
             "label": user.label,
             "email": user.email,
@@ -1384,7 +1393,7 @@ def profile_export():
                 user.verify_date.isoformat() if user.verify_date else None,
             "access_date":
                 user.access_date.isoformat() if user.access_date else None,
-        }, indent=2, ensure_ascii=False))
+        }))
 
         for p in user.mypatterns:
             base = f"patterns/{p.name}"
@@ -1409,14 +1418,14 @@ def profile_export():
             }
             zf.writestr(
                 f"{base}.meta.json",
-                json.dumps(meta, indent=2, ensure_ascii=False),
+                _export_json(meta),
             )
             if p.contents:
                 zf.writestr(f"{base}.json", p.contents)
             if p.preview_image:
                 zf.writestr(f"{base}.preview.png", p.preview_image)
 
-        zf.writestr("groups.json", json.dumps([
+        zf.writestr("groups.json", _export_json([
             {
                 "group_name": m.group.name,
                 "group_label": m.group.label,
@@ -1425,7 +1434,7 @@ def profile_export():
                 "state": m.state,
             }
             for m in user.memberships
-        ], indent=2, ensure_ascii=False))
+        ]))
 
         for c in conversations_for_user(user):
             if c.kind == "group" and c.group is not None:
@@ -1456,7 +1465,7 @@ def profile_export():
                 ],
             }
             zf.writestr(
-                fname, json.dumps(payload, indent=2, ensure_ascii=False),
+                fname, _export_json(payload),
             )
 
     buf.seek(0)
@@ -3478,7 +3487,7 @@ def update_pattern(user_name, pattern_name):
         elif action == "save-pattern":
             if not g.user or user.name != g.user.name:
                 return respond("NOK", "Invalid user", 403)
-            contents = data["contents"]
+            contents = scrub_surrogates(data["contents"])
             try:
                 validate_pattern(contents, pattern.pattern_type)
             except PatternError as e:
@@ -3530,7 +3539,7 @@ def update_pattern(user_name, pattern_name):
                 return respond("NOK", "Invalid user", 403)
             # Inline clone (from the profile list) doesn't send the
             # pattern body — fall back to the persisted contents.
-            payload = data.get("contents")
+            payload = scrub_surrogates(data.get("contents"))
             if payload is not None:
                 try:
                     validate_pattern(payload, pattern.pattern_type)

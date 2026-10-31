@@ -47,18 +47,8 @@ let draw_symbols = false;
 // palette position — same encoding as desktop's
 // BeadSymbols.SAVED_SYMBOLS ("·abcdefg…"). Persisted in
 // data.view.symbols.
-const _DEFAULT_SYMBOLS = "·abcdefghijklmnopqrstuvwxyz+-/\\*";
-let pattern_symbols = _DEFAULT_SYMBOLS;
-
-function _symbolFor(colorIdx) {
-    if (colorIdx < 0) return "";
-    const s = pattern_symbols || _DEFAULT_SYMBOLS;
-    if (colorIdx < s.length) {
-        const ch = s.charAt(colorIdx);
-        return ch === " " ? "" : ch;
-    }
-    return "";
-}
+// null: the defaults (DEFAULT_SYMBOLS in bead/symbols.js).
+let pattern_symbols = null;
 
 
 // Active drawing tool. "pencil" / "select" / "fill" / "pipette".
@@ -200,7 +190,7 @@ class ViewDraft {
                 ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
                 ctx.strokeRect(x, y, dx, dy);
                 if (drawSymbol) {
-                    const sym = _symbolFor(state);
+                    const sym = symbolFor(pattern_symbols, state);
                     if (sym) {
                         ctx.fillStyle = draw_colors
                             ? contrastingColor(colors[state])
@@ -332,7 +322,7 @@ class ViewCorrected {
                 ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
                 ctx.strokeRect(x, y, dx, dy);
                 if (drawSymbol) {
-                    const sym = _symbolFor(state);
+                    const sym = symbolFor(pattern_symbols, state);
                     if (sym) {
                         ctx.fillStyle = draw_colors
                             ? contrastingColor(colors[state])
@@ -489,7 +479,7 @@ class ViewSimulated {
                     ctx.stroke();
                 }
                 if (draw_symbols && d >= 8) {
-                    const sym = _symbolFor(state);
+                    const sym = symbolFor(pattern_symbols, state);
                     if (sym) {
                         ctx.font = `${Math.round(Math.min(d, dy) * 0.8)}px sans-serif`;
                         ctx.textAlign = "center";
@@ -544,7 +534,7 @@ class ViewColors {
             ctx.strokeStyle = settings.darcula ? "#aaa" : "#222";
             ctx.strokeRect(x, y, d, d);
             if (showSymbols) {
-                const sym = _symbolFor(idx);
+                const sym = symbolFor(pattern_symbols, idx);
                 if (sym) {
                     ctx.fillStyle = draw_colors
                         ? contrastingColor(this.palette[idx])
@@ -625,7 +615,7 @@ class ViewBeadList {
 	    ctx.fillStyle = draw_colors
 	        ? contrastingColor(colors[color])
 	        : (settings.darcula ? "#eee" : "#222");
-	    const sym = draw_symbols ? _symbolFor(color) : "";
+	    const sym = draw_symbols ? symbolFor(pattern_symbols, color) : "";
 	    const label = sym ? `${count} ${sym}` : `${count}`;
 	    ctx.fillText(label, x + dx / 2, y + dy / 2 + 5);
 	    y += dy + b;
@@ -635,20 +625,6 @@ class ViewBeadList {
 	    }
 	}
     }
-}
-
-
-function contrastingColor(color) {
-    // Defensive: callers occasionally pass undefined when a palette
-    // slot is missing (e.g. cell value past the end of the palette).
-    // Default to black-on-white in that case.
-    if (typeof color !== "string") return "#000";
-    const parts = color.slice(4, color.length - 1).split(",");
-    const r = parseInt(parts[0].trim(), 10);
-    const g = parseInt(parts[1].trim(), 10);
-    const b = parseInt(parts[2].trim(), 10);
-    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return luminance > 128 ? "#000" : "#fff";
 }
 
 
@@ -1853,7 +1829,7 @@ function _openTechInfoDialog() {
             sw.style.background = colors[c];
             cell.appendChild(sw);
             const label = document.createElement("span");
-            const sym = draw_symbols ? _symbolFor(c) : "";
+            const sym = draw_symbols ? symbolFor(pattern_symbols, c) : "";
             label.textContent = sym ? `${n}× ${sym}` : `${n}×`;
             label.style.fontFamily = "monospace";
             cell.appendChild(label);
@@ -1942,36 +1918,20 @@ function _openPaletteDialog() {
 
 // ---- Symbol palette editor --------------------------------------
 //
+// Symbol helpers are in bead/symbols.js.
+//
 // Per-colour glyph string edited as one row per palette index. Same
 // data model as desktop's BeadSymbols.SAVED_SYMBOLS — single string
 // where character N is the glyph for palette colour N. Index 0 is
 // the background and isn't drawn, so its slot is shown but optional.
 
-function _padSymbols(s) {
-    const target = Math.max(_DEFAULT_SYMBOLS.length, (colors || []).length);
-    let out = (s || "");
-    if (out.length < target) {
-        out += _DEFAULT_SYMBOLS.slice(out.length, target);
-    }
-    return out;
-}
-
-function _setCharAt(s, idx, ch) {
-    const safeCh = (ch && ch.length > 0) ? ch.charAt(0) : " ";
-    if (idx >= s.length) {
-        s = s + " ".repeat(idx - s.length);
-        return s + safeCh;
-    }
-    return s.slice(0, idx) + safeCh + s.slice(idx + 1);
-}
-
 function _applySymbols(s) {
-    pattern_symbols = _padSymbols(s);
+    pattern_symbols = padSymbols(s, (colors || []).length);
     if (data && data.view) data.view["symbols"] = pattern_symbols;
 }
 
 function _openSymbolsDialog() {
-    const before = _padSymbols(pattern_symbols);
+    const before = padSymbols(pattern_symbols, (colors || []).length);
     let draft = before;
 
     const wrap = document.createElement("div");
@@ -1985,7 +1945,7 @@ function _openSymbolsDialog() {
     wrap.appendChild(grid);
 
     const inputs = [];
-    const n = Math.max(_DEFAULT_SYMBOLS.length, (colors || []).length);
+    const n = Math.max(DEFAULT_SYMBOLS.length, (colors || []).length);
     for (let i = 0; i < n; i++) {
         const idxLabel = document.createElement("span");
         idxLabel.textContent = String(i);
@@ -2008,7 +1968,7 @@ function _openSymbolsDialog() {
         inp.addEventListener("input", () => {
             const ch = inp.value.length > 0 ? inp.value.charAt(0) : " ";
             inp.value = ch === " " ? "" : ch;
-            draft = _setCharAt(draft, i, ch);
+            draft = setSymbol(draft, i, ch);
             _applySymbols(draft);
             if (view) view.draw();
         });
@@ -2023,7 +1983,7 @@ function _openSymbolsDialog() {
     reset.textContent = _actionLabel("symbols.reset", "Reset to default");
     reset.style.marginTop = "10px";
     reset.addEventListener("click", () => {
-        draft = _DEFAULT_SYMBOLS;
+        draft = DEFAULT_SYMBOLS;
         for (let i = 0; i < inputs.length; i++) {
             const ch = draft.charAt(i) || "";
             inputs[i].value = ch === " " ? "" : ch;
@@ -2044,7 +2004,7 @@ function _openSymbolsDialog() {
                 onClick: (m) => {
                     committing = true;
                     const beforeSnap = before;
-                    const afterSnap  = _padSymbols(draft);
+                    const afterSnap  = padSymbols(draft, (colors || []).length);
                     if (afterSnap === beforeSnap) {
                         m.close();
                         return;
@@ -2409,7 +2369,7 @@ function saveSettings(data, settings) {
     data.view["selected-tool"] = current_tool;
     data.view["draw-colors"] = !!draw_colors;
     data.view["draw-symbols"] = !!draw_symbols;
-    data.view["symbols"] = pattern_symbols || _DEFAULT_SYMBOLS;
+    data.view["symbols"] = pattern_symbols || DEFAULT_SYMBOLS;
 }
 
 function savePatternData(data, pattern) {
@@ -2996,7 +2956,7 @@ function _renderBeadThumbnail(currentData, w, h) {
     const tDrawSymbols = !!view["draw-symbols"];
     const tSymbols = (typeof view["symbols"] === "string"
                      && view["symbols"].length > 0)
-        ? view["symbols"] : _DEFAULT_SYMBOLS;
+        ? view["symbols"] : DEFAULT_SYMBOLS;
     const symbolAt = (idx) => {
         if (idx < 0 || idx >= tSymbols.length) return "";
         const ch = tSymbols.charAt(idx);
