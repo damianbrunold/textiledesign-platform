@@ -1,5 +1,3 @@
-"use strict";
-
 // DOM menu bar — renders a declarative menu tree as classic desktop-style
 // menubar + dropdowns, driven by the ActionRegistry.
 //
@@ -18,7 +16,9 @@
 // and `checkedWhen` are read from ActionRegistry. A `label` override on the
 // item can replace the default. Use `{ separator: true }` for a divider.
 
-const Menu = (function () {
+import { ActionRegistry } from "./actions.js";
+
+export const Menu = (function () {
     let openSubmenu = null;
     let rootEl = null;
 

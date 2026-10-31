@@ -65,6 +65,10 @@ let cursor = {
     selected_part: "weave",
 }
 let mousedown = false;
+// The editor's undo history (ui/commands.js CommandBus).
+let commandBus = null;
+// Drag state of the drawing tools (ui/tools.js rasterizes).
+let toolDrag = null;
 let had_selection = false;
 let saved_x_weave = 0;
 let saved_y_weave = 0;
@@ -4542,8 +4546,8 @@ function tieupSwapSides() {
 // (x1,y1)-(x2,y2) pair, so we collapse to a single cell at the new spot).
 function _moveCursorAfterCopy() {
     if (typeof Selection === "undefined") return;
-    if (Selection.isEmpty()) return;
-    const sel = Selection.current();
+    if (Selection.isEmpty(cursor)) return;
+    const sel = Selection.current(cursor);
     if (!sel) return;
     const part = sel.part;
     const grid = cursor.selected_pattern;
@@ -4566,22 +4570,22 @@ function _moveCursorAfterCopy() {
 
 function selectionCopy() {
     if (typeof Selection === "undefined") return;
-    if (Selection.isEmpty()) return;
-    Selection.copyToClipboard();
+    if (Selection.isEmpty(cursor)) return;
+    Selection.copyToClipboard(cursor, pattern);
     _moveCursorAfterCopy();
 }
 
 function selectionCut() {
     if (typeof Selection === "undefined") return;
-    if (Selection.isEmpty()) return;
-    Selection.copyToClipboard();
+    if (Selection.isEmpty(cursor)) return;
+    Selection.copyToClipboard(cursor, pattern);
     selectionClear();
 }
 
 function _paste(transparent) {
     if (typeof Selection === "undefined") return;
     if (!Clipboard.has()) return;
-    const sel = Selection.current();
+    const sel = Selection.current(cursor);
     if (!sel) return;
     // Build a command that captures the destination region's before-state.
     const payload = Clipboard.get();
@@ -4594,7 +4598,7 @@ function _paste(transparent) {
     if (grid && grid.height !== undefined) j2 = Math.min(j2, grid.height - 1);
     const part = cursor.selected_part;
     if (!commandBus) {
-        Selection.pasteFromClipboard(transparent);
+        Selection.pasteFromClipboard(cursor, pattern, transparent);
         _afterPatternMutation(part);
         return;
     }
@@ -4602,14 +4606,14 @@ function _paste(transparent) {
         const snap = snapshotEntering(pattern.entering, i1, i2);
         commandBus.execute({
             label: transparent ? "paste-transparent" : "paste",
-            apply() { Selection.pasteFromClipboard(transparent); _afterPatternMutation(part); },
+            apply() { Selection.pasteFromClipboard(cursor, pattern, transparent); _afterPatternMutation(part); },
             revert() { restoreEntering(pattern.entering, snap); _afterPatternMutation(part); },
         });
     } else if (grid && grid.get && grid.set) {
         const snap = snapshotGridRegion(grid, i1, j1, i2, j2);
         commandBus.execute({
             label: transparent ? "paste-transparent" : "paste",
-            apply() { Selection.pasteFromClipboard(transparent); _afterPatternMutation(part); },
+            apply() { Selection.pasteFromClipboard(cursor, pattern, transparent); _afterPatternMutation(part); },
             revert() { restoreGridRegion(grid, snap); _afterPatternMutation(part); },
         });
     }
@@ -7379,10 +7383,12 @@ function _paletteRestore(snap) {
 // Tiny RGB <-> HSV helpers. H ∈ [0,360), S,V ∈ [0,1].
 // Colour conversions and the RGB / HSV pickers are shared with the
 // bead editor (colorpicker.js).
-const _rgbToHsv = ColorPicker.rgbToHsv;
-const _hsvToRgb = ColorPicker.hsvToRgb;
-const _rgbToHex = ColorPicker.rgbToHex;
-const _hexToRgb = ColorPicker.hexToRgb;
+// ColorPicker comes from a module (ui/colorpicker.js), which runs after
+// this script: look it up when called, not at load time.
+function _rgbToHsv(...args) { return ColorPicker.rgbToHsv(...args); }
+function _hsvToRgb(...args) { return ColorPicker.hsvToRgb(...args); }
+function _rgbToHex(...args) { return ColorPicker.rgbToHex(...args); }
+function _hexToRgb(...args) { return ColorPicker.hexToRgb(...args); }
 function _colorLabel(k, fb) {
     const a = _getI18n().actions[k];
     return (a && a.label) || fb;
@@ -9104,16 +9110,16 @@ function setupEditorActions() {
     R("edit.redo", "Ctrl+Y", () => { if (commandBus) commandBus.redo(); },
         { enabledWhen: () => commandBus && commandBus.canRedo() });
     R("edit.cut", "Ctrl+X", selectionCut,
-        { enabledWhen: () => !readonly && typeof Selection !== "undefined" && !Selection.isEmpty() });
+        { enabledWhen: () => !readonly && typeof Selection !== "undefined" && !Selection.isEmpty(cursor) });
     R("edit.copy", "Ctrl+C", selectionCopy,
-        { enabledWhen: () => typeof Selection !== "undefined" && !Selection.isEmpty() });
+        { enabledWhen: () => typeof Selection !== "undefined" && !Selection.isEmpty(cursor) });
     R("edit.paste", "Ctrl+V", selectionPaste,
         { enabledWhen: () => !readonly && typeof Clipboard !== "undefined" && Clipboard.has() });
     R("edit.paste-transparent", "Ctrl+B", selectionPasteTransparent,
         { enabledWhen: () => !readonly && typeof Clipboard !== "undefined" && Clipboard.has() });
     R("edit.delete", "Delete", selectionClear,
-        { enabledWhen: () => !readonly && typeof Selection !== "undefined" && !Selection.isEmpty() });
-    const hasSel = () => typeof Selection !== "undefined" && !Selection.isEmpty();
+        { enabledWhen: () => !readonly && typeof Selection !== "undefined" && !Selection.isEmpty(cursor) });
+    const hasSel = () => typeof Selection !== "undefined" && !Selection.isEmpty(cursor);
     const hasSquareSel = () => {
         if (!hasSel()) return false;
         return Math.abs(cursor.x2 - cursor.x1) === Math.abs(cursor.y2 - cursor.y1);
@@ -9820,7 +9826,7 @@ function setupEditorActions() {
         _refreshUserdefMenuLabels();
     }
 
-    Shortcuts.install();
+    Shortcuts.install({ blocked: editorDialogOpen });
 
     // Refresh menubar state whenever the command bus changes.
     if (commandBus) commandBus.subscribe(() => ActionRegistry.notify());

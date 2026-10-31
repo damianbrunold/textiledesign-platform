@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { loadScripts } from "./helpers/load.js";
+import { describe, expect, it, vi } from "vitest";
+import {
+    CommandBus, makeCellCommand, makeEnteringCommand, makeGridRegionCommand,
+    restoreEntering, restoreGridRegion, snapshotEntering, snapshotGridRegion,
+} from "../../src/textileplatform/static/js/ui/commands.js";
 
-let run;
 
 // A command that pushes/pops a marker on a log, so tests can see the
 // order of apply / revert calls.
@@ -32,13 +34,10 @@ function fakeEntering(shafts) {
     };
 }
 
-beforeEach(() => {
-    ({ run } = loadScripts(["commands.js"]));
-});
 
 describe("CommandBus", () => {
     it("starts empty and at the saved state", () => {
-        const bus = run("new CommandBus()");
+        const bus = new CommandBus();
         expect(bus.canUndo()).toBe(false);
         expect(bus.canRedo()).toBe(false);
         expect(bus.top()).toBe(null);
@@ -46,7 +45,7 @@ describe("CommandBus", () => {
     });
 
     it("applies on execute and reverts on undo, in stack order", () => {
-        const bus = run("new CommandBus()");
+        const bus = new CommandBus();
         const log = [];
         bus.execute(cmd(log, "a"));
         bus.execute(cmd(log, "b"));
@@ -57,7 +56,7 @@ describe("CommandBus", () => {
     });
 
     it("re-applies on redo", () => {
-        const bus = run("new CommandBus()");
+        const bus = new CommandBus();
         const log = [];
         bus.execute(cmd(log, "a"));
         bus.undo();
@@ -69,7 +68,7 @@ describe("CommandBus", () => {
     });
 
     it("drops the redo stack on a new command", () => {
-        const bus = run("new CommandBus()");
+        const bus = new CommandBus();
         const log = [];
         bus.execute(cmd(log, "a"));
         bus.undo();
@@ -78,7 +77,7 @@ describe("CommandBus", () => {
     });
 
     it("keeps at most `limit` commands", () => {
-        const bus = run("new CommandBus(3)");
+        const bus = new CommandBus(3);
         const log = [];
         for (const n of ["a", "b", "c", "d"]) bus.execute(cmd(log, n));
         expect(bus.undoStack.map((c) => c.label)).toEqual(["b", "c", "d"]);
@@ -89,7 +88,7 @@ describe("CommandBus", () => {
     describe("saved-state tracking", () => {
         it("is unsaved after an edit and saved again after undoing it",
             () => {
-                const bus = run("new CommandBus()");
+                const bus = new CommandBus();
                 bus.execute(cmd([], "a"));
                 expect(bus.isAtSavedState()).toBe(false);
                 bus.undo();
@@ -97,7 +96,7 @@ describe("CommandBus", () => {
             });
 
         it("follows markSaved through undo and redo", () => {
-            const bus = run("new CommandBus()");
+            const bus = new CommandBus();
             bus.execute(cmd([], "a"));
             bus.execute(cmd([], "b"));
             bus.markSaved();
@@ -110,7 +109,7 @@ describe("CommandBus", () => {
 
         it("accepts an explicit stack position (save raced an edit)",
             () => {
-                const bus = run("new CommandBus()");
+                const bus = new CommandBus();
                 const a = cmd([], "a");
                 bus.execute(a);
                 bus.execute(cmd([], "b"));
@@ -121,7 +120,7 @@ describe("CommandBus", () => {
             });
 
         it("can never reach the saved state after markUnsaved", () => {
-            const bus = run("new CommandBus()");
+            const bus = new CommandBus();
             bus.markUnsaved();
             expect(bus.isAtSavedState()).toBe(false);
             bus.execute(cmd([], "a"));
@@ -130,15 +129,15 @@ describe("CommandBus", () => {
         });
 
         it("becomes unreachable when the pristine bottom is dropped", () => {
-            const bus = run("new CommandBus(2)");
+            const bus = new CommandBus(2);
             for (const n of ["a", "b", "c"]) bus.execute(cmd([], n));
             while (bus.undo());
             expect(bus.isAtSavedState()).toBe(false);
-            expect(bus.savedMark).toBe(run("CommandBus.UNREACHABLE"));
+            expect(bus.savedMark).toBe(CommandBus.UNREACHABLE);
         });
 
         it("becomes unreachable when the saved command is dropped", () => {
-            const bus = run("new CommandBus(2)");
+            const bus = new CommandBus(2);
             bus.execute(cmd([], "a"));
             bus.markSaved();
             bus.execute(cmd([], "b"));
@@ -148,7 +147,7 @@ describe("CommandBus", () => {
         });
 
         it("keeps a saved mark that is still on the stack", () => {
-            const bus = run("new CommandBus(2)");
+            const bus = new CommandBus(2);
             bus.execute(cmd([], "a"));
             bus.execute(cmd([], "b"));
             bus.markSaved();
@@ -158,7 +157,7 @@ describe("CommandBus", () => {
         });
 
         it("resets history and the saved state on clear", () => {
-            const bus = run("new CommandBus()");
+            const bus = new CommandBus();
             bus.execute(cmd([], "a"));
             bus.undo();
             bus.markUnsaved();
@@ -171,7 +170,7 @@ describe("CommandBus", () => {
 
     describe("listeners", () => {
         it("are notified on every change and can unsubscribe", () => {
-            const bus = run("new CommandBus()");
+            const bus = new CommandBus();
             const fn = vi.fn();
             const unsubscribe = bus.subscribe(fn);
             bus.execute(cmd([], "a"));
@@ -187,7 +186,7 @@ describe("CommandBus", () => {
         });
 
         it("are not notified by a no-op undo / redo", () => {
-            const bus = run("new CommandBus()");
+            const bus = new CommandBus();
             const fn = vi.fn();
             bus.subscribe(fn);
             bus.undo();
@@ -199,7 +198,7 @@ describe("CommandBus", () => {
             // jsdom forwards the window's console to Node's.
             const error = vi.spyOn(console, "error")
                 .mockImplementation(() => {});
-            const bus = run("new CommandBus()");
+            const bus = new CommandBus();
             const second = vi.fn();
             bus.subscribe(() => { throw new Error("boom"); });
             bus.subscribe(second);
@@ -216,10 +215,10 @@ describe("snapshots", () => {
         const grid = fakeGrid(4, 3);
         grid.data.forEach((_, k) => { grid.data[k] = k; });
         const before = [...grid.data];
-        const snap = run("snapshotGridRegion")(grid, 1, 0, 2, 1);
+        const snap = snapshotGridRegion(grid, 1, 0, 2, 1);
         expect(snap.cells).toEqual([1, 2, 5, 6]);
         grid.data.fill(9);
-        run("restoreGridRegion")(grid, snap);
+        restoreGridRegion(grid, snap);
         expect(grid.data).toEqual(
             [9, 1, 2, 9, 9, 5, 6, 9, 9, 9, 9, 9]);
         expect(before[1]).toBe(1);
@@ -227,20 +226,20 @@ describe("snapshots", () => {
 
     it("restore an entering range", () => {
         const entering = fakeEntering([1, 2, 3, 4]);
-        const snap = run("snapshotEntering")(entering, 1, 2);
+        const snap = snapshotEntering(entering, 1, 2);
         entering.data.fill(0);
-        run("restoreEntering")(entering, snap);
+        restoreEntering(entering, snap);
         expect(entering.data).toEqual([0, 2, 3, 0]);
     });
 });
 
 describe("command factories", () => {
     it("makeGridRegionCommand mutates once and replays the result", () => {
-        const bus = run("new CommandBus()");
+        const bus = new CommandBus();
         const grid = fakeGrid(3, 3);
         let calls = 0;
         const afterApply = vi.fn();
-        bus.execute(run("makeGridRegionCommand")({
+        bus.execute(makeGridRegionCommand({
             grid, i1: 0, j1: 0, i2: 1, j2: 1,
             mutate: () => {
                 calls++;
@@ -262,9 +261,9 @@ describe("command factories", () => {
     });
 
     it("makeCellCommand sets and restores one cell", () => {
-        const bus = run("new CommandBus()");
+        const bus = new CommandBus();
         const grid = fakeGrid(2, 2, 3);
-        bus.execute(run("makeCellCommand")({
+        bus.execute(makeCellCommand({
             grid, i: 1, j: 0, newValue: 5, label: "toggle",
         }));
         expect(grid.get(1, 0)).toBe(5);
@@ -274,10 +273,10 @@ describe("command factories", () => {
     });
 
     it("makeEnteringCommand sets and restores one shaft", () => {
-        const bus = run("new CommandBus()");
+        const bus = new CommandBus();
         const entering = fakeEntering([1, 2, 3]);
         const afterApply = vi.fn();
-        bus.execute(run("makeEnteringCommand")({
+        bus.execute(makeEnteringCommand({
             entering, i: 2, newShaft: 8, afterApply,
         }));
         expect(entering.data).toEqual([1, 2, 8]);

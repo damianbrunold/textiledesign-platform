@@ -1,11 +1,5 @@
-import { beforeAll, describe, expect, it } from "vitest";
-import { loadScripts } from "./helpers/load.js";
-
-let T;
-
-beforeAll(() => {
-    T = loadScripts(["tools.js"]).run("ToolRaster");
-});
+import { describe, expect, it } from "vitest";
+import { ToolRaster as T } from "../../src/textileplatform/static/js/ui/tools.js";
 
 const key = ([i, j]) => `${i},${j}`;
 const keys = (cells) => new Set(cells.map(key));

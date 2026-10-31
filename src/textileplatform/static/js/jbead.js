@@ -27,6 +27,8 @@ let colors = [];
 
 
 let readonly = false;
+// The editor's undo history (ui/commands.js CommandBus).
+let commandBus = null;
 
 
 let selected_color = 1;
@@ -2655,7 +2657,7 @@ function setupEditorActions() {
 
     // Bind shortcuts.
     for (const a of ActionRegistry.all()) Shortcuts.bindAction(a);
-    Shortcuts.install();
+    Shortcuts.install({ blocked: editorDialogOpen });
 
     // Extra one-off shortcuts: 0-9 select colour, F5 redraw. The
     // generic Shortcuts dispatcher binds one combo per action so we

@@ -1,5 +1,3 @@
-"use strict";
-
 // Keyboard shortcut dispatcher. One global keydown listener looks up a
 // normalized combo ("Ctrl+Shift+S", "F4", "Alt+1", "h") in the registered
 // bindings and invokes the bound action.
@@ -14,7 +12,9 @@
 // Inputs with tagName INPUT/TEXTAREA or contenteditable receive key events
 // untouched (we return before dispatching) so typing in dialogs isn't hijacked.
 
-const Shortcuts = (function () {
+import { ActionRegistry } from "./actions.js";
+
+export const Shortcuts = (function () {
     const bindings = new Map(); // combo -> actionId
 
     function normalize(combo) {
@@ -87,14 +87,16 @@ const Shortcuts = (function () {
         return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
     }
 
-    function install() {
+    // `blocked()`: true while an editor dialog is open; the pattern
+    // behind it is then off limits.
+    function install({ blocked = () => false } = {}) {
         window.addEventListener("keydown", (e) => {
             if (_isEditable(e.target)) return;
             const id = lookup(e);
             if (!id) return;
             // While a dialog is open the pattern behind it is off limits;
             // just keep Ctrl+S etc. from reaching the browser.
-            if (typeof editorDialogOpen === "function" && editorDialogOpen()) {
+            if (blocked()) {
                 e.preventDefault();
                 return;
             }

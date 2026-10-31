@@ -1,5 +1,3 @@
-"use strict";
-
 // Action registry — single source of truth for everything the user can invoke
 // in the editor. Menus, the keyboard shortcut dispatcher, and toolbars all
 // read from this registry.
@@ -10,7 +8,7 @@
 // the call site that produces them for the menu (we can't call gettext from
 // JS — labels are set by the template and passed in).
 
-const ActionRegistry = (function () {
+export const ActionRegistry = (function () {
     const actions = new Map();
     const listeners = [];
 

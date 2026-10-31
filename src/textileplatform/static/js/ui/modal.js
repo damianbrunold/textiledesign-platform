@@ -1,5 +1,3 @@
-"use strict";
-
 // Minimal modal dialog primitive. Vanilla DOM, no dependencies.
 //
 // Usage:
@@ -20,7 +18,7 @@
 //   - Click on backdrop closes (same semantics).
 //   - Stacking supported (multiple modals).
 
-const Modal = (function () {
+export const Modal = (function () {
     let _stack = [];
     let _savedBodyOverflow = null;
     let _savedBodyPaddingRight = null;
@@ -164,7 +162,7 @@ const Modal = (function () {
                 if (idx >= 0) _stack.splice(idx, 1);
                 _unlockScroll();
                 if (prevActive && prevActive.focus) {
-                    try { prevActive.focus(); } catch (e) { /* ignore */ }
+                    try { prevActive.focus(); } catch { /* ignore */ }
                 }
                 if (opts.onClose) opts.onClose();
             },

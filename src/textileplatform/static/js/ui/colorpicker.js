@@ -1,5 +1,3 @@
-"use strict";
-
 // Shared colour-picker primitives. Used by the bead editor (jbead.js)
 // and ports the same dialogs the weave editor (dbweave.js) ships:
 //
@@ -25,7 +23,9 @@
 // translated UI strings — keeps this module decoupled from any app-
 // specific i18n machinery.
 
-const ColorPicker = (function () {
+import { Modal } from "./modal.js";
+
+export const ColorPicker = (function () {
 
     function rgbToHsv(r, g, b) {
         r /= 255; g /= 255; b /= 255;

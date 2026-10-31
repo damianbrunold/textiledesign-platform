@@ -1,5 +1,3 @@
-"use strict";
-
 // Selection + Clipboard.
 //
 // Clipboard format mirrors the desktop's universal char-grid: a w × h
@@ -14,8 +12,8 @@
 //   { kind: source-kind (informational), w, h,
 //     cells: number[][] // h rows × w cols, cells[j][i] }
 
-const Selection = (function () {
-    function current() {
+export const Selection = (function () {
+    function current(cursor) {
         if (typeof cursor === "undefined" || cursor === null) return null;
         const i1 = Math.min(cursor.x1, cursor.x2);
         const i2 = Math.max(cursor.x1, cursor.x2);
@@ -29,7 +27,7 @@ const Selection = (function () {
         };
     }
 
-    function isEmpty() {
+    function isEmpty(cursor) {
         if (typeof cursor === "undefined" || cursor === null) return true;
         return cursor.x1 === cursor.x2 && cursor.y1 === cursor.y2;
     }
@@ -40,7 +38,7 @@ const Selection = (function () {
         return out;
     }
 
-    function _gridFor(part) {
+    function _gridFor(pattern, part) {
         if (part === "weave") return pattern.weave;
         if (part === "tieup") return pattern.tieup;
         if (part === "treadling") return pattern.treadling;
@@ -48,13 +46,13 @@ const Selection = (function () {
     }
 
     // Serialise the current selection into a w × h matrix of integers.
-    function copyToClipboard() {
-        if (isEmpty()) return null;
-        const sel = current();
+    function copyToClipboard(cursor, pattern) {
+        if (isEmpty(cursor)) return null;
+        const sel = current(cursor);
         const part = sel.part;
         const cells = _make2D(sel.w, sel.h);
 
-        const grid = _gridFor(part);
+        const grid = _gridFor(pattern, part);
         if (grid) {
             for (let j = 0; j < sel.h; j++)
                 for (let i = 0; i < sel.w; i++)
@@ -91,10 +89,10 @@ const Selection = (function () {
     // Interpretation is driven by the *target* pane (sel.part), so a
     // payload copied from any source can be pasted into any compatible
     // pane — matching desktop PasteSelection's switch on kbd_field.
-    function pasteFromClipboard(transparent) {
+    function pasteFromClipboard(cursor, pattern, transparent) {
         const payload = Clipboard.get();
         if (!payload) return { ok: false };
-        const sel = current();
+        const sel = current(cursor);
         if (!sel) return { ok: false };
 
         const part = sel.part;
@@ -104,7 +102,7 @@ const Selection = (function () {
         const cellAt = (i, j) => (cells[j] && cells[j][i]) || 0;
         let i2 = i1 + w - 1, j2 = j1 + h - 1;
 
-        const grid = _gridFor(part);
+        const grid = _gridFor(pattern, part);
         if (grid) {
             const W = grid.width, H = grid.height;
             i2 = Math.min(i2, W - 1);
@@ -176,7 +174,7 @@ const Selection = (function () {
 })();
 
 
-const Clipboard = (function () {
+export const Clipboard = (function () {
     let payload = null;
 
     function set(p) {
@@ -190,7 +188,7 @@ const Clipboard = (function () {
                     .writeText("textileplatform:" + JSON.stringify(payload))
                     .catch(() => { /* ignore */ });
             }
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
     }
 
     function get() {

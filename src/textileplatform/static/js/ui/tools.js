@@ -1,5 +1,3 @@
-"use strict";
-
 // Drawing-tool rasterizers + active drag state.
 //
 // Each rasterizer takes integer endpoint coordinates and returns an array of
@@ -14,7 +12,7 @@
 //   ellipse       — midpoint-algorithm outline inside the bounding box
 //   fillellipse   — solid ellipse inside the bounding box
 
-const ToolRaster = (function () {
+export const ToolRaster = (function () {
     function line(i1, j1, i2, j2) {
         const out = [];
         let x = i1, y = j1;
@@ -122,6 +120,3 @@ const ToolRaster = (function () {
     return { line, rect, fillrect, ellipseOutline, ellipseFill, rasterize };
 })();
 
-
-// Shared drag state for tool gestures (populated by dbweave.js mouse handlers).
-let toolDrag = null;

@@ -1,11 +1,11 @@
-"use strict";
-
 // Fetches one of the public legal pages (/terms, /privacy, /imprint),
 // extracts the <article class="legal"> body, and shows it in a Modal.
 // Used from the editors so opening the document does not navigate away
 // and discard pending edits.
 
-const LegalDialog = (function () {
+import { Modal } from "./modal.js";
+
+export const LegalDialog = (function () {
     function _extractTitle(doc, fallback) {
         const h = doc.querySelector("section.content header h2, header h2, h2");
         return (h && h.textContent.trim()) || fallback;

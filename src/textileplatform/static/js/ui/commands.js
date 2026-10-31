@@ -1,5 +1,3 @@
-"use strict";
-
 // CommandBus — undo/redo infrastructure for the weave editor.
 //
 // A Command is an object with:
@@ -17,7 +15,7 @@
 // revert); CommandBus.UNREACHABLE = no stack position matches (recovered
 // draft, or the saved command was dropped off the bottom of the stack).
 
-class CommandBus {
+export class CommandBus {
     constructor(limit = 200) {
         this.undoStack = [];
         this.redoStack = [];
@@ -106,7 +104,7 @@ CommandBus.UNREACHABLE = Object.freeze({ label: "unreachable" });
 
 // Snapshot a rectangular region of a Grid-like object (supports get(i,j) and
 // set(i,j,value)). Returns an opaque snapshot; use restoreGridRegion to revert.
-function snapshotGridRegion(grid, i1, j1, i2, j2) {
+export function snapshotGridRegion(grid, i1, j1, i2, j2) {
     const cells = [];
     for (let j = j1; j <= j2; j++) {
         for (let i = i1; i <= i2; i++) {
@@ -116,7 +114,7 @@ function snapshotGridRegion(grid, i1, j1, i2, j2) {
     return { i1, j1, i2, j2, cells };
 }
 
-function restoreGridRegion(grid, snapshot) {
+export function restoreGridRegion(grid, snapshot) {
     let k = 0;
     for (let j = snapshot.j1; j <= snapshot.j2; j++) {
         for (let i = snapshot.i1; i <= snapshot.i2; i++) {
@@ -126,13 +124,13 @@ function restoreGridRegion(grid, snapshot) {
 }
 
 // Snapshot a 1D Entering-like object with get_shaft/set_shaft.
-function snapshotEntering(entering, i1, i2) {
+export function snapshotEntering(entering, i1, i2) {
     const shafts = [];
     for (let i = i1; i <= i2; i++) shafts.push(entering.get_shaft(i));
     return { i1, i2, shafts };
 }
 
-function restoreEntering(entering, snapshot) {
+export function restoreEntering(entering, snapshot) {
     let k = 0;
     for (let i = snapshot.i1; i <= snapshot.i2; i++) {
         entering.set_shaft(i, snapshot.shafts[k++]);
@@ -141,7 +139,7 @@ function restoreEntering(entering, snapshot) {
 
 // Convenience command factory: captures a grid region snapshot, runs a mutator,
 // and auto-generates revert. `onApply` is also called on redo.
-function makeGridRegionCommand(opts) {
+export function makeGridRegionCommand(opts) {
     const { grid, i1, j1, i2, j2, mutate, afterApply, label } = opts;
     let beforeSnap = null;
     let afterSnap = null;
@@ -167,7 +165,7 @@ function makeGridRegionCommand(opts) {
 // Single-cell toggle helper: captures old value, applies new value, revert
 // restores old. `afterApply` is invoked both on apply and revert (e.g., to
 // trigger recalc + redraw).
-function makeCellCommand(opts) {
+export function makeCellCommand(opts) {
     const { grid, i, j, newValue, afterApply, label } = opts;
     let oldValue = null;
     return {
@@ -185,7 +183,7 @@ function makeCellCommand(opts) {
 }
 
 // Shaft assignment command for the Entering (1D threading) structure.
-function makeEnteringCommand(opts) {
+export function makeEnteringCommand(opts) {
     const { entering, i, newShaft, afterApply, label } = opts;
     let oldShaft = null;
     return {
@@ -202,5 +200,3 @@ function makeEnteringCommand(opts) {
     };
 }
 
-// Module-global command bus; created by the editor at init time.
-let commandBus = null;
